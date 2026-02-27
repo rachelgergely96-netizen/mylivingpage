@@ -30,6 +30,7 @@ export default function LoginPage() {
       if (error) {
         throw error;
       }
+      router.refresh();
       router.replace(nextPath);
     } catch (error) {
       setStatus("error");

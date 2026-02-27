@@ -13,6 +13,7 @@ import type { PageRecord } from "@/types/resume";
 const VALID_THEMES: Set<string> = new Set([
   "cosmic", "fluid", "ember", "monolith", "aurora",
   "terracotta", "prism", "biolume", "circuit", "sakura",
+  "glacier", "verdant", "neon", "topo", "luxe",
 ]);
 
 export const revalidate = 60;

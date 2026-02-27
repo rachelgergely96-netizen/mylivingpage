@@ -4,10 +4,15 @@ import { renderCircuit } from "./renderers/circuit";
 import { renderCosmic } from "./renderers/cosmic";
 import { renderEmber } from "./renderers/ember";
 import { renderFluid } from "./renderers/fluid";
+import { renderGlacier } from "./renderers/glacier";
+import { renderLuxe } from "./renderers/luxe";
 import { renderMonolith } from "./renderers/monolith";
+import { renderNeon } from "./renderers/neon";
 import { renderPrism } from "./renderers/prism";
 import { renderSakura } from "./renderers/sakura";
 import { renderTerracotta } from "./renderers/terracotta";
+import { renderTopo } from "./renderers/topo";
+import { renderVerdant } from "./renderers/verdant";
 import type { ThemeDefinition, ThemeId } from "./types";
 
 export const THEME_REGISTRY: ThemeDefinition[] = [
@@ -100,6 +105,51 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     vibe: "Elegant & Refined",
     background: "#0F0A0D",
     renderer: renderSakura,
+  },
+  {
+    id: "glacier",
+    name: "Glacier",
+    description:
+      "Slow-drifting ice crystals and frost particles float through frozen mist with pale blue luminance.",
+    vibe: "Calm & Focused",
+    background: "#040810",
+    renderer: renderGlacier,
+  },
+  {
+    id: "verdant",
+    name: "Verdant",
+    description:
+      "Organic vine tendrils grow and branch across the canvas while firefly particles drift through a lush canopy.",
+    vibe: "Balanced & Growth-Minded",
+    background: "#050D06",
+    renderer: renderVerdant,
+  },
+  {
+    id: "neon",
+    name: "Neon",
+    description:
+      "Pulsing neon grid lines recede into perspective while light streaks race along the horizon in synthwave style.",
+    vibe: "Dynamic & Ambitious",
+    background: "#08050E",
+    renderer: renderNeon,
+  },
+  {
+    id: "topo",
+    name: "Topo",
+    description:
+      "Animated topographic contour lines shift and morph with noise, creating living elevation maps.",
+    vibe: "Analytical & Precise",
+    background: "#070808",
+    renderer: renderTopo,
+  },
+  {
+    id: "luxe",
+    name: "Luxe",
+    description:
+      "Golden light rays slowly sweep through darkness while metallic flecks drift and catch the light.",
+    vibe: "Prestigious & Confident",
+    background: "#0A0808",
+    renderer: renderLuxe,
   },
 ];
 

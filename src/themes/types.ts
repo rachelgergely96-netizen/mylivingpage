@@ -8,7 +8,12 @@ export type ThemeId =
   | "prism"
   | "biolume"
   | "circuit"
-  | "sakura";
+  | "sakura"
+  | "glacier"
+  | "verdant"
+  | "neon"
+  | "topo"
+  | "luxe";
 
 export type ThemeRenderer = (
   ctx: CanvasRenderingContext2D,

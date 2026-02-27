@@ -9,12 +9,20 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: pages } = await supabase
-    .from("pages")
-    .select("*")
-    .eq("user_id", user?.id ?? "")
-    .order("created_at", { ascending: false });
+  const [{ data: profile }, { data: pages }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", user?.id ?? "")
+      .maybeSingle(),
+    supabase
+      .from("pages")
+      .select("*")
+      .eq("user_id", user?.id ?? "")
+      .order("created_at", { ascending: false }),
+  ]);
 
+  const displayName = profile?.full_name || profile?.username || null;
   const list = (pages ?? []) as PageRecord[];
 
   return (
@@ -22,7 +30,13 @@ export default async function DashboardPage() {
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Dashboard</p>
-          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F5F0EB]">Your Living Pages</h1>
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F5F0EB]">
+            {displayName ? (
+              <>Welcome back, <span className="text-[#D4A654]">{displayName}</span></>
+            ) : (
+              "Your Living Pages"
+            )}
+          </h1>
         </div>
         <Link
           href="/create"

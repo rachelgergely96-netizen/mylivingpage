@@ -167,7 +167,6 @@ function DeviceBreakdown({ devices }: { devices: DeviceEntry[] }) {
 }
 
 export default function AnalyticsCharts({
-  pageName,
   totalViews,
   dailyViews,
   referrers,

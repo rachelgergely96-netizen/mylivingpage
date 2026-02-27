@@ -67,7 +67,6 @@ export const renderNeon: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const hue = 180 + Math.sin(seed) * 120;
 
     // Streak trail
-    const trailLen = 15 + ratio * 20;
     const prevRatio = Math.max(0.1, ratio - 0.05);
     const prevY = horizonY + (h - horizonY) * Math.pow(prevRatio, 1.8);
     const grad = ctx.createLinearGradient(x, prevY, x, y);

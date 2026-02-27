@@ -503,7 +503,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
       <div className="space-y-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)]">Highlight Stats</p>
-          <p className="mt-1 text-xs text-[rgba(245,240,235,0.35)]">Up to 4 standout numbers (e.g. "8+" / "Years Experience")</p>
+          <p className="mt-1 text-xs text-[rgba(245,240,235,0.35)]">Up to 4 standout numbers (e.g. {'"'}8+{'"'} / {'"'}Years Experience{'"'})</p>
         </div>
         {stats.map((stat, i) => (
           <div key={i} className="flex items-center gap-3">

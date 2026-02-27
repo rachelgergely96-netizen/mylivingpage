@@ -1,8 +1,14 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import WaitlistForm from "@/components/marketing/WaitlistForm";
+
+const FreeProDemo = dynamic(() => import("@/components/marketing/demo/FreeProDemo"), {
+  ssr: false,
+  loading: () => <div className="h-[600px]" />,
+});
 
 const features = [
   { icon: "✦", title: "Living Backgrounds", copy: "Procedural art systems that move and breathe behind your story." },
@@ -31,6 +37,9 @@ export default function LandingPage() {
               </a>
               <a href="#how" className="transition-colors hover:text-[#F0D48A]">
                 How
+              </a>
+              <a href="#demo" className="transition-colors hover:text-[#F0D48A]">
+                Demo
               </a>
               <a href="#waitlist" className="transition-colors hover:text-[#F0D48A]">
                 Waitlist
@@ -119,6 +128,8 @@ export default function LandingPage() {
               </div>
             </div>
           </section>
+
+          <FreeProDemo />
 
           <section id="waitlist" className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6 sm:py-20 text-center md:px-10">
             <p className="mb-4 text-xs uppercase tracking-[0.22em] text-[#D4A654]">Early Access</p>

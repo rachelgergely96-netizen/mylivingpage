@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import GuidedFlow from "@/components/create/GuidedFlow";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -11,6 +12,7 @@ import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
 
 type Step = "input" | "theme" | "processing" | "preview";
+type InputMode = "choose" | "paste" | "guided";
 
 const STAGES = [
   "Analyzing resume structure...",
@@ -82,6 +84,14 @@ function parseSseChunk(chunk: string, onMessage: (payload: { type: string; [key:
 export default function CreatePage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("input");
+  const [inputMode, setInputMode] = useState<InputMode>("choose");
+  const [guidedData, setGuidedData] = useState<Partial<ResumeData>>({
+    name: "", headline: "", location: "", email: null,
+    linkedin: null, github: null, website: null, avatar_url: null,
+    summary: "", experience: [], education: [], projects: [],
+    skills: [{ category: "General", items: [] }],
+    certifications: [], stats: [],
+  });
   const [resumeText, setResumeText] = useState("");
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>("cosmic");
   const [progress, setProgress] = useState(0);
@@ -95,6 +105,7 @@ export default function CreatePage() {
   const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const guidedModeRef = useRef(false);
 
   const themes = useMemo(() => THEME_REGISTRY.filter((theme) => PREVIEW_THEMES.includes(theme.id)), []);
 
@@ -336,7 +347,45 @@ export default function CreatePage() {
         </p>
       ) : null}
 
-      {step === "input" ? (
+      {step === "input" && inputMode === "choose" ? (
+        <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 1</p>
+          <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F5F0EB]">How would you like to start?</h2>
+          <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(245,240,235,0.55)]">Choose the path that works best for you.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => { setInputMode("paste"); guidedModeRef.current = false; }}
+              className="group rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 sm:p-6 text-left transition-all duration-300 ease-soft hover:-translate-y-1 hover:border-[rgba(212,166,84,0.3)] hover:bg-[rgba(212,166,84,0.05)]"
+            >
+              <p className="mb-3 text-2xl text-[#D4A654]">&#x25C8;</p>
+              <h3 className="font-heading text-xl font-bold text-[#F5F0EB]">Paste Resume</h3>
+              <p className="mt-2 text-xs leading-6 text-[rgba(245,240,235,0.5)]">
+                Already have your resume? Paste it and let AI structure it for you.
+              </p>
+              <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.3)] group-hover:text-[#D4A654] transition-colors">
+                Quick &mdash; ~2 min
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setInputMode("guided"); guidedModeRef.current = true; }}
+              className="group rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 sm:p-6 text-left transition-all duration-300 ease-soft hover:-translate-y-1 hover:border-[rgba(212,166,84,0.3)] hover:bg-[rgba(212,166,84,0.05)]"
+            >
+              <p className="mb-3 text-2xl text-[#D4A654]">&#x2726;</p>
+              <h3 className="font-heading text-xl font-bold text-[#F5F0EB]">Build It Together</h3>
+              <p className="mt-2 text-xs leading-6 text-[rgba(245,240,235,0.5)]">
+                Answer a few friendly prompts and we&apos;ll build your page step by step.
+              </p>
+              <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.3)] group-hover:text-[#D4A654] transition-colors">
+                Guided &mdash; ~5 min
+              </p>
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {step === "input" && inputMode === "paste" ? (
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Paste resume text</h2>
@@ -364,15 +413,36 @@ export default function CreatePage() {
               Load Sample
             </button>
           </div>
-          <button
-            type="button"
-            disabled={!resumeText.trim()}
-            onClick={() => setStep("theme")}
-            className="gold-pill mt-6 h-12 px-7 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Continue to Theme Selection
-          </button>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setInputMode("choose")}
+              className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(245,240,235,0.7)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A]"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={!resumeText.trim()}
+              onClick={() => setStep("theme")}
+              className="gold-pill h-12 px-7 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Continue to Theme Selection
+            </button>
+          </div>
         </section>
+      ) : null}
+
+      {step === "input" && inputMode === "guided" ? (
+        <GuidedFlow
+          guidedData={guidedData}
+          onUpdate={setGuidedData}
+          onComplete={(data) => {
+            setParsedData(data);
+            setStep("theme");
+          }}
+          onBack={() => setInputMode("choose")}
+        />
       ) : null}
 
       {step === "theme" ? (
@@ -420,10 +490,10 @@ export default function CreatePage() {
             </button>
             <button
               type="button"
-              onClick={startProcessing}
+              onClick={guidedModeRef.current && parsedData ? () => setStep("preview") : startProcessing}
               className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)]"
             >
-              Generate My Living Page
+              {guidedModeRef.current && parsedData ? "Preview My Living Page" : "Generate My Living Page"}
             </button>
           </div>
         </section>

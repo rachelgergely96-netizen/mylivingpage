@@ -79,7 +79,7 @@ export default function ThemeCanvas({
   }, [interactive, theme]);
 
   return (
-    <div ref={containerRef} className={className} style={{ position: "relative", overflow: "hidden", borderRadius: 16 }}>
+    <div ref={containerRef} className={className} style={{ position: "relative", overflow: "hidden", ...(!className?.includes("rounded-none") ? { borderRadius: 16 } : {}) }}>
       <canvas
         ref={canvasRef}
         style={{

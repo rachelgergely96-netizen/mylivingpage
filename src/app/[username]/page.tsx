@@ -88,23 +88,11 @@ export default async function PublicLivingPage({ params }: { params: { username:
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
       <PageOwnerBar pageId={page.id} pageUserId={page.user_id} />
-      <section className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-10">
-        <div className="overflow-hidden rounded-2xl border border-[rgba(212,166,84,0.2)] shadow-[0_40px_100px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-            <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(245,240,235,0.55)]">
-              mylivingpage.com/<span className="text-[#F0D48A]">{page.slug}</span>
-            </div>
-          </div>
-          <ThemeCanvas themeId={themeId} height="calc(100vh - 170px)" className="rounded-none">
-            <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
-              <ResumeLayout data={page.resume_data} />
-            </div>
-          </ThemeCanvas>
+      <ThemeCanvas themeId={themeId} height="100vh" className="rounded-none">
+        <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
+          <ResumeLayout data={page.resume_data} />
         </div>
-      </section>
+      </ThemeCanvas>
     </main>
   );
 }

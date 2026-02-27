@@ -45,7 +45,7 @@ export default function PageOwnerBar({ pageId, pageUserId }: PageOwnerBarProps) 
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 pb-2 pt-4 md:px-8">
+    <div className="fixed left-0 right-0 top-0 z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-8">
       <Link
         href="/dashboard"
         className="flex items-center gap-1.5 text-xs text-[rgba(245,240,235,0.5)] transition-colors hover:text-[#F0D48A]"

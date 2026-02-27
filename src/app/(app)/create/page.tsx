@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { usernameFromEmail } from "@/lib/usernames";
+import { slugifyUsername, usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
@@ -89,8 +89,54 @@ export default function CreatePage() {
   const [error, setError] = useState("");
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [customSlug, setCustomSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [slugMessage, setSlugMessage] = useState("");
+  const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const themes = useMemo(() => THEME_REGISTRY.filter((theme) => PREVIEW_THEMES.includes(theme.id)), []);
+
+  const checkSlug = useCallback(async (value: string) => {
+    const clean = slugifyUsername(value);
+    if (!clean || clean.length < 3) {
+      setSlugStatus("invalid");
+      setSlugMessage("At least 3 characters required.");
+      return;
+    }
+    setSlugStatus("checking");
+    try {
+      const res = await fetch(`/api/username?slug=${encodeURIComponent(clean)}`);
+      const data = (await res.json()) as { available: boolean; slug: string; reason: string | null };
+      setSlugStatus(data.available ? "available" : "taken");
+      setSlugMessage(data.available ? "Available!" : (data.reason ?? "Already taken."));
+    } catch {
+      setSlugStatus("idle");
+    }
+  }, []);
+
+  const handleSlugChange = (value: string) => {
+    setCustomSlug(value.toLowerCase().replace(/[^a-z0-9-_.]/g, ""));
+    setSlugStatus("idle");
+    setSlugMessage("");
+    if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+    slugTimerRef.current = setTimeout(() => checkSlug(value), 400);
+  };
+
+  // Initialize slug from user's existing username on preview step
+  useEffect(() => {
+    if (step === "preview" && !customSlug) {
+      const init = async () => {
+        const supabase = createBrowserSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle<{ username: string }>();
+          const fallback = usernameFromEmail(user.email);
+          setCustomSlug(profile?.username ?? fallback);
+        }
+      };
+      init();
+    }
+  }, [step, customSlug]);
 
   const startProcessing = async () => {
     setError("");
@@ -175,17 +221,31 @@ export default function CreatePage() {
         .maybeSingle<{ username: string }>();
 
       const derivedUsername = usernameFromEmail(user.email);
-      const username = existingProfile?.username ?? derivedUsername;
+      const currentUsername = existingProfile?.username ?? derivedUsername;
 
       if (!existingProfile) {
         await supabase.from("profiles").upsert(
           {
             id: user.id,
-            username,
+            username: currentUsername,
             email: user.email,
           },
           { onConflict: "id" },
         );
+      }
+
+      // If user chose a custom slug different from their current one, update it
+      const desiredSlug = slugifyUsername(customSlug) || currentUsername;
+      if (desiredSlug !== currentUsername) {
+        const patchRes = await fetch("/api/username", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: desiredSlug }),
+        });
+        if (!patchRes.ok) {
+          const body = (await patchRes.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? "Could not claim that URL.");
+        }
       }
 
       const { data: savedPage, error: saveError } = await supabase
@@ -193,7 +253,7 @@ export default function CreatePage() {
         .upsert(
           {
             user_id: user.id,
-            slug: username,
+            slug: desiredSlug,
             status: "live",
             theme_id: selectedTheme,
             resume_data: parsedData,
@@ -212,7 +272,7 @@ export default function CreatePage() {
         throw saveError;
       }
 
-      router.push(`/${savedPage?.slug ?? username}`);
+      router.push(`/${savedPage?.slug ?? desiredSlug}`);
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
     } finally {
@@ -367,13 +427,36 @@ export default function CreatePage() {
             <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 4</p>
             <h2 className="mt-2 font-heading text-3xl font-bold">Preview and publish</h2>
           </div>
+
+          {/* URL Chooser */}
+          <div className="mb-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+            <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">Choose your URL</p>
+            <div className="flex items-center gap-0">
+              <span className="rounded-l-lg border border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
+                mylivingpage.com/
+              </span>
+              <input
+                type="text"
+                value={customSlug}
+                onChange={(e) => handleSlugChange(e.target.value)}
+                placeholder="your-name"
+                className="flex-1 rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
+              />
+            </div>
+            {slugMessage ? (
+              <p className={`mt-2 text-xs ${slugStatus === "available" ? "text-[#88ee88]" : slugStatus === "checking" ? "text-[rgba(245,240,235,0.4)]" : "text-[#ff8e8e]"}`}>
+                {slugStatus === "checking" ? "Checking..." : slugMessage}
+              </p>
+            ) : null}
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-[rgba(212,166,84,0.18)]">
             <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
               <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
               <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(245,240,235,0.5)]">
-                mylivingpage.com/<span className="text-[#F0D48A]">{parsedData.name.toLowerCase().replace(/\s+/g, "-")}</span>
+                mylivingpage.com/<span className="text-[#F0D48A]">{slugifyUsername(customSlug) || "your-name"}</span>
               </div>
             </div>
             <ThemeCanvas themeId={selectedTheme} height={620} className="rounded-none">
@@ -392,7 +475,7 @@ export default function CreatePage() {
             </button>
             <button
               type="button"
-              disabled={publishing}
+              disabled={publishing || slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking"}
               onClick={publishPage}
               className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:opacity-60"
             >

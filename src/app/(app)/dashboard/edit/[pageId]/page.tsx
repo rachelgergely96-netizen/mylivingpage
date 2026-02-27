@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { slugifyUsername } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord, ResumeData } from "@/types/resume";
@@ -26,6 +27,10 @@ export default function EditPage() {
   const [page, setPage] = useState<PageRecord | null>(null);
   const [data, setData] = useState<ResumeData | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
+  const [customSlug, setCustomSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [slugMessage, setSlugMessage] = useState("");
+  const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -49,10 +54,37 @@ export default function EditPage() {
       setPage(row);
       setData(row.resume_data);
       setThemeId(row.theme_id as ThemeId);
+      setCustomSlug(row.slug);
       setLoading(false);
     };
     load();
   }, [pageId, router]);
+
+  const checkSlug = useCallback(async (value: string) => {
+    const clean = slugifyUsername(value);
+    if (!clean || clean.length < 3) {
+      setSlugStatus("invalid");
+      setSlugMessage("At least 3 characters required.");
+      return;
+    }
+    setSlugStatus("checking");
+    try {
+      const res = await fetch(`/api/username?slug=${encodeURIComponent(clean)}`);
+      const json = (await res.json()) as { available: boolean; slug: string; reason: string | null };
+      setSlugStatus(json.available ? "available" : "taken");
+      setSlugMessage(json.available ? "Available!" : (json.reason ?? "Already taken."));
+    } catch {
+      setSlugStatus("idle");
+    }
+  }, []);
+
+  const handleSlugChange = (value: string) => {
+    setCustomSlug(value.toLowerCase().replace(/[^a-z0-9-_.]/g, ""));
+    setSlugStatus("idle");
+    setSlugMessage("");
+    if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
+    slugTimerRef.current = setTimeout(() => checkSlug(value), 400);
+  };
 
   const updateField = useCallback(<K extends keyof ResumeData>(key: K, value: ResumeData[K]) => {
     setData((prev) => prev ? { ...prev, [key]: value } : prev);
@@ -60,14 +92,31 @@ export default function EditPage() {
 
   const save = async () => {
     if (!data || !page || saving) return;
+    if (slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking") return;
     setSaving(true);
     setError("");
     setSuccess("");
     try {
+      // If slug changed, update username via API
+      const desiredSlug = slugifyUsername(customSlug) || page.slug;
+      if (desiredSlug !== page.slug) {
+        const patchRes = await fetch("/api/username", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: desiredSlug }),
+        });
+        if (!patchRes.ok) {
+          const body = (await patchRes.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? "Could not update URL.");
+        }
+        // Update local page state with new slug
+        setPage((prev) => prev ? { ...prev, slug: desiredSlug } : prev);
+      }
+
       const supabase = createBrowserSupabaseClient();
       const { error: saveError } = await supabase
         .from("pages")
-        .update({ resume_data: data, theme_id: themeId, updated_at: new Date().toISOString() })
+        .update({ resume_data: data, theme_id: themeId, slug: desiredSlug, updated_at: new Date().toISOString() })
         .eq("id", page.id);
       if (saveError) throw saveError;
       setSuccess("Saved successfully!");
@@ -118,7 +167,7 @@ export default function EditPage() {
           </button>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking"}
             onClick={save}
             className="gold-pill px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:opacity-60"
           >
@@ -152,6 +201,27 @@ export default function EditPage() {
       {/* Content Tab */}
       {tab === "content" ? (
         <div className="space-y-5">
+          {/* Page URL */}
+          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Page URL</legend>
+            <div className="flex items-center gap-0">
+              <span className="rounded-l-lg border border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
+                mylivingpage.com/
+              </span>
+              <input
+                type="text"
+                value={customSlug}
+                onChange={(e) => handleSlugChange(e.target.value)}
+                className="flex-1 rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
+              />
+            </div>
+            {slugMessage ? (
+              <p className={`text-xs ${slugStatus === "available" ? "text-[#88ee88]" : slugStatus === "checking" ? "text-[rgba(245,240,235,0.4)]" : "text-[#ff8e8e]"}`}>
+                {slugStatus === "checking" ? "Checking..." : slugMessage}
+              </p>
+            ) : null}
+          </fieldset>
+
           {/* Basic Info */}
           <fieldset className="glass-card space-y-4 rounded-2xl p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Basic Info</legend>

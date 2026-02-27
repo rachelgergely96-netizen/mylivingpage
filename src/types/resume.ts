@@ -6,6 +6,7 @@ export interface ResumeData {
   linkedin: string | null;
   github: string | null;
   website: string | null;
+  avatar_url: string | null;
   summary: string;
   experience: Array<{
     title: string;

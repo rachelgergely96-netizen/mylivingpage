@@ -5,8 +5,13 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { THEME_MAP } from "@/themes/registry";
+import type { ThemeId } from "@/themes/types";
 import type { PageRecord } from "@/types/resume";
+
+const VALID_THEMES: Set<string> = new Set([
+  "cosmic", "fluid", "ember", "monolith", "aurora",
+  "terracotta", "prism", "biolume", "circuit", "sakura",
+]);
 
 export const revalidate = 60;
 
@@ -82,7 +87,7 @@ export default async function PublicLivingPage({ params }: { params: { username:
     notFound();
   }
 
-  const themeId = page.theme_id in THEME_MAP ? (page.theme_id as keyof typeof THEME_MAP) : "cosmic";
+  const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
 
   return (
     <main className="min-h-screen">

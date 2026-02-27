@@ -31,6 +31,8 @@ export default function EditPage() {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [slugMessage, setSlugMessage] = useState("");
   const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -84,6 +86,28 @@ export default function EditPage() {
     setSlugMessage("");
     if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
     slugTimerRef.current = setTimeout(() => checkSlug(value), 400);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    setUploadingAvatar(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/avatar", { method: "POST", body: form });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error ?? "Upload failed.");
+      setData((prev) => prev ? { ...prev, avatar_url: json.url! } : prev);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Avatar upload failed.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    await fetch("/api/avatar", { method: "DELETE" });
+    setData((prev) => prev ? { ...prev, avatar_url: null } : prev);
   };
 
   const updateField = useCallback(<K extends keyof ResumeData>(key: K, value: ResumeData[K]) => {
@@ -254,6 +278,48 @@ export default function EditPage() {
                 <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">Website</span>
                 <input type="text" value={data.website ?? ""} onChange={(e) => updateField("website", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
               </label>
+            </div>
+          </fieldset>
+
+          {/* Profile Photo */}
+          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Profile Photo</legend>
+            <div className="flex items-center gap-4">
+              {data.avatar_url ? (
+                <img src={data.avatar_url} alt="Avatar" className="h-16 w-16 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]" />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
+                  {(data.name || "?").slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingAvatar}
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-1.5 text-xs uppercase tracking-[0.12em] text-[rgba(245,240,235,0.7)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A] disabled:opacity-50"
+                >
+                  {uploadingAvatar ? "Uploading..." : data.avatar_url ? "Change Photo" : "Upload Photo"}
+                </button>
+                {data.avatar_url ? (
+                  <button type="button" onClick={removeAvatar} className="text-xs text-[rgba(245,240,235,0.35)] hover:text-[#ff8e8e]">
+                    Remove &middot; use monogram
+                  </button>
+                ) : (
+                  <p className="text-[10px] text-[rgba(245,240,235,0.3)]">Optional &middot; JPEG, PNG, or WebP under 2 MB</p>
+                )}
+              </div>
             </div>
           </fieldset>
 

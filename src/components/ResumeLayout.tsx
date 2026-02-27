@@ -74,9 +74,17 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
               </div>
             ) : null}
           </div>
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
-            {(data.name || "?").slice(0, 1).toUpperCase()}
-          </div>
+          {data.avatar_url ? (
+            <img
+              src={data.avatar_url}
+              alt={data.name}
+              className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]"
+            />
+          ) : (
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
+              {(data.name || "?").slice(0, 1).toUpperCase()}
+            </div>
+          )}
         </header>
 
         {/* ── Summary ─────────────────────────────────────────────── */}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import DownloadResumeButton from "@/components/DownloadResumeButton";
+import MadeWithBadge from "@/components/MadeWithBadge";
 import PageOwnerBar from "@/components/PageOwnerBar";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
@@ -93,11 +95,13 @@ export default async function PublicLivingPage({ params }: { params: { username:
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
       <PageOwnerBar pageId={page.id} pageUserId={page.user_id} />
-      <ThemeCanvas themeId={themeId} height="100vh" className="rounded-none">
+      <ThemeCanvas themeId={themeId} height="100dvh" className="rounded-none min-h-screen">
         <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
           <ResumeLayout data={page.resume_data} />
         </div>
       </ThemeCanvas>
+      <DownloadResumeButton data={page.resume_data} />
+      <MadeWithBadge pageUserId={page.user_id} />
     </main>
   );
 }

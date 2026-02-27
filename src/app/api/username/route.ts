@@ -5,7 +5,8 @@ import { slugifyUsername } from "@/lib/usernames";
 const RESERVED_SLUGS = new Set([
   "login", "signup", "dashboard", "create", "api", "callback",
   "admin", "settings", "profile", "help", "about", "pricing",
-  "terms", "privacy", "blog", "docs", "support",
+  "terms", "privacy", "cookies", "acceptable-use", "dmca", "disclaimer",
+  "security", "delete-account", "legal", "blog", "docs", "support",
 ]);
 
 /** GET /api/username?slug=desired-slug — check availability */

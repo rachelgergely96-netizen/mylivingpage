@@ -304,11 +304,11 @@ export default function CreatePage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-8 md:px-10">
-      <div className="mb-7 flex items-center justify-between">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
+      <div className="mb-5 sm:mb-7 flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Create Flow</p>
-          <h1 className="mt-2 font-heading text-4xl font-bold text-[#F5F0EB]">Generate Your Living Page</h1>
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F5F0EB]">Generate Your Living Page</h1>
         </div>
         <div className="hidden gap-2 md:flex">
           {(["input", "theme", "processing", "preview"] as Step[]).map((id, index) => {
@@ -337,15 +337,15 @@ export default function CreatePage() {
       ) : null}
 
       {step === "input" ? (
-        <section className="glass-card rounded-2xl p-6 md:p-8">
+        <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 1</p>
-          <h2 className="mt-2 font-heading text-3xl font-bold">Paste resume text</h2>
-          <p className="mt-2 text-sm text-[rgba(245,240,235,0.55)]">Drop your full resume text and continue to theme selection.</p>
+          <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Paste resume text</h2>
+          <p className="mt-2 text-xs sm:text-sm text-[rgba(245,240,235,0.55)]">Drop your full resume text and continue to theme selection.</p>
           <textarea
             value={resumeText}
             onChange={(event) => setResumeText(event.target.value)}
             placeholder="Paste your resume text here..."
-            className="mt-5 min-h-[320px] w-full rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] p-5 font-mono text-sm leading-7 text-[#F5F0EB] placeholder:text-[rgba(245,240,235,0.3)] focus:border-[#D4A654] focus:outline-none"
+            className="mt-4 sm:mt-5 min-h-[240px] sm:min-h-[320px] w-full rounded-xl sm:rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5 font-mono text-xs sm:text-sm leading-6 sm:leading-7 text-[#F5F0EB] placeholder:text-[rgba(245,240,235,0.3)] focus:border-[#D4A654] focus:outline-none"
           />
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[rgba(245,240,235,0.35)]">
             <p>
@@ -379,8 +379,8 @@ export default function CreatePage() {
         <section className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 2</p>
-            <h2 className="mt-2 font-heading text-3xl font-bold">Pick your living theme</h2>
-            <p className="mt-2 text-sm text-[rgba(245,240,235,0.55)]">Each option is rendered live on Canvas.</p>
+            <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Pick your living theme</h2>
+            <p className="mt-2 text-xs sm:text-sm text-[rgba(245,240,235,0.55)]">Each option is rendered live on Canvas.</p>
           </div>
           <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
             <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.35)]">Your resume input</p>
@@ -430,9 +430,9 @@ export default function CreatePage() {
       ) : null}
 
       {step === "processing" ? (
-        <section className="glass-card mx-auto max-w-xl rounded-2xl p-8 text-center">
+        <section className="glass-card mx-auto max-w-xl rounded-2xl p-5 sm:p-8 text-center">
           <div className="mx-auto h-16 w-16 animate-spin rounded-full border-2 border-[rgba(212,166,84,0.2)] border-t-[#D4A654]" />
-          <h2 className="mt-6 font-heading text-3xl font-bold">Bringing You to Life</h2>
+          <h2 className="mt-6 font-heading text-2xl sm:text-3xl font-bold">Bringing You to Life</h2>
           <p className="mt-2 text-sm text-[#D4A654]">{stage}</p>
           <div className="mt-6 h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
             <div
@@ -448,14 +448,14 @@ export default function CreatePage() {
         <section>
           <div className="mb-4 text-center">
             <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 4</p>
-            <h2 className="mt-2 font-heading text-3xl font-bold">Preview and publish</h2>
+            <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Preview and publish</h2>
           </div>
 
           {/* URL Chooser */}
           <div className="mb-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
             <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">Choose your URL</p>
-            <div className="flex items-center gap-0">
-              <span className="rounded-l-lg border border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
+              <span className="rounded-lg sm:rounded-l-lg sm:rounded-r-none border sm:border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
                 mylivingpage.com/
               </span>
               <input
@@ -463,7 +463,7 @@ export default function CreatePage() {
                 value={customSlug}
                 onChange={(e) => handleSlugChange(e.target.value)}
                 placeholder="your-name"
-                className="flex-1 rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
+                className="flex-1 rounded-lg sm:rounded-l-none sm:rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
               />
             </div>
             {slugMessage ? (
@@ -476,11 +476,11 @@ export default function CreatePage() {
           {/* Avatar Upload */}
           <div className="mb-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
             <p className="mb-3 text-[10px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">Profile Photo</p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               {parsedData.avatar_url ? (
-                <img src={parsedData.avatar_url} alt="Avatar" className="h-16 w-16 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]" />
+                <img src={parsedData.avatar_url} alt="Avatar" className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]" />
               ) : (
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
+                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-xl sm:text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
                   {(parsedData.name || "?").slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -528,7 +528,7 @@ export default function CreatePage() {
                 mylivingpage.com/<span className="text-[#F0D48A]">{slugifyUsername(customSlug) || "your-name"}</span>
               </div>
             </div>
-            <ThemeCanvas themeId={selectedTheme} height={620} className="rounded-none">
+            <ThemeCanvas themeId={selectedTheme} height="min(620px, calc(100dvh - 200px))" className="rounded-none">
               <div className="h-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.55)_100%)]">
                 <ResumeLayout data={parsedData} />
               </div>

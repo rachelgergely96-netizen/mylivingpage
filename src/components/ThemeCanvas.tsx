@@ -54,6 +54,15 @@ export default function ThemeCanvas({
         y: (event.clientY - rect.top) / rect.height,
       };
     };
+    const handleTouch = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      const rect = canvas.getBoundingClientRect();
+      mouseRef.current = {
+        x: (touch.clientX - rect.left) / rect.width,
+        y: (touch.clientY - rect.top) / rect.height,
+      };
+    };
 
     resize();
     window.addEventListener("resize", resize);
@@ -67,6 +76,7 @@ export default function ThemeCanvas({
 
     if (interactive && container) {
       container.addEventListener("mousemove", handleMove);
+      container.addEventListener("touchmove", handleTouch, { passive: true });
     }
 
     const start = performance.now();
@@ -91,6 +101,7 @@ export default function ThemeCanvas({
       observer?.disconnect();
       if (interactive && container) {
         container.removeEventListener("mousemove", handleMove);
+        container.removeEventListener("touchmove", handleTouch);
       }
     };
   }, [interactive, theme]);

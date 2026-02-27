@@ -154,8 +154,8 @@ export default function EditPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10">
-        <div className="glass-card rounded-2xl p-8 text-center">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 md:px-10">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[rgba(212,166,84,0.2)] border-t-[#D4A654]" />
           <p className="mt-4 text-sm text-[rgba(245,240,235,0.5)]">Loading page...</p>
         </div>
@@ -165,8 +165,8 @@ export default function EditPage() {
 
   if (!data) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10">
-        <div className="glass-card rounded-2xl p-8 text-center">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 md:px-10">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 text-center">
           <p className="text-sm text-[#ff8e8e]">{error || "Page not found."}</p>
         </div>
       </main>
@@ -174,18 +174,18 @@ export default function EditPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-8 md:px-10">
+    <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8 md:px-10">
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Edit Page</p>
-          <h1 className="mt-2 font-heading text-3xl font-bold text-[#F5F0EB]">{data.name}</h1>
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F5F0EB]">{data.name}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
-            className="rounded-full border border-[rgba(255,255,255,0.15)] px-5 py-2.5 text-xs uppercase tracking-[0.14em] text-[rgba(245,240,235,0.6)] hover:text-[#F0D48A]"
+            className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 sm:px-5 sm:py-2.5 text-xs uppercase tracking-[0.14em] text-[rgba(245,240,235,0.6)] hover:text-[#F0D48A]"
           >
             Back
           </button>
@@ -193,7 +193,7 @@ export default function EditPage() {
             type="button"
             disabled={saving || slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking"}
             onClick={save}
-            className="gold-pill px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:opacity-60"
+            className="gold-pill px-5 py-2 sm:px-6 sm:py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -210,7 +210,7 @@ export default function EditPage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className="flex-1 rounded-lg px-4 py-2.5 text-xs font-medium uppercase tracking-[0.14em] transition-all"
+            className="flex-1 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] transition-all"
             style={{
               background: tab === t ? "rgba(212,166,84,0.12)" : "transparent",
               color: tab === t ? "#F0D48A" : "rgba(245,240,235,0.45)",
@@ -226,17 +226,17 @@ export default function EditPage() {
       {tab === "content" ? (
         <div className="space-y-5">
           {/* Page URL */}
-          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Page URL</legend>
-            <div className="flex items-center gap-0">
-              <span className="rounded-l-lg border border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
+              <span className="rounded-lg sm:rounded-l-lg sm:rounded-r-none border sm:border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
                 mylivingpage.com/
               </span>
               <input
                 type="text"
                 value={customSlug}
                 onChange={(e) => handleSlugChange(e.target.value)}
-                className="flex-1 rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
+                className="flex-1 rounded-lg sm:rounded-l-none sm:rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
               />
             </div>
             {slugMessage ? (
@@ -247,7 +247,7 @@ export default function EditPage() {
           </fieldset>
 
           {/* Basic Info */}
-          <fieldset className="glass-card space-y-4 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-4 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Basic Info</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
@@ -282,13 +282,13 @@ export default function EditPage() {
           </fieldset>
 
           {/* Profile Photo */}
-          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Profile Photo</legend>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               {data.avatar_url ? (
-                <img src={data.avatar_url} alt="Avatar" className="h-16 w-16 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]" />
+                <img src={data.avatar_url} alt="Avatar" className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]" />
               ) : (
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
+                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-xl sm:text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
                   {(data.name || "?").slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -324,7 +324,7 @@ export default function EditPage() {
           </fieldset>
 
           {/* Summary */}
-          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Summary</legend>
             <textarea
               value={data.summary}
@@ -335,7 +335,7 @@ export default function EditPage() {
           </fieldset>
 
           {/* Stats */}
-          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Stats</legend>
             {data.stats?.map((stat, i) => (
               <div key={i} className="flex gap-3">
@@ -382,11 +382,11 @@ export default function EditPage() {
           </fieldset>
 
           {/* Experience */}
-          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Experience</legend>
             {data.experience?.map((exp, i) => (
               <div key={i} className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4">
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
                   <input type="text" value={exp.title} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], title: e.target.value }; updateField("experience", next); }} placeholder="Title" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
                   <input type="text" value={exp.company} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], company: e.target.value }; updateField("experience", next); }} placeholder="Company" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
                   <input type="text" value={exp.dates} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], dates: e.target.value }; updateField("experience", next); }} placeholder="Dates" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
@@ -413,7 +413,7 @@ export default function EditPage() {
           </fieldset>
 
           {/* Education */}
-          <fieldset className="glass-card space-y-3 rounded-2xl p-5">
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
             <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Education</legend>
             {data.education?.map((edu, i) => (
               <div key={i} className="flex flex-wrap gap-2">
@@ -461,7 +461,7 @@ export default function EditPage() {
               mylivingpage.com/<span className="text-[#F0D48A]">{page?.slug}</span>
             </div>
           </div>
-          <ThemeCanvas themeId={themeId} height="calc(100vh - 250px)" className="rounded-none">
+          <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">
             <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
               <ResumeLayout data={data} />
             </div>

@@ -45,7 +45,7 @@ export default function PageOwnerBar({ pageId, pageUserId }: PageOwnerBarProps) 
   };
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-8">
+    <div className="fixed left-0 right-0 top-0 z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 md:px-8">
       <Link
         href="/dashboard"
         className="flex items-center gap-1.5 text-xs text-[rgba(245,240,235,0.5)] transition-colors hover:text-[#F0D48A]"
@@ -55,10 +55,10 @@ export default function PageOwnerBar({ pageId, pageUserId }: PageOwnerBarProps) 
         </svg>
         Dashboard
       </Link>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <Link
           href={`/dashboard/edit/${pageId}`}
-          className="rounded-full border border-[rgba(212,166,84,0.3)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#D4A654] transition-colors hover:bg-[rgba(212,166,84,0.08)] hover:text-[#F0D48A]"
+          className="rounded-full border border-[rgba(212,166,84,0.3)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#D4A654] transition-colors hover:bg-[rgba(212,166,84,0.08)] hover:text-[#F0D48A]"
         >
           Edit
         </Link>
@@ -66,7 +66,7 @@ export default function PageOwnerBar({ pageId, pageUserId }: PageOwnerBarProps) 
           type="button"
           disabled={deleting}
           onClick={handleDelete}
-          className="rounded-full border border-[rgba(255,120,120,0.25)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(255,120,120,0.6)] transition-colors hover:border-[rgba(255,120,120,0.4)] hover:text-[#ff8e8e] disabled:opacity-50"
+          className="rounded-full border border-[rgba(255,120,120,0.25)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[rgba(255,120,120,0.6)] transition-colors hover:border-[rgba(255,120,120,0.4)] hover:text-[#ff8e8e] disabled:opacity-50"
         >
           {deleting ? "Deleting..." : "Delete"}
         </button>

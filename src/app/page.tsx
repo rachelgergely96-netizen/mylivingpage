@@ -1,4 +1,6 @@
 import Link from "next/link";
+import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
+import { getRequestLegalSite } from "@/lib/legal/request-site";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import WaitlistForm from "@/components/marketing/WaitlistForm";
 
@@ -12,13 +14,15 @@ const features = [
 ];
 
 export default function LandingPage() {
+  const site = getRequestLegalSite();
+
   return (
     <div className="relative isolate min-h-screen overflow-x-hidden">
       <CosmicBackground />
       <div className="relative z-10">
         <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(26,10,46,0.72)] backdrop-blur-xl">
-          <nav className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6 md:px-10">
-            <div className="font-heading text-2xl font-bold text-[#F5F0EB]">
+          <nav className="mx-auto flex h-16 sm:h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 md:px-10">
+            <div className="font-heading text-xl sm:text-2xl font-bold text-[#F5F0EB]">
               my<span className="text-[#D4A654]">living</span>page
             </div>
             <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-[rgba(245,240,235,0.6)] md:flex">
@@ -31,6 +35,9 @@ export default function LandingPage() {
               <a href="#waitlist" className="transition-colors hover:text-[#F0D48A]">
                 Waitlist
               </a>
+              <Link href="/examples" className="transition-colors hover:text-[#F0D48A]">
+                Examples
+              </Link>
             </div>
             <Link
               href="/signup"
@@ -42,36 +49,40 @@ export default function LandingPage() {
         </header>
 
         <main>
-          <section className="mx-auto flex min-h-[88vh] w-full max-w-7xl flex-col items-center justify-center px-6 py-24 text-center md:px-10">
-            <p className="mb-8 rounded-full border border-[rgba(212,166,84,0.25)] bg-[rgba(212,166,84,0.1)] px-5 py-2 text-xs uppercase tracking-[0.22em] text-[#F0D48A]">
-              ✧ Pre-Launch Access
-            </p>
-            <h1 className="max-w-5xl font-heading text-5xl font-bold leading-[1.06] tracking-[-0.03em] text-[#F5F0EB] drop-shadow-[0_4px_28px_rgba(0,0,0,0.65)] md:text-7xl">
+          <section className="relative mx-auto flex min-h-[88vh] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 sm:px-6 sm:py-24 text-center md:px-10">
+            {/* Dark vignette behind hero text for contrast */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(26,10,46,0.7)_0%,rgba(26,10,46,0.4)_45%,transparent_75%)]" />
+            <div className="relative">
+              <p className="mb-8 rounded-full border border-[rgba(212,166,84,0.25)] bg-[rgba(212,166,84,0.1)] px-5 py-2 text-xs uppercase tracking-[0.22em] text-[#F0D48A]">
+                ✧ Pre-Launch Access
+              </p>
+            </div>
+            <h1 className="relative max-w-5xl font-heading text-3xl sm:text-5xl font-bold leading-[1.06] tracking-[-0.03em] text-[#F5F0EB] drop-shadow-[0_4px_32px_rgba(0,0,0,0.85)] md:text-7xl">
               Your resume, <span className="text-[#D4A654] italic">alive</span>.
             </h1>
-            <p className="mt-8 max-w-2xl text-lg font-light leading-8 text-[rgba(245,240,235,0.62)]">
+            <p className="relative mt-6 sm:mt-8 max-w-2xl text-base sm:text-lg font-light leading-7 sm:leading-8 text-[rgba(245,240,235,0.78)]">
               MyLivingPage turns static resumes into living digital identity pages with algorithmic art themes and AI-structured storytelling.
             </p>
-            <div className="mt-11 flex flex-wrap items-center justify-center gap-3">
+            <div className="relative mt-8 sm:mt-11 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/signup"
-                className="gold-pill px-8 py-4 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(212,166,84,0.38)]"
+                className="gold-pill px-6 py-3 sm:px-8 sm:py-4 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(212,166,84,0.38)]"
               >
                 Create My Page
               </Link>
-              <a
-                href="#waitlist"
-                className="rounded-full border border-[rgba(255,255,255,0.18)] px-8 py-4 text-sm text-[rgba(245,240,235,0.75)] transition-colors hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A]"
+              <Link
+                href="/examples"
+                className="rounded-full border border-[rgba(255,255,255,0.18)] px-6 py-3 sm:px-8 sm:py-4 text-sm text-[rgba(245,240,235,0.75)] transition-colors hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A]"
               >
-                Join Waitlist
-              </a>
+                See Examples
+              </Link>
             </div>
           </section>
 
-          <section id="features" className="mx-auto w-full max-w-7xl px-6 py-16 md:px-10">
-            <div className="mb-12 text-center">
+          <section id="features" className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10">
+            <div className="mb-8 sm:mb-12 text-center">
               <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#D4A654]">Core Features</p>
-              <h2 className="font-heading text-4xl font-bold text-[#F5F0EB] md:text-5xl">A page that breathes</h2>
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-[#F5F0EB] drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)] md:text-5xl">A page that breathes</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {features.map((feature) => (
@@ -87,10 +98,10 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="how" className="mx-auto w-full max-w-6xl px-6 py-16 md:px-10">
-            <div className="glass-card rounded-3xl p-8 md:p-12">
+          <section id="how" className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:px-10">
+            <div className="glass-card rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12">
               <p className="mb-4 text-center text-xs uppercase tracking-[0.22em] text-[#D4A654]">How It Works</p>
-              <h2 className="text-center font-heading text-4xl font-bold text-[#F5F0EB] md:text-5xl">Three steps to live</h2>
+              <h2 className="text-center font-heading text-3xl sm:text-4xl font-bold text-[#F5F0EB] drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)] md:text-5xl">Three steps to live</h2>
               <div className="mt-10 grid gap-4 md:grid-cols-3">
                 {[
                   ["01", "Paste your resume", "Drop your resume text. AI extracts structure, skills, and highlights."],
@@ -109,9 +120,9 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="waitlist" className="mx-auto w-full max-w-4xl px-6 py-20 text-center md:px-10">
+          <section id="waitlist" className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6 sm:py-20 text-center md:px-10">
             <p className="mb-4 text-xs uppercase tracking-[0.22em] text-[#D4A654]">Early Access</p>
-            <h2 className="font-heading text-5xl font-bold leading-tight text-[#F5F0EB] md:text-6xl">
+            <h2 className="font-heading text-3xl sm:text-5xl font-bold leading-tight text-[#F5F0EB] drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)] md:text-6xl">
               Make them <span className="text-[#D4A654] italic">remember</span> you
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-base leading-8 text-[rgba(245,240,235,0.58)]">
@@ -121,13 +132,10 @@ export default function LandingPage() {
           </section>
         </main>
 
-        <footer className="border-t border-[rgba(255,255,255,0.08)] px-6 py-10 text-center text-sm text-[rgba(245,240,235,0.45)]">
-          <p className="font-heading text-xl text-[#F5F0EB]">
-            my<span className="text-[#D4A654]">living</span>page
-          </p>
-          <p className="mt-2">© 2026 MyLivingPage. Your resume, alive.</p>
-        </footer>
+        <SiteLegalFooter siteId={site.id} />
       </div>
     </div>
   );
 }
+
+

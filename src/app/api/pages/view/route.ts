@@ -25,9 +25,7 @@ export async function POST(request: Request) {
       user_agent: headersList.get("user-agent"),
     });
 
-    const { data: currentPage } = await supabase.from("pages").select("views").eq("id", body.pageId).maybeSingle();
-    const nextViews = (currentPage?.views ?? 0) + 1;
-    await supabase.from("pages").update({ views: nextViews }).eq("id", body.pageId);
+    await supabase.rpc("increment_page_views", { page_id: body.pageId });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

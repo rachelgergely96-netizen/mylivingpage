@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import PageOwnerBar from "@/components/PageOwnerBar";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
@@ -86,6 +87,7 @@ export default async function PublicLivingPage({ params }: { params: { username:
   return (
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
+      <PageOwnerBar pageId={page.id} pageUserId={page.user_id} />
       <section className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-10">
         <div className="overflow-hidden rounded-2xl border border-[rgba(212,166,84,0.2)] shadow-[0_40px_100px_rgba(0,0,0,0.55)]">
           <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">

@@ -20,6 +20,7 @@ export default function ThemeCanvas({
   children,
 }: ThemeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
@@ -41,6 +42,7 @@ export default function ThemeCanvas({
       canvas.height = Math.max(1, Math.floor(canvas.offsetHeight * pixelRatio));
     };
 
+    const container = containerRef.current;
     const handleMove = (event: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       mouseRef.current = {
@@ -51,8 +53,8 @@ export default function ThemeCanvas({
 
     resize();
     window.addEventListener("resize", resize);
-    if (interactive) {
-      canvas.addEventListener("mousemove", handleMove);
+    if (interactive && container) {
+      container.addEventListener("mousemove", handleMove);
     }
 
     const start = performance.now();
@@ -70,14 +72,14 @@ export default function ThemeCanvas({
         cancelAnimationFrame(animationRef.current);
       }
       window.removeEventListener("resize", resize);
-      if (interactive) {
-        canvas.removeEventListener("mousemove", handleMove);
+      if (interactive && container) {
+        container.removeEventListener("mousemove", handleMove);
       }
     };
   }, [interactive, theme]);
 
   return (
-    <div className={className} style={{ position: "relative", overflow: "hidden", borderRadius: 16 }}>
+    <div ref={containerRef} className={className} style={{ position: "relative", overflow: "hidden", borderRadius: 16 }}>
       <canvas
         ref={canvasRef}
         style={{
@@ -90,7 +92,7 @@ export default function ThemeCanvas({
       {children ? (
         <div
           style={{
-            pointerEvents: "none",
+            pointerEvents: "auto",
             position: "absolute",
             inset: 0,
             zIndex: 2,

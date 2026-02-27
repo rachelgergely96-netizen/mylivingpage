@@ -68,13 +68,12 @@ export default async function DashboardPage() {
                 >
                   View
                 </Link>
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]"
+                <Link
+                  href={`/dashboard/edit/${page.id}`}
+                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[rgba(245,240,235,0.6)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A]"
                 >
                   Edit
-                </button>
+                </Link>
                 <button
                   type="button"
                   disabled

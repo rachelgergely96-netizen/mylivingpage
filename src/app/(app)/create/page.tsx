@@ -24,7 +24,7 @@ const PREVIEW_THEMES: ThemeId[] = ["cosmic", "fluid", "ember", "monolith", "auro
 
 const SAMPLE_RESUME = `RAY
 Attorney & Technology Entrepreneur
-New York, NY | ray@email.com | linkedin.com/in/ray
+New York, NY | ray@email.com | linkedin.com/in/ray | github.com/ray-dev
 
 SUMMARY
 Licensed attorney in New York building at the intersection of law and technology. Creator of multiple tech ventures including BarPrepPlay (275+ users), LiveCardStudio, and ReadyToClose.
@@ -40,15 +40,23 @@ Founder — LiveCardStudio
 - Created living greeting card platform with procedural Canvas 2D graphics
 - Engineered particle systems, synthesized audio, and animated themes
 
+PROJECTS
+BarPrepPlay — Gamified bar exam prep platform with spaced repetition and adaptive question pools. Built with Next.js, Supabase, and Stripe.
+LiveCardStudio — Living greeting card platform featuring procedural Canvas 2D animations, particle systems, and synthesized audio.
+ReadyToClose — Real estate closing management tool streamlining document preparation and scheduling.
+
 EDUCATION
 Juris Doctor — Law School, 2023
 
 SKILLS
-Legal Tech, SaaS Development, EdTech, UI/UX Design, Gamification, Canvas 2D, Product Design
+Languages: TypeScript, Python, SQL
+Frameworks: Next.js, React, Tailwind CSS
+Tools: Supabase, Stripe, Vercel, Figma
+Domains: Legal Tech, SaaS, EdTech, UI/UX Design
 
 CERTIFICATIONS
-New York State Bar (Licensed)
-Florida Bar (February 2026)`;
+New York State Bar — New York State, Licensed 2023
+Florida Bar — The Florida Bar, February 2026`;
 
 function parseSseChunk(chunk: string, onMessage: (payload: { type: string; [key: string]: unknown }) => void) {
   const events = chunk.split("\n\n");
@@ -262,7 +270,12 @@ export default function CreatePage() {
             </p>
             <button
               type="button"
-              onClick={() => setResumeText(SAMPLE_RESUME)}
+              onClick={() => {
+                if (resumeText.trim() && resumeText !== SAMPLE_RESUME) {
+                  if (!window.confirm("This will replace your current text with a sample resume. Continue?")) return;
+                }
+                setResumeText(SAMPLE_RESUME);
+              }}
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(245,240,235,0.6)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A]"
             >
               Load Sample
@@ -285,6 +298,15 @@ export default function CreatePage() {
             <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 2</p>
             <h2 className="mt-2 font-heading text-3xl font-bold">Pick your living theme</h2>
             <p className="mt-2 text-sm text-[rgba(245,240,235,0.55)]">Each option is rendered live on Canvas.</p>
+          </div>
+          <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.35)]">Your resume input</p>
+            <p className="mt-1 truncate font-mono text-xs text-[rgba(245,240,235,0.55)]">
+              {resumeText.slice(0, 120)}{resumeText.length > 120 ? "..." : ""}
+            </p>
+            <p className="mt-1 text-[10px] text-[rgba(245,240,235,0.3)]">
+              {resumeText.length.toLocaleString()} characters · {resumeText.split(/\n/).length} lines
+            </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {themes.map((theme) => (

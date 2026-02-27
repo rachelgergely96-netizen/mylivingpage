@@ -30,6 +30,7 @@ The JSON must have exactly this structure:
   "location": "string",
   "email": "string or null",
   "linkedin": "string or null",
+  "github": "string or null",
   "website": "string or null",
   "summary": "string (2-3 sentence professional summary)",
   "experience": [
@@ -47,14 +48,38 @@ The JSON must have exactly this structure:
       "year": "string"
     }
   ],
-  "skills": ["string"],
-  "certifications": ["string"],
+  "projects": [
+    {
+      "name": "string",
+      "description": "string (1-2 sentence summary of the project)",
+      "tech": ["string (technologies used)"],
+      "url": "string or null"
+    }
+  ],
+  "skills": [
+    {
+      "category": "string (e.g. Languages, Frameworks, Tools, Soft Skills)",
+      "items": ["string"]
+    }
+  ],
+  "certifications": [
+    {
+      "name": "string",
+      "issuer": "string or null (issuing organization)",
+      "date": "string or null (date obtained or expected)"
+    }
+  ],
   "stats": [
     { "value": "string", "label": "string" }
   ]
 }
 
-For "stats", extract 3-4 impressive quantitative highlights from the resume (like years of experience, number of users, number of ventures, etc). Make the "value" short and punchy.
+Rules:
+- For "stats", extract 3-4 impressive quantitative highlights from the resume (like years of experience, number of users, number of ventures, etc). Make the "value" short and punchy.
+- For "projects", extract any personal projects, side projects, or open-source work mentioned. If none are mentioned, return an empty array.
+- For "skills", group related skills into 2-5 categories. Common categories: Languages, Frameworks, Tools, Platforms, Soft Skills, etc.
+- For "certifications", include the issuing body and date if available. If none are mentioned, return an empty array.
+- For "github", extract a GitHub URL/username if present, otherwise null.
 
 RESUME TEXT:
 ${resumeText}`;

@@ -4,6 +4,7 @@ export interface ResumeData {
   location: string;
   email: string | null;
   linkedin: string | null;
+  github: string | null;
   website: string | null;
   summary: string;
   experience: Array<{
@@ -17,8 +18,21 @@ export interface ResumeData {
     school: string;
     year: string;
   }>;
-  skills: string[];
-  certifications: string[];
+  projects: Array<{
+    name: string;
+    description: string;
+    tech: string[];
+    url: string | null;
+  }>;
+  skills: Array<{
+    category: string;
+    items: string[];
+  }>;
+  certifications: Array<{
+    name: string;
+    issuer: string | null;
+    date: string | null;
+  }>;
   stats: Array<{ value: string; label: string }>;
 }
 

@@ -9,7 +9,7 @@ export default function TierToggle({ isPro, onToggle }: TierToggleProps) {
       <button
         type="button"
         onClick={() => !isPro || onToggle()}
-        className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${isPro ? "text-[rgba(245,240,235,0.3)]" : "text-[#D4A654]"}`}
+        className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${isPro ? "text-[rgba(245,240,235,0.5)]" : "text-[#D4A654]"}`}
       >
         Free
       </button>
@@ -28,7 +28,7 @@ export default function TierToggle({ isPro, onToggle }: TierToggleProps) {
       <button
         type="button"
         onClick={() => isPro || onToggle()}
-        className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${isPro ? "text-[#D4A654]" : "text-[rgba(245,240,235,0.3)]"}`}
+        className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${isPro ? "text-[#D4A654]" : "text-[rgba(245,240,235,0.5)]"}`}
       >
         Pro &mdash; $9/mo
       </button>

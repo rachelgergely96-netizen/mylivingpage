@@ -9,7 +9,7 @@ export default function MockPageContent({ isPro, viewMode }: MockPageContentProp
   const isRecruiter = isPro && viewMode === "recruiter";
 
   return (
-    <div className="relative z-10 px-4 py-5 sm:p-6">
+    <div className="relative z-10 overflow-hidden px-4 py-5 sm:p-6">
       {/* Page header */}
       <div className="mb-4 flex items-center justify-between">
         <span className={`font-mono text-[10px] uppercase tracking-[0.16em] transition-colors duration-500 ${isPro ? "text-[#D4A654]" : "text-[rgba(245,240,235,0.3)]"}`}>

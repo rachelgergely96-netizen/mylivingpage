@@ -41,7 +41,7 @@ export default function MockPageContent({ isPro, viewMode }: MockPageContentProp
       </h3>
 
       {/* Bio */}
-      <p className="mb-4 max-w-md text-sm font-light leading-relaxed text-[rgba(245,240,235,0.6)] transition-all duration-500">
+      <p className="mb-4 max-w-md text-sm font-light leading-relaxed text-[rgba(245,240,235,0.78)] transition-all duration-500">
         {VIEW_BIOS[isPro ? viewMode : "story"]}
       </p>
 

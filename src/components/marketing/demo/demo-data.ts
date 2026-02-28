@@ -11,7 +11,7 @@ export const THEME_KEY_MAP: Record<DemoThemeKey, ThemeId> = {
 };
 
 export const THEME_ACCENTS: Record<DemoThemeKey, { dot: string; accent: string }> = {
-  celestial: { dot: "linear-gradient(135deg, #D4A654, #8B6DB5)", accent: "#D4A654" },
+  celestial: { dot: "linear-gradient(135deg, #3B82F6, #6366F1)", accent: "#3B82F6" },
   noir: { dot: "linear-gradient(135deg, #E8E4ED, #3A3A4A)", accent: "#C0B8D0" },
   ocean: { dot: "linear-gradient(135deg, #5BD6C4, #2D5BA6)", accent: "#5BD6C4" },
 };

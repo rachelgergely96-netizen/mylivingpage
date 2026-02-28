@@ -23,11 +23,11 @@ export default function BrowserMockup({
 }: BrowserMockupProps) {
   return (
     <div
-      className={`overflow-hidden rounded-2xl border transition-all duration-500 ${isPro ? "border-[rgba(212,166,84,0.25)] shadow-[0_0_80px_rgba(212,166,84,0.05),0_12px_48px_rgba(0,0,0,0.4)]" : "border-[rgba(255,255,255,0.08)]"}`}
-      style={{ background: "var(--deep-purple, #1a0a2e)" }}
+      className={`overflow-hidden rounded-2xl border transition-all duration-500 ${isPro ? "border-[rgba(59,130,246,0.25)] shadow-[0_0_80px_rgba(59,130,246,0.05),0_12px_48px_rgba(0,0,0,0.4)]" : "border-[rgba(255,255,255,0.08)]"}`}
+      style={{ background: "var(--deep-purple, #0a1628)" }}
     >
       {/* Chrome bar */}
-      <div className="flex items-center gap-2 sm:gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(19,16,27,0.9)] px-3 py-2.5 sm:px-4 sm:py-3">
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(8,14,28,0.9)] px-3 py-2.5 sm:px-4 sm:py-3">
         {/* Dots */}
         <div className="hidden sm:flex gap-[5px]">
           <span className="h-2 w-2 rounded-full" style={{ background: "#ff5f57" }} />
@@ -37,7 +37,7 @@ export default function BrowserMockup({
 
         {/* URL bar */}
         <div
-          className={`flex flex-1 items-center gap-1.5 rounded-md bg-[rgba(255,255,255,0.05)] px-3 py-1.5 font-mono text-[11px] transition-colors duration-500 ${isPro ? "text-[#D4A654]" : "text-[rgba(245,240,235,0.35)]"}`}
+          className={`flex flex-1 items-center gap-1.5 rounded-md bg-[rgba(255,255,255,0.05)] px-3 py-1.5 font-mono text-[11px] transition-colors duration-500 ${isPro ? "text-[#3B82F6]" : "text-[rgba(240,244,255,0.35)]"}`}
         >
           <span className="text-[10px] text-[#5BD67C]">&#x1F512;</span>
           <span>{isPro ? "raysmith.page" : "mylivingpage.com/ray"}</span>
@@ -65,7 +65,7 @@ export default function BrowserMockup({
                 key={mode}
                 type="button"
                 onClick={() => onViewModeChange(mode)}
-                className={`rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.06em] border transition-all duration-200 ${viewMode === mode ? "border-[rgba(212,166,84,0.4)] bg-[rgba(212,166,84,0.15)] text-[#D4A654]" : "border-[rgba(255,255,255,0.06)] text-[rgba(245,240,235,0.3)]"}`}
+                className={`rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.06em] border transition-all duration-200 ${viewMode === mode ? "border-[rgba(59,130,246,0.4)] bg-[rgba(59,130,246,0.15)] text-[#3B82F6]" : "border-[rgba(255,255,255,0.06)] text-[rgba(240,244,255,0.3)]"}`}
               >
                 {mode}
               </button>
@@ -75,7 +75,7 @@ export default function BrowserMockup({
       </div>
 
       {/* Viewport */}
-      <div className="max-h-[75vh] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(212,166,84,0.15) transparent" }}>
+      <div className="max-h-[75vh] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(59,130,246,0.15) transparent" }}>
         {children}
       </div>
     </div>

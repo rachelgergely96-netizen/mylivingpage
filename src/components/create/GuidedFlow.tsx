@@ -59,15 +59,15 @@ const STEP_PROMPTS = [
 /* ── Helpers ────────────────────────────────────────────── */
 
 const inputClass =
-  "w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[#F5F0EB] placeholder:text-[rgba(245,240,235,0.3)] focus:border-[#D4A654] focus:outline-none";
+  "w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none";
 
-const labelClass = "mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]";
+const labelClass = "mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]";
 
 const addBtnClass =
-  "rounded-full border border-dashed border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs text-[rgba(245,240,235,0.5)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A] transition-colors";
+  "rounded-full border border-dashed border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs text-[rgba(240,244,255,0.5)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] transition-colors";
 
 const removeBtnClass =
-  "text-[10px] text-[rgba(245,240,235,0.3)] hover:text-[#ff8e8e] transition-colors";
+  "text-[10px] text-[rgba(240,244,255,0.3)] hover:text-[#ff8e8e] transition-colors";
 
 /* ── Component ──────────────────────────────────────────── */
 
@@ -140,7 +140,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
           className="h-1.5 rounded-full transition-all duration-300"
           style={{
             width: i <= step ? 20 : 12,
-            background: i <= step ? "linear-gradient(90deg, #D4A654, #F0D48A)" : "rgba(255,255,255,0.12)",
+            background: i <= step ? "linear-gradient(90deg, #3B82F6, #93C5FD)" : "rgba(255,255,255,0.12)",
           }}
         />
       ))}
@@ -226,7 +226,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
           className={inputClass}
         />
       </div>
-      <p className="text-xs text-[rgba(245,240,235,0.35)]">All links are optional — skip if none apply.</p>
+      <p className="text-xs text-[rgba(240,244,255,0.35)]">All links are optional — skip if none apply.</p>
     </div>
   );
 
@@ -246,7 +246,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
       {experience.map((exp, i) => (
         <div key={i} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.35)]">Role {i + 1}</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.35)]">Role {i + 1}</p>
             <button type="button" onClick={() => removeExp(i)} className={removeBtnClass}>Remove</button>
           </div>
           <input
@@ -286,7 +286,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
       ))}
       <button type="button" onClick={addExp} className={addBtnClass}>+ Add a role</button>
       {experience.length === 0 && (
-        <p className="text-xs text-[rgba(245,240,235,0.35)]">No experience yet? You can skip this step.</p>
+        <p className="text-xs text-[rgba(240,244,255,0.35)]">No experience yet? You can skip this step.</p>
       )}
     </div>
   );
@@ -313,11 +313,11 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
   const renderEducation = () => (
     <div className="space-y-6">
       <div className="space-y-4">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)]">Education</p>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)]">Education</p>
         {education.map((edu, i) => (
           <div key={i} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.35)]">Degree {i + 1}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.35)]">Degree {i + 1}</p>
               <button type="button" onClick={() => removeEdu(i)} className={removeBtnClass}>Remove</button>
             </div>
             <input
@@ -349,11 +349,11 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)]">Certifications</p>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)]">Certifications</p>
         {certifications.map((cert, i) => (
           <div key={i} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.35)]">Certification {i + 1}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.35)]">Certification {i + 1}</p>
               <button type="button" onClick={() => removeCert(i)} className={removeBtnClass}>Remove</button>
             </div>
             <input
@@ -408,7 +408,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
   const renderSkillsProjects = () => (
     <div className="space-y-6">
       <div className="space-y-4">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)]">Skills</p>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)]">Skills</p>
         {skills.map((group, i) => (
           <div key={i} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -417,7 +417,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
                 value={group.category}
                 onChange={(e) => updateSkill(i, { category: e.target.value })}
                 placeholder="Category (e.g. Languages, Tools)"
-                className="bg-transparent text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)] placeholder:text-[rgba(245,240,235,0.25)] focus:outline-none"
+                className="bg-transparent text-xs font-medium uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)] placeholder:text-[rgba(240,244,255,0.25)] focus:outline-none"
               />
               {skills.length > 1 && (
                 <button type="button" onClick={() => removeSkillGroup(i)} className={removeBtnClass}>Remove</button>
@@ -430,18 +430,18 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
               placeholder="TypeScript, React, Node.js"
               className={inputClass}
             />
-            <p className="text-[10px] text-[rgba(245,240,235,0.25)]">Separate skills with commas</p>
+            <p className="text-[10px] text-[rgba(240,244,255,0.25)]">Separate skills with commas</p>
           </div>
         ))}
         <button type="button" onClick={addSkillGroup} className={addBtnClass}>+ Add skill category</button>
       </div>
 
       <div className="space-y-4">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)]">Projects</p>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)]">Projects</p>
         {projects.map((proj, i) => (
           <div key={i} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.35)]">Project {i + 1}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.35)]">Project {i + 1}</p>
               <button type="button" onClick={() => removeProject(i)} className={removeBtnClass}>Remove</button>
             </div>
             <input
@@ -465,7 +465,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
               placeholder="Next.js, Supabase, Stripe"
               className={inputClass}
             />
-            <p className="text-[10px] text-[rgba(245,240,235,0.25)]">Separate technologies with commas</p>
+            <p className="text-[10px] text-[rgba(240,244,255,0.25)]">Separate technologies with commas</p>
           </div>
         ))}
         <button type="button" onClick={addProject} className={addBtnClass}>+ Add project</button>
@@ -490,7 +490,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
     <div className="space-y-6">
       <div>
         <label className={labelClass}>Professional Summary</label>
-        <p className="mb-2 text-xs text-[rgba(245,240,235,0.35)]">In 2-3 sentences, what makes you great at what you do?</p>
+        <p className="mb-2 text-xs text-[rgba(240,244,255,0.35)]">In 2-3 sentences, what makes you great at what you do?</p>
         <textarea
           value={summary}
           onChange={(e) => set({ summary: e.target.value })}
@@ -502,8 +502,8 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
 
       <div className="space-y-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(245,240,235,0.5)]">Highlight Stats</p>
-          <p className="mt-1 text-xs text-[rgba(245,240,235,0.35)]">Up to 4 standout numbers (e.g. {'"'}8+{'"'} / {'"'}Years Experience{'"'})</p>
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)]">Highlight Stats</p>
+          <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">Up to 4 standout numbers (e.g. {'"'}8+{'"'} / {'"'}Years Experience{'"'})</p>
         </div>
         {stats.map((stat, i) => (
           <div key={i} className="flex items-center gap-3">
@@ -537,9 +537,9 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
   return (
     <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
       {progressDots}
-      <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Step 1 · {step + 1} of {TOTAL_STEPS}</p>
-      <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F5F0EB]">{STEP_PROMPTS[step].heading}</h2>
-      <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(245,240,235,0.55)]">{STEP_PROMPTS[step].sub}</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1 · {step + 1} of {TOTAL_STEPS}</p>
+      <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">{STEP_PROMPTS[step].heading}</h2>
+      <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">{STEP_PROMPTS[step].sub}</p>
 
       {stepRenderers[step]()}
 
@@ -547,7 +547,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
         <button
           type="button"
           onClick={goBack}
-          className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(245,240,235,0.7)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A]"
+          className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
         >
           Back
         </button>
@@ -555,7 +555,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
           type="button"
           disabled={!canContinue()}
           onClick={goNext}
-          className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {step < TOTAL_STEPS - 1 ? "Continue" : "Continue to Theme Selection"}
         </button>

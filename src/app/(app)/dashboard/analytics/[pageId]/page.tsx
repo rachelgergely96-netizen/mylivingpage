@@ -96,7 +96,7 @@ export default async function AnalyticsPage({
       <div className="mb-6 sm:mb-8">
         <Link
           href="/dashboard"
-          className="mb-3 inline-flex items-center gap-1.5 text-xs text-[rgba(245,240,235,0.5)] transition-colors hover:text-[#F0D48A]"
+          className="mb-3 inline-flex items-center gap-1.5 text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
         >
           <svg
             className="h-3.5 w-3.5"
@@ -114,13 +114,13 @@ export default async function AnalyticsPage({
           Back to Dashboard
         </Link>
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">
             Analytics
           </p>
-          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F5F0EB]">
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">
             {pageName}
           </h1>
-          <p className="mt-1 text-sm text-[rgba(245,240,235,0.45)]">
+          <p className="mt-1 text-sm text-[rgba(240,244,255,0.45)]">
             /{typedPage.slug}
           </p>
         </div>

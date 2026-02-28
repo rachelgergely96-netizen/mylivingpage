@@ -48,7 +48,7 @@ export default function PageOwnerBar({ pageId, pageUserId }: PageOwnerBarProps) 
     <div className="fixed left-0 right-0 top-0 z-50 mx-auto flex w-full max-w-6xl items-center justify-between gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 md:px-8">
       <Link
         href="/dashboard"
-        className="flex items-center gap-1.5 text-xs text-[rgba(245,240,235,0.5)] transition-colors hover:text-[#F0D48A]"
+        className="flex items-center gap-1.5 text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
       >
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -58,7 +58,7 @@ export default function PageOwnerBar({ pageId, pageUserId }: PageOwnerBarProps) 
       <div className="flex items-center gap-1.5 sm:gap-2">
         <Link
           href={`/dashboard/edit/${pageId}`}
-          className="rounded-full border border-[rgba(212,166,84,0.3)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#D4A654] transition-colors hover:bg-[rgba(212,166,84,0.08)] hover:text-[#F0D48A]"
+          className="rounded-full border border-[rgba(59,130,246,0.3)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#3B82F6] transition-colors hover:bg-[rgba(59,130,246,0.08)] hover:text-[#93C5FD]"
         >
           Edit
         </Link>

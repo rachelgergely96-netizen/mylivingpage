@@ -42,7 +42,7 @@ export default function WaitlistForm() {
   return (
     <form onSubmit={onSubmit} className="mx-auto mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row">
       <input
-        className="h-12 w-full rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)] px-5 text-sm text-[#F5F0EB] placeholder:text-[rgba(245,240,235,0.35)] focus:border-[#D4A654] focus:outline-none"
+        className="h-12 w-full rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)] px-5 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
@@ -52,12 +52,12 @@ export default function WaitlistForm() {
       <button
         type="submit"
         disabled={status === "loading"}
-        className="gold-pill h-12 shrink-0 px-7 text-sm font-semibold transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
+        className="gold-pill h-12 shrink-0 px-7 text-sm font-semibold transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {status === "loading" ? "Joining..." : "Join Waitlist"}
       </button>
       {message ? (
-        <p className={`w-full text-xs ${status === "error" ? "text-[#ff8e8e]" : "text-[#D4A654]"}`}>{message}</p>
+        <p className={`w-full text-xs ${status === "error" ? "text-[#ff8e8e]" : "text-[#3B82F6]"}`}>{message}</p>
       ) : null}
     </form>
   );

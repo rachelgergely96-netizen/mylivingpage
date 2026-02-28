@@ -26,10 +26,10 @@ interface AnalyticsChartsProps {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className="font-mono text-2xl sm:text-3xl font-bold text-[#F0D48A]">
+      <p className="font-mono text-2xl sm:text-3xl font-bold text-[#93C5FD]">
         {value.toLocaleString()}
       </p>
-      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">
+      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
         {label}
       </p>
     </div>
@@ -41,7 +41,7 @@ function DailyChart({ dailyViews }: { dailyViews: DailyView[] }) {
 
   return (
     <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">
+      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
         Views — Last 30 Days
       </p>
       <div className="flex items-end gap-[3px] sm:gap-1" style={{ height: 120 }}>
@@ -54,10 +54,10 @@ function DailyChart({ dailyViews }: { dailyViews: DailyView[] }) {
               style={{ height: "100%" }}
             >
               <div
-                className="absolute bottom-0 w-full rounded-t-sm bg-[#D4A654] opacity-70 transition-opacity group-hover:opacity-100"
+                className="absolute bottom-0 w-full rounded-t-sm bg-[#3B82F6] opacity-70 transition-opacity group-hover:opacity-100"
                 style={{ height: `${Math.max(height, 2)}%` }}
               />
-              <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-[rgba(26,10,46,0.95)] px-2 py-1 text-[10px] text-[rgba(245,240,235,0.8)] shadow group-hover:block">
+              <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-[rgba(10,22,40,0.95)] px-2 py-1 text-[10px] text-[rgba(240,244,255,0.8)] shadow group-hover:block">
                 {day.count} view{day.count !== 1 ? "s" : ""}
                 <br />
                 {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
@@ -69,7 +69,7 @@ function DailyChart({ dailyViews }: { dailyViews: DailyView[] }) {
           );
         })}
       </div>
-      <div className="mt-2 flex justify-between text-[10px] text-[rgba(245,240,235,0.25)]">
+      <div className="mt-2 flex justify-between text-[10px] text-[rgba(240,244,255,0.25)]">
         <span>
           {dailyViews.length > 0
             ? new Date(dailyViews[0].date + "T00:00:00").toLocaleDateString("en-US", {
@@ -95,11 +95,11 @@ function ReferrerList({ referrers }: { referrers: ReferrerEntry[] }) {
 
   return (
     <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">
+      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
         Top Referrers
       </p>
       {referrers.length === 0 ? (
-        <p className="text-sm text-[rgba(245,240,235,0.35)]">No referrer data yet.</p>
+        <p className="text-sm text-[rgba(240,244,255,0.35)]">No referrer data yet.</p>
       ) : (
         <div className="space-y-2.5">
           {referrers.slice(0, 8).map((ref) => {
@@ -107,16 +107,16 @@ function ReferrerList({ referrers }: { referrers: ReferrerEntry[] }) {
             return (
               <div key={ref.domain}>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="truncate text-[rgba(245,240,235,0.75)]">
+                  <span className="truncate text-[rgba(240,244,255,0.75)]">
                     {ref.domain}
                   </span>
-                  <span className="ml-3 shrink-0 font-mono text-xs text-[rgba(245,240,235,0.4)]">
+                  <span className="ml-3 shrink-0 font-mono text-xs text-[rgba(240,244,255,0.4)]">
                     {pct}%
                   </span>
                 </div>
                 <div className="mt-1 h-1 w-full rounded-full bg-[rgba(255,255,255,0.06)]">
                   <div
-                    className="h-full rounded-full bg-[#D4A654] opacity-60"
+                    className="h-full rounded-full bg-[#3B82F6] opacity-60"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -134,11 +134,11 @@ function DeviceBreakdown({ devices }: { devices: DeviceEntry[] }) {
 
   return (
     <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(245,240,235,0.4)]">
+      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
         Devices
       </p>
       {devices.every((d) => d.count === 0) ? (
-        <p className="text-sm text-[rgba(245,240,235,0.35)]">No device data yet.</p>
+        <p className="text-sm text-[rgba(240,244,255,0.35)]">No device data yet.</p>
       ) : (
         <div className="space-y-2.5">
           {devices.map((device) => {
@@ -146,14 +146,14 @@ function DeviceBreakdown({ devices }: { devices: DeviceEntry[] }) {
             return (
               <div key={device.type}>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[rgba(245,240,235,0.75)]">{device.type}</span>
-                  <span className="font-mono text-xs text-[rgba(245,240,235,0.4)]">
+                  <span className="text-[rgba(240,244,255,0.75)]">{device.type}</span>
+                  <span className="font-mono text-xs text-[rgba(240,244,255,0.4)]">
                     {pct}%
                   </span>
                 </div>
                 <div className="mt-1 h-1 w-full rounded-full bg-[rgba(255,255,255,0.06)]">
                   <div
-                    className="h-full rounded-full bg-[#D4A654] opacity-60"
+                    className="h-full rounded-full bg-[#3B82F6] opacity-60"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -178,8 +178,8 @@ export default function AnalyticsCharts({
   if (totalViews === 0 && last30 === 0) {
     return (
       <div className="glass-card rounded-2xl p-6 sm:p-8 text-center">
-        <p className="font-heading text-xl text-[#F5F0EB]">No views yet</p>
-        <p className="mt-2 text-sm text-[rgba(245,240,235,0.5)]">
+        <p className="font-heading text-xl text-[#F0F4FF]">No views yet</p>
+        <p className="mt-2 text-sm text-[rgba(240,244,255,0.5)]">
           Share your page to start seeing analytics. Views will appear here once visitors arrive.
         </p>
       </div>

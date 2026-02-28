@@ -15,17 +15,17 @@ export default function ExamplesPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(26,10,46,0.72)] backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
         <nav className="mx-auto flex h-16 sm:h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 md:px-10">
           <Link
             href="/"
-            className="font-heading text-xl sm:text-2xl font-bold text-[#F5F0EB]"
+            className="font-heading text-xl sm:text-2xl font-bold text-[#F0F4FF]"
           >
-            my<span className="text-[#D4A654]">living</span>page
+            my<span className="text-[#3B82F6]">living</span>page
           </Link>
           <Link
             href="/signup"
-            className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(212,166,84,0.3)]"
+            className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
           >
             Create Yours
           </Link>
@@ -35,13 +35,13 @@ export default function ExamplesPage() {
       <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-16 md:px-10">
         {/* Hero */}
         <div className="mb-10 sm:mb-14 text-center">
-          <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#D4A654]">
+          <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#3B82F6]">
             Examples
           </p>
-          <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-[#F5F0EB]">
+          <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-[#F0F4FF]">
             See what a living page looks like
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(245,240,235,0.6)]">
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
             Each page pairs structured resume data with a unique algorithmic art
             theme. Hover to interact with the backgrounds.
           </p>
@@ -54,7 +54,7 @@ export default function ExamplesPage() {
             return (
               <article
                 key={demo.data.name}
-                className="group overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] transition-all duration-300 ease-soft hover:border-[rgba(212,166,84,0.2)]"
+                className="group overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] transition-all duration-300 ease-soft hover:border-[rgba(59,130,246,0.2)]"
               >
                 {/* Live theme preview */}
                 <div className="relative h-[420px] sm:h-[460px] overflow-hidden">
@@ -73,10 +73,10 @@ export default function ExamplesPage() {
                 <div className="border-t border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-4 py-3 sm:px-5 sm:py-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-heading text-sm font-bold text-[#F5F0EB]">
+                      <p className="font-heading text-sm font-bold text-[#F0F4FF]">
                         {theme?.name ?? demo.themeId}
                       </p>
-                      <p className="text-[11px] text-[rgba(245,240,235,0.45)]">
+                      <p className="text-[11px] text-[rgba(240,244,255,0.45)]">
                         {theme?.vibe}
                       </p>
                     </div>
@@ -96,12 +96,12 @@ export default function ExamplesPage() {
 
         {/* CTA */}
         <div className="mt-12 sm:mt-16 text-center">
-          <p className="mb-4 text-sm text-[rgba(245,240,235,0.5)]">
+          <p className="mb-4 text-sm text-[rgba(240,244,255,0.5)]">
             Ready to build yours?
           </p>
           <Link
             href="/signup"
-            className="gold-pill inline-block px-8 py-4 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(212,166,84,0.38)]"
+            className="gold-pill inline-block px-8 py-4 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
           >
             Create Your Living Page
           </Link>

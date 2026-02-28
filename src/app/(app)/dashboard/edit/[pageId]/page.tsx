@@ -156,8 +156,8 @@ export default function EditPage() {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 md:px-10">
         <div className="glass-card rounded-2xl p-6 sm:p-8 text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[rgba(212,166,84,0.2)] border-t-[#D4A654]" />
-          <p className="mt-4 text-sm text-[rgba(245,240,235,0.5)]">Loading page...</p>
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[rgba(59,130,246,0.2)] border-t-[#3B82F6]" />
+          <p className="mt-4 text-sm text-[rgba(240,244,255,0.5)]">Loading page...</p>
         </div>
       </main>
     );
@@ -178,14 +178,14 @@ export default function EditPage() {
       {/* Header */}
       <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4A654]">Edit Page</p>
-          <h1 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F5F0EB]">{data.name}</h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Edit Page</p>
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">{data.name}</h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
-            className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 sm:px-5 sm:py-2.5 text-xs uppercase tracking-[0.14em] text-[rgba(245,240,235,0.6)] hover:text-[#F0D48A]"
+            className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 sm:px-5 sm:py-2.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#93C5FD]"
           >
             Back
           </button>
@@ -193,7 +193,7 @@ export default function EditPage() {
             type="button"
             disabled={saving || slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking"}
             onClick={save}
-            className="gold-pill px-5 py-2 sm:px-6 sm:py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(212,166,84,0.35)] disabled:opacity-60"
+            className="gold-pill px-5 py-2 sm:px-6 sm:py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -212,9 +212,9 @@ export default function EditPage() {
             onClick={() => setTab(t)}
             className="flex-1 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] transition-all"
             style={{
-              background: tab === t ? "rgba(212,166,84,0.12)" : "transparent",
-              color: tab === t ? "#F0D48A" : "rgba(245,240,235,0.45)",
-              borderColor: tab === t ? "rgba(212,166,84,0.25)" : "transparent",
+              background: tab === t ? "rgba(59,130,246,0.12)" : "transparent",
+              color: tab === t ? "#93C5FD" : "rgba(240,244,255,0.45)",
+              borderColor: tab === t ? "rgba(59,130,246,0.25)" : "transparent",
             }}
           >
             {t}
@@ -227,20 +227,20 @@ export default function EditPage() {
         <div className="space-y-5">
           {/* Page URL */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Page URL</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Page URL</legend>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
-              <span className="rounded-lg sm:rounded-l-lg sm:rounded-r-none border sm:border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(245,240,235,0.45)]">
+              <span className="rounded-lg sm:rounded-l-lg sm:rounded-r-none border sm:border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(240,244,255,0.45)]">
                 mylivingpage.com/
               </span>
               <input
                 type="text"
                 value={customSlug}
                 onChange={(e) => handleSlugChange(e.target.value)}
-                className="flex-1 rounded-lg sm:rounded-l-none sm:rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
+                className="flex-1 rounded-lg sm:rounded-l-none sm:rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD] focus:border-[#3B82F6] focus:outline-none"
               />
             </div>
             {slugMessage ? (
-              <p className={`text-xs ${slugStatus === "available" ? "text-[#88ee88]" : slugStatus === "checking" ? "text-[rgba(245,240,235,0.4)]" : "text-[#ff8e8e]"}`}>
+              <p className={`text-xs ${slugStatus === "available" ? "text-[#88ee88]" : slugStatus === "checking" ? "text-[rgba(240,244,255,0.4)]" : "text-[#ff8e8e]"}`}>
                 {slugStatus === "checking" ? "Checking..." : slugMessage}
               </p>
             ) : null}
@@ -248,47 +248,47 @@ export default function EditPage() {
 
           {/* Basic Info */}
           <fieldset className="glass-card space-y-4 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Basic Info</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Basic Info</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">Name</span>
-                <input type="text" value={data.name} onChange={(e) => updateField("name", e.target.value)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">Name</span>
+                <input type="text" value={data.name} onChange={(e) => updateField("name", e.target.value)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">Headline</span>
-                <input type="text" value={data.headline} onChange={(e) => updateField("headline", e.target.value)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">Headline</span>
+                <input type="text" value={data.headline} onChange={(e) => updateField("headline", e.target.value)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">Location</span>
-                <input type="text" value={data.location} onChange={(e) => updateField("location", e.target.value)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">Location</span>
+                <input type="text" value={data.location} onChange={(e) => updateField("location", e.target.value)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">Email</span>
-                <input type="email" value={data.email ?? ""} onChange={(e) => updateField("email", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">Email</span>
+                <input type="email" value={data.email ?? ""} onChange={(e) => updateField("email", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">LinkedIn</span>
-                <input type="text" value={data.linkedin ?? ""} onChange={(e) => updateField("linkedin", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">LinkedIn</span>
+                <input type="text" value={data.linkedin ?? ""} onChange={(e) => updateField("linkedin", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">GitHub</span>
-                <input type="text" value={data.github ?? ""} onChange={(e) => updateField("github", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">GitHub</span>
+                <input type="text" value={data.github ?? ""} onChange={(e) => updateField("github", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(245,240,235,0.4)]">Website</span>
-                <input type="text" value={data.website ?? ""} onChange={(e) => updateField("website", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">Website</span>
+                <input type="text" value={data.website ?? ""} onChange={(e) => updateField("website", e.target.value || null)} className="mt-1 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
               </label>
             </div>
           </fieldset>
 
           {/* Profile Photo */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Profile Photo</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Profile Photo</legend>
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               {data.avatar_url ? (
-                <img src={data.avatar_url} alt="Avatar" className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover ring-2 ring-[#D4A654] shadow-[0_0_28px_rgba(212,166,84,0.3)]" />
+                <img src={data.avatar_url} alt="Avatar" className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover ring-2 ring-[#3B82F6] shadow-[0_0_28px_rgba(59,130,246,0.3)]" />
               ) : (
-                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4A654] to-[#E8845C] font-heading text-xl sm:text-2xl font-bold text-[#1A0A2E] shadow-[0_0_28px_rgba(212,166,84,0.3)]">
+                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#E8845C] font-heading text-xl sm:text-2xl font-bold text-[#0a1628] shadow-[0_0_28px_rgba(59,130,246,0.3)]">
                   {(data.name || "?").slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -308,16 +308,16 @@ export default function EditPage() {
                   type="button"
                   disabled={uploadingAvatar}
                   onClick={() => avatarInputRef.current?.click()}
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-1.5 text-xs uppercase tracking-[0.12em] text-[rgba(245,240,235,0.7)] hover:border-[rgba(212,166,84,0.35)] hover:text-[#F0D48A] disabled:opacity-50"
+                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-1.5 text-xs uppercase tracking-[0.12em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50"
                 >
                   {uploadingAvatar ? "Uploading..." : data.avatar_url ? "Change Photo" : "Upload Photo"}
                 </button>
                 {data.avatar_url ? (
-                  <button type="button" onClick={removeAvatar} className="text-xs text-[rgba(245,240,235,0.35)] hover:text-[#ff8e8e]">
+                  <button type="button" onClick={removeAvatar} className="text-xs text-[rgba(240,244,255,0.35)] hover:text-[#ff8e8e]">
                     Remove &middot; use monogram
                   </button>
                 ) : (
-                  <p className="text-[10px] text-[rgba(245,240,235,0.3)]">Optional &middot; JPEG, PNG, or WebP under 2 MB</p>
+                  <p className="text-[10px] text-[rgba(240,244,255,0.3)]">Optional &middot; JPEG, PNG, or WebP under 2 MB</p>
                 )}
               </div>
             </div>
@@ -325,18 +325,18 @@ export default function EditPage() {
 
           {/* Summary */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Summary</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Summary</legend>
             <textarea
               value={data.summary}
               onChange={(e) => updateField("summary", e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm leading-6 text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none"
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm leading-6 text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
             />
           </fieldset>
 
           {/* Stats */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Stats</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Stats</legend>
             {data.stats?.map((stat, i) => (
               <div key={i} className="flex gap-3">
                 <input
@@ -348,7 +348,7 @@ export default function EditPage() {
                     updateField("stats", next);
                   }}
                   placeholder="Value"
-                  className="w-28 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0D48A] focus:border-[#D4A654] focus:outline-none"
+                  className="w-28 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD] focus:border-[#3B82F6] focus:outline-none"
                 />
                 <input
                   type="text"
@@ -359,7 +359,7 @@ export default function EditPage() {
                     updateField("stats", next);
                   }}
                   placeholder="Label"
-                  className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none"
+                  className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
                 />
                 <button
                   type="button"
@@ -374,7 +374,7 @@ export default function EditPage() {
               <button
                 type="button"
                 onClick={() => updateField("stats", [...(data.stats ?? []), { value: "", label: "" }])}
-                className="text-xs text-[#D4A654] hover:text-[#F0D48A]"
+                className="text-xs text-[#3B82F6] hover:text-[#93C5FD]"
               >
                 + Add Stat
               </button>
@@ -383,20 +383,20 @@ export default function EditPage() {
 
           {/* Experience */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Experience</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Experience</legend>
             {data.experience?.map((exp, i) => (
               <div key={i} className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4">
                 <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
-                  <input type="text" value={exp.title} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], title: e.target.value }; updateField("experience", next); }} placeholder="Title" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
-                  <input type="text" value={exp.company} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], company: e.target.value }; updateField("experience", next); }} placeholder="Company" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
-                  <input type="text" value={exp.dates} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], dates: e.target.value }; updateField("experience", next); }} placeholder="Dates" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                  <input type="text" value={exp.title} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], title: e.target.value }; updateField("experience", next); }} placeholder="Title" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                  <input type="text" value={exp.company} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], company: e.target.value }; updateField("experience", next); }} placeholder="Company" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                  <input type="text" value={exp.dates} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], dates: e.target.value }; updateField("experience", next); }} placeholder="Dates" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
                 </div>
                 <textarea
                   value={exp.highlights?.join("\n") ?? ""}
                   onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], highlights: e.target.value.split("\n").filter(Boolean) }; updateField("experience", next); }}
                   rows={2}
                   placeholder="Highlights (one per line)"
-                  className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs leading-5 text-[rgba(245,240,235,0.6)] focus:border-[#D4A654] focus:outline-none"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs leading-5 text-[rgba(240,244,255,0.6)] focus:border-[#3B82F6] focus:outline-none"
                 />
                 <button type="button" onClick={() => updateField("experience", data.experience.filter((_, idx) => idx !== i))} className="text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">
                   Remove
@@ -406,7 +406,7 @@ export default function EditPage() {
             <button
               type="button"
               onClick={() => updateField("experience", [...(data.experience ?? []), { title: "", company: "", dates: "", highlights: [] }])}
-              className="text-xs text-[#D4A654] hover:text-[#F0D48A]"
+              className="text-xs text-[#3B82F6] hover:text-[#93C5FD]"
             >
               + Add Experience
             </button>
@@ -414,16 +414,16 @@ export default function EditPage() {
 
           {/* Education */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#D4A654]">Education</legend>
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Education</legend>
             {data.education?.map((edu, i) => (
               <div key={i} className="flex flex-wrap gap-2">
-                <input type="text" value={edu.degree} onChange={(e) => { const next = [...data.education]; next[i] = { ...next[i], degree: e.target.value }; updateField("education", next); }} placeholder="Degree" className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
-                <input type="text" value={edu.school} onChange={(e) => { const next = [...data.education]; next[i] = { ...next[i], school: e.target.value }; updateField("education", next); }} placeholder="School" className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
-                <input type="text" value={edu.year} onChange={(e) => { const next = [...data.education]; next[i] = { ...next[i], year: e.target.value }; updateField("education", next); }} placeholder="Year" className="w-24 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F5F0EB] focus:border-[#D4A654] focus:outline-none" />
+                <input type="text" value={edu.degree} onChange={(e) => { const next = [...data.education]; next[i] = { ...next[i], degree: e.target.value }; updateField("education", next); }} placeholder="Degree" className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <input type="text" value={edu.school} onChange={(e) => { const next = [...data.education]; next[i] = { ...next[i], school: e.target.value }; updateField("education", next); }} placeholder="School" className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <input type="text" value={edu.year} onChange={(e) => { const next = [...data.education]; next[i] = { ...next[i], year: e.target.value }; updateField("education", next); }} placeholder="Year" className="w-24 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
                 <button type="button" onClick={() => updateField("education", data.education.filter((_, idx) => idx !== i))} className="rounded-lg border border-[rgba(255,120,120,0.2)] px-3 py-2 text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
               </div>
             ))}
-            <button type="button" onClick={() => updateField("education", [...(data.education ?? []), { degree: "", school: "", year: "" }])} className="text-xs text-[#D4A654] hover:text-[#F0D48A]">+ Add Education</button>
+            <button type="button" onClick={() => updateField("education", [...(data.education ?? []), { degree: "", school: "", year: "" }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Education</button>
           </fieldset>
         </div>
       ) : null}
@@ -438,13 +438,13 @@ export default function EditPage() {
               onClick={() => setThemeId(theme.id)}
               className="glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft hover:-translate-y-1"
               style={{
-                borderColor: themeId === theme.id ? "rgba(212,166,84,0.38)" : "rgba(255,255,255,0.08)",
-                background: themeId === theme.id ? "rgba(212,166,84,0.07)" : "rgba(255,255,255,0.03)",
+                borderColor: themeId === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
+                background: themeId === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
               }}
             >
               <ThemeCanvas themeId={theme.id} height={120} />
               <p className="mt-3 font-heading text-xl">{theme.name}</p>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#D4A654]">{theme.vibe}</p>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
             </button>
           ))}
         </div>
@@ -452,13 +452,13 @@ export default function EditPage() {
 
       {/* Preview Tab */}
       {tab === "preview" ? (
-        <div className="overflow-hidden rounded-2xl border border-[rgba(212,166,84,0.18)]">
+        <div className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.18)]">
           <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
             <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-            <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(245,240,235,0.5)]">
-              mylivingpage.com/<span className="text-[#F0D48A]">{page?.slug}</span>
+            <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
+              mylivingpage.com/<span className="text-[#93C5FD]">{page?.slug}</span>
             </div>
           </div>
           <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">

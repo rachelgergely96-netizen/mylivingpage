@@ -5,12 +5,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        gold: "#D4A654",
-        "gold-light": "#F0D48A",
-        "deep-purple": "#1A0A2E",
-        "mid-purple": "#0F0519",
-        "rich-purple": "#120A20",
-        "text-primary": "#F5F0EB",
+        gold: "#3B82F6",
+        "gold-light": "#93C5FD",
+        "deep-purple": "#0A1628",
+        "mid-purple": "#060E1C",
+        "rich-purple": "#081222",
+        "text-primary": "#F0F4FF",
       },
       fontFamily: {
         heading: ["var(--font-playfair)", "serif"],
@@ -21,7 +21,7 @@ const config: Config = {
         soft: "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       boxShadow: {
-        glow: "0 0 40px rgba(212, 166, 84, 0.2)",
+        glow: "0 0 40px rgba(59, 130, 246, 0.2)",
       },
     },
   },

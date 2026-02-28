@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --gold: #d4a654;
-  --gold-light: #f0d48a;
-  --deep-purple: #1a0a2e;
-  --mid-purple: #0f0519;
-  --rich-purple: #120a20;
-  --text-primary: #f5f0eb;
-  --text-secondary: rgba(245, 240, 235, 0.55);
-  --text-muted: rgba(245, 240, 235, 0.28);
+  --gold: #3b82f6;
+  --gold-light: #93c5fd;
+  --deep-purple: #0a1628;
+  --mid-purple: #060e1c;
+  --rich-purple: #081222;
+  --text-primary: #f0f4ff;
+  --text-secondary: rgba(240, 244, 255, 0.55);
+  --text-muted: rgba(240, 244, 255, 0.28);
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
 }
@@ -62,7 +62,7 @@ a {
 
 .gold-pill {
   background: linear-gradient(135deg, var(--gold), var(--gold-light));
-  color: var(--deep-purple);
+  color: #ffffff;
   border-radius: 999px;
 }
 

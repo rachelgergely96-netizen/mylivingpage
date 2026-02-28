@@ -22,24 +22,24 @@ export default function AiGeneratorPreview({ isPro }: AiGeneratorPreviewProps) {
   }, [isPro]);
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(26,10,46,0.85)] p-4">
+    <div className="relative overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.85)] p-4">
       {/* Lock overlay */}
       <div
-        className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-[rgba(11,8,20,0.72)] backdrop-blur-[4px] transition-opacity duration-500 ${isPro ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-[rgba(6,10,24,0.72)] backdrop-blur-[4px] transition-opacity duration-500 ${isPro ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
         <span className="text-lg">&#x1F512;</span>
-        <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#D4A654]">Pro &mdash; AI Content</span>
+        <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#3B82F6]">Pro &mdash; AI Content</span>
       </div>
 
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[#D4A654]">&#x2728; AI Content Generator</p>
-      <p className="mb-3 text-[13px] text-[rgba(245,240,235,0.5)]">{AI_PROMPT}</p>
+      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[#3B82F6]">&#x2728; AI Content Generator</p>
+      <p className="mb-3 text-[13px] text-[rgba(240,244,255,0.5)]">{AI_PROMPT}</p>
 
       {/* Output */}
-      <div className="min-h-[60px] rounded-lg bg-[rgba(255,255,255,0.03)] p-3 text-xs leading-relaxed text-[rgba(245,240,235,0.65)]" style={{ whiteSpace: "pre-wrap" }}>
+      <div className="min-h-[60px] rounded-lg bg-[rgba(255,255,255,0.03)] p-3 text-xs leading-relaxed text-[rgba(240,244,255,0.65)]" style={{ whiteSpace: "pre-wrap" }}>
         {displayed}
         {isPro && typing && displayed.length < AI_OUTPUT.length && (
           <span
-            className="ml-0.5 inline-block h-3.5 w-[2px] align-text-bottom bg-[#D4A654]"
+            className="ml-0.5 inline-block h-3.5 w-[2px] align-text-bottom bg-[#3B82F6]"
             style={{ animation: "blink 0.8s ease infinite" }}
           />
         )}
@@ -47,7 +47,7 @@ export default function AiGeneratorPreview({ isPro }: AiGeneratorPreviewProps) {
 
       {/* Actions */}
       <div className="mt-3 flex gap-2">
-        <button type="button" className="rounded-md border border-[rgba(212,166,84,0.4)] bg-[rgba(212,166,84,0.1)] px-3 py-1.5 font-mono text-[10px] text-[#D4A654]">
+        <button type="button" className="rounded-md border border-[rgba(59,130,246,0.4)] bg-[rgba(59,130,246,0.1)] px-3 py-1.5 font-mono text-[10px] text-[#3B82F6]">
           Copy to LinkedIn
         </button>
         <button
@@ -58,7 +58,7 @@ export default function AiGeneratorPreview({ isPro }: AiGeneratorPreviewProps) {
               setTimeout(() => setTyping(true), 100);
             }
           }}
-          className="rounded-md border border-[rgba(255,255,255,0.08)] px-3 py-1.5 font-mono text-[10px] text-[rgba(245,240,235,0.3)]"
+          className="rounded-md border border-[rgba(255,255,255,0.08)] px-3 py-1.5 font-mono text-[10px] text-[rgba(240,244,255,0.3)]"
         >
           Regenerate
         </button>

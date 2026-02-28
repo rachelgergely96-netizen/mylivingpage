@@ -80,14 +80,14 @@ export default async function OGImage({ params }: { params: { username: string }
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #1A0A2E 0%, #0F0519 100%)",
+            background: "linear-gradient(135deg, #0a1628 0%, #0F0519 100%)",
             fontFamily: "Playfair",
           }}
         >
-          <div style={{ display: "flex", alignItems: "baseline", fontSize: 48, fontWeight: 700, color: "#F5F0EB" }}>
-            my<span style={{ color: "#D4A654" }}>living</span>page
+          <div style={{ display: "flex", alignItems: "baseline", fontSize: 48, fontWeight: 700, color: "#F0F4FF" }}>
+            my<span style={{ color: "#3B82F6" }}>living</span>page
           </div>
-          <div style={{ marginTop: 20, fontSize: 22, color: "rgba(245,240,235,0.6)", fontFamily: "DM Sans" }}>
+          <div style={{ marginTop: 20, fontSize: 22, color: "rgba(240,244,255,0.6)", fontFamily: "DM Sans" }}>
             Your resume, alive.
           </div>
         </div>
@@ -119,7 +119,7 @@ export default async function OGImage({ params }: { params: { username: string }
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "linear-gradient(145deg, #1A0A2E 0%, #120A20 60%, #0F0519 100%)",
+          background: "linear-gradient(145deg, #0a1628 0%, #120A20 60%, #0F0519 100%)",
           padding: "60px 70px 50px",
           fontFamily: "DM Sans",
           position: "relative",
@@ -149,8 +149,8 @@ export default async function OGImage({ params }: { params: { username: string }
               style={{
                 borderRadius: "50%",
                 objectFit: "cover",
-                border: "3px solid #D4A654",
-                boxShadow: "0 0 30px rgba(212,166,84,0.25)",
+                border: "3px solid #3B82F6",
+                boxShadow: "0 0 30px rgba(59,130,246,0.25)",
               }}
             />
           ) : (
@@ -162,12 +162,12 @@ export default async function OGImage({ params }: { params: { username: string }
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "linear-gradient(135deg, #D4A654, #E8845C)",
+                background: "linear-gradient(135deg, #3B82F6, #E8845C)",
                 fontSize: 38,
                 fontWeight: 700,
                 fontFamily: "Playfair",
-                color: "#1A0A2E",
-                boxShadow: "0 0 30px rgba(212,166,84,0.25)",
+                color: "#0a1628",
+                boxShadow: "0 0 30px rgba(59,130,246,0.25)",
               }}
             >
               {initial}
@@ -179,7 +179,7 @@ export default async function OGImage({ params }: { params: { username: string }
                 fontSize: 42,
                 fontWeight: 700,
                 fontFamily: "Playfair",
-                color: "#F5F0EB",
+                color: "#F0F4FF",
                 lineHeight: 1.1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -192,7 +192,7 @@ export default async function OGImage({ params }: { params: { username: string }
               style={{
                 marginTop: 6,
                 fontSize: 20,
-                color: "rgba(245,240,235,0.75)",
+                color: "rgba(240,244,255,0.75)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -201,7 +201,7 @@ export default async function OGImage({ params }: { params: { username: string }
               {resume.headline}
             </div>
             {resume.location ? (
-              <div style={{ marginTop: 4, fontSize: 16, color: "rgba(245,240,235,0.45)" }}>
+              <div style={{ marginTop: 4, fontSize: 16, color: "rgba(240,244,255,0.45)" }}>
                 {resume.location}
               </div>
             ) : null}
@@ -215,7 +215,7 @@ export default async function OGImage({ params }: { params: { username: string }
               marginTop: 36,
               fontSize: 19,
               lineHeight: 1.55,
-              color: "rgba(245,240,235,0.58)",
+              color: "rgba(240,244,255,0.58)",
               maxWidth: 900,
             }}
           >
@@ -231,19 +231,19 @@ export default async function OGImage({ params }: { params: { username: string }
           style={{
             width: "100%",
             height: 1,
-            background: "linear-gradient(90deg, #D4A654, rgba(212,166,84,0.15))",
+            background: "linear-gradient(90deg, #3B82F6, rgba(59,130,246,0.15))",
             marginBottom: 28,
           }}
         />
 
         {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "baseline", fontSize: 24, fontWeight: 700, fontFamily: "Playfair", color: "#F5F0EB" }}>
-            my<span style={{ color: "#D4A654" }}>living</span>page
+          <div style={{ display: "flex", alignItems: "baseline", fontSize: 24, fontWeight: 700, fontFamily: "Playfair", color: "#F0F4FF" }}>
+            my<span style={{ color: "#3B82F6" }}>living</span>page
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ fontSize: 18, color: "rgba(245,240,235,0.5)", fontFamily: "DM Sans" }}>
-              mylivingpage.com/<span style={{ color: "#F0D48A" }}>{page.slug}</span>
+            <div style={{ fontSize: 18, color: "rgba(240,244,255,0.5)", fontFamily: "DM Sans" }}>
+              mylivingpage.com/<span style={{ color: "#93C5FD" }}>{page.slug}</span>
             </div>
             {/* Theme accent bar */}
             <div

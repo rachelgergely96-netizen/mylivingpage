@@ -17,21 +17,21 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(26,10,46,0.72)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6 md:px-10">
           <Link href="/" className="font-heading text-xl font-bold">
-            my<span className="text-[#D4A654]">living</span>page
+            my<span className="text-[#3B82F6]">living</span>page
           </Link>
           <nav className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(245,240,235,0.7)] transition-colors hover:text-[#F0D48A]"
+              className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"
             >
               Dashboard
             </Link>
             <Link
               href="/create"
-              className="gold-pill px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_32px_rgba(212,166,84,0.3)]"
+              className="gold-pill px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_32px_rgba(59,130,246,0.3)]"
             >
               Create
             </Link>

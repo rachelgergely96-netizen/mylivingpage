@@ -43,8 +43,8 @@ export default function CosmicBackground() {
         particlePositions[i3 + 1] = (Math.random() - 0.5) * 80;
         particlePositions[i3 + 2] = (Math.random() - 0.5) * 60 - 10;
 
-        const hue = 0.08 + Math.random() * 0.06;
-        const saturation = 0.3 + Math.random() * 0.5;
+        const hue = 0.58 + Math.random() * 0.08;
+        const saturation = 0.4 + Math.random() * 0.5;
         const lightness = 0.5 + Math.random() * 0.4;
         const color = new THREE.Color();
         color.setHSL(hue, saturation, lightness);
@@ -73,7 +73,7 @@ export default function CosmicBackground() {
       const linePositions = new Float32Array(300 * 6);
       lineGeometry.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
       const lineMaterial = new THREE.LineBasicMaterial({
-        color: 0xd4a654,
+        color: 0x3b82f6,
         transparent: true,
         opacity: 0.06,
         blending: THREE.AdditiveBlending,
@@ -91,7 +91,7 @@ export default function CosmicBackground() {
 
       for (let index = 0; index < 5; index += 1) {
         const material = new THREE.MeshBasicMaterial({
-          color: new THREE.Color().setHSL(0.08, 0.6, 0.5),
+          color: new THREE.Color().setHSL(0.6, 0.6, 0.5),
           wireframe: true,
           transparent: true,
           opacity: 0.05 + Math.random() * 0.05,

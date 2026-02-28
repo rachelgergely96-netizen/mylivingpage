@@ -128,10 +128,18 @@ export default function EditPage() {
         setPage((prev) => prev ? { ...prev, slug: desiredSlug } : prev);
       }
 
+      const payload: Record<string, unknown> = {
+        resume_data: data,
+        theme_id: themeId,
+        updated_at: new Date().toISOString(),
+      };
+      if (desiredSlug !== page.slug) {
+        payload.slug = desiredSlug;
+      }
       const saveRes = await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume_data: data, theme_id: themeId, slug: desiredSlug, updated_at: new Date().toISOString() }),
+        body: JSON.stringify(payload),
       });
       if (!saveRes.ok) {
         const body = (await saveRes.json().catch(() => null)) as { error?: string } | null;

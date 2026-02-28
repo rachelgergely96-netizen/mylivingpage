@@ -30,32 +30,16 @@ export async function POST(request: Request) {
     // Use service-role client to bypass RLS
     const supabase = createServiceRoleSupabaseClient();
 
-    // Find existing page — try multiple strategies since schema varies
-    let existingId: string | null = null;
-
-    // Strategy 1: search by owner_id
-    const { data: byOwner } = await supabase
+    // Find existing page by either ownership column
+    const { data: existing } = await supabase
       .from("pages")
       .select("id")
-      .eq("owner_id", user.id)
+      .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .eq("slug", body.slug)
       .limit(1)
       .maybeSingle();
 
-    existingId = byOwner?.id ?? null;
-
-    // Strategy 2: search by user_id if owner_id didn't match
-    if (!existingId) {
-      const { data: byUser } = await supabase
-        .from("pages")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("slug", body.slug)
-        .limit(1)
-        .maybeSingle();
-
-      existingId = byUser?.id ?? null;
-    }
+    const existingId = existing?.id ?? null;
 
     // Build fields — include everything, unknown columns are silently ignored by Supabase
     const now = new Date().toISOString();

@@ -248,6 +248,7 @@ export default function CreatePage() {
         return;
       }
 
+      // Ensure profile exists
       const { data: existingProfile } = await supabase
         .from("profiles")
         .select("username")
@@ -259,11 +260,7 @@ export default function CreatePage() {
 
       if (!existingProfile) {
         await supabase.from("profiles").upsert(
-          {
-            id: user.id,
-            username: currentUsername,
-            email: user.email,
-          },
+          { id: user.id, username: currentUsername, email: user.email },
           { onConflict: "id" },
         );
       }
@@ -282,50 +279,26 @@ export default function CreatePage() {
         }
       }
 
-      // Try insert/upsert — handle both old (user_id) and new (owner_id) schemas
-      const pagePayload: Record<string, unknown> = {
-        user_id: user.id,
-        owner_id: user.id,
-        slug: desiredSlug,
-        status: "live",
-        visibility: "public",
-        title: parsedData.name || "My Living Page",
-        theme_id: selectedTheme,
-        resume_data: parsedData,
-        raw_resume: resumeText,
-        page_config: {},
-        published_at: new Date().toISOString(),
-      };
+      // Publish via server-side API (service-role bypasses RLS)
+      const res = await fetch("/api/pages/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: desiredSlug,
+          title: parsedData.name || "My Living Page",
+          theme_id: selectedTheme,
+          resume_data: parsedData,
+          raw_resume: resumeText,
+          page_config: {},
+        }),
+      });
 
-      // First try upsert on user_id,slug constraint
-      let savedPage: { slug: string } | null = null;
-      let saveError: Error | null = null;
-
-      const result = await supabase
-        .from("pages")
-        .upsert(pagePayload, { onConflict: "user_id,slug" })
-        .select("slug")
-        .single<{ slug: string }>();
-
-      if (result.error) {
-        // If constraint doesn't exist, try a plain insert
-        const insertResult = await supabase
-          .from("pages")
-          .insert(pagePayload)
-          .select("slug")
-          .single<{ slug: string }>();
-
-        savedPage = insertResult.data;
-        saveError = insertResult.error ? new Error(insertResult.error.message) : null;
-      } else {
-        savedPage = result.data;
+      const result = (await res.json()) as { slug?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(result.error ?? "Publish failed.");
       }
 
-      if (saveError) {
-        throw saveError;
-      }
-
-      router.push(`/${savedPage?.slug ?? desiredSlug}`);
+      router.push(`/${result.slug ?? desiredSlug}`);
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
     } finally {

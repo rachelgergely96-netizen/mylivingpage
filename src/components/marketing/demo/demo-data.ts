@@ -2,18 +2,26 @@ import type { ThemeId } from "@/themes/types";
 
 /* ── Theme mapping ─────────────────────────────────── */
 
-export type DemoThemeKey = "celestial" | "noir" | "ocean";
+export type DemoThemeKey = "celestial" | "noir" | "ocean" | "aurora" | "neon" | "luxe" | "ember";
 
 export const THEME_KEY_MAP: Record<DemoThemeKey, ThemeId> = {
   celestial: "cosmic",
   noir: "monolith",
   ocean: "fluid",
+  aurora: "aurora",
+  neon: "neon",
+  luxe: "luxe",
+  ember: "ember",
 };
 
-export const THEME_ACCENTS: Record<DemoThemeKey, { dot: string; accent: string }> = {
-  celestial: { dot: "linear-gradient(135deg, #3B82F6, #6366F1)", accent: "#3B82F6" },
-  noir: { dot: "linear-gradient(135deg, #E8E4ED, #3A3A4A)", accent: "#C0B8D0" },
-  ocean: { dot: "linear-gradient(135deg, #5BD6C4, #2D5BA6)", accent: "#5BD6C4" },
+export const THEME_ACCENTS: Record<DemoThemeKey, { dot: string; accent: string; label: string }> = {
+  celestial: { dot: "linear-gradient(135deg, #3B82F6, #6366F1)", accent: "#3B82F6", label: "Cosmic" },
+  noir: { dot: "linear-gradient(135deg, #E8E4ED, #3A3A4A)", accent: "#C0B8D0", label: "Monolith" },
+  ocean: { dot: "linear-gradient(135deg, #5BD6C4, #2D5BA6)", accent: "#5BD6C4", label: "Fluid" },
+  aurora: { dot: "linear-gradient(135deg, #7DD3FC, #A78BFA)", accent: "#7DD3FC", label: "Aurora" },
+  neon: { dot: "linear-gradient(135deg, #F472B6, #8B5CF6)", accent: "#F472B6", label: "Neon" },
+  luxe: { dot: "linear-gradient(135deg, #D4A654, #8B6914)", accent: "#D4A654", label: "Luxe" },
+  ember: { dot: "linear-gradient(135deg, #F97316, #DC2626)", accent: "#F97316", label: "Ember" },
 };
 
 /* ── View mode content ─────────────────────────────── */

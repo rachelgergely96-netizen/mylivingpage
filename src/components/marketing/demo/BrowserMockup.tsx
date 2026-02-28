@@ -10,7 +10,7 @@ interface BrowserMockupProps {
   children: ReactNode;
 }
 
-const themes: DemoThemeKey[] = ["celestial", "noir", "ocean"];
+const themes: DemoThemeKey[] = ["celestial", "noir", "ocean", "aurora", "neon", "luxe", "ember"];
 const viewModes: ViewMode[] = ["story", "recruiter", "project"];
 
 export default function BrowserMockup({
@@ -46,13 +46,14 @@ export default function BrowserMockup({
         {/* Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Theme dots */}
-          <div className={`flex gap-[5px] transition-all duration-400 ${isPro ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div className={`flex gap-1 transition-all duration-400 ${isPro ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             {themes.map((key) => (
               <button
                 key={key}
                 type="button"
+                title={THEME_ACCENTS[key].label}
                 onClick={() => onThemeChange(key)}
-                className={`h-3.5 w-3.5 rounded-full border-2 transition-all duration-300 ${themeKey === key ? "border-white scale-110" : "border-transparent"}`}
+                className={`h-3 w-3 rounded-full border-2 transition-all duration-300 ${themeKey === key ? "border-white scale-125" : "border-transparent hover:scale-110"}`}
                 style={{ background: THEME_ACCENTS[key].dot }}
               />
             ))}
@@ -72,6 +73,13 @@ export default function BrowserMockup({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Active theme label */}
+      <div className={`flex items-center justify-center gap-2 border-b border-[rgba(255,255,255,0.04)] bg-[rgba(8,14,28,0.6)] py-1.5 font-mono text-[9px] uppercase tracking-[0.12em] transition-all duration-500 ${isPro ? "max-h-8 opacity-100" : "max-h-0 overflow-hidden border-0 py-0 opacity-0"}`}>
+        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: THEME_ACCENTS[themeKey].accent }} />
+        <span style={{ color: THEME_ACCENTS[themeKey].accent }}>{THEME_ACCENTS[themeKey].label}</span>
+        <span className="text-[rgba(240,244,255,0.2)]">theme</span>
       </div>
 
       {/* Viewport */}

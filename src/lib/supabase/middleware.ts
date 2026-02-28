@@ -5,6 +5,7 @@ import { NextResponse as NextResponseBuilder } from "next/server";
 interface SessionUpdateResult {
   response: NextResponse;
   userId: string | null;
+  userEmail: string | null;
 }
 
 export async function updateSession(request: NextRequest): Promise<SessionUpdateResult> {
@@ -64,5 +65,5 @@ export async function updateSession(request: NextRequest): Promise<SessionUpdate
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { response, userId: user?.id ?? null };
+  return { response, userId: user?.id ?? null, userEmail: user?.email ?? null };
 }

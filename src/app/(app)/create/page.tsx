@@ -22,7 +22,11 @@ const STAGES = [
   "Finalizing JSON output...",
 ];
 
-const PREVIEW_THEMES: ThemeId[] = ["cosmic", "fluid", "ember", "monolith", "aurora", "terracotta"];
+const PREVIEW_THEMES: ThemeId[] = [
+  "cosmic", "fluid", "ember", "monolith", "aurora",
+  "terracotta", "neon", "luxe", "prism", "biolume",
+  "circuit", "sakura", "glacier", "verdant", "topo",
+];
 
 const SAMPLE_RESUME = `RAY
 Attorney & Technology Entrepreneur

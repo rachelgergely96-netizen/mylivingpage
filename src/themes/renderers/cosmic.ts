@@ -1,6 +1,8 @@
 import type { ThemeRenderer } from "../types";
 
+/** Deep space constellation field with golden star-links drifting through nebula clouds */
 export const renderCosmic: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+  // Nebula clouds
   const nebX = w * 0.4 + Math.sin(t * 0.15) * w * 0.1;
   const nebY = h * 0.35 + Math.cos(t * 0.12) * h * 0.08;
   const neb = ctx.createRadialGradient(nebX, nebY, 0, w * 0.5, h * 0.5, w * 0.8);
@@ -16,7 +18,21 @@ export const renderCosmic: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.fillStyle = n2;
   ctx.fillRect(0, 0, w, h);
 
-  for (let i = 0; i < 80; i += 1) {
+  // Faint Milky Way band (diagonal)
+  ctx.save();
+  ctx.translate(w * 0.5, h * 0.5);
+  ctx.rotate(-0.4);
+  const milky = ctx.createLinearGradient(0, -h * 0.08, 0, h * 0.08);
+  milky.addColorStop(0, "transparent");
+  milky.addColorStop(0.5, `hsla(250, 20%, 30%, ${0.02 + Math.sin(t * 0.15) * 0.005})`);
+  milky.addColorStop(1, "transparent");
+  ctx.fillStyle = milky;
+  ctx.fillRect(-w, -h * 0.08, w * 2, h * 0.16);
+  ctx.restore();
+
+  // Stars with parallax, twinkle, and mouse boost — stored for constellation lines
+  const stars: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i < 80; i++) {
     const seed = i * 137.508;
     const depth = (i % 3) + 1;
     const parallax = depth * 0.3;
@@ -30,6 +46,8 @@ export const renderCosmic: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const dist = Math.sqrt(dx * dx + dy * dy);
     const mouseBoost = dist < 120 ? (1 - dist / 120) * 0.3 : 0;
 
+    stars.push({ x: px, y: py });
+
     ctx.beginPath();
     ctx.arc(px, py, r, 0, Math.PI * 2);
     ctx.fillStyle = `hsla(${hue}, 65%, ${65 + mouseBoost * 30}%, ${twinkle + mouseBoost})`;
@@ -41,18 +59,10 @@ export const renderCosmic: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     ctx.fill();
   }
 
-  const stars: Array<{ x: number; y: number }> = [];
-  for (let i = 0; i < 80; i += 1) {
-    const seed = i * 137.508;
-    stars.push({
-      x: ((Math.sin(seed) * 0.5 + 0.5) * w + Math.sin(t * 0.06 + i * 0.1) * 6) % w,
-      y: ((Math.cos(seed * 1.3) * 0.5 + 0.5) * h + Math.cos(t * 0.045 + i * 0.12) * 5) % h,
-    });
-  }
-
+  // Constellation lines
   ctx.lineWidth = 0.5;
-  for (let i = 0; i < stars.length; i += 1) {
-    for (let j = i + 1; j < Math.min(i + 6, stars.length); j += 1) {
+  for (let i = 0; i < stars.length; i++) {
+    for (let j = i + 1; j < Math.min(i + 6, stars.length); j++) {
       const d = Math.hypot(stars[i].x - stars[j].x, stars[i].y - stars[j].y);
       if (d < w * 0.12) {
         const alpha = (1 - d / (w * 0.12)) * 0.07;
@@ -63,5 +73,33 @@ export const renderCosmic: ThemeRenderer = (ctx, w, h, t, mx, my) => {
         ctx.stroke();
       }
     }
+  }
+
+  // Shooting star effect every ~6 seconds
+  const shootPhase = (t * 0.16) % 1;
+  if (shootPhase < 0.15) {
+    const progress = shootPhase / 0.15;
+    const seed = Math.floor(t * 0.16) * 73.1;
+    const startX = (Math.sin(seed) * 0.5 + 0.5) * w;
+    const startY = Math.sin(seed * 1.3) * h * 0.3;
+    const angle = 0.5 + Math.sin(seed * 2) * 0.3;
+    const len = 50 + progress * 30;
+    const x = startX + Math.cos(angle) * progress * w * 0.4;
+    const y = startY + Math.sin(angle) * progress * h * 0.3;
+
+    // Streak
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - Math.cos(angle) * len, y - Math.sin(angle) * len);
+    const alpha = (1 - progress) * 0.3;
+    ctx.strokeStyle = `hsla(45, 80%, 80%, ${alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Head glow
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(45, 90%, 85%, ${alpha})`;
+    ctx.fill();
   }
 };

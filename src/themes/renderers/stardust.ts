@@ -5,6 +5,19 @@ export const renderStardust: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   const cx = w * 0.5 + (mx - 0.5) * 40;
   const cy = h * 0.5 + (my - 0.5) * 40;
 
+  // Background star field for depth
+  for (let i = 0; i < 55; i++) {
+    const seed = i * 211.3;
+    const x = (Math.sin(seed * 3.1) * 0.5 + 0.5) * w;
+    const y = (Math.cos(seed * 2.7) * 0.5 + 0.5) * h;
+    const twinkle = 0.3 + Math.sin(t * 0.8 + seed * 1.9) * 0.3;
+    const size = 0.3 + Math.sin(seed * 0.5) * 0.2;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(220, 15%, 75%, ${twinkle * 0.08})`;
+    ctx.fill();
+  }
+
   // Nebula clouds
   for (let i = 0; i < 4; i++) {
     const angle = t * 0.05 + i * Math.PI * 0.5;
@@ -18,6 +31,25 @@ export const renderStardust: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     nebula.addColorStop(1, "transparent");
     ctx.fillStyle = nebula;
     ctx.fillRect(0, 0, w, h);
+  }
+
+  // Dark dust lanes between spiral arms
+  for (let i = 0; i < 3; i++) {
+    const armAngle = (i * (Math.PI * 2 / 3)) + Math.PI / 3; // offset from spiral arms
+    const laneStart = t * 0.08 + armAngle;
+    ctx.beginPath();
+    for (let p = 0; p < 40; p++) {
+      const progress = p / 40;
+      const spiralAngle = laneStart + progress * Math.PI * 2.5;
+      const d = progress * Math.min(w, h) * 0.4;
+      const lx = cx + Math.cos(spiralAngle) * d;
+      const ly = cy + Math.sin(spiralAngle) * d;
+      if (p === 0) ctx.moveTo(lx, ly);
+      else ctx.lineTo(lx, ly);
+    }
+    ctx.strokeStyle = `hsla(240, 20%, 5%, ${0.02 + Math.sin(t * 0.2 + i) * 0.005})`;
+    ctx.lineWidth = 8 + Math.sin(i * 2.3) * 3;
+    ctx.stroke();
   }
 
   // Spiral arm particles
@@ -40,16 +72,19 @@ export const renderStardust: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const hue = 200 + progress * 60 + Math.sin(seed * 0.5) * 30;
     const brightness = 60 + pulse * 20;
 
+    // Nova flash on occasional particles
+    const novaFlash = Math.sin(t * 0.25 + seed * 7.3) > 0.98 ? 0.4 : 0;
+
     ctx.beginPath();
-    ctx.arc(x, y, size * 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${hue}, 60%, ${brightness}%, ${pulse * 0.7})`;
+    ctx.arc(x, y, size * 1.5 + novaFlash * 3, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue}, 60%, ${brightness + novaFlash * 25}%, ${pulse * 0.7 + novaFlash})`;
     ctx.fill();
 
     // Larger faint glow for brighter stars
-    if (i % 4 === 0) {
+    if (i % 4 === 0 || novaFlash > 0) {
       ctx.beginPath();
-      ctx.arc(x, y, size * 8, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${hue}, 50%, ${brightness}%, ${pulse * 0.04})`;
+      ctx.arc(x, y, size * 8 + novaFlash * 10, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 50%, ${brightness}%, ${pulse * 0.04 + novaFlash * 0.1})`;
       ctx.fill();
     }
   }

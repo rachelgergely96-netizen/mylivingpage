@@ -44,7 +44,7 @@ export default function EditPage() {
         .from("pages")
         .select("*")
         .eq("id", pageId)
-        .eq("user_id", user.id)
+        .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .single<PageRecord>();
 
       if (fetchError || !row) {

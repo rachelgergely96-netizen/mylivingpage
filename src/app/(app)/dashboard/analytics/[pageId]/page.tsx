@@ -21,7 +21,7 @@ export default async function AnalyticsPage({
     .from("pages")
     .select("*")
     .eq("id", params.pageId)
-    .eq("user_id", user.id)
+    .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
     .maybeSingle();
 
   if (!page) notFound();

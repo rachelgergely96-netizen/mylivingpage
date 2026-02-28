@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     supabase
       .from("pages")
       .select("*")
-      .eq("user_id", user?.id ?? "")
+      .or(`user_id.eq.${user?.id ?? ""},owner_id.eq.${user?.id ?? ""}`)
       .order("created_at", { ascending: false }),
   ]);
 
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">Status</p>
-                <p className="text-sm capitalize text-[rgba(240,244,255,0.75)]">{page.status}</p>
+                <p className="text-sm capitalize text-[rgba(240,244,255,0.75)]">{page.status ?? (page.visibility === "public" ? "live" : page.visibility) ?? "—"}</p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <Link

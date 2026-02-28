@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { slugifyUsername } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
@@ -36,28 +35,20 @@ export default function EditPage() {
 
   useEffect(() => {
     const load = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login?next=/dashboard"); return; }
-
-      const { data: row, error: fetchError } = await supabase
-        .from("pages")
-        .select("*")
-        .eq("id", pageId)
-        .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
-        .single<PageRecord>();
-
-      if (fetchError || !row) {
-        setError("Page not found or you don't have access.");
+      try {
+        const res = await fetch(`/api/pages/${pageId}`);
+        if (res.status === 401) { router.push("/login?next=/dashboard"); return; }
+        if (!res.ok) { setError("Page not found or you don't have access."); setLoading(false); return; }
+        const row = (await res.json()) as PageRecord;
+        setPage(row);
+        setData(row.resume_data);
+        setThemeId(row.theme_id as ThemeId);
+        setCustomSlug(row.slug);
+      } catch {
+        setError("Failed to load page.");
+      } finally {
         setLoading(false);
-        return;
       }
-
-      setPage(row);
-      setData(row.resume_data);
-      setThemeId(row.theme_id as ThemeId);
-      setCustomSlug(row.slug);
-      setLoading(false);
     };
     load();
   }, [pageId, router]);
@@ -137,12 +128,15 @@ export default function EditPage() {
         setPage((prev) => prev ? { ...prev, slug: desiredSlug } : prev);
       }
 
-      const supabase = createBrowserSupabaseClient();
-      const { error: saveError } = await supabase
-        .from("pages")
-        .update({ resume_data: data, theme_id: themeId, slug: desiredSlug, updated_at: new Date().toISOString() })
-        .eq("id", page.id);
-      if (saveError) throw saveError;
+      const saveRes = await fetch(`/api/pages/${page.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume_data: data, theme_id: themeId, slug: desiredSlug, updated_at: new Date().toISOString() }),
+      });
+      if (!saveRes.ok) {
+        const body = (await saveRes.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed.");
+      }
       setSuccess("Saved successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e) {

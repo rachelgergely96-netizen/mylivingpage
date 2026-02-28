@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 
 export default async function DashboardPage() {
-  const supabase = createServerSupabaseClient();
-
+  const authClient = createServerSupabaseClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
+
+  // Use service-role client to bypass RLS for data queries
+  const supabase = createServiceRoleSupabaseClient();
 
   const [{ data: profile }, { data: pages }] = await Promise.all([
     supabase

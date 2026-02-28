@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AnalyticsCharts from "@/components/analytics/AnalyticsCharts";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 
 export default async function AnalyticsPage({
@@ -9,12 +9,15 @@ export default async function AnalyticsPage({
 }: {
   params: { pageId: string };
 }) {
-  const supabase = createServerSupabaseClient();
+  const authClient = createServerSupabaseClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) notFound();
+
+  // Use service-role client to bypass RLS for data queries
+  const supabase = createServiceRoleSupabaseClient();
 
   // Fetch the page and verify ownership
   const { data: page } = await supabase

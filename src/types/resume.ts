@@ -39,9 +39,12 @@ export interface ResumeData {
 
 export interface PageRecord {
   id: string;
-  user_id: string;
+  user_id?: string;
+  owner_id?: string;
   slug: string;
-  status: "draft" | "live" | "archived";
+  status?: "draft" | "live" | "archived";
+  visibility?: "private" | "link" | "public";
+  title?: string;
   theme_id: string;
   resume_data: ResumeData;
   raw_resume: string | null;

@@ -30,16 +30,36 @@ export async function POST(request: Request) {
     // Use service-role client to bypass RLS
     const supabase = createServiceRoleSupabaseClient();
 
-    // Check for existing page by owner_id + slug OR user_id + slug
-    const { data: existing } = await supabase
+    // Find existing page — try multiple strategies since schema varies
+    let existingId: string | null = null;
+
+    // Strategy 1: search by owner_id
+    const { data: byOwner } = await supabase
       .from("pages")
       .select("id")
-      .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
+      .eq("owner_id", user.id)
       .eq("slug", body.slug)
       .limit(1)
       .maybeSingle();
 
-    const pageFields = {
+    existingId = byOwner?.id ?? null;
+
+    // Strategy 2: search by user_id if owner_id didn't match
+    if (!existingId) {
+      const { data: byUser } = await supabase
+        .from("pages")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("slug", body.slug)
+        .limit(1)
+        .maybeSingle();
+
+      existingId = byUser?.id ?? null;
+    }
+
+    // Build fields — include everything, unknown columns are silently ignored by Supabase
+    const now = new Date().toISOString();
+    const allFields: Record<string, unknown> = {
       user_id: user.id,
       owner_id: user.id,
       slug: body.slug,
@@ -50,23 +70,54 @@ export async function POST(request: Request) {
       resume_data: body.resume_data,
       raw_resume: body.raw_resume ?? "",
       page_config: body.page_config ?? {},
-      published_at: new Date().toISOString(),
+      published_at: now,
     };
 
-    if (existing) {
+    if (existingId) {
+      // Update existing page
       const { error } = await supabase
         .from("pages")
-        .update(pageFields)
-        .eq("id", existing.id);
+        .update(allFields)
+        .eq("id", existingId);
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        // If update fails (maybe unknown columns), try with minimal fields
+        const { error: retryErr } = await supabase
+          .from("pages")
+          .update({
+            status: "live",
+            theme_id: body.theme_id,
+            resume_data: body.resume_data,
+            raw_resume: body.raw_resume ?? "",
+            page_config: body.page_config ?? {},
+            published_at: now,
+          })
+          .eq("id", existingId);
+
+        if (retryErr) {
+          return NextResponse.json({ error: retryErr.message }, { status: 500 });
+        }
       }
     } else {
-      const { error } = await supabase.from("pages").insert(pageFields);
+      // Fresh insert
+      const { error } = await supabase.from("pages").insert(allFields);
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        // Retry with MVP-only columns
+        const { error: retryErr } = await supabase.from("pages").insert({
+          user_id: user.id,
+          slug: body.slug,
+          status: "live",
+          theme_id: body.theme_id,
+          resume_data: body.resume_data,
+          raw_resume: body.raw_resume ?? "",
+          page_config: body.page_config ?? {},
+          published_at: now,
+        });
+
+        if (retryErr) {
+          return NextResponse.json({ error: retryErr.message }, { status: 500 });
+        }
       }
     }
 

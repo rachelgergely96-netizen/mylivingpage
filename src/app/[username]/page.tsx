@@ -26,12 +26,14 @@ async function fetchLivePage(username: string) {
     return null;
   }
 
+  // Query by both user_id and owner_id (handles both MVP and secure schemas)
+  // Check both status='live' and visibility='public' (handles both schemas)
   const { data: exactPage } = await supabase
     .from("pages")
     .select("*")
-    .eq("user_id", profile.id)
+    .or(`user_id.eq.${profile.id},owner_id.eq.${profile.id}`)
     .eq("slug", username)
-    .eq("status", "live")
+    .or("status.eq.live,visibility.eq.public")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -40,11 +42,12 @@ async function fetchLivePage(username: string) {
     return exactPage as PageRecord;
   }
 
+  // Fallback: any live/public page for this user
   const { data: fallbackPage } = await supabase
     .from("pages")
     .select("*")
-    .eq("user_id", profile.id)
-    .eq("status", "live")
+    .or(`user_id.eq.${profile.id},owner_id.eq.${profile.id}`)
+    .or("status.eq.live,visibility.eq.public")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -86,7 +89,7 @@ export async function generateMetadata({ params }: { params: { username: string 
 
 export default async function PublicLivingPage({ params }: { params: { username: string } }) {
   const page = await fetchLivePage(params.username);
-  if (!page || page.status !== "live") {
+  if (!page || (page.status !== "live" && page.visibility !== "public")) {
     notFound();
   }
 
@@ -95,14 +98,14 @@ export default async function PublicLivingPage({ params }: { params: { username:
   return (
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
-      <PageOwnerBar pageId={page.id} pageUserId={page.user_id} />
+      <PageOwnerBar pageId={page.id} pageUserId={page.user_id ?? page.owner_id ?? ""} />
       <ThemeCanvas themeId={themeId} height="100dvh" className="rounded-none min-h-screen">
         <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
           <ResumeLayout data={page.resume_data} />
         </div>
       </ThemeCanvas>
       <DownloadResumeButton data={page.resume_data} />
-      <MadeWithBadge pageUserId={page.user_id} />
+      <MadeWithBadge pageUserId={page.user_id ?? page.owner_id ?? ""} />
     </main>
   );
 }

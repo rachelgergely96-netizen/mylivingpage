@@ -107,7 +107,13 @@ export default function LoginPage() {
 
         {message ? <p className="mt-4 text-sm text-[#ff8e8e]">{message}</p> : null}
 
-        <p className="mt-5 text-sm text-[rgba(240,244,255,0.45)]">
+        <div className="mt-3 text-right">
+          <Link href="/forgot-password" className="text-xs text-[rgba(240,244,255,0.4)] hover:text-[#3B82F6]">
+            Forgot password?
+          </Link>
+        </div>
+
+        <p className="mt-3 text-sm text-[rgba(240,244,255,0.45)]">
           New here?{" "}
           <Link href="/signup" className="text-[#3B82F6] hover:text-[#93C5FD]">
             Create an account

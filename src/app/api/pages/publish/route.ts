@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 
 interface PublishBody {
   slug: string;
@@ -104,6 +105,12 @@ export async function POST(request: Request) {
         }
       }
     }
+
+    trackEvent(user.id, "page.publish", {
+      theme_id: body.theme_id,
+      slug: body.slug,
+      is_update: !!existingId,
+    });
 
     return NextResponse.json({ slug: body.slug });
   } catch (err) {

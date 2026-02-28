@@ -7,7 +7,7 @@ export default async function AdminUsersPage() {
   const [{ data: profiles }, { data: allPages }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, username, full_name, email, avatar_url, plan, created_at")
+      .select("id, username, full_name, email, avatar_url, plan, created_at, auth_provider, last_sign_in_at, sign_in_count")
       .order("created_at", { ascending: false }),
     supabase
       .from("pages")
@@ -34,6 +34,9 @@ export default async function AdminUsersPage() {
       avatar_url: string | null;
       plan: string;
       created_at: string;
+      auth_provider: string | null;
+      last_sign_in_at: string | null;
+      sign_in_count: number | null;
     };
     const stats = userStats[p.id] ?? { pageCount: 0, totalViews: 0 };
     return {
@@ -44,6 +47,9 @@ export default async function AdminUsersPage() {
       avatar_url: p.avatar_url,
       plan: p.plan,
       created_at: p.created_at,
+      auth_provider: p.auth_provider,
+      last_sign_in_at: p.last_sign_in_at,
+      sign_in_count: p.sign_in_count ?? 0,
       pageCount: stats.pageCount,
       totalViews: stats.totalViews,
     };

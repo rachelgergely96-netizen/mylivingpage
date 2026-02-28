@@ -15,12 +15,19 @@ interface DeviceEntry {
   count: number;
 }
 
+interface CountryEntry {
+  country: string;
+  count: number;
+}
+
 interface AnalyticsChartsProps {
   pageName: string;
   totalViews: number;
+  uniqueVisitors: number;
   dailyViews: DailyView[];
   referrers: ReferrerEntry[];
   devices: DeviceEntry[];
+  countries: CountryEntry[];
 }
 
 function StatCard({ label, value }: { label: string; value: number }) {
@@ -129,6 +136,45 @@ function ReferrerList({ referrers }: { referrers: ReferrerEntry[] }) {
   );
 }
 
+function CountryList({ countries }: { countries: CountryEntry[] }) {
+  const total = countries.reduce((sum, c) => sum + c.count, 0) || 1;
+
+  return (
+    <div className="glass-card rounded-2xl p-4 sm:p-5">
+      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+        Top Countries
+      </p>
+      {countries.length === 0 ? (
+        <p className="text-sm text-[rgba(240,244,255,0.35)]">No country data yet.</p>
+      ) : (
+        <div className="space-y-2.5">
+          {countries.slice(0, 8).map((entry) => {
+            const pct = Math.round((entry.count / total) * 100);
+            return (
+              <div key={entry.country}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="truncate text-[rgba(240,244,255,0.75)]">
+                    {entry.country}
+                  </span>
+                  <span className="ml-3 shrink-0 font-mono text-xs text-[rgba(240,244,255,0.4)]">
+                    {pct}%
+                  </span>
+                </div>
+                <div className="mt-1 h-1 w-full rounded-full bg-[rgba(255,255,255,0.06)]">
+                  <div
+                    className="h-full rounded-full bg-[#3B82F6] opacity-60"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DeviceBreakdown({ devices }: { devices: DeviceEntry[] }) {
   const total = devices.reduce((sum, d) => sum + d.count, 0) || 1;
 
@@ -168,9 +214,11 @@ function DeviceBreakdown({ devices }: { devices: DeviceEntry[] }) {
 
 export default function AnalyticsCharts({
   totalViews,
+  uniqueVisitors,
   dailyViews,
   referrers,
   devices,
+  countries,
 }: AnalyticsChartsProps) {
   const last30 = dailyViews.reduce((sum, d) => sum + d.count, 0);
   const last7 = dailyViews.slice(-7).reduce((sum, d) => sum + d.count, 0);
@@ -189,8 +237,9 @@ export default function AnalyticsCharts({
   return (
     <div className="space-y-4">
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatCard label="Total Views" value={totalViews} />
+        <StatCard label="Unique Visitors" value={uniqueVisitors} />
         <StatCard label="Last 30 Days" value={last30} />
         <StatCard label="Last 7 Days" value={last7} />
       </div>
@@ -198,10 +247,13 @@ export default function AnalyticsCharts({
       {/* Daily chart */}
       <DailyChart dailyViews={dailyViews} />
 
-      {/* Referrers + Devices */}
+      {/* Referrers + Devices + Countries */}
       <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
         <ReferrerList referrers={referrers} />
         <DeviceBreakdown devices={devices} />
+      </div>
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+        <CountryList countries={countries} />
       </div>
     </div>
   );

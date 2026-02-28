@@ -37,7 +37,7 @@ export default async function AnalyticsPage({
 
   const { data: views } = await supabase
     .from("page_views")
-    .select("viewed_at, referrer, user_agent")
+    .select("viewed_at, referrer, user_agent, viewer_ip, country")
     .eq("page_id", params.pageId)
     .gte("viewed_at", ninetyDaysAgo.toISOString())
     .order("viewed_at", { ascending: true });
@@ -46,6 +46,8 @@ export default async function AnalyticsPage({
     viewed_at: string;
     referrer: string | null;
     user_agent: string | null;
+    viewer_ip: string | null;
+    country: string | null;
   }[];
 
   // Build last 30 days array with zero-fill
@@ -92,6 +94,20 @@ export default async function AnalyticsPage({
     count,
   }));
 
+  // Unique visitors
+  const uniqueIps = new Set(rows.map((r) => r.viewer_ip).filter(Boolean));
+  const uniqueVisitors = uniqueIps.size;
+
+  // Country breakdown
+  const countryCounts: Record<string, number> = {};
+  for (const row of rows) {
+    const c = row.country ?? "Unknown";
+    countryCounts[c] = (countryCounts[c] ?? 0) + 1;
+  }
+  const countries = Object.entries(countryCounts)
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count);
+
   const pageName = typedPage.resume_data?.name ?? "Untitled";
 
   return (
@@ -132,9 +148,11 @@ export default async function AnalyticsPage({
       <AnalyticsCharts
         pageName={pageName}
         totalViews={typedPage.views ?? 0}
+        uniqueVisitors={uniqueVisitors}
         dailyViews={dailyViews}
         referrers={referrers}
         devices={devices}
+        countries={countries}
       />
     </main>
   );

@@ -46,6 +46,16 @@ export async function GET(request: NextRequest) {
       username = `${baseUsername}-${suffix}`;
     }
 
+    // Determine auth provider
+    const provider =
+      (user.app_metadata?.provider as string | undefined) ??
+      (Array.isArray(user.app_metadata?.providers) && user.app_metadata.providers.includes("google")
+        ? "google"
+        : "email");
+
+    // Read signup referrer from user metadata (set during signUp)
+    const signupReferrer = (user.user_metadata?.signup_referrer as string | undefined) ?? null;
+
     await admin.from("profiles").upsert(
       {
         id: user.id,
@@ -55,11 +65,16 @@ export async function GET(request: NextRequest) {
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
           null,
+        auth_provider: provider,
+        signup_referrer: signupReferrer,
       },
       {
         onConflict: "id",
       },
     );
+
+    // Increment sign-in count
+    await admin.rpc("increment_sign_in_count", { uid: user.id });
   }
 
   return NextResponse.redirect(redirectUrl);

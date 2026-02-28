@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 
 /** POST /api/account/change-password — update the user's password */
 export async function POST(request: Request) {
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  trackEvent(user.id, "account.password_change");
 
   return NextResponse.json({ success: true });
 }

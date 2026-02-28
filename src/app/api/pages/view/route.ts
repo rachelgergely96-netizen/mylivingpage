@@ -18,11 +18,14 @@ export async function POST(request: Request) {
       "unknown";
     const hashedIp = createHash("sha256").update(rawIp).digest("hex");
 
+    const country = headersList.get("x-vercel-ip-country") ?? null;
+
     await supabase.from("page_views").insert({
       page_id: body.pageId,
       viewer_ip: hashedIp,
       referrer: headersList.get("referer"),
       user_agent: headersList.get("user-agent"),
+      country,
     });
 
     await supabase.rpc("increment_page_views", { page_id: body.pageId });

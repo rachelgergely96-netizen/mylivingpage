@@ -12,12 +12,16 @@ export default function SignupPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/dashboard");
+  const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
 
   useEffect(() => {
-    const next = new URLSearchParams(window.location.search).get("next");
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
     if (next && next.startsWith("/")) {
       setNextPath(next);
     }
+    const ref = params.get("ref") || params.get("utm_source") || null;
+    if (ref) setSignupReferrer(ref);
   }, []);
 
   const onSignup = async (event: FormEvent<HTMLFormElement>) => {
@@ -34,6 +38,7 @@ export default function SignupPage() {
         password,
         options: {
           emailRedirectTo: redirectTo,
+          data: signupReferrer ? { signup_referrer: signupReferrer } : undefined,
         },
       });
       if (error) {

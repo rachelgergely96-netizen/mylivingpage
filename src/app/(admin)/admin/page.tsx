@@ -38,25 +38,35 @@ export default async function AdminOverviewPage() {
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   const cutoff = ninetyDaysAgo.toISOString();
 
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDayCutoff = sevenDaysAgo.toISOString();
+
   // Parallel queries
   const [
     { count: totalUsers },
     { count: totalPages },
     { count: waitlistCount },
+    { count: googleUserCount },
+    { count: activeSevenDayCount },
     { data: allPages },
     { data: recentProfiles },
     { data: recentViews },
     { data: latestUsers },
     { data: latestPages },
+    { data: recentEvents },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("pages").select("*", { count: "exact", head: true }),
     supabase.from("waitlist").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("auth_provider", "google"),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).gte("last_sign_in_at", sevenDayCutoff),
     supabase.from("pages").select("views"),
     supabase.from("profiles").select("created_at").gte("created_at", cutoff).order("created_at", { ascending: true }),
     supabase.from("page_views").select("viewed_at").gte("viewed_at", cutoff).order("viewed_at", { ascending: true }),
     supabase.from("profiles").select("username, full_name, email, created_at").order("created_at", { ascending: false }).limit(5),
     supabase.from("pages").select("slug, views, created_at, resume_data").order("created_at", { ascending: false }).limit(5),
+    supabase.from("events").select("event_name, metadata, created_at, user_id").order("created_at", { ascending: false }).limit(15),
   ]);
 
   const totalViews = (allPages ?? []).reduce((sum, p) => sum + ((p as { views: number }).views ?? 0), 0);
@@ -79,10 +89,12 @@ export default async function AdminOverviewPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
         <StatCard label="Total Users" value={totalUsers ?? 0} />
         <StatCard label="Total Pages" value={totalPages ?? 0} />
         <StatCard label="Total Views" value={totalViews} />
+        <StatCard label="Google Users" value={googleUserCount ?? 0} />
+        <StatCard label="Active (7d)" value={activeSevenDayCount ?? 0} />
         <StatCard label="Waitlist" value={waitlistCount ?? 0} />
       </div>
 
@@ -155,6 +167,40 @@ export default async function AdminOverviewPage() {
             })}
             {(latestPages ?? []).length === 0 && (
               <p className="text-sm text-[rgba(240,244,255,0.35)]">No pages yet.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Activity feed */}
+      <div className="mt-6">
+        <div className="glass-card rounded-2xl p-4 sm:p-5">
+          <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            Recent Activity
+          </p>
+          <div className="space-y-2.5">
+            {(recentEvents ?? []).length === 0 ? (
+              <p className="text-sm text-[rgba(240,244,255,0.35)]">No activity yet.</p>
+            ) : (
+              (recentEvents ?? []).map((e, i) => {
+                const ev = e as { event_name: string; metadata: Record<string, unknown>; created_at: string; user_id: string | null };
+                return (
+                  <div key={`${ev.created_at}-${i}`} className="flex items-center justify-between rounded-lg bg-[rgba(255,255,255,0.02)] px-3 py-2">
+                    <div>
+                      <p className="text-sm text-[#F0F4FF]">{ev.event_name}</p>
+                      {ev.metadata && Object.keys(ev.metadata).length > 0 && (
+                        <p className="text-[10px] text-[rgba(240,244,255,0.3)] font-mono truncate max-w-xs">
+                          {JSON.stringify(ev.metadata)}
+                        </p>
+                      )}
+                    </div>
+                    <p className="shrink-0 ml-3 text-[10px] font-mono text-[rgba(240,244,255,0.3)]">
+                      {new Date(ev.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{" "}
+                      {new Date(ev.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

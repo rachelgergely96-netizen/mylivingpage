@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -53,6 +54,11 @@ export async function POST(request: Request) {
   // Bust cache by appending timestamp
   const url = `${urlData.publicUrl}?t=${Date.now()}`;
 
+  // Persist avatar URL to profiles
+  await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+
+  trackEvent(user.id, "avatar.upload");
+
   return NextResponse.json({ url });
 }
 
@@ -70,6 +76,11 @@ export async function DELETE() {
   if (existing?.length) {
     await supabase.storage.from("avatars").remove(existing.map((f) => `${user.id}/${f.name}`));
   }
+
+  // Clear avatar URL from profiles
+  await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+
+  trackEvent(user.id, "avatar.remove");
 
   return NextResponse.json({ success: true });
 }

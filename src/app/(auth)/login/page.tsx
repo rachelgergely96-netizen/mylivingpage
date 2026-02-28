@@ -30,6 +30,8 @@ export default function LoginPage() {
       if (error) {
         throw error;
       }
+      // Track login (fire-and-forget)
+      fetch("/api/auth/track-login", { method: "POST" }).catch(() => {});
       router.refresh();
       router.replace(nextPath);
     } catch (error) {

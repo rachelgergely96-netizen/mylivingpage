@@ -1,15 +1,20 @@
 import { renderAurora } from "./renderers/aurora";
 import { renderBiolume } from "./renderers/biolume";
 import { renderCircuit } from "./renderers/circuit";
+import { renderCoral } from "./renderers/coral";
 import { renderCosmic } from "./renderers/cosmic";
+import { renderDusk } from "./renderers/dusk";
 import { renderEmber } from "./renderers/ember";
 import { renderFluid } from "./renderers/fluid";
 import { renderGlacier } from "./renderers/glacier";
+import { renderInk } from "./renderers/ink";
 import { renderLuxe } from "./renderers/luxe";
+import { renderMatrix } from "./renderers/matrix";
 import { renderMonolith } from "./renderers/monolith";
 import { renderNeon } from "./renderers/neon";
 import { renderPrism } from "./renderers/prism";
 import { renderSakura } from "./renderers/sakura";
+import { renderStardust } from "./renderers/stardust";
 import { renderTerracotta } from "./renderers/terracotta";
 import { renderTopo } from "./renderers/topo";
 import { renderVerdant } from "./renderers/verdant";
@@ -150,6 +155,51 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     vibe: "Prestigious & Confident",
     background: "#0A0808",
     renderer: renderLuxe,
+  },
+  {
+    id: "dusk",
+    name: "Dusk",
+    description:
+      "Warm sunset gradient bands drift horizontally with floating dust motes caught in the fading light.",
+    vibe: "Warm & Reflective",
+    background: "#0E0710",
+    renderer: renderDusk,
+  },
+  {
+    id: "matrix",
+    name: "Matrix",
+    description:
+      "Falling code rain columns with glowing lead characters and faint scanline overlay.",
+    vibe: "Hacker & Cryptic",
+    background: "#020804",
+    renderer: renderMatrix,
+  },
+  {
+    id: "coral",
+    name: "Coral",
+    description:
+      "Underwater coral reef with swaying tendrils, caustic light patterns, and rising bubbles.",
+    vibe: "Deep & Immersive",
+    background: "#040A0D",
+    renderer: renderCoral,
+  },
+  {
+    id: "stardust",
+    name: "Stardust",
+    description:
+      "Spiraling galaxy arms with dense particle fields and softly glowing nebula clouds.",
+    vibe: "Cosmic & Expansive",
+    background: "#050510",
+    renderer: renderStardust,
+  },
+  {
+    id: "ink",
+    name: "Ink",
+    description:
+      "Ink drops spreading through water with blooming organic shapes and delicate tendrils.",
+    vibe: "Artistic & Contemplative",
+    background: "#080A10",
+    renderer: renderInk,
   },
 ];
 

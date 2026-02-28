@@ -26,6 +26,7 @@ const PREVIEW_THEMES: ThemeId[] = [
   "cosmic", "fluid", "ember", "monolith", "aurora",
   "terracotta", "neon", "luxe", "prism", "biolume",
   "circuit", "sakura", "glacier", "verdant", "topo",
+  "dusk", "matrix", "coral", "stardust", "ink",
 ];
 
 const SAMPLE_RESUME = `RAY

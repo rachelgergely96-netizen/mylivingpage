@@ -13,7 +13,12 @@ export type ThemeId =
   | "verdant"
   | "neon"
   | "topo"
-  | "luxe";
+  | "luxe"
+  | "dusk"
+  | "matrix"
+  | "coral"
+  | "stardust"
+  | "ink";
 
 export type ThemeRenderer = (
   ctx: CanvasRenderingContext2D,

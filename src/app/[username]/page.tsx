@@ -14,6 +14,7 @@ const VALID_THEMES: Set<string> = new Set([
   "cosmic", "fluid", "ember", "monolith", "aurora",
   "terracotta", "prism", "biolume", "circuit", "sakura",
   "glacier", "verdant", "neon", "topo", "luxe",
+  "dusk", "matrix", "coral", "stardust", "ink",
 ]);
 
 export const revalidate = 60;

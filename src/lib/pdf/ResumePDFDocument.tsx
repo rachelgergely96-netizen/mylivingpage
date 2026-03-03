@@ -217,9 +217,14 @@ export default function ResumePDFDocument({ data }: ResumePDFDocumentProps) {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.entryTitle}>
                       {exp.title}
-                      <Text style={styles.entrySubtitle}>
-                        {"  "}· {exp.company}
-                      </Text>
+                      {"  "}·{" "}
+                      {exp.url ? (
+                        <Link src={formatUrl(exp.url)} style={{ textDecoration: "none" }}>
+                          <Text style={styles.entrySubtitle}>{exp.company}</Text>
+                        </Link>
+                      ) : (
+                        <Text style={styles.entrySubtitle}>{exp.company}</Text>
+                      )}
                     </Text>
                   </View>
                   <Text style={styles.entryDate}>{exp.dates}</Text>

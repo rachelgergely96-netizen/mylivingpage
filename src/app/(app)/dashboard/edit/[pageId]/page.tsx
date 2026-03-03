@@ -41,7 +41,16 @@ export default function EditPage() {
         if (!res.ok) { setError("Page not found or you don't have access."); setLoading(false); return; }
         const row = (await res.json()) as PageRecord;
         setPage(row);
-        setData(row.resume_data);
+        const rd = { ...row.resume_data };
+        // Normalize legacy string[] skills to {category, items}[]
+        if (rd.skills?.length && typeof rd.skills[0] === "string") {
+          rd.skills = [{ category: "General", items: rd.skills as unknown as string[] }];
+        }
+        // Normalize legacy string[] certifications to {name, issuer, date}[]
+        if (rd.certifications?.length && typeof rd.certifications[0] === "string") {
+          rd.certifications = (rd.certifications as unknown as string[]).map((c) => ({ name: c, issuer: null, date: null }));
+        }
+        setData(rd);
         setThemeId(row.theme_id as ThemeId);
         setCustomSlug(row.slug);
       } catch {
@@ -393,6 +402,7 @@ export default function EditPage() {
                   <input type="text" value={exp.company} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], company: e.target.value }; updateField("experience", next); }} placeholder="Company" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
                   <input type="text" value={exp.dates} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], dates: e.target.value }; updateField("experience", next); }} placeholder="Dates" className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
                 </div>
+                <input type="text" value={exp.url ?? ""} onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], url: e.target.value || null }; updateField("experience", next); }} placeholder="Company website URL (optional)" className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
                 <textarea
                   value={exp.highlights?.join("\n") ?? ""}
                   onChange={(e) => { const next = [...data.experience]; next[i] = { ...next[i], highlights: e.target.value.split("\n").filter(Boolean) }; updateField("experience", next); }}
@@ -407,7 +417,7 @@ export default function EditPage() {
             ))}
             <button
               type="button"
-              onClick={() => updateField("experience", [...(data.experience ?? []), { title: "", company: "", dates: "", highlights: [] }])}
+              onClick={() => updateField("experience", [...(data.experience ?? []), { title: "", company: "", dates: "", highlights: [], url: null }])}
               className="text-xs text-[#3B82F6] hover:text-[#93C5FD]"
             >
               + Add Experience
@@ -426,6 +436,60 @@ export default function EditPage() {
               </div>
             ))}
             <button type="button" onClick={() => updateField("education", [...(data.education ?? []), { degree: "", school: "", year: "" }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Education</button>
+          </fieldset>
+
+          {/* Skills */}
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Skills</legend>
+            {data.skills?.map((group, i) => (
+              <div key={i} className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4">
+                <input
+                  type="text"
+                  value={typeof group === "string" ? group : group.category}
+                  onChange={(e) => { const next = [...(data.skills ?? [])]; next[i] = { ...next[i], category: e.target.value }; updateField("skills", next); }}
+                  placeholder="Category (e.g. Languages, Tools)"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={Array.isArray((group as { items?: string[] }).items) ? (group as { items: string[] }).items.join(", ") : ""}
+                  onChange={(e) => { const next = [...(data.skills ?? [])]; next[i] = { ...next[i], items: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }; updateField("skills", next); }}
+                  placeholder="TypeScript, React, Node.js (comma separated)"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+                />
+                <button type="button" onClick={() => updateField("skills", (data.skills ?? []).filter((_, idx) => idx !== i))} className="text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => updateField("skills", [...(data.skills ?? []), { category: "", items: [] }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Skill Category</button>
+          </fieldset>
+
+          {/* Projects */}
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Projects</legend>
+            {data.projects?.map((proj, i) => (
+              <div key={i} className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4">
+                <input type="text" value={proj.name} onChange={(e) => { const next = [...data.projects]; next[i] = { ...next[i], name: e.target.value }; updateField("projects", next); }} placeholder="Project Name" className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <textarea value={proj.description} onChange={(e) => { const next = [...data.projects]; next[i] = { ...next[i], description: e.target.value }; updateField("projects", next); }} rows={2} placeholder="Brief description" className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs leading-5 text-[rgba(240,244,255,0.6)] focus:border-[#3B82F6] focus:outline-none" />
+                <input type="text" value={proj.tech?.join(", ") ?? ""} onChange={(e) => { const next = [...data.projects]; next[i] = { ...next[i], tech: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }; updateField("projects", next); }} placeholder="Technologies (comma separated)" className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <input type="text" value={proj.url ?? ""} onChange={(e) => { const next = [...data.projects]; next[i] = { ...next[i], url: e.target.value || null }; updateField("projects", next); }} placeholder="Project URL (optional)" className="w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <button type="button" onClick={() => updateField("projects", data.projects.filter((_, idx) => idx !== i))} className="text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => updateField("projects", [...(data.projects ?? []), { name: "", description: "", tech: [], url: null }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Project</button>
+          </fieldset>
+
+          {/* Certifications */}
+          <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Certifications</legend>
+            {data.certifications?.map((cert, i) => (
+              <div key={i} className="flex flex-wrap gap-2">
+                <input type="text" value={cert.name} onChange={(e) => { const next = [...data.certifications]; next[i] = { ...next[i], name: e.target.value }; updateField("certifications", next); }} placeholder="Certification name" className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <input type="text" value={cert.issuer ?? ""} onChange={(e) => { const next = [...data.certifications]; next[i] = { ...next[i], issuer: e.target.value || null }; updateField("certifications", next); }} placeholder="Issuer" className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <input type="text" value={cert.date ?? ""} onChange={(e) => { const next = [...data.certifications]; next[i] = { ...next[i], date: e.target.value || null }; updateField("certifications", next); }} placeholder="Date" className="w-24 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none" />
+                <button type="button" onClick={() => updateField("certifications", data.certifications.filter((_, idx) => idx !== i))} className="rounded-lg border border-[rgba(255,120,120,0.2)] px-3 py-2 text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => updateField("certifications", [...(data.certifications ?? []), { name: "", issuer: null, date: null }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Certification</button>
           </fieldset>
         </div>
       ) : null}

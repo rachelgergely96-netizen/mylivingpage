@@ -17,6 +17,7 @@ interface ExperienceEntry {
   company: string;
   dates: string;
   highlights: string[];
+  url: string | null;
 }
 
 interface EducationEntry {
@@ -237,7 +238,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
     set({ experience: next });
   };
 
-  const addExp = () => set({ experience: [...experience, { title: "", company: "", dates: "", highlights: [] }] });
+  const addExp = () => set({ experience: [...experience, { title: "", company: "", dates: "", highlights: [], url: null }] });
 
   const removeExp = (index: number) => set({ experience: experience.filter((_, i) => i !== index) });
 
@@ -272,6 +273,13 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
               className={inputClass}
             />
           </div>
+          <input
+            type="text"
+            value={exp.url ?? ""}
+            onChange={(e) => updateExp(i, { url: e.target.value || null })}
+            placeholder="Company website URL (optional)"
+            className={inputClass}
+          />
           <div>
             <label className={labelClass}>Key highlights (one per line)</label>
             <textarea
@@ -466,6 +474,13 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
               className={inputClass}
             />
             <p className="text-[10px] text-[rgba(240,244,255,0.25)]">Separate technologies with commas</p>
+            <input
+              type="text"
+              value={proj.url ?? ""}
+              onChange={(e) => updateProject(i, { url: e.target.value || null })}
+              placeholder="Project URL (optional)"
+              className={inputClass}
+            />
           </div>
         ))}
         <button type="button" onClick={addProject} className={addBtnClass}>+ Add project</button>

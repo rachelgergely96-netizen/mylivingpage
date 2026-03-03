@@ -13,6 +13,7 @@ export interface ResumeData {
     company: string;
     dates: string;
     highlights: string[];
+    url: string | null;
   }>;
   education: Array<{
     degree: string;

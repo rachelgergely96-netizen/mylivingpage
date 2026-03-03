@@ -30,6 +30,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Built real-time collaboration engine using WebSockets and CRDTs",
             "Mentored 4 junior engineers through structured growth plans",
           ],
+          url: null,
         },
         {
           title: "Software Engineer",
@@ -39,6 +40,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Designed and shipped analytics dashboard used by 500+ enterprise clients",
             "Reduced API response times by 60% through query optimization",
           ],
+          url: null,
         },
         {
           title: "Junior Developer",
@@ -48,6 +50,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Built responsive client sites using React and Node.js",
             "Introduced automated testing, bringing coverage from 15% to 80%",
           ],
+          url: null,
         },
       ],
       education: [
@@ -125,6 +128,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Built and scaled design system across 3 product teams",
             "Led research sprints with 200+ patient interviews",
           ],
+          url: null,
         },
         {
           title: "Senior Product Designer",
@@ -134,6 +138,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Designed onboarding flow that reduced churn by 25%",
             "Created component library adopted across 4 product squads",
           ],
+          url: null,
         },
         {
           title: "UX Designer",
@@ -143,6 +148,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Delivered 30+ client projects across fintech, healthcare, and e-commerce",
             "Introduced usability testing practice, winning 2 industry awards",
           ],
+          url: null,
         },
       ],
       education: [
@@ -237,6 +243,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Led due diligence on 6 acquisitions totaling $320M",
             "Implemented forecasting model reducing variance by 35%",
           ],
+          url: null,
         },
         {
           title: "Senior Financial Analyst",
@@ -246,6 +253,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Advised on 8 M&A transactions in technology sector",
             "Built financial models for deals ranging $50M – $500M",
           ],
+          url: null,
         },
         {
           title: "Financial Analyst",
@@ -255,6 +263,7 @@ export const DEMO_PAGES: DemoPage[] = [
             "Delivered financial audits for FTSE 100 clients",
             "Streamlined reporting workflows saving 200+ hours annually",
           ],
+          url: null,
         },
       ],
       education: [

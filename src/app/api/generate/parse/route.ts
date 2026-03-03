@@ -38,7 +38,8 @@ The JSON must have exactly this structure:
       "title": "string",
       "company": "string",
       "dates": "string",
-      "highlights": ["string", "string"]
+      "highlights": ["string", "string"],
+      "url": "string or null (company website URL if mentioned)"
     }
   ],
   "education": [

@@ -143,7 +143,6 @@ export default function LandingPage() {
                           <ResumeLayout data={demo.data} compact />
                         </div>
                       </ThemeCanvas>
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[rgba(6,6,26,0.95)] to-transparent" />
                     </div>
                     <div className="border-t border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-4 py-3 sm:px-5 sm:py-4">
                       <div className="flex items-center justify-between">

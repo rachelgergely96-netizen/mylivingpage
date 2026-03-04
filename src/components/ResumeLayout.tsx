@@ -36,7 +36,7 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
   const hasContact = data.email || data.linkedin || data.github || data.website;
 
   return (
-    <div className={`relative z-10 h-full ${compact ? "overflow-hidden px-3 py-4 sm:px-4 sm:py-5" : "overflow-y-auto px-4 py-5 sm:p-6 md:p-8"}`}>
+    <div className={`relative z-10 h-full overflow-y-auto scrollbar-hide ${compact ? "px-3 py-4 sm:px-4 sm:py-5" : "px-4 py-5 sm:p-6 md:p-8"}`}>
       <div className="mx-auto max-w-4xl">
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} flex items-start justify-between gap-3 sm:gap-4`}>

@@ -137,12 +137,13 @@ export default function LandingPage() {
                     key={demo.data.name}
                     className="group overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] transition-all duration-300 ease-soft hover:border-[rgba(59,130,246,0.2)]"
                   >
-                    <div className="relative h-[380px] sm:h-[420px] lg:h-[460px] overflow-hidden">
+                    <div className="relative h-[520px] sm:h-[540px] lg:h-[560px] overflow-hidden">
                       <ThemeCanvas themeId={demo.themeId as ThemeId} height="100%" interactive>
                         <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
                           <ResumeLayout data={demo.data} compact />
                         </div>
                       </ThemeCanvas>
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[rgba(6,6,26,0.95)] to-transparent" />
                     </div>
                     <div className="border-t border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-4 py-3 sm:px-5 sm:py-4">
                       <div className="flex items-center justify-between">

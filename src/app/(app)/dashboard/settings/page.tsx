@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { slugifyUsername } from "@/lib/usernames";
+import { isPremiumPlan } from "@/lib/plans";
 
 interface Profile {
   id: string;
@@ -18,7 +19,9 @@ interface Profile {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,8 +69,12 @@ export default function SettingsPage() {
       setUsername(data.username ?? "");
       setAvatarUrl(data.avatar_url);
       setLoading(false);
+      if (searchParams.get("upgraded") === "true") {
+        showToast("Welcome to Pro! Your premium features are now active.");
+        router.replace("/dashboard/settings", { scroll: false });
+      }
     })();
-  }, [router]);
+  }, [router, searchParams, showToast]);
 
   // Username availability check (debounced)
   const checkTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -369,18 +376,50 @@ export default function SettingsPage() {
       {/* ── Plan Section ── */}
       <section className="glass-card rounded-2xl p-5 sm:p-7 mb-5">
         <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-3">Plan</h2>
-        <div className="flex items-center gap-3">
-          <span className="rounded-full border border-[rgba(59,130,246,0.35)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#3B82F6]">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${isPremiumPlan(profile.plan) ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
             {profile.plan ?? "spark"}
           </span>
-          <button
-            type="button"
-            disabled
-            className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]"
-          >
-            Upgrade (coming soon)
-          </button>
+          {isPremiumPlan(profile.plan) ? (
+            <>
+              <span className="text-xs text-[rgba(240,244,255,0.5)]">$9/month</span>
+              <button
+                type="button"
+                disabled={billingLoading}
+                onClick={async () => {
+                  setBillingLoading(true);
+                  const res = await fetch("/api/stripe/portal", { method: "POST" });
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                  else setBillingLoading(false);
+                }}
+                className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#F0F4FF] disabled:opacity-50"
+              >
+                {billingLoading ? "Loading..." : "Manage Subscription"}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={billingLoading}
+              onClick={async () => {
+                setBillingLoading(true);
+                const res = await fetch("/api/stripe/checkout", { method: "POST" });
+                const data = await res.json();
+                if (data.url) window.location.href = data.url;
+                else setBillingLoading(false);
+              }}
+              className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
+            >
+              {billingLoading ? "Loading..." : "Upgrade to Pro — $9/mo"}
+            </button>
+          )}
         </div>
+        {!isPremiumPlan(profile.plan) && (
+          <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
+            Unlock all themes, unlimited pages, analytics, and more.
+          </p>
+        )}
       </section>
 
       {/* ── Danger Zone ── */}

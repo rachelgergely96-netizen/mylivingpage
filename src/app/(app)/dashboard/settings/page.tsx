@@ -57,23 +57,58 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Load profile
+  // Load profile (with polling retry after upgrade to handle webhook race condition)
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const res = await fetch("/api/profile");
+      if (cancelled) return;
       if (res.status === 401) { router.push("/login?next=/dashboard/settings"); return; }
       if (!res.ok) { setLoading(false); return; }
       const data = (await res.json()) as Profile;
+
+      const justUpgraded = searchParams.get("upgraded") === "true";
+
+      // If returning from Stripe checkout but webhook hasn't updated the plan yet,
+      // poll up to 5 times (every 1.5s) until the plan reflects "pro"
+      if (justUpgraded && !isPremiumPlan(data.plan)) {
+        let retries = 0;
+        const poll = async (): Promise<Profile> => {
+          if (retries >= 5 || cancelled) return data;
+          retries++;
+          await new Promise((r) => setTimeout(r, 1500));
+          if (cancelled) return data;
+          const retry = await fetch("/api/profile");
+          if (!retry.ok) return data;
+          const fresh = (await retry.json()) as Profile;
+          if (isPremiumPlan(fresh.plan)) return fresh;
+          return poll();
+        };
+        const final = await poll();
+        if (cancelled) return;
+        setProfile(final);
+        setFullName(final.full_name ?? "");
+        setUsername(final.username ?? "");
+        setAvatarUrl(final.avatar_url);
+        setLoading(false);
+        showToast(isPremiumPlan(final.plan)
+          ? "Welcome to Pro! Your premium features are now active."
+          : "Upgrade processing — features will unlock shortly.");
+        router.replace("/dashboard/settings", { scroll: false });
+        return;
+      }
+
       setProfile(data);
       setFullName(data.full_name ?? "");
       setUsername(data.username ?? "");
       setAvatarUrl(data.avatar_url);
       setLoading(false);
-      if (searchParams.get("upgraded") === "true") {
+      if (justUpgraded) {
         showToast("Welcome to Pro! Your premium features are now active.");
         router.replace("/dashboard/settings", { scroll: false });
       }
     })();
+    return () => { cancelled = true; };
   }, [router, searchParams, showToast]);
 
   // Username availability check (debounced)

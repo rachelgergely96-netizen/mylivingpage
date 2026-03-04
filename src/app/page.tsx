@@ -137,8 +137,8 @@ export default function LandingPage() {
                     key={demo.data.name}
                     className="group overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] transition-all duration-300 ease-soft hover:border-[rgba(59,130,246,0.2)]"
                   >
-                    <div className="relative h-[420px] sm:h-[460px] overflow-hidden">
-                      <ThemeCanvas themeId={demo.themeId as ThemeId} height={460} interactive>
+                    <div className="relative h-[380px] sm:h-[420px] lg:h-[460px] overflow-hidden">
+                      <ThemeCanvas themeId={demo.themeId as ThemeId} height="100%" interactive>
                         <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
                           <ResumeLayout data={demo.data} compact />
                         </div>

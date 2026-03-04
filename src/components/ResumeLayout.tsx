@@ -26,18 +26,20 @@ function normalizeCerts(raw: ResumeData["certifications"]): Array<{ name: string
 }
 
 export default function ResumeLayout({ data, compact = false }: ResumeLayoutProps) {
-  const headingSize = compact ? "text-2xl md:text-3xl" : "text-2xl sm:text-3xl md:text-4xl";
-  const summarySize = compact ? "text-xs sm:text-sm" : "text-sm sm:text-base";
-  const skills = normalizeSkills(data.skills);
+  const headingSize = compact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl md:text-4xl";
+  const summarySize = compact ? "text-xs" : "text-sm sm:text-base";
+  const allSkills = normalizeSkills(data.skills);
+  const skills = compact ? allSkills.slice(0, 2).map(g => ({ ...g, items: g.items.slice(0, 4) })) : allSkills;
   const certs = normalizeCerts(data.certifications);
+  const experience = compact ? data.experience?.slice(0, 2) : data.experience;
 
   const hasContact = data.email || data.linkedin || data.github || data.website;
 
   return (
-    <div className="relative z-10 h-full overflow-y-auto px-4 py-5 sm:p-6 md:p-8">
+    <div className={`relative z-10 h-full ${compact ? "overflow-hidden px-3 py-3 sm:px-4 sm:py-4" : "overflow-y-auto px-4 py-5 sm:p-6 md:p-8"}`}>
       <div className="mx-auto max-w-4xl">
         {/* ── Header ─────────────────────────────────────────────── */}
-        <header className="mb-5 sm:mb-6 flex items-start justify-between gap-3 sm:gap-4">
+        <header className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} flex items-start justify-between gap-3 sm:gap-4`}>
           <div className="min-w-0">
             <h1 className={`${headingSize} font-heading font-bold text-[#F0F4FF] drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)] leading-tight`}>
               {data.name}
@@ -86,11 +88,11 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
         </header>
 
         {/* ── Summary ─────────────────────────────────────────────── */}
-        {data.summary ? <p className={`${summarySize} mb-5 sm:mb-6 leading-6 sm:leading-7 text-[rgba(240,244,255,0.6)]`}>{data.summary}</p> : null}
+        {data.summary ? <p className={`${summarySize} ${compact ? "mb-3 sm:mb-4 line-clamp-3 leading-5" : "mb-5 sm:mb-6 leading-6 sm:leading-7"} text-[rgba(240,244,255,0.6)]`}>{data.summary}</p> : null}
 
         {/* ── Stats Bar ──────────────────────────────────────────── */}
         {data.stats?.length ? (
-          <section className="mb-5 sm:mb-6 grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4">
+          <section className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4`}>
             {data.stats.slice(0, 4).map((stat) => (
               <article
                 key={`${stat.label}-${stat.value}`}
@@ -104,34 +106,34 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
         ) : null}
 
         {/* ── Experience ──────────────────────────────────────────── */}
-        {data.experience?.length ? (
-          <section className="mb-4 sm:mb-5">
+        {experience?.length ? (
+          <section className={compact ? "mb-3 sm:mb-4" : "mb-4 sm:mb-5"}>
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Experience</h2>
             <div className="space-y-2">
-              {data.experience.map((experience) => (
+              {experience.map((exp) => (
                 <article
-                  key={`${experience.company}-${experience.title}-${experience.dates}`}
-                  className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-3 sm:p-4 backdrop-blur-md"
+                  key={`${exp.company}-${exp.title}-${exp.dates}`}
+                  className={`rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] ${compact ? "p-2.5 sm:p-3" : "p-3 sm:p-4"} backdrop-blur-md`}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-1.5 sm:gap-2">
                     <p className="text-xs sm:text-sm font-medium text-[#F0F4FF]">
-                      {experience.title}{" "}
+                      {exp.title}{" "}
                       <span className="text-[rgba(240,244,255,0.45)]">
                         ·{" "}
-                        {experience.url ? (
-                          <a href={experience.url.startsWith("http") ? experience.url : `https://${experience.url}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto underline decoration-[rgba(59,130,246,0.3)] underline-offset-2 transition-colors hover:text-[#93C5FD]">
-                            {experience.company}
+                        {exp.url ? (
+                          <a href={exp.url.startsWith("http") ? exp.url : `https://${exp.url}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto underline decoration-[rgba(59,130,246,0.3)] underline-offset-2 transition-colors hover:text-[#93C5FD]">
+                            {exp.company}
                           </a>
-                        ) : experience.company}
+                        ) : exp.company}
                       </span>
                     </p>
-                    <p className="font-mono text-[11px] text-[rgba(240,244,255,0.35)]">{experience.dates}</p>
+                    <p className="font-mono text-[11px] text-[rgba(240,244,255,0.35)]">{exp.dates}</p>
                   </div>
-                  {experience.highlights?.length ? (
+                  {!compact && exp.highlights?.length ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {experience.highlights.map((highlight) => (
+                      {exp.highlights.map((highlight) => (
                         <span
-                          key={`${experience.company}-${highlight}`}
+                          key={`${exp.company}-${highlight}`}
                           className="rounded-md bg-[rgba(255,255,255,0.04)] px-2 py-1 text-[11px] text-[rgba(240,244,255,0.5)]"
                         >
                           {highlight}
@@ -146,7 +148,7 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
         ) : null}
 
         {/* ── Projects ───────────────────────────────────────────── */}
-        {data.projects?.length ? (
+        {!compact && data.projects?.length ? (
           <section className="mb-5">
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Projects</h2>
             <div className="space-y-2">
@@ -184,7 +186,7 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
         ) : null}
 
         {/* ── Education ──────────────────────────────────────────── */}
-        {data.education?.length ? (
+        {!compact && data.education?.length ? (
           <section className="mb-5">
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Education</h2>
             <div className="space-y-2">
@@ -207,7 +209,7 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
 
         {/* ── Skills (grouped by category) ───────────────────────── */}
         {skills.length ? (
-          <section className="mb-5">
+          <section className={compact ? "mb-3" : "mb-5"}>
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Skills</h2>
             <div className="space-y-3">
               {skills.map((group) => (
@@ -232,7 +234,7 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
         ) : null}
 
         {/* ── Certifications ─────────────────────────────────────── */}
-        {certs.length ? (
+        {!compact && certs.length ? (
           <section>
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Certifications</h2>
             <div className="space-y-2">

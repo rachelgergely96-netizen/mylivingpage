@@ -5,12 +5,14 @@ import type { ResumeData } from "@/types/resume";
 
 interface DownloadResumeButtonProps {
   data: ResumeData;
+  premium?: boolean;
 }
 
-export default function DownloadResumeButton({ data }: DownloadResumeButtonProps) {
+export default function DownloadResumeButton({ data, premium }: DownloadResumeButtonProps) {
   const [generating, setGenerating] = useState(false);
 
   const handleDownload = async () => {
+    if (!premium) return;
     setGenerating(true);
     try {
       const { pdf } = await import("@react-pdf/renderer");
@@ -75,6 +77,7 @@ export default function DownloadResumeButton({ data }: DownloadResumeButtonProps
           </svg>
         )}
         <span>{generating ? "Generating..." : "Download PDF"}</span>
+        {!premium ? <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span> : null}
       </button>
     </div>
   );

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import AnalyticsCharts from "@/components/analytics/AnalyticsCharts";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
+import { isPremiumPlan } from "@/lib/plans";
 
 export default async function AnalyticsPage({
   params,
@@ -18,6 +19,17 @@ export default async function AnalyticsPage({
 
   // Use service-role client to bypass RLS for data queries
   const supabase = createServiceRoleSupabaseClient();
+
+  // Check plan — analytics is premium only
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!isPremiumPlan(profile?.plan)) {
+    redirect("/dashboard/settings");
+  }
 
   // Fetch the page and verify ownership
   const { data: page } = await supabase

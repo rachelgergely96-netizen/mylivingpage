@@ -4,8 +4,10 @@ import DownloadResumeButton from "@/components/DownloadResumeButton";
 import MadeWithBadge from "@/components/MadeWithBadge";
 import PageOwnerBar from "@/components/PageOwnerBar";
 import ResumeLayout from "@/components/ResumeLayout";
+import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
+import { isPremiumPlan } from "@/lib/plans";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord } from "@/types/resume";
@@ -95,18 +97,29 @@ export default async function PublicLivingPage({ params }: { params: { username:
   }
 
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
+  const pageUserId = page.user_id ?? page.owner_id ?? "";
+
+  // Fetch owner's plan for premium feature gating
+  const supabase = createServiceRoleSupabaseClient();
+  const { data: ownerProfile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", pageUserId)
+    .maybeSingle();
+  const premium = isPremiumPlan(ownerProfile?.plan);
 
   return (
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
-      <PageOwnerBar pageId={page.id} pageUserId={page.user_id ?? page.owner_id ?? ""} />
+      <PageOwnerBar pageId={page.id} pageUserId={pageUserId} />
       <ThemeCanvas themeId={themeId} height="100dvh" className="rounded-none min-h-screen">
         <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
           <ResumeLayout data={page.resume_data} />
         </div>
       </ThemeCanvas>
-      <DownloadResumeButton data={page.resume_data} />
-      <MadeWithBadge pageUserId={page.user_id ?? page.owner_id ?? ""} />
+      <DownloadResumeButton data={page.resume_data} premium={premium} />
+      <ShareCardDownload pageUserId={pageUserId} slug={page.slug} />
+      <MadeWithBadge pageUserId={pageUserId} premium={premium} />
     </main>
   );
 }

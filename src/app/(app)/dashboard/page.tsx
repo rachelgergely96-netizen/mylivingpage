@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 import DeletePageButton from "@/components/DeletePageButton";
+import { MAX_FREE_PAGES, isPremiumPlan } from "@/lib/plans";
 
 export default async function DashboardPage() {
   const authClient = createServerSupabaseClient();
@@ -15,7 +16,7 @@ export default async function DashboardPage() {
   const [{ data: profile }, { data: pages }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name, username")
+      .select("full_name, username, plan")
       .eq("id", user?.id ?? "")
       .maybeSingle(),
     supabase
@@ -27,6 +28,8 @@ export default async function DashboardPage() {
 
   const displayName = profile?.full_name || profile?.username || null;
   const list = (pages ?? []) as PageRecord[];
+  const premium = isPremiumPlan(profile?.plan);
+  const atPageLimit = !premium && list.length >= MAX_FREE_PAGES;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-10 md:px-10">
@@ -41,12 +44,21 @@ export default async function DashboardPage() {
             )}
           </h1>
         </div>
-        <Link
-          href="/create"
-          className="gold-pill self-start sm:self-auto px-5 py-2.5 sm:px-6 sm:py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
-        >
-          Create New Page
-        </Link>
+        {atPageLimit ? (
+          <Link
+            href="/dashboard/settings"
+            className="self-start sm:self-auto rounded-full border border-[rgba(255,255,255,0.15)] px-5 py-2.5 sm:px-6 sm:py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.5)]"
+          >
+            Upgrade for More Pages
+          </Link>
+        ) : (
+          <Link
+            href="/create"
+            className="gold-pill self-start sm:self-auto px-5 py-2.5 sm:px-6 sm:py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
+          >
+            Create New Page
+          </Link>
+        )}
       </div>
 
       {!list.length ? (
@@ -91,12 +103,22 @@ export default async function DashboardPage() {
                 >
                   Edit
                 </Link>
-                <Link
-                  href={`/dashboard/analytics/${page.id}`}
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 sm:px-4 sm:py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                >
-                  Analytics
-                </Link>
+                {premium ? (
+                  <Link
+                    href={`/dashboard/analytics/${page.id}`}
+                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 sm:px-4 sm:py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                  >
+                    Analytics
+                  </Link>
+                ) : (
+                  <Link
+                    href="/dashboard/settings"
+                    className="rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1.5 sm:px-4 sm:py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] flex items-center gap-1.5"
+                  >
+                    Analytics
+                    <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span>
+                  </Link>
+                )}
                 <DeletePageButton pageId={page.id} />
               </div>
             </article>

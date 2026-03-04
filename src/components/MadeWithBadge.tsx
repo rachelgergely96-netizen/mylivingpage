@@ -6,9 +6,10 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 interface MadeWithBadgeProps {
   pageUserId: string;
+  premium?: boolean;
 }
 
-export default function MadeWithBadge({ pageUserId }: MadeWithBadgeProps) {
+export default function MadeWithBadge({ pageUserId, premium }: MadeWithBadgeProps) {
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -24,7 +25,7 @@ export default function MadeWithBadge({ pageUserId }: MadeWithBadgeProps) {
     check();
   }, [pageUserId]);
 
-  if (!show || dismissed) return null;
+  if (!show || dismissed || premium) return null;
 
   return (
     <div

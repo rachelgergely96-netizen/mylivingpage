@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
-
-const MAX_FREE_ARCHIVES = 5;
+import { MAX_FREE_ARCHIVES } from "@/lib/plans";
 
 /** Authenticate the caller and return their user id, or null */
 async function getAuthUserId() {

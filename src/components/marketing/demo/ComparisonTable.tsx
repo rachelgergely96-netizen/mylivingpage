@@ -2,7 +2,7 @@ import { COMPARISON_FEATURES } from "./demo-data";
 
 export default function ComparisonTable() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)]" style={{ background: "rgba(6,10,24,0.6)" }}>
+    <div className="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] backdrop-blur-xl" style={{ background: "rgba(6,10,24,0.85)" }}>
       {/* Header */}
       <div className="border-b border-[rgba(255,255,255,0.08)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-[#3B82F6]">
         Feature Comparison

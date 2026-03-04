@@ -8,6 +8,7 @@ import { slugifyUsername } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord, ResumeData } from "@/types/resume";
+import { FREE_THEMES, isPremiumPlan } from "@/lib/plans";
 
 type Tab = "content" | "theme" | "preview";
 
@@ -32,6 +33,8 @@ export default function EditPage() {
   const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [userPlan, setUserPlan] = useState<string>("spark");
+  const premium = isPremiumPlan(userPlan);
 
   useEffect(() => {
     const load = async () => {
@@ -53,6 +56,12 @@ export default function EditPage() {
         setData(rd);
         setThemeId(row.theme_id as ThemeId);
         setCustomSlug(row.slug);
+        // Fetch user plan
+        const profileRes = await fetch("/api/profile");
+        if (profileRes.ok) {
+          const prof = (await profileRes.json()) as { plan?: string };
+          setUserPlan(prof.plan ?? "spark");
+        }
       } catch {
         setError("Failed to load page.");
       } finally {
@@ -385,7 +394,7 @@ export default function EditPage() {
               <button
                 type="button"
                 onClick={() => updateField("stats", [...(data.stats ?? []), { value: "", label: "" }])}
-                className="text-xs text-[#3B82F6] hover:text-[#93C5FD]"
+                className="rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD] transition-all"
               >
                 + Add Stat
               </button>
@@ -418,7 +427,7 @@ export default function EditPage() {
             <button
               type="button"
               onClick={() => updateField("experience", [...(data.experience ?? []), { title: "", company: "", dates: "", highlights: [], url: null }])}
-              className="text-xs text-[#3B82F6] hover:text-[#93C5FD]"
+              className="rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD] transition-all"
             >
               + Add Experience
             </button>
@@ -435,7 +444,7 @@ export default function EditPage() {
                 <button type="button" onClick={() => updateField("education", data.education.filter((_, idx) => idx !== i))} className="rounded-lg border border-[rgba(255,120,120,0.2)] px-3 py-2 text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
               </div>
             ))}
-            <button type="button" onClick={() => updateField("education", [...(data.education ?? []), { degree: "", school: "", year: "" }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Education</button>
+            <button type="button" onClick={() => updateField("education", [...(data.education ?? []), { degree: "", school: "", year: "" }])} className="rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD] transition-all">+ Add Education</button>
           </fieldset>
 
           {/* Skills */}
@@ -460,7 +469,7 @@ export default function EditPage() {
                 <button type="button" onClick={() => updateField("skills", (data.skills ?? []).filter((_, idx) => idx !== i))} className="text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
               </div>
             ))}
-            <button type="button" onClick={() => updateField("skills", [...(data.skills ?? []), { category: "", items: [] }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Skill Category</button>
+            <button type="button" onClick={() => updateField("skills", [...(data.skills ?? []), { category: "", items: [] }])} className="rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD] transition-all">+ Add Skill Category</button>
           </fieldset>
 
           {/* Projects */}
@@ -475,7 +484,7 @@ export default function EditPage() {
                 <button type="button" onClick={() => updateField("projects", data.projects.filter((_, idx) => idx !== i))} className="text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
               </div>
             ))}
-            <button type="button" onClick={() => updateField("projects", [...(data.projects ?? []), { name: "", description: "", tech: [], url: null }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Project</button>
+            <button type="button" onClick={() => updateField("projects", [...(data.projects ?? []), { name: "", description: "", tech: [], url: null }])} className="rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD] transition-all">+ Add Project</button>
           </fieldset>
 
           {/* Certifications */}
@@ -489,7 +498,7 @@ export default function EditPage() {
                 <button type="button" onClick={() => updateField("certifications", data.certifications.filter((_, idx) => idx !== i))} className="rounded-lg border border-[rgba(255,120,120,0.2)] px-3 py-2 text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]">Remove</button>
               </div>
             ))}
-            <button type="button" onClick={() => updateField("certifications", [...(data.certifications ?? []), { name: "", issuer: null, date: null }])} className="text-xs text-[#3B82F6] hover:text-[#93C5FD]">+ Add Certification</button>
+            <button type="button" onClick={() => updateField("certifications", [...(data.certifications ?? []), { name: "", issuer: null, date: null }])} className="rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD] transition-all">+ Add Certification</button>
           </fieldset>
         </div>
       ) : null}
@@ -497,22 +506,34 @@ export default function EditPage() {
       {/* Theme Tab */}
       {tab === "theme" ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ALL_THEMES.map((theme) => (
-            <button
-              key={theme.id}
-              type="button"
-              onClick={() => setThemeId(theme.id)}
-              className="glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft hover:-translate-y-1"
-              style={{
-                borderColor: themeId === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
-                background: themeId === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
-              }}
-            >
-              <ThemeCanvas themeId={theme.id} height={120} />
-              <p className="mt-3 font-heading text-xl">{theme.name}</p>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
-            </button>
-          ))}
+          {ALL_THEMES.map((theme) => {
+            const locked = !premium && !FREE_THEMES.includes(theme.id);
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => { if (!locked) setThemeId(theme.id); }}
+                className={`glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft ${locked ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-1"}`}
+                style={{
+                  borderColor: themeId === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
+                  background: themeId === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
+                }}
+              >
+                <div className="relative">
+                  <ThemeCanvas themeId={theme.id} height={120} />
+                  {locked ? (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
+                      <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
+                        Pro
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                <p className="mt-3 font-heading text-xl">{theme.name}</p>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
+              </button>
+            );
+          })}
         </div>
       ) : null}
 

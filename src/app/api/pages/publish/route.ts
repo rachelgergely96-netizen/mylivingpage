@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
+import { FREE_THEMES, MAX_FREE_PAGES, isPremiumPlan, isPremiumTheme } from "@/lib/plans";
 
 interface PublishBody {
   slug: string;
@@ -31,6 +32,23 @@ export async function POST(request: Request) {
     // Use service-role client to bypass RLS
     const supabase = createServiceRoleSupabaseClient();
 
+    // Check plan limits
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const userPlan = profile?.plan ?? "spark";
+    const premium = isPremiumPlan(userPlan);
+
+    if (!premium && isPremiumTheme(body.theme_id)) {
+      return NextResponse.json(
+        { error: `The "${body.theme_id}" theme requires a premium plan. Free themes: ${FREE_THEMES.join(", ")}.` },
+        { status: 403 },
+      );
+    }
+
     // Find existing page by either ownership column
     const { data: existing } = await supabase
       .from("pages")
@@ -41,6 +59,21 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     const existingId = existing?.id ?? null;
+
+    // Enforce page limit for free users (only on new pages)
+    if (!premium && !existingId) {
+      const { count } = await supabase
+        .from("pages")
+        .select("*", { count: "exact", head: true })
+        .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`);
+
+      if (count !== null && count >= MAX_FREE_PAGES) {
+        return NextResponse.json(
+          { error: "Free plan allows 1 page. Upgrade to create more." },
+          { status: 403 },
+        );
+      }
+    }
 
     // Build fields — include everything, unknown columns are silently ignored by Supabase
     const now = new Date().toISOString();

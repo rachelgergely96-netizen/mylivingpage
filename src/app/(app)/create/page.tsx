@@ -10,6 +10,7 @@ import { slugifyUsername, usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
+import { FREE_THEMES, MAX_FREE_PAGES, isPremiumPlan } from "@/lib/plans";
 
 type Step = "input" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
@@ -111,6 +112,28 @@ export default function CreatePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const guidedModeRef = useRef(false);
+  const [userPlan, setUserPlan] = useState<string>("spark");
+  const [pageCount, setPageCount] = useState<number>(0);
+  const premium = isPremiumPlan(userPlan);
+  const atPageLimit = !premium && pageCount >= MAX_FREE_PAGES;
+
+  // Fetch user plan and page count on mount
+  useEffect(() => {
+    const fetchPlanInfo = async () => {
+      try {
+        const supabase = createBrowserSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const [profileRes, pagesRes] = await Promise.all([
+          supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
+          supabase.from("pages").select("id", { count: "exact", head: true }).or(`user_id.eq.${user.id},owner_id.eq.${user.id}`),
+        ]);
+        setUserPlan(profileRes.data?.plan ?? "spark");
+        setPageCount(pagesRes.count ?? 0);
+      } catch { /* ignore */ }
+    };
+    fetchPlanInfo();
+  }, []);
 
   const themes = useMemo(() => THEME_REGISTRY.filter((theme) => PREVIEW_THEMES.includes(theme.id)), []);
 
@@ -344,7 +367,24 @@ export default function CreatePage() {
         </p>
       ) : null}
 
-      {step === "input" && inputMode === "choose" ? (
+      {atPageLimit ? (
+        <section className="glass-card rounded-2xl p-5 sm:p-8 text-center">
+          <p className="text-2xl mb-3">&#x1F512;</p>
+          <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#F0F4FF]">Page limit reached</h2>
+          <p className="mt-2 text-sm text-[rgba(240,244,255,0.55)]">
+            The free Spark plan includes {MAX_FREE_PAGES} living page. Upgrade to create unlimited pages.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/settings")}
+            className="mt-5 gold-pill px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.16em]"
+          >
+            Upgrade Plan
+          </button>
+        </section>
+      ) : null}
+
+      {!atPageLimit && step === "input" && inputMode === "choose" ? (
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">How would you like to start?</h2>
@@ -382,7 +422,7 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {step === "input" && inputMode === "paste" ? (
+      {!atPageLimit && step === "input" && inputMode === "paste" ? (
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Paste resume text</h2>
@@ -430,7 +470,7 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {step === "input" && inputMode === "guided" ? (
+      {!atPageLimit && step === "input" && inputMode === "guided" ? (
         <GuidedFlow
           guidedData={guidedData}
           onUpdate={setGuidedData}
@@ -459,23 +499,35 @@ export default function CreatePage() {
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {themes.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                onClick={() => setSelectedTheme(theme.id)}
-                className="glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft hover:-translate-y-1"
-                style={{
-                  borderColor: selectedTheme === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
-                  background: selectedTheme === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
-                }}
-              >
-                <ThemeCanvas themeId={theme.id} height={120} />
-                <p className="mt-3 font-heading text-xl">{theme.name}</p>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
-                <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.45)]">{theme.description}</p>
-              </button>
-            ))}
+            {themes.map((theme) => {
+              const locked = !premium && !FREE_THEMES.includes(theme.id);
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => { if (!locked) setSelectedTheme(theme.id); }}
+                  className={`glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft ${locked ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-1"}`}
+                  style={{
+                    borderColor: selectedTheme === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
+                    background: selectedTheme === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
+                  }}
+                >
+                  <div className="relative">
+                    <ThemeCanvas themeId={theme.id} height={120} />
+                    {locked ? (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
+                        <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
+                          Pro
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 font-heading text-xl">{theme.name}</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
+                  <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.45)]">{theme.description}</p>
+                </button>
+              );
+            })}
           </div>
           <div className="flex flex-wrap gap-3">
             <button

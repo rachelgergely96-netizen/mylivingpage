@@ -8,7 +8,7 @@ export interface DemoPage {
 
 export const DEMO_PAGES: DemoPage[] = [
   {
-    themeId: "cosmic",
+    themeId: "ember",
     data: {
       name: "Alex Chen",
       headline: "Senior Full-Stack Engineer",
@@ -98,10 +98,10 @@ export const DEMO_PAGES: DemoPage[] = [
         },
       ],
       stats: [
-        { value: "8+", label: "Years Experience" },
-        { value: "2M+", label: "Requests / Day" },
-        { value: "12", label: "Open Source Projects" },
-        { value: "500+", label: "Enterprise Clients" },
+        { value: "8+", label: "Years Exp." },
+        { value: "2M+", label: "Req. / Day" },
+        { value: "12", label: "OSS Projects" },
+        { value: "500+", label: "Enterprise" },
       ],
     },
   },
@@ -213,15 +213,15 @@ export const DEMO_PAGES: DemoPage[] = [
         },
       ],
       stats: [
-        { value: "10+", label: "Years in Design" },
-        { value: "40%", label: "Task Completion Lift" },
-        { value: "30+", label: "Client Projects" },
-        { value: "200+", label: "User Interviews" },
+        { value: "10+", label: "Yrs Design" },
+        { value: "40%", label: "Completion Lift" },
+        { value: "30+", label: "Projects" },
+        { value: "200+", label: "Interviews" },
       ],
     },
   },
   {
-    themeId: "monolith",
+    themeId: "matrix",
     data: {
       name: "James Okafor",
       headline: "Finance Director & Strategic Advisor",
@@ -316,10 +316,10 @@ export const DEMO_PAGES: DemoPage[] = [
         },
       ],
       stats: [
-        { value: "$850M", label: "Portfolio Managed" },
-        { value: "12+", label: "Years in Finance" },
-        { value: "6", label: "Acquisitions Led" },
-        { value: "35%", label: "Forecast Variance Cut" },
+        { value: "$850M", label: "Portfolio" },
+        { value: "12+", label: "Yrs Finance" },
+        { value: "6", label: "Acquisitions" },
+        { value: "35%", label: "Variance Cut" },
       ],
     },
   },

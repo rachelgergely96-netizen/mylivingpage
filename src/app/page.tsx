@@ -39,6 +39,9 @@ export default function LandingPage() {
               <a href="#examples" className="transition-colors hover:text-[#93C5FD]">
                 Examples
               </a>
+              <Link href="/pricing" className="transition-colors hover:text-[#93C5FD]">
+                Pricing
+              </Link>
             </div>
             <Link
               href="/signup"

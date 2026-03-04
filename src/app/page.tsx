@@ -1,14 +1,13 @@
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import WaitlistForm from "@/components/marketing/WaitlistForm";
-
-const FreeProDemo = dynamic(() => import("@/components/marketing/demo/FreeProDemo"), {
-  ssr: false,
-  loading: () => <div className="h-[600px]" />,
-});
+import ResumeLayout from "@/components/ResumeLayout";
+import ThemeCanvas from "@/components/ThemeCanvas";
+import { DEMO_PAGES } from "@/lib/demo-data";
+import { THEME_MAP } from "@/themes/registry";
+import type { ThemeId } from "@/themes/types";
 
 const features = [
   { icon: "✦", title: "Living Backgrounds", copy: "Procedural art systems that move and breathe behind your story." },
@@ -38,15 +37,12 @@ export default function LandingPage() {
               <a href="#how" className="transition-colors hover:text-[#93C5FD]">
                 How
               </a>
-              <a href="#demo" className="transition-colors hover:text-[#93C5FD]">
-                Demo
+              <a href="#examples" className="transition-colors hover:text-[#93C5FD]">
+                Examples
               </a>
               <a href="#waitlist" className="transition-colors hover:text-[#93C5FD]">
                 Waitlist
               </a>
-              <Link href="/examples" className="transition-colors hover:text-[#93C5FD]">
-                Examples
-              </Link>
             </div>
             <Link
               href="/signup"
@@ -76,12 +72,12 @@ export default function LandingPage() {
                 >
                   Create My Page
                 </Link>
-                <Link
-                  href="/examples"
+                <a
+                  href="#examples"
                   className="rounded-full border border-[rgba(255,255,255,0.18)] px-6 py-3 sm:px-8 sm:py-4 text-sm text-[rgba(240,244,255,0.75)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
                 >
                   See Examples
-                </Link>
+                </a>
               </div>
             </div>
           </section>
@@ -127,7 +123,51 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <FreeProDemo />
+          <section id="examples" className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10">
+            <div className="mb-8 sm:mb-12 text-center">
+              <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Examples</p>
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-[#F0F4FF] md:text-5xl">
+                See what a living page looks like
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
+                Each page pairs structured resume data with a unique algorithmic art theme. Hover to interact with the backgrounds.
+              </p>
+            </div>
+            <div className="grid gap-6 md:gap-8 lg:grid-cols-3">
+              {DEMO_PAGES.map((demo) => {
+                const theme = THEME_MAP[demo.themeId as ThemeId];
+                return (
+                  <article
+                    key={demo.data.name}
+                    className="group overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] transition-all duration-300 ease-soft hover:border-[rgba(59,130,246,0.2)]"
+                  >
+                    <div className="relative h-[420px] sm:h-[460px] overflow-hidden">
+                      <ThemeCanvas themeId={demo.themeId as ThemeId} height={460} interactive>
+                        <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
+                          <ResumeLayout data={demo.data} compact />
+                        </div>
+                      </ThemeCanvas>
+                    </div>
+                    <div className="border-t border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-4 py-3 sm:px-5 sm:py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-heading text-sm font-bold text-[#F0F4FF]">{theme?.name ?? demo.themeId}</p>
+                          <p className="text-[11px] text-[rgba(240,244,255,0.45)]">{theme?.vibe}</p>
+                        </div>
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor: theme?.background ?? "#06061A",
+                            boxShadow: `0 0 8px ${theme?.background ?? "#06061A"}`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
 
           <section id="waitlist" className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6 sm:py-20 text-center md:px-10">
             <div className="rounded-3xl border border-[rgba(255,255,255,0.06)] bg-[rgba(10,22,40,0.55)] px-6 py-10 backdrop-blur-xl sm:px-10 sm:py-14">

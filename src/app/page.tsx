@@ -2,7 +2,6 @@ import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
-import WaitlistForm from "@/components/marketing/WaitlistForm";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { DEMO_PAGES } from "@/lib/demo-data";
@@ -39,9 +38,6 @@ export default function LandingPage() {
               </a>
               <a href="#examples" className="transition-colors hover:text-[#93C5FD]">
                 Examples
-              </a>
-              <a href="#waitlist" className="transition-colors hover:text-[#93C5FD]">
-                Waitlist
               </a>
             </div>
             <Link
@@ -169,18 +165,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="waitlist" className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6 sm:py-20 text-center md:px-10">
-            <div className="rounded-3xl border border-[rgba(255,255,255,0.06)] bg-[rgba(10,22,40,0.55)] px-6 py-10 backdrop-blur-xl sm:px-10 sm:py-14">
-              <p className="mb-4 text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Early Access</p>
-              <h2 className="font-heading text-3xl sm:text-5xl font-bold leading-tight text-[#F0F4FF] md:text-6xl">
-                Make them <span className="text-[#3B82F6] italic">remember</span> you
-              </h2>
-              <p className="mx-auto mt-5 max-w-xl text-base leading-8 text-[rgba(240,244,255,0.58)]">
-                Join the waitlist for launch access and priority onboarding into the MyLivingPage MVP.
-              </p>
-              <WaitlistForm />
-            </div>
-          </section>
         </main>
 
         <SiteLegalFooter siteId={site.id} />

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
+import DeletePageButton from "@/components/DeletePageButton";
 
 export default async function DashboardPage() {
   const authClient = createServerSupabaseClient();
@@ -96,13 +97,7 @@ export default async function DashboardPage() {
                 >
                   Analytics
                 </Link>
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 sm:px-4 sm:py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]"
-                >
-                  Archive
-                </button>
+                <DeletePageButton pageId={page.id} />
               </div>
             </article>
           ))}

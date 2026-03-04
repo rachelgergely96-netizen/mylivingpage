@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
+
+const MAX_FREE_ARCHIVES = 5;
 
 /** Authenticate the caller and return their user id, or null */
 async function getAuthUserId() {
@@ -49,6 +52,44 @@ export async function PATCH(request: Request, { params }: { params: { pageId: st
   }
 
   const supabase = createServiceRoleSupabaseClient();
+
+  // Auto-archive the current version before applying updates
+  try {
+    // Prune oldest archives if at the limit
+    const { count } = await supabase
+      .from("page_archives")
+      .select("*", { count: "exact", head: true })
+      .eq("page_id", params.pageId);
+
+    if (count !== null && count >= MAX_FREE_ARCHIVES) {
+      const { data: oldest } = await supabase
+        .from("page_archives")
+        .select("id")
+        .eq("page_id", params.pageId)
+        .order("archived_at", { ascending: true })
+        .limit(count - MAX_FREE_ARCHIVES + 1);
+
+      if (oldest?.length) {
+        await supabase
+          .from("page_archives")
+          .delete()
+          .in("id", oldest.map((a: { id: string }) => a.id));
+      }
+    }
+
+    await supabase.from("page_archives").insert({
+      page_id: params.pageId,
+      owner_id: userId,
+      resume_data: page.resume_data,
+      theme_id: page.theme_id,
+      slug: page.slug,
+    });
+
+    trackEvent(userId, "page.archive_created", { page_id: params.pageId });
+  } catch {
+    // Archive failure should not block the save
+  }
+
   const { error } = await supabase.from("pages").update(updates).eq("id", params.pageId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

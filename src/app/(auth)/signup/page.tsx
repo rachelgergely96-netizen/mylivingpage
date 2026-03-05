@@ -45,8 +45,7 @@ export default function SignupPage() {
         throw error;
       }
 
-      setStatus("success");
-      setMessage("Check your email for a confirmation link to finish signup.");
+      router.push(nextPath);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to create account.");

@@ -10,10 +10,12 @@ interface DownloadResumeButtonProps {
 
 export default function DownloadResumeButton({ data, premium }: DownloadResumeButtonProps) {
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDownload = async () => {
     if (!premium) return;
     setGenerating(true);
+    setError(null);
     try {
       const { pdf } = await import("@react-pdf/renderer");
       const { default: ResumePDFDocument } = await import(
@@ -27,14 +29,15 @@ export default function DownloadResumeButton({ data, premium }: DownloadResumeBu
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // Silently fail — PDF generation is non-critical
+      setError("PDF generation failed. Try again.");
+      setTimeout(() => setError(null), 4000);
     } finally {
       setGenerating(false);
     }
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-40">
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
       <button
         type="button"
         onClick={handleDownload}
@@ -79,6 +82,11 @@ export default function DownloadResumeButton({ data, premium }: DownloadResumeBu
         <span>{generating ? "Generating..." : "Download PDF"}</span>
         {!premium ? <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span> : null}
       </button>
+      {error ? (
+        <p className="rounded-lg bg-[rgba(10,22,40,0.9)] px-3 py-1.5 text-xs text-[#ff8e8e] backdrop-blur-xl">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

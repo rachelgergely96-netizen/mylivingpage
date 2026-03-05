@@ -23,29 +23,28 @@ export const revalidate = 60;
 
 async function fetchLivePage(username: string) {
   const supabase = createServiceRoleSupabaseClient();
-  const { data: profile } = await supabase.from("profiles").select("id, username").eq("username", username).maybeSingle();
 
-  if (!profile) {
-    return null;
-  }
-
-  // Query by both user_id and owner_id (handles both MVP and secure schemas)
-  // Check both status='live' and visibility='public' (handles both schemas)
-  const { data: exactPage } = await supabase
+  // Primary: look up by slug directly — most reliable, works regardless of profile username
+  const { data: slugPage } = await supabase
     .from("pages")
     .select("*")
-    .or(`user_id.eq.${profile.id},owner_id.eq.${profile.id}`)
     .eq("slug", username)
     .or("status.eq.live,visibility.eq.public")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (exactPage) {
-    return exactPage as PageRecord;
-  }
+  if (slugPage) return slugPage as PageRecord;
 
-  // Fallback: any live/public page for this user
+  // Fallback: find profile by username, then any live page for that user
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (!profile) return null;
+
   const { data: fallbackPage } = await supabase
     .from("pages")
     .select("*")

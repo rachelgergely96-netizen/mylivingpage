@@ -6,9 +6,10 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 interface ShareCardDownloadProps {
   pageUserId: string;
   slug: string;
+  premium?: boolean;
 }
 
-export default function ShareCardDownload({ pageUserId, slug }: ShareCardDownloadProps) {
+export default function ShareCardDownload({ pageUserId, slug, premium = false }: ShareCardDownloadProps) {
   const [isOwner, setIsOwner] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -22,6 +23,7 @@ export default function ShareCardDownload({ pageUserId, slug }: ShareCardDownloa
   }, [pageUserId]);
 
   if (!isOwner) return null;
+  if (!premium) return null;
 
   const handleDownload = async () => {
     setDownloading(true);

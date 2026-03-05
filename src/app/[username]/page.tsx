@@ -118,7 +118,7 @@ export default async function PublicLivingPage({ params }: { params: { username:
         </div>
       </ThemeCanvas>
       <DownloadResumeButton data={page.resume_data} premium={premium} />
-      <ShareCardDownload pageUserId={pageUserId} slug={page.slug} />
+      <ShareCardDownload pageUserId={pageUserId} slug={page.slug} premium={premium} />
       <MadeWithBadge pageUserId={pageUserId} premium={premium} />
     </main>
   );

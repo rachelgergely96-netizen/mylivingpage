@@ -95,7 +95,6 @@ export const COMPARISON_FEATURES: ComparisonFeature[] = [
   { feature: "Remove branding", free: false, pro: true },
   { feature: "Page analytics", free: false, pro: true },
   { feature: "Premium themes", free: false, pro: true },
-  { feature: "View modes (Story / Recruiter / Project)", free: false, pro: true },
   { feature: "PDF export", free: false, pro: true },
   { feature: "AI content generator", free: false, pro: true },
   { feature: "Auto share card with PNG export", free: false, pro: true },

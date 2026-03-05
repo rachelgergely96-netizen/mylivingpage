@@ -1,14 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { useLocalDraft } from "@/hooks/useLocalDraft";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { slugifyUsername } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord, ResumeData } from "@/types/resume";
 import { FREE_THEMES, isPremiumPlan } from "@/lib/plans";
+
+interface EditDraft {
+  data: ResumeData;
+  themeId: ThemeId;
+  customSlug: string;
+}
 
 type Tab = "content" | "theme" | "preview";
 
@@ -36,6 +45,33 @@ export default function EditPage() {
   const [userPlan, setUserPlan] = useState<string>("spark");
   const premium = isPremiumPlan(userPlan);
 
+  // Draft persistence & dirty tracking
+  const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(`mlp-draft-edit-${pageId}`);
+  const initialSnapshotRef = useRef<string>("");
+
+  const isDirty = useMemo(() => {
+    if (!data || !initialSnapshotRef.current) return false;
+    const current = JSON.stringify({ data, themeId, customSlug });
+    return current !== initialSnapshotRef.current;
+  }, [data, themeId, customSlug]);
+
+  useUnsavedChanges(isDirty);
+
+  // Save draft on changes
+  useEffect(() => {
+    if (!data || !isDirty) return;
+    saveDraft({ data, themeId, customSlug });
+  }, [data, themeId, customSlug, isDirty, saveDraft]);
+
+  const restoreDraft = useCallback(() => {
+    if (!pendingDraft) return;
+    const d = pendingDraft.data;
+    setData(d.data);
+    setThemeId(d.themeId);
+    setCustomSlug(d.customSlug);
+    dismissDraft();
+  }, [pendingDraft, dismissDraft]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -56,6 +92,8 @@ export default function EditPage() {
         setData(rd);
         setThemeId(row.theme_id as ThemeId);
         setCustomSlug(row.slug);
+        // Set initial snapshot for dirty tracking
+        initialSnapshotRef.current = JSON.stringify({ data: rd, themeId: row.theme_id, customSlug: row.slug });
         // Fetch user plan
         const profileRes = await fetch("/api/profile");
         if (profileRes.ok) {
@@ -163,6 +201,8 @@ export default function EditPage() {
         const body = (await saveRes.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? "Save failed.");
       }
+      clearDraft();
+      initialSnapshotRef.current = JSON.stringify({ data, themeId, customSlug: desiredSlug });
       setSuccess("Saved successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
@@ -222,6 +262,10 @@ export default function EditPage() {
 
       {error ? <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">{error}</p> : null}
       {success ? <p className="mb-4 rounded-xl border border-[rgba(100,220,100,0.35)] bg-[rgba(100,220,100,0.08)] px-4 py-3 text-sm text-[#88ee88]">{success}</p> : null}
+
+      {pendingDraft ? (
+        <DraftBanner savedAt={pendingDraft.savedAt} onRestore={restoreDraft} onDiscard={dismissDraft} />
+      ) : null}
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1">

@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import GuidedFlow from "@/components/create/GuidedFlow";
+import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { useLocalDraft } from "@/hooks/useLocalDraft";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { slugifyUsername, usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
@@ -14,6 +17,14 @@ import { FREE_THEMES, MAX_FREE_PAGES, isPremiumPlan } from "@/lib/plans";
 
 type Step = "input" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
+
+interface CreateDraft {
+  resumeText: string;
+  guidedData: Partial<ResumeData>;
+  selectedTheme: ThemeId;
+  inputMode: InputMode;
+  step: Step;
+}
 
 const STAGES = [
   "Analyzing resume structure...",
@@ -116,6 +127,29 @@ export default function CreatePage() {
   const [pageCount, setPageCount] = useState<number>(0);
   const premium = isPremiumPlan(userPlan);
   const atPageLimit = !premium && pageCount >= MAX_FREE_PAGES;
+
+  // Draft persistence
+  const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<CreateDraft>("mlp-draft-create");
+  const isDirty = resumeText.length > 0 || (guidedData.name ?? "").length > 0 || selectedTheme !== "cosmic";
+  useUnsavedChanges(isDirty && step !== "processing");
+
+  // Save draft on changes (skip during processing/preview)
+  useEffect(() => {
+    if (step === "processing" || step === "preview") return;
+    if (!isDirty) return;
+    saveDraft({ resumeText, guidedData, selectedTheme, inputMode, step });
+  }, [resumeText, guidedData, selectedTheme, inputMode, step, isDirty, saveDraft]);
+
+  const restoreDraft = useCallback(() => {
+    if (!pendingDraft) return;
+    const d = pendingDraft.data;
+    setResumeText(d.resumeText ?? "");
+    setGuidedData(d.guidedData ?? { name: "", headline: "", location: "", email: null, linkedin: null, github: null, website: null, avatar_url: null, summary: "", experience: [], education: [], projects: [], skills: [{ category: "General", items: [] }], certifications: [], stats: [] });
+    setSelectedTheme(d.selectedTheme ?? "cosmic");
+    setInputMode(d.inputMode ?? "choose");
+    if (d.step === "theme") setStep("theme");
+    dismissDraft();
+  }, [pendingDraft, dismissDraft]);
 
   // Fetch user plan and page count on mount
   useEffect(() => {
@@ -326,6 +360,7 @@ export default function CreatePage() {
         throw new Error(result.error ?? "Publish failed.");
       }
 
+      clearDraft();
       router.push(`/${result.slug ?? desiredSlug}`);
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
@@ -365,6 +400,10 @@ export default function CreatePage() {
         <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
           {error}
         </p>
+      ) : null}
+
+      {pendingDraft && step === "input" ? (
+        <DraftBanner savedAt={pendingDraft.savedAt} onRestore={restoreDraft} onDiscard={dismissDraft} />
       ) : null}
 
       {atPageLimit ? (

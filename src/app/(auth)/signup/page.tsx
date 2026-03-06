@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import {
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from "@/lib/legal/legal-version";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -13,6 +17,7 @@ export default function SignupPage() {
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/dashboard");
   const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -26,24 +31,50 @@ export default function SignupPage() {
 
   const onSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!acceptedLegal) {
+      setStatus("error");
+      setMessage("You must accept the Terms of Service and Privacy Policy to create an account.");
+      return;
+    }
+
     setStatus("loading");
     setMessage("");
 
     try {
       const supabase = createBrowserSupabaseClient();
-      const redirectTo = `${window.location.origin}/callback?next=${encodeURIComponent(nextPath)}`;
+      const callbackParams = new URLSearchParams({
+        next: nextPath,
+        legal_accept: "1",
+        legal_source: "signup",
+      });
+      const redirectTo = `${window.location.origin}/callback?${callbackParams.toString()}`;
+      const signupMetadata: Record<string, string | boolean> = {
+        legal_accepted: true,
+        legal_accepted_at: new Date().toISOString(),
+        legal_terms_version: TERMS_VERSION,
+        legal_privacy_version: PRIVACY_VERSION,
+      };
+      if (signupReferrer) {
+        signupMetadata.signup_referrer = signupReferrer;
+      }
 
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectTo,
-          data: signupReferrer ? { signup_referrer: signupReferrer } : undefined,
+          data: signupMetadata,
         },
       });
       if (error) {
         throw error;
       }
+
+      await fetch("/api/legal/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "signup" }),
+      }).catch(() => {});
 
       router.push(nextPath);
     } catch (error) {
@@ -53,11 +84,22 @@ export default function SignupPage() {
   };
 
   const onGoogleSignup = async () => {
+    if (!acceptedLegal) {
+      setStatus("error");
+      setMessage("You must accept the Terms of Service and Privacy Policy to continue with Google.");
+      return;
+    }
+
     setStatus("loading");
     setMessage("");
     try {
       const supabase = createBrowserSupabaseClient();
-      const redirectTo = `${window.location.origin}/callback?next=${encodeURIComponent(nextPath)}`;
+      const callbackParams = new URLSearchParams({
+        next: nextPath,
+        legal_accept: "1",
+        legal_source: "signup",
+      });
+      const redirectTo = `${window.location.origin}/callback?${callbackParams.toString()}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -81,11 +123,30 @@ export default function SignupPage() {
         <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.55)]">
           Sign up with email or Google. You can start creating immediately after authentication.
         </p>
+        <label className="mt-5 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+          <input
+            type="checkbox"
+            checked={acceptedLegal}
+            onChange={(event) => setAcceptedLegal(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-[#3B82F6]"
+          />
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+              Privacy Policy
+            </Link>.
+          </span>
+        </label>
 
         <button
           type="button"
           onClick={onGoogleSignup}
-          className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+          disabled={status === "loading" || !acceptedLegal}
+          className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continue with Google
         </button>
@@ -116,7 +177,7 @@ export default function SignupPage() {
           />
           <button
             type="submit"
-            disabled={status === "loading"}
+            disabled={status === "loading" || !acceptedLegal}
             className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
           >
             {status === "loading" ? "Creating..." : "Create Account"}

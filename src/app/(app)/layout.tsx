@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import SignOutButton from "@/components/ui/SignOutButton";
+import { ADMIN_EMAIL } from "@/lib/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function AuthenticatedLayout({
@@ -24,6 +25,14 @@ export default async function AuthenticatedLayout({
             my<span className="text-[#3B82F6]">living</span>page
           </Link>
           <nav className="flex items-center gap-3">
+            {user.email === ADMIN_EMAIL && (
+              <Link
+                href="/admin"
+                className="rounded-full border border-[rgba(239,68,68,0.3)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[#ff8e8e] transition-colors hover:border-[rgba(239,68,68,0.5)] hover:text-[#fca5a5]"
+              >
+                Admin
+              </Link>
+            )}
             <Link
               href="/dashboard"
               className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"

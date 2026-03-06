@@ -2,11 +2,34 @@
 
 import { useState } from "react";
 
+type FeedbackType = "bug" | "feature" | "general";
+
+const TYPE_LABELS: Record<FeedbackType, string> = {
+  bug: "Bug Report",
+  feature: "Feature Request",
+  general: "General",
+};
+
 export default function FeedbackWidget() {
   const [open, setOpen] = useState(false);
+  const [type, setType] = useState<FeedbackType>("general");
   const [message, setMessage] = useState("");
+  const [page, setPage] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState("");
+
+  const handleOpen = () => {
+    setPage(window.location.pathname);
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setMessage("");
+    setType("general");
+    setStatus("idle");
+    setError("");
+  };
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
@@ -17,7 +40,7 @@ export default function FeedbackWidget() {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, type, page }),
       });
 
       if (!res.ok) {
@@ -28,8 +51,7 @@ export default function FeedbackWidget() {
       setStatus("success");
       setMessage("");
       setTimeout(() => {
-        setOpen(false);
-        setStatus("idle");
+        handleClose();
       }, 2000);
     } catch (err) {
       setStatus("error");
@@ -44,10 +66,28 @@ export default function FeedbackWidget() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)]">
             Send Feedback
           </p>
+
           {status === "success" ? (
             <p className="py-4 text-center text-sm text-[#3B82F6]">Thanks for your feedback!</p>
           ) : (
             <>
+              {/* Type selector */}
+              <div className="mb-3 flex gap-1.5">
+                {(["bug", "feature", "general"] as FeedbackType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setType(t)}
+                    className={`flex-1 rounded-full py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                      type === t
+                        ? "bg-[#3B82F6] text-white"
+                        : "border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.5)] hover:text-[rgba(240,244,255,0.8)]"
+                    }`}
+                  >
+                    {TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -56,12 +96,17 @@ export default function FeedbackWidget() {
                 rows={4}
                 className="w-full resize-none rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] p-3 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none"
               />
+              <p className="mt-1 text-right text-[10px] text-[rgba(240,244,255,0.25)]">
+                {message.length}/2000
+              </p>
+
               {error && (
                 <p className="mt-1 text-xs text-[#ff8e8e]">{error}</p>
               )}
+
               <div className="mt-3 flex gap-2">
                 <button
-                  onClick={() => { setOpen(false); setMessage(""); setStatus("idle"); setError(""); }}
+                  onClick={handleClose}
                   className="flex-1 rounded-full border border-[rgba(255,255,255,0.12)] py-2 text-xs text-[rgba(240,244,255,0.55)] transition-colors hover:text-[rgba(240,244,255,0.8)]"
                 >
                   Cancel
@@ -80,7 +125,7 @@ export default function FeedbackWidget() {
       )}
 
       <button
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={open ? handleClose : handleOpen}
         className="rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(10,22,40,0.85)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)] shadow-lg backdrop-blur-xl transition-colors hover:border-[rgba(59,130,246,0.4)] hover:text-[#93C5FD]"
       >
         {open ? "Close" : "Feedback"}

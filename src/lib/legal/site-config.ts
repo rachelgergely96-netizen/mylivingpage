@@ -36,7 +36,7 @@ export interface LegalNavItem {
   description: string;
 }
 
-export const SECOND_SITE_DOMAIN_PLACEHOLDER = "[SECOND_SITE_DOMAIN]";
+export const SECOND_SITE_DOMAIN_PLACEHOLDER = "second-site.example.com";
 
 export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
   terms: {
@@ -44,7 +44,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     shortLabel: "Terms",
     pageTitle: "Terms of Service",
     seoDescription:
-      "Terms of Service for MyLivingPage.com and [SECOND_SITE_DOMAIN], including user responsibilities and dispute terms.",
+      "Terms of Service for MyLivingPage.com and affiliated domains, including user responsibilities, billing, and dispute terms.",
   },
   privacy: {
     href: "/privacy",
@@ -58,7 +58,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     shortLabel: "Cookies",
     pageTitle: "Cookie Policy",
     seoDescription:
-      "Cookie Policy describing cookie categories, analytics and ads placeholders, and user cookie controls.",
+      "Cookie Policy describing cookie categories, analytics and advertising controls, and user preferences.",
   },
   "acceptable-use": {
     href: "/acceptable-use",
@@ -97,16 +97,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
   },
 };
 
-const MYLIVINGPAGE_POLICIES: LegalPolicyId[] = [
-  "terms",
-  "privacy",
-  "cookies",
-  "acceptable-use",
-  "dmca",
-  "disclaimer",
-  "security",
-  "delete-account",
-];
+const MYLIVINGPAGE_POLICIES: LegalPolicyId[] = ["terms", "privacy"];
 
 const SECOND_SITE_POLICIES: LegalPolicyId[] = [
   "terms",
@@ -122,7 +113,7 @@ const LEGAL_SITES: Record<LegalSiteId, LegalSiteConfig> = {
     id: "mylivingpage",
     brandName: "MyLivingPage.com",
     domain: "mylivingpage.com",
-    companyNamePlaceholder: "{{COMPANY_NAME}}",
+    companyNamePlaceholder: "MyLivingPage",
     contactEmailPlaceholder: "{{CONTACT_EMAIL}}",
     mailingAddressPlaceholder: "{{MAILING_ADDRESS}}",
     productDescription:
@@ -136,7 +127,8 @@ const LEGAL_SITES: Record<LegalSiteId, LegalSiteConfig> = {
     companyNamePlaceholder: "{{SECOND_SITE_COMPANY_NAME}}",
     contactEmailPlaceholder: "{{SECOND_SITE_CONTACT_EMAIL}}",
     mailingAddressPlaceholder: "{{SECOND_SITE_MAILING_ADDRESS}}",
-    productDescription: "{{SECOND_SITE_DESCRIPTION}}",
+    productDescription:
+      "A web application where users create and manage profile pages with structured content, media, and sharing controls.",
     supportedPolicies: SECOND_SITE_POLICIES,
   },
 };
@@ -209,14 +201,14 @@ export function getLegalNavItems(siteId: LegalSiteId, includeIndex: boolean = tr
 export function getPolicyMetadata(policyId: LegalPolicyId): Metadata {
   const route = POLICY_ROUTES[policyId];
   return {
-    title: `${route.pageTitle} | MyLivingPage.com / [SECOND_SITE_DOMAIN]`,
+    title: `${route.pageTitle} | MyLivingPage.com`,
     description: route.seoDescription,
   };
 }
 
 export function getLegalIndexMetadata(): Metadata {
   return {
-    title: "Legal and Policies | MyLivingPage.com / [SECOND_SITE_DOMAIN]",
+    title: "Legal and Policies | MyLivingPage.com",
     description: "Browse Terms, Privacy, Cookie, Acceptable Use, DMCA, Disclaimer, and related legal policies.",
   };
 }

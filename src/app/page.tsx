@@ -1,12 +1,35 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
+import LandingNav from "@/components/marketing/LandingNav";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { DEMO_PAGES } from "@/lib/demo-data";
 import { THEME_MAP } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
+
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://mylivingpage.com";
+const ogDescription = "Turn your resume into a living digital page with algorithmic art themes and AI-structured storytelling.";
+
+export const metadata: Metadata = {
+  title: "MyLivingPage | Your Resume, Alive",
+  description: ogDescription,
+  alternates: { canonical: appUrl },
+  openGraph: {
+    title: "MyLivingPage | Your Resume, Alive",
+    description: ogDescription,
+    url: appUrl,
+    siteName: "MyLivingPage",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MyLivingPage | Your Resume, Alive",
+    description: ogDescription,
+  },
+};
 
 const features = [
   { icon: "✦", title: "Living Backgrounds", copy: "Procedural art systems that move and breathe behind your story." },
@@ -25,31 +48,7 @@ export default function LandingPage() {
       <CosmicBackground />
       <div className="relative z-10">
         <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
-          <nav className="mx-auto flex h-16 sm:h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 md:px-10">
-            <div className="font-heading text-xl sm:text-2xl font-bold text-[#F0F4FF]">
-              my<span className="text-[#3B82F6]">living</span>page
-            </div>
-            <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.6)] md:flex">
-              <a href="#features" className="transition-colors hover:text-[#93C5FD]">
-                Features
-              </a>
-              <a href="#how" className="transition-colors hover:text-[#93C5FD]">
-                How
-              </a>
-              <a href="#examples" className="transition-colors hover:text-[#93C5FD]">
-                Examples
-              </a>
-              <Link href="/pricing" className="transition-colors hover:text-[#93C5FD]">
-                Pricing
-              </Link>
-            </div>
-            <Link
-              href="/signup"
-              className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
-            >
-              Start
-            </Link>
-          </nav>
+          <LandingNav />
         </header>
 
         <main>
@@ -143,7 +142,7 @@ export default function LandingPage() {
                     <div className="relative h-[300px] sm:h-[330px] lg:h-[360px] overflow-hidden">
                       <ThemeCanvas themeId={demo.themeId as ThemeId} height="100%" interactive>
                         <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
-                          <ResumeLayout data={demo.data} compact />
+                          <ResumeLayout data={demo.data} compact headingLevel="h2" />
                         </div>
                       </ThemeCanvas>
                     </div>
@@ -165,6 +164,80 @@ export default function LandingPage() {
                   </article>
                 );
               })}
+            </div>
+          </section>
+
+          {/* ── Pricing summary ──────────────────────────────────── */}
+          <section id="pricing" className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16 md:px-10">
+            <div className="mb-8 text-center">
+              <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Pricing</p>
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-[#F0F4FF]">Simple, transparent pricing</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Spark — free */}
+              <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.5)] p-6 backdrop-blur-xl">
+                <p className="mb-1 text-xs uppercase tracking-[0.2em] text-[rgba(240,244,255,0.5)]">Spark</p>
+                <p className="font-heading text-4xl font-bold text-[#F0F4FF]">Free</p>
+                <p className="mt-1 text-sm text-[rgba(240,244,255,0.45)]">forever</p>
+                <ul className="mt-5 space-y-2.5 text-sm text-[rgba(240,244,255,0.65)]">
+                  {["1 living page", "5 free themes", "AI resume structuring", "Public profile URL", "View analytics"].map((f) => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <span className="text-[#3B82F6]">✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/signup"
+                  className="mt-6 block w-full rounded-full border border-[rgba(255,255,255,0.18)] py-2.5 text-center text-sm text-[rgba(240,244,255,0.75)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                >
+                  Get started free
+                </Link>
+              </div>
+              {/* Pro */}
+              <div className="rounded-2xl border border-[rgba(59,130,246,0.35)] bg-[rgba(10,22,40,0.6)] p-6 backdrop-blur-xl ring-1 ring-[rgba(59,130,246,0.15)]">
+                <p className="mb-1 text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Pro</p>
+                <p className="font-heading text-4xl font-bold text-[#F0F4FF]">$9<span className="text-xl font-normal text-[rgba(240,244,255,0.5)]">/mo</span></p>
+                <p className="mt-1 text-sm text-[rgba(240,244,255,0.45)]">billed monthly</p>
+                <ul className="mt-5 space-y-2.5 text-sm text-[rgba(240,244,255,0.65)]">
+                  {[
+                    "Everything in Spark",
+                    "Unlimited pages",
+                    "20+ premium themes",
+                    "PDF resume export",
+                    "Share card PNG download",
+                    "Remove 'Made with' badge",
+                  ].map((f) => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <span className="text-[#3B82F6]">✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/signup"
+                  className="gold-pill mt-6 block w-full py-2.5 text-center text-sm font-semibold"
+                >
+                  Start Pro
+                </Link>
+              </div>
+            </div>
+            <p className="mt-6 text-center text-sm text-[rgba(240,244,255,0.45)]">
+              <Link href="/pricing" className="text-[#93C5FD] underline underline-offset-2 hover:text-[#BFDBFE]">
+                See full feature comparison →
+              </Link>
+            </p>
+          </section>
+
+          {/* ── CTA ─────────────────────────────────────────────────── */}
+          <section className="mx-auto w-full max-w-3xl px-4 pb-16 sm:pb-24 text-center">
+            <div className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(10,22,40,0.55)] px-8 py-12 backdrop-blur-xl">
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-[#F0F4FF]">Ready to build yours?</h2>
+              <p className="mx-auto mt-4 max-w-sm text-base text-[rgba(240,244,255,0.6)]">Takes 2 minutes. No credit card required.</p>
+              <Link
+                href="/signup"
+                className="gold-pill mt-8 inline-block px-8 py-4 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
+              >
+                Create My Page
+              </Link>
             </div>
           </section>
 

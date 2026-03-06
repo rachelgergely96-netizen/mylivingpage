@@ -3,6 +3,7 @@ import type { ResumeData } from "@/types/resume";
 interface ResumeLayoutProps {
   data: ResumeData;
   compact?: boolean;
+  headingLevel?: "h1" | "h2";
 }
 
 /* ── Backward-compat helpers ───────────────────────────────────────── */
@@ -25,7 +26,8 @@ function normalizeCerts(raw: ResumeData["certifications"]): Array<{ name: string
   return raw as Array<{ name: string; issuer: string | null; date: string | null }>;
 }
 
-export default function ResumeLayout({ data, compact = false }: ResumeLayoutProps) {
+export default function ResumeLayout({ data, compact = false, headingLevel = "h1" }: ResumeLayoutProps) {
+  const NameHeading = headingLevel;
   const headingSize = compact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl md:text-4xl";
   const summarySize = compact ? "text-xs" : "text-sm sm:text-base";
   const allSkills = normalizeSkills(data.skills);
@@ -41,9 +43,9 @@ export default function ResumeLayout({ data, compact = false }: ResumeLayoutProp
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} flex items-start justify-between gap-3 sm:gap-4`}>
           <div className="min-w-0">
-            <h1 className={`${headingSize} font-heading font-bold text-[#F0F4FF] drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)] leading-tight`}>
+            <NameHeading className={`${headingSize} font-heading font-bold text-[#F0F4FF] drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)] leading-tight`}>
               {data.name}
-            </h1>
+            </NameHeading>
             <p className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.2em] text-[#3B82F6]">{data.headline}</p>
             {data.location ? <p className="mt-1 text-xs sm:text-sm text-[rgba(240,244,255,0.4)]">{data.location}</p> : null}
             {hasContact ? (

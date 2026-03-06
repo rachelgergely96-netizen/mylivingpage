@@ -4,6 +4,7 @@ import {
   recordLegalAcceptance,
 } from "@/lib/legal/acceptance";
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
+import { trackEvent } from "@/lib/track-event";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 interface LegalAcceptBody {
@@ -44,6 +45,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  if (source === "signup") {
+    await trackEvent(user.id, "user.signup", {}).catch(() => {});
   }
 
   return NextResponse.json({ success: true });

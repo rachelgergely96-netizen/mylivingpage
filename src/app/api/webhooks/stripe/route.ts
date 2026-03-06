@@ -7,6 +7,7 @@ import {
 } from "@/lib/legal/legal-version";
 import { getStripe } from "@/lib/stripe";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest) {
             acceptanceError,
           );
         }
+
+        await trackEvent(userId, "plan.upgrade", { plan: "pro" }).catch(() => {});
       }
       break;
     }

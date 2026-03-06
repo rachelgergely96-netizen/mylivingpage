@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import SignOutButton from "@/components/ui/SignOutButton";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -46,6 +47,7 @@ export default async function AuthenticatedLayout({
         </div>
       </header>
       <div>{children}</div>
+      <FeedbackWidget />
     </div>
   );
 }

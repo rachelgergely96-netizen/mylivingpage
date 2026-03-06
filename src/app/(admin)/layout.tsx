@@ -48,6 +48,12 @@ export default async function AdminLayout({
               Pages
             </Link>
             <Link
+              href="/admin/feedback"
+              className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"
+            >
+              Feedback
+            </Link>
+            <Link
               href="/dashboard"
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"
             >

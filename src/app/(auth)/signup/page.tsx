@@ -142,10 +142,14 @@ export default function SignupPage() {
           </span>
         </label>
 
+        {!acceptedLegal && (
+          <p className="mt-2 text-xs text-[#FCD34D]">↑ Check the box above to continue</p>
+        )}
+
         <button
           type="button"
           onClick={onGoogleSignup}
-          disabled={status === "loading" || !acceptedLegal}
+          disabled={status === "loading"}
           className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continue with Google
@@ -177,7 +181,7 @@ export default function SignupPage() {
           />
           <button
             type="submit"
-            disabled={status === "loading" || !acceptedLegal}
+            disabled={status === "loading"}
             className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
           >
             {status === "loading" ? "Creating..." : "Create Account"}

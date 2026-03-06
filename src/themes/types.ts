@@ -18,7 +18,11 @@ export type ThemeId =
   | "matrix"
   | "coral"
   | "stardust"
-  | "ink";
+  | "ink"
+  | "bloom"
+  | "silk"
+  | "tempest"
+  | "obsidian";
 
 export type ThemeRenderer = (
   ctx: CanvasRenderingContext2D,

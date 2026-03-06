@@ -1,3 +1,7 @@
+import { renderBloom } from "./renderers/bloom";
+import { renderObsidian } from "./renderers/obsidian";
+import { renderSilk } from "./renderers/silk";
+import { renderTempest } from "./renderers/tempest";
 import { renderAurora } from "./renderers/aurora";
 import { renderBiolume } from "./renderers/biolume";
 import { renderCircuit } from "./renderers/circuit";
@@ -200,6 +204,42 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     vibe: "Artistic & Contemplative",
     background: "#080A10",
     renderer: renderInk,
+  },
+  {
+    id: "bloom",
+    name: "Bloom",
+    description:
+      "Generative botanical flowers open and breathe with Bézier-curve petals while golden pollen drifts upward.",
+    vibe: "Lush & Radiant",
+    background: "#0a0514",
+    renderer: renderBloom,
+  },
+  {
+    id: "silk",
+    name: "Silk",
+    description:
+      "Iridescent flowing fabric threads undulate across a midnight canvas with interference color and fluid mouse response.",
+    vibe: "Iridescent & Fluid",
+    background: "#040612",
+    renderer: renderSilk,
+  },
+  {
+    id: "tempest",
+    name: "Tempest",
+    description:
+      "Atmospheric storm with FBM cloud masses, fractal forking lightning, and relentless diagonal rain.",
+    vibe: "Electric & Relentless",
+    background: "#020306",
+    renderer: renderTempest,
+  },
+  {
+    id: "obsidian",
+    name: "Obsidian",
+    description:
+      "Volcanic glass fractured by glowing magma veins that pulse and breathe while heat particles rise from the cracks.",
+    vibe: "Fierce & Primal",
+    background: "#040100",
+    renderer: renderObsidian,
   },
 ];
 

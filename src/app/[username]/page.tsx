@@ -7,10 +7,10 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
+import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { isPremiumPlan } from "@/lib/plans";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { ThemeId } from "@/themes/types";
-import type { PageRecord } from "@/types/resume";
 
 const VALID_THEMES: Set<string> = new Set([
   "cosmic", "fluid", "ember", "monolith", "aurora",
@@ -21,44 +21,9 @@ const VALID_THEMES: Set<string> = new Set([
 
 export const revalidate = 60;
 
-async function fetchLivePage(username: string) {
-  const supabase = createServiceRoleSupabaseClient();
-
-  // Primary: look up by slug directly — most reliable, works regardless of profile username
-  const { data: slugPage } = await supabase
-    .from("pages")
-    .select("*")
-    .eq("slug", username)
-    .or("status.eq.live,visibility.eq.public")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (slugPage) return slugPage as PageRecord;
-
-  // Fallback: find profile by username, then any live page for that user
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("username", username)
-    .maybeSingle();
-
-  if (!profile) return null;
-
-  const { data: fallbackPage } = await supabase
-    .from("pages")
-    .select("*")
-    .or(`user_id.eq.${profile.id},owner_id.eq.${profile.id}`)
-    .or("status.eq.live,visibility.eq.public")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return (fallbackPage as PageRecord | null) ?? null;
-}
-
 export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
-  const page = await fetchLivePage(params.username);
+  const supabase = createServiceRoleSupabaseClient();
+  const page = await fetchPublicLivePage(supabase, params.username);
   if (!page) {
     return {
       title: "MyLivingPage",
@@ -67,7 +32,7 @@ export async function generateMetadata({ params }: { params: { username: string 
   }
 
   const resume = page.resume_data;
-  const title = `${resume.name} · ${resume.headline} | MyLivingPage`;
+  const title = `${resume.name} - ${resume.headline} | MyLivingPage`;
   const description = resume.summary;
   const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${params.username}`;
 
@@ -90,7 +55,8 @@ export async function generateMetadata({ params }: { params: { username: string 
 }
 
 export default async function PublicLivingPage({ params }: { params: { username: string } }) {
-  const page = await fetchLivePage(params.username);
+  const supabase = createServiceRoleSupabaseClient();
+  const page = await fetchPublicLivePage(supabase, params.username);
   if (!page || (page.status !== "live" && page.visibility !== "public")) {
     notFound();
   }
@@ -98,8 +64,6 @@ export default async function PublicLivingPage({ params }: { params: { username:
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
   const pageUserId = page.user_id ?? page.owner_id ?? "";
 
-  // Fetch owner's plan for premium feature gating
-  const supabase = createServiceRoleSupabaseClient();
   const { data: ownerProfile } = await supabase
     .from("profiles")
     .select("plan")

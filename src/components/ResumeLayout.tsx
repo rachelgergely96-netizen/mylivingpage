@@ -123,8 +123,11 @@ export default function ResumeLayout({ data, compact = false, headingLevel = "h1
                       <span className="text-[rgba(240,244,255,0.45)]">
                         ·{" "}
                         {exp.url ? (
-                          <a href={exp.url.startsWith("http") ? exp.url : `https://${exp.url}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto underline decoration-[rgba(59,130,246,0.3)] underline-offset-2 transition-colors hover:text-[#93C5FD]">
+                          <a href={exp.url.startsWith("http") ? exp.url : `https://${exp.url}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto inline-flex items-center gap-0.5 text-[#93C5FD] transition-colors hover:text-[#BFDBFE]">
                             {exp.company}
+                            <svg className="inline h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                            </svg>
                           </a>
                         ) : exp.company}
                       </span>

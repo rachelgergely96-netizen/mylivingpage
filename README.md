@@ -24,6 +24,11 @@ Next.js 14 App Router implementation for the MyLivingPage MVP.
 - Set callback URL to:
   - `http://localhost:3000/callback` (dev)
 
+## Stripe Legal Setup
+
+- In Stripe Dashboard, set live Terms of Service and Privacy Policy URLs for Checkout business details.
+- Confirm customer portal cancellation is enabled for subscriptions.
+
 ## Key Routes
 
 - `/` landing page + waitlist

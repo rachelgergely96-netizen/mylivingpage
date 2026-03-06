@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
+import { LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getLegalNavItems } from "@/lib/legal/site-config";
 
@@ -26,7 +27,7 @@ export default function LegalIndexPage() {
 
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         <section className="glass-card rounded-3xl p-6 sm:p-10">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Last updated: {"{{EFFECTIVE_DATE}}"}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Last updated: {LEGAL_EFFECTIVE_DATE}</p>
           <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl">Legal and Policies</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.68)] sm:text-base">
             These policies apply to {site.brandName}. Replace placeholders before launch, including contact channels,

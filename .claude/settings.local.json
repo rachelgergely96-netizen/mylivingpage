@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add .eslintrc.json .gitignore README.md middleware.ts next.config.mjs package-lock.json package.json postcss.config.mjs tailwind.config.ts tsconfig.json .env.example)",
+      "Bash(git add src/ public/ supabase/ mylivingpage-bundle/)",
+      "Bash(git commit:*)",
+      "Bash(git push -u origin main)",
+      "Bash(git add src/middleware.ts)",
+      "Bash(git rm middleware.ts)",
+      "Bash(git push)",
+      "Bash(npm run build)",
+      "Bash(git add .gitignore)",
+      "Bash(git push origin main)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx next build)",
+      "Bash(git add src/app/api/username/route.ts src/app/\\\\\\(app\\\\\\)/create/page.tsx src/app/\\\\\\(app\\\\\\)/dashboard/edit/[pageId]/page.tsx)"
+    ]
+  }
+}

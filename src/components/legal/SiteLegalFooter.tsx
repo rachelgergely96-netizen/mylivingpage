@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { getLegalNavItems, type LegalSiteId } from "@/lib/legal/site-config";
+import {
+  getLegalNavItems,
+  SECOND_SITE_DOMAIN_PLACEHOLDER,
+  type LegalSiteId,
+} from "@/lib/legal/site-config";
 
 function BrandMark({ siteId }: { siteId: LegalSiteId }) {
   if (siteId === "mylivingpage") {
@@ -10,7 +14,7 @@ function BrandMark({ siteId }: { siteId: LegalSiteId }) {
     );
   }
 
-  return <span className="font-heading text-xl text-[#F0F4FF]">[SECOND_SITE_DOMAIN]</span>;
+  return <span className="font-heading text-xl text-[#F0F4FF]">{SECOND_SITE_DOMAIN_PLACEHOLDER}</span>;
 }
 
 export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {

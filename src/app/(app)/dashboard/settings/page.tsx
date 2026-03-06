@@ -224,8 +224,9 @@ export default function SettingsPage() {
       await supabase.auth.signOut();
       router.replace("/");
     } else {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
       setDeleting(false);
-      showToast("Failed to delete account.");
+      showToast(data?.error ?? "Failed to delete account.");
     }
   };
 
@@ -455,6 +456,17 @@ export default function SettingsPage() {
             Unlock all themes, unlimited pages, analytics, and more.
           </p>
         )}
+        <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
+          Pro auto-renews monthly until canceled. By upgrading, you agree to our{" "}
+          <a href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+            Terms
+          </a>{" "}
+          and{" "}
+          <a href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+            Privacy Policy
+          </a>
+          . Cancel anytime from the billing portal. No refunds except where required by law.
+        </p>
       </section>
 
       {/* ── Danger Zone ── */}
@@ -478,7 +490,7 @@ export default function SettingsPage() {
           <div className="w-full max-w-md rounded-2xl border border-[rgba(239,68,68,0.25)] bg-[rgba(10,22,40,0.95)] p-6 sm:p-7">
             <h3 className="font-heading text-xl font-bold text-[#ff8e8e] mb-3">Delete Account</h3>
             <p className="mb-4 text-sm text-[rgba(240,244,255,0.6)]">
-              This will permanently delete your profile, all pages, and analytics data. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
+              This will permanently delete your profile, all pages, and analytics data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
             </p>
             <input
               type="text"

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { getStripe } from "@/lib/stripe";
 
 /** POST /api/account/delete — permanently delete user account and all data */
 export async function POST() {
@@ -9,6 +10,47 @@ export async function POST() {
 
   const supabase = createServiceRoleSupabaseClient();
   const userId = user.id;
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", userId)
+    .maybeSingle<{ stripe_customer_id: string | null }>();
+
+  if (profileError) {
+    return NextResponse.json({ error: "Failed to load billing profile." }, { status: 500 });
+  }
+
+  const customerId = profile?.stripe_customer_id ?? null;
+  if (customerId) {
+    const stripe = getStripe();
+    try {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 100,
+      });
+
+      const cancellable = subscriptions.data.filter(
+        (subscription) =>
+          subscription.status !== "canceled" &&
+          subscription.status !== "incomplete_expired",
+      );
+
+      for (const subscription of cancellable) {
+        await stripe.subscriptions.cancel(subscription.id);
+      }
+    } catch (error) {
+      console.error("Account deletion blocked: Stripe cancellation failed", error);
+      return NextResponse.json(
+        {
+          error:
+            "Unable to cancel active billing. Please retry from Settings or contact support.",
+        },
+        { status: 409 },
+      );
+    }
+  }
 
   // 1. Delete all user's pages
   await supabase

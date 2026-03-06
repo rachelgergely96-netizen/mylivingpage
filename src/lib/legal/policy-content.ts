@@ -1,4 +1,5 @@
 import type { LegalPolicyId, LegalSiteConfig } from "@/lib/legal/site-config";
+import { LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
 
 export type LegalBlock =
   | {
@@ -25,7 +26,7 @@ export interface LegalPolicyDocument {
   sections: LegalSection[];
 }
 
-const LAST_UPDATED_PLACEHOLDER = "{{EFFECTIVE_DATE}}";
+const LAST_UPDATED = LEGAL_EFFECTIVE_DATE;
 
 function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
   return [
@@ -105,7 +106,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
       blocks: [
         {
           type: "paragraph",
-          text: "You retain ownership of your User Content. You grant us a non-exclusive, worldwide, royalty-free license to host, store, process, reproduce, adapt, and display your User Content solely to operate, secure, improve, and provide the Service according to your sharing settings and instructions.",
+          text: "You retain ownership of your User Content. You grant us a non-exclusive, worldwide, royalty-free license to host, store, process, reproduce, adapt, and display your User Content solely to operate, secure, improve, and provide the Service according to your sharing settings and instructions, including serving public pages and shared links you choose to publish.",
         },
         {
           type: "paragraph",
@@ -201,7 +202,11 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
         },
         {
           type: "paragraph",
-          text: "Arbitration setting: {{ARBITRATION_OPTIONAL}}. Class action waivers and jury trial waivers may apply where enforceable.",
+          text: "If informal resolution does not resolve the dispute, claims will be resolved by binding individual arbitration administered by the American Arbitration Association under its Consumer Arbitration Rules, except either party may bring eligible claims in small claims court.",
+        },
+        {
+          type: "paragraph",
+          text: "You and we each waive the right to a jury trial and to participate in class or representative actions, to the maximum extent permitted by law. If this waiver is unenforceable for a claim, that claim proceeds in court and the remaining claims stay in arbitration.",
         },
       ],
     },
@@ -211,7 +216,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
       blocks: [
         {
           type: "paragraph",
-          text: "These policies are governed by the laws of {{JURISDICTION_STATE}}, excluding conflict of law rules, except where mandatory consumer protection laws apply.",
+          text: "These policies are governed by the laws of the State of Delaware, excluding conflict of law rules, except where mandatory consumer protection laws require otherwise.",
         },
       ],
     },
@@ -247,7 +252,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "terms",
     title: "Terms of Service",
     summary: `These Terms govern your use of ${site.brandName} and describe your rights, obligations, and legal relationship with ${site.companyNamePlaceholder}.`,
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "service-overview",
@@ -283,11 +288,51 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "Some features may require payment. If paid plans are offered, fees, billing cycle, renewals, cancellations, and refunds are shown at checkout and may be processed by {{PAYMENT_PROCESSOR}}.",
+            text: "Certain features require a paid subscription. Current paid pricing and plan details are shown at checkout and in account settings. Payment processing is provided by Stripe, Inc.",
           },
           {
             type: "paragraph",
-            text: "You authorize us and our processor to charge the selected payment method for recurring or one-time charges as disclosed.",
+            text: "By starting a paid subscription, you authorize recurring monthly charges to your selected payment method until canceled.",
+          },
+        ],
+      },
+      {
+        id: "subscription-renewal-cancellation",
+        heading: "Auto-Renewal, Cancellation, and Refunds",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "Paid subscriptions renew automatically each billing cycle unless canceled.",
+              "You may cancel at any time from the Stripe customer billing portal linked in account settings.",
+              "Cancellation stops future renewals and generally takes effect at the end of the current paid period.",
+              "Except where required by applicable law, fees are non-refundable and we do not provide prorated refunds for partial billing periods.",
+              "If you delete your account, active subscriptions are canceled before account deletion is finalized.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "failed-payments-and-plan-status",
+        heading: "Failed Payments and Plan Status",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "If payment fails or a charge is declined, your paid features may be suspended or your account may be downgraded until billing is resolved. We may retry failed charges through our payment processor in accordance with processor rules.",
+          },
+        ],
+      },
+      {
+        id: "taxes-price-changes-chargebacks",
+        heading: "Taxes, Price Changes, and Chargebacks",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "You are responsible for applicable taxes, duties, or government charges associated with your subscription.",
+              "We may change pricing or plan features with advance notice before the change takes effect for future billing periods.",
+              "If you initiate a chargeback or payment dispute in bad faith, we may suspend or terminate access pending resolution.",
+            ],
           },
         ],
       },
@@ -296,8 +341,32 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
         heading: "Third-Party Services",
         blocks: [
           {
+            type: "list",
+            items: [
+              "Stripe (payments and billing portal)",
+              "Supabase (authentication, database, and object storage)",
+              "Vercel (application hosting and delivery)",
+              "Anthropic (AI-assisted resume parsing features)",
+              "Google OAuth (optional social sign-in)",
+            ],
+          },
+          {
             type: "paragraph",
-            text: "The Service may depend on or integrate with third-party providers such as hosting, analytics, email, cloud storage, authentication, and payments. Applicable providers include {{THIRD_PARTY_SERVICES}} and are governed by their own terms.",
+            text: "Third-party services are governed by their own terms and privacy policies, and may update independently of our Service.",
+          },
+        ],
+      },
+      {
+        id: "service-license-feedback",
+        heading: "Service License, Trademarks, and Feedback",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Subject to these Terms, we grant you a limited, revocable, non-exclusive, non-transferable license to access and use the Service for your personal or internal business use.",
+          },
+          {
+            type: "paragraph",
+            text: "You may not use our trademarks, logos, or branding without prior written permission. If you submit feedback or suggestions, you grant us a non-exclusive, worldwide, royalty-free license to use that feedback to improve the Service.",
           },
         ],
       },
@@ -321,7 +390,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "privacy",
     title: "Privacy Policy",
     summary: `This Privacy Policy explains how ${site.companyNamePlaceholder} handles personal data for ${site.brandName}.`,
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "privacy-scope",
@@ -347,7 +416,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Identifiers: name, username, email, account ID, device IDs, and IP address.",
               "Profile and content: text, photos, links, notes, files, and user-submitted materials.",
               "Usage data: logs, interactions, diagnostics, and performance metrics.",
-              "Transactions: subscription and billing metadata from {{PAYMENT_PROCESSOR}}.",
+              "Transactions: subscription status, invoice references, and billing metadata from Stripe. Full payment card numbers are processed by Stripe and are not stored on our servers.",
               "Support data: messages, reports, and feedback.",
             ],
           },
@@ -369,8 +438,8 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
         ],
       },
       {
-        id: "purposes-legal-bases",
-        heading: "Purposes and Legal Bases",
+        id: "purposes",
+        heading: "Purposes of Processing",
         blocks: [
           {
             type: "list",
@@ -380,7 +449,6 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Process payments and provide customer support.",
               "Detect abuse, fraud, and policy violations.",
               "Comply with legal obligations.",
-              "Legal bases placeholder: {{GDPR_RIGHTS_AND_LAWFUL_BASIS_DETAILS}}.",
             ],
           },
         ],
@@ -397,7 +465,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Payment and billing providers.",
               "Security and fraud prevention providers.",
               "Professional advisors and authorities where legally required.",
-              "Provider list placeholder: {{THIRD_PARTY_SERVICES}}.",
+              "Primary providers include Supabase, Vercel, Stripe, Anthropic, and Google OAuth (if you choose Google sign-in).",
             ],
           },
         ],
@@ -413,8 +481,8 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "US rights placeholder: {{US_STATE_PRIVACY_RIGHTS}}.",
-              "GDPR/UK rights placeholder: {{GDPR_RIGHTS_AND_LAWFUL_BASIS_DETAILS}}.",
+              "US residents may request access, correction, deletion, and portability of personal information, and may appeal denials where required by applicable state law.",
+              "If you are in the EEA, UK, or Switzerland, you may have additional rights including objection, restriction, and complaint to your local supervisory authority.",
               `Submit requests at ${site.contactEmailPlaceholder}.`,
             ],
           },
@@ -430,7 +498,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Cookies and analytics are described in this policy and the Cookie Policy.",
               "Do Not Track note: no uniform industry handling; controls are provided where required.",
               "Children's privacy: not intended for children under 13, or higher age where required.",
-              "International transfer mechanism placeholder: {{INTERNATIONAL_TRANSFER_MECHANISM}}.",
+              "If data is transferred internationally, we rely on contractual or legal safeguards appropriate to the transfer destination and applicable law.",
             ],
           },
         ],
@@ -444,7 +512,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
             items: [
               `Email: ${site.contactEmailPlaceholder}`,
               `Mailing address: ${site.mailingAddressPlaceholder}`,
-              "DPO contact placeholder: {{DPO_CONTACT_OPTIONAL}}.",
+              "Please include enough detail for us to verify your identity and evaluate your request.",
             ],
           },
         ],
@@ -458,8 +526,8 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
   return {
     policyId: "cookies",
     title: "Cookie Policy",
-    summary: "This policy explains cookie categories, analytics and ads placeholders, and user controls.",
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    summary: "This policy explains cookie categories, optional analytics or advertising technologies, and available user controls.",
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "cookie-intro",
@@ -478,21 +546,21 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "Strictly necessary cookies for login, session management, and security.",
-              "Functional cookies for preferences and usability.",
-              "Analytics cookies for understanding feature usage and performance.",
-              "Advertising cookies, if enabled, for attribution and campaign measurement.",
+              "Strictly necessary cookies used for authentication, session continuity, fraud prevention, and security.",
+              "Functional storage used to remember settings and improve usability.",
+              "Analytics cookies may be used to understand performance and feature usage when enabled.",
+              "Advertising or attribution cookies are only used if marketing features are enabled.",
             ],
           },
         ],
       },
       {
         id: "analytics-ads",
-        heading: "Analytics and Advertising Placeholders",
+        heading: "Analytics and Advertising Providers",
         blocks: [
           {
             type: "paragraph",
-            text: "We may use analytics and advertising providers that collect technical and usage data under their own terms. Provider placeholder: {{THIRD_PARTY_SERVICES}}.",
+            text: "Where enabled, analytics or marketing technologies may be provided by third parties such as Vercel analytics or other approved vendors. Those providers process data under their own policies.",
           },
         ],
       },
@@ -520,7 +588,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "Consent banner and preference center placeholder: {{COOKIE_CONSENT_MECHANISM}}. We collect consent for non-essential cookies where required by law.",
+            text: "We request consent for non-essential cookies where required by law. Essential authentication and security cookies remain active because the Service cannot function safely without them.",
           },
         ],
       },
@@ -534,7 +602,7 @@ function buildAcceptableUsePolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "acceptable-use",
     title: "Acceptable Use Policy",
     summary: "This policy defines prohibited behavior and how we enforce platform safety.",
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "aup-purpose",
@@ -595,7 +663,7 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "dmca",
     title: "Copyright and DMCA Policy",
     summary: "This policy describes notice and counter-notice procedures for copyright complaints.",
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "dmca-scope",
@@ -680,7 +748,7 @@ function buildDisclaimerPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "disclaimer",
     title: "General Disclaimer",
     summary: "The Service is informational and does not provide legal, medical, or financial advice.",
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "no-professional-advice",
@@ -732,7 +800,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "security",
     title: "Security Overview",
     summary: "This overview describes our security controls and vulnerability reporting process.",
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "security-overview",
@@ -779,7 +847,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "Infrastructure and operational services may be provided by vetted third-party vendors. Provider placeholder: {{THIRD_PARTY_SERVICES}}.",
+            text: "Infrastructure and operational services may be provided by vetted third-party vendors, including Supabase, Vercel, Stripe, Anthropic, and Google OAuth (if selected).",
           },
         ],
       },
@@ -793,7 +861,7 @@ function buildDeleteAccountPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "delete-account",
     title: "Account Deletion",
     summary: "This page explains account deletion steps and what data may be retained after deletion.",
-    lastUpdated: LAST_UPDATED_PLACEHOLDER,
+    lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "deletion-steps",
@@ -817,10 +885,10 @@ function buildDeleteAccountPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "Profile and content records: {{ACCOUNT_DATA_RETENTION_WINDOW}}.",
-              "Financial and tax records: {{FINANCIAL_RECORD_RETENTION_WINDOW}}.",
-              "Security logs and abuse records: {{SECURITY_LOG_RETENTION_WINDOW}}.",
-              "Backup systems: {{BACKUP_RETENTION_WINDOW}}.",
+              "Profile and published-page content records: removed at deletion request completion, except where retention is legally required.",
+              "Financial and tax records tied to paid billing: retained up to 7 years where required by law or accounting standards.",
+              "Security logs and abuse-prevention records: generally retained up to 24 months.",
+              "Backups: rolling encrypted backups are typically overwritten within 35 days.",
             ],
           },
         ],

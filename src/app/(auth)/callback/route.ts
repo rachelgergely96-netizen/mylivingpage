@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getClientIp,
+  recordLegalAcceptance,
+} from "@/lib/legal/acceptance";
+import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
 import { createServiceRoleSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import { usernameFromEmail } from "@/lib/usernames";
 
@@ -13,6 +18,10 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = safeRedirectPath(requestUrl.searchParams.get("next"));
+  const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
+  const legalSourceParam = requestUrl.searchParams.get("legal_source");
+  const legalSource: LegalAcceptanceSource =
+    legalSourceParam === "checkout" ? "checkout" : "signup";
   const redirectUrl = new URL(next, requestUrl.origin);
 
   if (!code) {
@@ -75,6 +84,36 @@ export async function GET(request: NextRequest) {
 
     // Increment sign-in count
     await admin.rpc("increment_sign_in_count", { uid: user.id });
+
+    const metadataAccepted = user.user_metadata?.legal_accepted === true;
+    if (legalAcceptRequested || metadataAccepted) {
+      const metadataAcceptedAt =
+        typeof user.user_metadata?.legal_accepted_at === "string"
+          ? user.user_metadata.legal_accepted_at
+          : undefined;
+      const metadataTermsVersion =
+        typeof user.user_metadata?.legal_terms_version === "string"
+          ? user.user_metadata.legal_terms_version
+          : undefined;
+      const metadataPrivacyVersion =
+        typeof user.user_metadata?.legal_privacy_version === "string"
+          ? user.user_metadata.legal_privacy_version
+          : undefined;
+
+      try {
+        await recordLegalAcceptance({
+          userId: user.id,
+          source: legalSource,
+          acceptedAt: metadataAcceptedAt,
+          termsVersion: metadataTermsVersion,
+          privacyVersion: metadataPrivacyVersion,
+          ipAddress: getClientIp(request.headers),
+          userAgent: request.headers.get("user-agent"),
+        });
+      } catch (acceptanceError) {
+        console.error("Failed to record legal acceptance in callback", acceptanceError);
+      }
+    }
   }
 
   return NextResponse.redirect(redirectUrl);

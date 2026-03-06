@@ -154,35 +154,54 @@ export default function ResumeLayout({ data, compact = false, headingLevel = "h1
           <section className="mb-5">
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Projects</h2>
             <div className="space-y-2">
-              {data.projects.map((project) => (
-                <article
-                  key={project.name}
-                  className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-3 sm:p-4 backdrop-blur-md"
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-1.5 sm:gap-2">
-                    <p className="text-xs sm:text-sm font-medium text-[#F0F4FF]">
-                      {project.url ? (
-                        <a href={project.url.startsWith("http") ? project.url : `https://${project.url}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto underline decoration-[rgba(59,130,246,0.3)] underline-offset-2 transition-colors hover:text-[#93C5FD]">
+              {data.projects.map((project) => {
+                const projectUrl = project.url
+                  ? (project.url.startsWith("http") ? project.url : `https://${project.url}`)
+                  : null;
+                const CardWrapper = projectUrl ? "a" : "div";
+                const cardLinkProps = projectUrl
+                  ? { href: projectUrl, target: "_blank", rel: "noopener noreferrer" }
+                  : {};
+                return (
+                  <article key={project.name}>
+                    <CardWrapper
+                      {...cardLinkProps}
+                      className={`block rounded-xl border p-3 sm:p-4 backdrop-blur-md transition-all duration-200 ${
+                        projectUrl
+                          ? "pointer-events-auto border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.04)] hover:border-[rgba(59,130,246,0.4)] hover:bg-[rgba(59,130,246,0.08)]"
+                          : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+                        <p className={`text-xs sm:text-sm font-medium ${projectUrl ? "text-[#93C5FD]" : "text-[#F0F4FF]"}`}>
                           {project.name}
-                        </a>
-                      ) : project.name}
-                    </p>
-                  </div>
-                  <p className="mt-1.5 text-xs leading-5 text-[rgba(240,244,255,0.5)]">{project.description}</p>
-                  {project.tech?.length ? (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {project.tech.map((t) => (
-                        <span
-                          key={`${project.name}-${t}`}
-                          className="rounded-md border border-[rgba(59,130,246,0.15)] bg-[rgba(59,130,246,0.06)] px-2 py-0.5 text-[10px] text-[#93C5FD]"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
-              ))}
+                        </p>
+                        {projectUrl ? (
+                          <span className="flex items-center gap-1 text-[10px] text-[#3B82F6] opacity-70">
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                            </svg>
+                            Visit
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1.5 text-xs leading-5 text-[rgba(240,244,255,0.5)]">{project.description}</p>
+                      {project.tech?.length ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {project.tech.map((t) => (
+                            <span
+                              key={`${project.name}-${t}`}
+                              className="rounded-md border border-[rgba(59,130,246,0.15)] bg-[rgba(59,130,246,0.06)] px-2 py-0.5 text-[10px] text-[#93C5FD]"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </CardWrapper>
+                  </article>
+                );
+              })}
             </div>
           </section>
         ) : null}

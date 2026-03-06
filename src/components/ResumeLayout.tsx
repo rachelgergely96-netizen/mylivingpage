@@ -101,7 +101,7 @@ export default function ResumeLayout({ data, compact = false, headingLevel = "h1
                 className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] p-2.5 sm:p-3 text-center backdrop-blur-md"
               >
                 <div className="font-mono text-base sm:text-xl text-[#93C5FD]">{stat.value}</div>
-                <div className="mt-0.5 sm:mt-1 truncate text-[9px] sm:text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.45)]">{stat.label}</div>
+                <div className="mt-0.5 sm:mt-1 text-[8px] sm:text-[9px] uppercase leading-tight tracking-[0.14em] text-[rgba(240,244,255,0.45)]">{stat.label}</div>
               </article>
             ))}
           </section>

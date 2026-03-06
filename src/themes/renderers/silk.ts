@@ -120,7 +120,7 @@ export const renderSilk: ThemeRenderer = (ctx, width, height, time, mouseX, mous
     for (let sx = 0; sx <= steps; sx++) {
       const x = (sx / steps) * width;
       const y = baseY + A * Math.sin(k * x + time * sp);
-      sx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (sx === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
     }
     ctx.stroke();
     ctx.restore();

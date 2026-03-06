@@ -84,7 +84,7 @@ function drawBoltPath(ctx: CanvasRenderingContext2D, points: Array<[number, numb
   ctx.restore();
 }
 
-export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
+export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _mouseY) => {
   if (!rainInit) {
     initRain(width);
     rainInit = true;

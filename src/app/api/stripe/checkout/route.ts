@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from "@/lib/legal/legal-version";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe, getOrCreateStripeCustomer } from "@/lib/stripe";
 
@@ -33,8 +37,21 @@ export async function POST() {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/dashboard/settings?upgraded=true`,
     cancel_url: `${appUrl}/dashboard/settings`,
+    allow_promotion_codes: true,
+    consent_collection: {
+      terms_of_service: "required",
+    },
+    metadata: {
+      supabase_user_id: user.id,
+      terms_version: TERMS_VERSION,
+      privacy_version: PRIVACY_VERSION,
+    },
     subscription_data: {
-      metadata: { supabase_user_id: user.id },
+      metadata: {
+        supabase_user_id: user.id,
+        terms_version: TERMS_VERSION,
+        privacy_version: PRIVACY_VERSION,
+      },
     },
   });
 

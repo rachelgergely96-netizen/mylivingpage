@@ -1,6 +1,6 @@
 import type { ThemeId } from "@/themes/types";
 
-export const FREE_THEMES: ThemeId[] = ["cosmic", "sakura", "monolith", "circuit", "dusk"];
+export const FREE_THEMES: ThemeId[] = ["cosmic", "fluid", "ember", "monolith", "aurora", "terracotta", "sakura", "circuit", "dusk"];
 export const MAX_FREE_PAGES = 1;
 export const MAX_FREE_ARCHIVES = 5;
 

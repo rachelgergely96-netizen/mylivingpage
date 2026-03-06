@@ -180,7 +180,7 @@ export default function LandingPage() {
                 <p className="font-heading text-4xl font-bold text-[#F0F4FF]">Free</p>
                 <p className="mt-1 text-sm text-[rgba(240,244,255,0.45)]">forever</p>
                 <ul className="mt-5 space-y-2.5 text-sm text-[rgba(240,244,255,0.65)]">
-                  {["1 living page", "5 free themes", "AI resume structuring", "Public profile URL", "View analytics"].map((f) => (
+                  {["1 living page", "9 free themes", "AI resume structuring", "Public profile URL", "View analytics"].map((f) => (
                     <li key={f} className="flex items-center gap-2.5">
                       <span className="text-[#3B82F6]">✓</span> {f}
                     </li>

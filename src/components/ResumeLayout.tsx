@@ -172,17 +172,14 @@ export default function ResumeLayout({ data, compact = false, headingLevel = "h1
                           : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)]"
                       }`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+                      <div className="flex items-center gap-1.5">
                         <p className={`text-xs sm:text-sm font-medium ${projectUrl ? "text-[#93C5FD]" : "text-[#F0F4FF]"}`}>
                           {project.name}
                         </p>
                         {projectUrl ? (
-                          <span className="flex items-center gap-1 text-[10px] text-[#3B82F6] opacity-70">
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
-                            Visit
-                          </span>
+                          <svg className="h-3 w-3 shrink-0 text-[#3B82F6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                          </svg>
                         ) : null}
                       </div>
                       <p className="mt-1.5 text-xs leading-5 text-[rgba(240,244,255,0.5)]">{project.description}</p>

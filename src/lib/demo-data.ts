@@ -323,4 +323,92 @@ export const DEMO_PAGES: DemoPage[] = [
       ],
     },
   },
+  {
+    themeId: "luxe",
+    data: {
+      name: "Jordan Ellis",
+      headline: "Litigation Associate",
+      location: "Chicago, IL",
+      email: "jordan@example.com",
+      linkedin: "linkedin.com/in/jordanellis",
+      github: null,
+      website: null,
+      avatar_url: null,
+      summary:
+        "Early-career attorney focused on commercial litigation, legal research, and clear client communication. Looking for a role where sharp writing, polished presence, and strong case preparation matter immediately.",
+      experience: [
+        {
+          title: "Associate Attorney",
+          company: "Brennan Cole LLP",
+          dates: "2024 - Present",
+          highlights: [
+            "Drafted motions, discovery responses, and research memos for complex business disputes",
+            "Prepared partners for hearings and client strategy calls under tight deadlines",
+            "Managed document review and case timelines across multiple active matters",
+          ],
+          url: null,
+        },
+        {
+          title: "Judicial Law Clerk",
+          company: "Circuit Court of Cook County",
+          dates: "2023 - 2024",
+          highlights: [
+            "Researched precedent and prepared bench memoranda for civil matters",
+            "Reviewed filings and proposed orders for docket management and hearings",
+          ],
+          url: null,
+        },
+        {
+          title: "Summer Associate",
+          company: "Harrison Tate",
+          dates: "2022",
+          highlights: [
+            "Supported litigation and employment teams on research, due diligence, and writing assignments",
+            "Delivered client-ready research summaries for partner review",
+          ],
+          url: null,
+        },
+      ],
+      education: [
+        {
+          degree: "J.D.",
+          school: "Northwestern Pritzker School of Law",
+          year: "2023",
+        },
+        {
+          degree: "B.A. Political Science",
+          school: "University of Michigan",
+          year: "2020",
+        },
+      ],
+      projects: [],
+      skills: [
+        {
+          category: "Practice",
+          items: ["Commercial Litigation", "Legal Research", "Motion Practice", "Discovery"],
+        },
+        {
+          category: "Writing",
+          items: ["Brief Drafting", "Case Strategy Memos", "Client Communication"],
+        },
+        {
+          category: "Tools",
+          items: ["Westlaw", "LexisNexis", "Relativity", "Clio"],
+        },
+      ],
+      certifications: [
+        {
+          name: "Illinois Bar Admission",
+          issuer: "Illinois Supreme Court",
+          date: "2023",
+        },
+      ],
+      stats: [
+        { value: "2", label: "Years Practice" },
+        { value: "25+", label: "Motions Drafted" },
+        { value: "40+", label: "Research Memos" },
+        { value: "100%", label: "Bar Passed" },
+      ],
+    },
+  },
 ];

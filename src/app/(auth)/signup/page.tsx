@@ -118,11 +118,22 @@ export default function SignupPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
       <div className="glass-card w-full rounded-2xl p-7 md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create Account</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Build Your Living Page</h1>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Start Free</p>
+        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Build the page you send with your resume</h1>
         <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.55)]">
-          Sign up with email or Google. You can start creating immediately after authentication.
+          Start with email or Google. Use your current resume, keep your PDF for ATS systems, and publish when you are ready.
         </p>
+        <div className="mt-5 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.45)]">
+          <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
+            No credit card
+          </span>
+          <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
+            Start with your current resume
+          </span>
+          <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
+            Publish when ready
+          </span>
+        </div>
         <label className="mt-5 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
           <input
             type="checkbox"
@@ -143,7 +154,7 @@ export default function SignupPage() {
         </label>
 
         {!acceptedLegal && (
-          <p className="mt-2 text-xs text-[#FCD34D]">↑ Check the box above to continue</p>
+          <p className="mt-2 text-xs text-[#FCD34D]">Check the box above to continue.</p>
         )}
 
         <button
@@ -152,7 +163,7 @@ export default function SignupPage() {
           disabled={status === "loading"}
           className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Continue with Google
+          Start with Google
         </button>
 
         <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
@@ -184,7 +195,7 @@ export default function SignupPage() {
             disabled={status === "loading"}
             className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
           >
-            {status === "loading" ? "Creating..." : "Create Account"}
+            {status === "loading" ? "Creating..." : "Create My Page"}
           </button>
         </form>
 

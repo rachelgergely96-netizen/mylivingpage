@@ -17,21 +17,21 @@ export default function PricingPage() {
               my<span className="text-[#3B82F6]">living</span>page
             </Link>
             <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.6)] md:flex">
-              <Link href="/#features" className="transition-colors hover:text-[#93C5FD]">
-                Features
-              </Link>
               <Link href="/#examples" className="transition-colors hover:text-[#93C5FD]">
                 Examples
+              </Link>
+              <Link href="/#comparison" className="transition-colors hover:text-[#93C5FD]">
+                Why It Works
               </Link>
               <Link href="/pricing" className="text-[#93C5FD]">
                 Pricing
               </Link>
             </div>
             <Link
-              href="/signup"
+              href="/signup?ref=pricing_nav"
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Start
+              Build My Page
             </Link>
           </nav>
         </header>
@@ -66,10 +66,10 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Link
-                href="/signup"
+                href="/signup?ref=pricing_free_card"
                 className="block w-full rounded-full border border-[rgba(255,255,255,0.18)] py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.75)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
               >
-                Get Started
+                Start Free
               </Link>
             </div>
 
@@ -93,7 +93,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Link
-                href="/signup"
+                href="/signup?ref=pricing_pro_card"
                 className="gold-pill block w-full py-3 text-center text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
               >
                 Upgrade to Pro

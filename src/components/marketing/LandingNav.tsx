@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 
 const NAV_LINKS = [
-  { href: "#features", label: "Features", external: false },
-  { href: "#how", label: "How It Works", external: false },
   { href: "#examples", label: "Examples", external: false },
+  { href: "#comparison", label: "Why It Works", external: false },
+  { href: "#how", label: "How It Works", external: false },
   { href: "#pricing", label: "Pricing", external: false },
 ];
 
@@ -36,10 +36,10 @@ export default function LandingNav() {
 
       <div className="flex items-center gap-3">
         <Link
-          href="/signup"
+          href="/signup?ref=landing_nav"
           className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
         >
-          Start
+          Build My Page
         </Link>
 
         {/* Hamburger — mobile only */}
@@ -90,11 +90,11 @@ export default function LandingNav() {
             ))}
             <li className="mt-2 border-t border-[rgba(255,255,255,0.08)] pt-3">
               <Link
-                href="/signup"
+                href="/signup?ref=landing_nav_mobile"
                 onClick={() => setOpen(false)}
                 className="gold-pill block w-full py-3 text-center text-sm font-semibold"
               >
-                Create My Page
+                Build My Page
               </Link>
             </li>
           </ul>

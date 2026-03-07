@@ -10,12 +10,12 @@ export const DEMO_PAGES: DemoPage[] = [
   {
     themeId: "ember",
     data: {
-      name: "Alex Chen",
+      name: "Avery Sample",
       headline: "Senior Full-Stack Engineer",
       location: "San Francisco, CA",
-      email: "alex@example.com",
-      linkedin: "linkedin.com/in/alexchen",
-      github: "alexchen",
+      email: "avery@sample.invalid",
+      linkedin: null,
+      github: null,
       website: null,
       avatar_url: null,
       summary:
@@ -23,29 +23,29 @@ export const DEMO_PAGES: DemoPage[] = [
       experience: [
         {
           title: "Senior Software Engineer",
-          company: "Streamline",
-          dates: "2022 – Present",
+          company: "Example Systems",
+          dates: "2022 - Present",
           highlights: [
             "Led migration from monolith to microservices serving 2M+ requests/day",
-            "Built real-time collaboration engine using WebSockets and CRDTs",
+            "Built real-time collaboration workflows using WebSockets and CRDTs",
             "Mentored 4 junior engineers through structured growth plans",
           ],
           url: null,
         },
         {
           title: "Software Engineer",
-          company: "DataVault",
-          dates: "2019 – 2022",
+          company: "Sample Analytics",
+          dates: "2019 - 2022",
           highlights: [
-            "Designed and shipped analytics dashboard used by 500+ enterprise clients",
+            "Designed and shipped analytics dashboards used across enterprise teams",
             "Reduced API response times by 60% through query optimization",
           ],
           url: null,
         },
         {
           title: "Junior Developer",
-          company: "WebCraft Studios",
-          dates: "2017 – 2019",
+          company: "DemoWorks Studio",
+          dates: "2017 - 2019",
           highlights: [
             "Built responsive client sites using React and Node.js",
             "Introduced automated testing, bringing coverage from 15% to 80%",
@@ -56,20 +56,20 @@ export const DEMO_PAGES: DemoPage[] = [
       education: [
         {
           degree: "B.S. Computer Science",
-          school: "UC Berkeley",
+          school: "Example Institute of Technology",
           year: "2017",
         },
       ],
       projects: [
         {
-          name: "OpenTrace",
+          name: "TraceBoard",
           description:
-            "Open-source distributed tracing library for Node.js microservices with zero-config setup.",
+            "Internal tracing toolkit for Node.js services with a low-friction setup for engineering teams.",
           tech: ["TypeScript", "gRPC", "OpenTelemetry"],
           url: null,
         },
         {
-          name: "DevPulse",
+          name: "Pipeline Pulse",
           description:
             "Developer productivity tracker that surfaces bottlenecks in CI/CD pipelines.",
           tech: ["Next.js", "PostgreSQL", "GitHub API"],
@@ -92,61 +92,61 @@ export const DEMO_PAGES: DemoPage[] = [
       ],
       certifications: [
         {
-          name: "AWS Solutions Architect – Associate",
-          issuer: "Amazon Web Services",
+          name: "Cloud Architecture Certification",
+          issuer: "Sample Cloud Board",
           date: "2023",
         },
       ],
       stats: [
         { value: "8+", label: "Years Exp." },
         { value: "2M+", label: "Req. / Day" },
-        { value: "12", label: "OSS Projects" },
-        { value: "500+", label: "Enterprise" },
+        { value: "12", label: "Builds Shipped" },
+        { value: "500+", label: "Team Users" },
       ],
     },
   },
   {
     themeId: "aurora",
     data: {
-      name: "Maya Rodriguez",
+      name: "Morgan Sample",
       headline: "UX Design Lead",
       location: "New York, NY",
-      email: "maya@example.com",
-      linkedin: "linkedin.com/in/mayarodriguez",
+      email: "morgan@sample.invalid",
+      linkedin: null,
       github: null,
-      website: "mayarodriguez.design",
+      website: null,
       avatar_url: null,
       summary:
-        "Design lead with a decade of experience shaping digital products used by millions. I bridge user research, interaction design, and brand strategy to create experiences that feel effortless.",
+        "Design lead with a decade of experience shaping digital products used by large teams. I bridge user research, interaction design, and brand strategy to create experiences that feel effortless.",
       experience: [
         {
           title: "UX Design Lead",
-          company: "Prism Health",
-          dates: "2021 – Present",
+          company: "Example Care Studio",
+          dates: "2021 - Present",
           highlights: [
-            "Redesigned patient portal, increasing task completion by 40%",
-            "Built and scaled design system across 3 product teams",
-            "Led research sprints with 200+ patient interviews",
+            "Redesigned a customer portal, increasing task completion by 40%",
+            "Built and scaled a design system across 3 product teams",
+            "Led research sprints with 200+ customer interviews",
           ],
           url: null,
         },
         {
           title: "Senior Product Designer",
-          company: "Canopy",
-          dates: "2018 – 2021",
+          company: "Sample Product Co.",
+          dates: "2018 - 2021",
           highlights: [
-            "Designed onboarding flow that reduced churn by 25%",
-            "Created component library adopted across 4 product squads",
+            "Designed onboarding flows that reduced churn by 25%",
+            "Created a component library adopted across 4 product squads",
           ],
           url: null,
         },
         {
           title: "UX Designer",
-          company: "PixelForge Agency",
-          dates: "2015 – 2018",
+          company: "DemoForge Agency",
+          dates: "2015 - 2018",
           highlights: [
-            "Delivered 30+ client projects across fintech, healthcare, and e-commerce",
-            "Introduced usability testing practice, winning 2 industry awards",
+            "Delivered 30+ client projects across fintech, healthcare, and ecommerce",
+            "Introduced usability testing practice for every engagement",
           ],
           url: null,
         },
@@ -154,12 +154,12 @@ export const DEMO_PAGES: DemoPage[] = [
       education: [
         {
           degree: "M.F.A. Interaction Design",
-          school: "School of Visual Arts",
+          school: "Sample School of Interaction",
           year: "2015",
         },
         {
           degree: "B.A. Psychology",
-          school: "NYU",
+          school: "Example City University",
           year: "2013",
         },
       ],
@@ -202,19 +202,19 @@ export const DEMO_PAGES: DemoPage[] = [
       ],
       certifications: [
         {
-          name: "Google UX Design Certificate",
-          issuer: "Google",
+          name: "Experience Design Certificate",
+          issuer: "Sample Design Guild",
           date: "2022",
         },
         {
-          name: "Certified Usability Analyst",
-          issuer: "Human Factors International",
+          name: "Usability Analysis Certificate",
+          issuer: "Example Usability Board",
           date: "2020",
         },
       ],
       stats: [
-        { value: "10+", label: "Yrs Design" },
-        { value: "40%", label: "Completion Lift" },
+        { value: "10+", label: "Years Design" },
+        { value: "40%", label: "Task Lift" },
         { value: "30+", label: "Projects" },
         { value: "200+", label: "Interviews" },
       ],
@@ -223,44 +223,44 @@ export const DEMO_PAGES: DemoPage[] = [
   {
     themeId: "matrix",
     data: {
-      name: "James Okafor",
+      name: "Taylor Sample",
       headline: "Finance Director & Strategic Advisor",
       location: "London, UK",
-      email: "james@example.com",
-      linkedin: "linkedin.com/in/jamesokafor",
+      email: "taylor@sample.invalid",
+      linkedin: null,
       github: null,
       website: null,
       avatar_url: null,
       summary:
-        "Finance director with 12 years of experience in corporate strategy, M&A, and financial planning across technology and financial services. Track record of driving operational efficiency and closing complex transactions.",
+        "Finance director with 12 years of experience in corporate strategy, M&A, and financial planning across growth-stage businesses. Track record of driving operational efficiency and leading complex transactions.",
       experience: [
         {
           title: "Finance Director",
-          company: "Nexus Capital Partners",
-          dates: "2020 – Present",
+          company: "Example Capital Group",
+          dates: "2020 - Present",
           highlights: [
-            "Oversee $850M portfolio across 14 technology investments",
+            "Oversee an $850M planning portfolio across 14 investments",
             "Led due diligence on 6 acquisitions totaling $320M",
-            "Implemented forecasting model reducing variance by 35%",
+            "Implemented forecasting models reducing variance by 35%",
           ],
           url: null,
         },
         {
           title: "Senior Financial Analyst",
-          company: "Barclays Investment Bank",
-          dates: "2016 – 2020",
+          company: "Sample Investment Advisory",
+          dates: "2016 - 2020",
           highlights: [
-            "Advised on 8 M&A transactions in technology sector",
-            "Built financial models for deals ranging $50M – $500M",
+            "Advised on 8 technology transactions across mid-market clients",
+            "Built financial models for deals ranging from $50M to $500M",
           ],
           url: null,
         },
         {
           title: "Financial Analyst",
-          company: "Deloitte",
-          dates: "2013 – 2016",
+          company: "Demo Audit Partners",
+          dates: "2013 - 2016",
           highlights: [
-            "Delivered financial audits for FTSE 100 clients",
+            "Delivered financial audits for public-company clients",
             "Streamlined reporting workflows saving 200+ hours annually",
           ],
           url: null,
@@ -269,12 +269,12 @@ export const DEMO_PAGES: DemoPage[] = [
       education: [
         {
           degree: "MBA, Finance",
-          school: "London Business School",
+          school: "Placeholder Business Academy",
           year: "2016",
         },
         {
           degree: "B.Sc. Economics",
-          school: "University of Lagos",
+          school: "Example State University",
           year: "2012",
         },
       ],
@@ -300,25 +300,25 @@ export const DEMO_PAGES: DemoPage[] = [
         },
         {
           category: "Tools",
-          items: ["Bloomberg Terminal", "Excel/VBA", "Tableau", "SAP"],
+          items: ["Excel/VBA", "Tableau", "SAP", "Planning Models"],
         },
       ],
       certifications: [
         {
-          name: "CFA Charterholder",
-          issuer: "CFA Institute",
+          name: "Strategic Finance Credential",
+          issuer: "Sample Finance Council",
           date: "2018",
         },
         {
-          name: "ACCA Qualified",
-          issuer: "ACCA",
+          name: "Advanced Reporting Credential",
+          issuer: "Example Accounting Board",
           date: "2015",
         },
       ],
       stats: [
         { value: "$850M", label: "Portfolio" },
-        { value: "12+", label: "Yrs Finance" },
-        { value: "6", label: "Acquisitions" },
+        { value: "12+", label: "Years Finance" },
+        { value: "6", label: "Deals Led" },
         { value: "35%", label: "Variance Cut" },
       ],
     },
@@ -326,11 +326,11 @@ export const DEMO_PAGES: DemoPage[] = [
   {
     themeId: "luxe",
     data: {
-      name: "Jordan Ellis",
+      name: "Jordan Sample",
       headline: "Litigation Associate",
       location: "Chicago, IL",
-      email: "jordan@example.com",
-      linkedin: "linkedin.com/in/jordanellis",
+      email: "jordan@sample.invalid",
+      linkedin: null,
       github: null,
       website: null,
       avatar_url: null,
@@ -339,10 +339,10 @@ export const DEMO_PAGES: DemoPage[] = [
       experience: [
         {
           title: "Associate Attorney",
-          company: "Brennan Cole LLP",
+          company: "Example Counsel Group",
           dates: "2024 - Present",
           highlights: [
-            "Drafted motions, discovery responses, and research memos for complex business disputes",
+            "Drafted motions, discovery responses, and research memos for business disputes",
             "Prepared partners for hearings and client strategy calls under tight deadlines",
             "Managed document review and case timelines across multiple active matters",
           ],
@@ -350,7 +350,7 @@ export const DEMO_PAGES: DemoPage[] = [
         },
         {
           title: "Judicial Law Clerk",
-          company: "Circuit Court of Cook County",
+          company: "Sample County Court",
           dates: "2023 - 2024",
           highlights: [
             "Researched precedent and prepared bench memoranda for civil matters",
@@ -360,7 +360,7 @@ export const DEMO_PAGES: DemoPage[] = [
         },
         {
           title: "Summer Associate",
-          company: "Harrison Tate",
+          company: "Demo Draft LLP",
           dates: "2022",
           highlights: [
             "Supported litigation and employment teams on research, due diligence, and writing assignments",
@@ -372,12 +372,12 @@ export const DEMO_PAGES: DemoPage[] = [
       education: [
         {
           degree: "J.D.",
-          school: "Northwestern Pritzker School of Law",
+          school: "Example Law Center",
           year: "2023",
         },
         {
           degree: "B.A. Political Science",
-          school: "University of Michigan",
+          school: "Sample State University",
           year: "2020",
         },
       ],
@@ -398,8 +398,8 @@ export const DEMO_PAGES: DemoPage[] = [
       ],
       certifications: [
         {
-          name: "Illinois Bar Admission",
-          issuer: "Illinois Supreme Court",
+          name: "Bar Admission Credential",
+          issuer: "Sample Bar Board",
           date: "2023",
         },
       ],

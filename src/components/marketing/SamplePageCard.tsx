@@ -44,7 +44,7 @@ export default function SamplePageCard({
           interactive={interactivePreview}
         >
           <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.62)_100%)]">
-            <ResumeLayout data={sample.demo.data} compact headingLevel="h2" />
+            <ResumeLayout data={sample.demo.data} compact headingLevel="h2" disableExternalLinks />
           </div>
         </ThemeCanvas>
       </div>

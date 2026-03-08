@@ -31,7 +31,7 @@ export default function CosmicBackground() {
       };
       window.addEventListener("mousemove", handleMouseMove);
 
-      const particleCount = 1600;
+      const particleCount = 960;
       const particleGeometry = new THREE.BufferGeometry();
       const particlePositions = new Float32Array(particleCount * 3);
       const particleColors = new Float32Array(particleCount * 3);
@@ -58,10 +58,10 @@ export default function CosmicBackground() {
       particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
 
       const particleMaterial = new THREE.PointsMaterial({
-        size: 1.5,
+        size: 1.2,
         vertexColors: true,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.42,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         sizeAttenuation: true,
@@ -70,12 +70,12 @@ export default function CosmicBackground() {
       scene.add(particleMesh);
 
       const lineGeometry = new THREE.BufferGeometry();
-      const linePositions = new Float32Array(300 * 6);
+      const linePositions = new Float32Array(180 * 6);
       lineGeometry.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
       const lineMaterial = new THREE.LineBasicMaterial({
         color: 0x3b82f6,
         transparent: true,
-        opacity: 0.06,
+        opacity: 0.035,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
@@ -89,12 +89,12 @@ export default function CosmicBackground() {
         new THREE.TorusGeometry(1.5, 0.3, 8, 6),
       ];
 
-      for (let index = 0; index < 5; index += 1) {
+      for (let index = 0; index < 3; index += 1) {
         const material = new THREE.MeshBasicMaterial({
           color: new THREE.Color().setHSL(0.6, 0.6, 0.5),
           wireframe: true,
           transparent: true,
-          opacity: 0.05 + Math.random() * 0.05,
+          opacity: 0.03 + Math.random() * 0.03,
         });
         const mesh = new THREE.Mesh(accentGeometries[index % accentGeometries.length], material);
         mesh.position.set((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 50, -10 + Math.random() * -10);
@@ -129,7 +129,7 @@ export default function CosmicBackground() {
         const lines = lineGeometry.attributes.position.array as Float32Array;
         for (let i = 0; i < Math.min(particleCount, 170); i += 1) {
           for (let j = i + 1; j < Math.min(particleCount, 170); j += 1) {
-            if (lineIndex >= 300) {
+            if (lineIndex >= 180) {
               break;
             }
             const i3 = i * 3;
@@ -166,7 +166,7 @@ export default function CosmicBackground() {
         camera.position.x = Math.sin(elapsed * 0.08) * 1.5 + mouse.x * 2;
         camera.position.y = Math.cos(elapsed * 0.06) * 1 + mouse.y * 1.5;
         camera.lookAt(0, 0, 0);
-        particleMaterial.opacity = 0.34 + Math.sin(elapsed * 0.5) * 0.1;
+        particleMaterial.opacity = 0.2 + Math.sin(elapsed * 0.4) * 0.05;
 
         renderer.render(scene, camera);
         animationId = window.requestAnimationFrame(animate);

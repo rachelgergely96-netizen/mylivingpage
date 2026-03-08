@@ -14,7 +14,7 @@ export default function LandingNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="mx-auto flex h-16 sm:h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 md:px-10">
+    <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:h-20 sm:px-6 md:px-10">
       <div className="font-heading text-xl sm:text-2xl font-bold text-[#F0F4FF]">
         my<span className="text-[#3B82F6]">living</span>page
       </div>
@@ -34,15 +34,16 @@ export default function LandingNav() {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Link
           href="/signup?ref=landing_nav"
-          className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
+          className="gold-pill px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] sm:px-5 sm:text-xs sm:tracking-[0.16em]"
         >
-          Build My Page
+          <span className="sm:hidden">Start Free</span>
+          <span className="hidden sm:inline">Build My Page Free</span>
         </Link>
 
-        {/* Hamburger — mobile only */}
+        {/* Hamburger - mobile only */}
         <button
           type="button"
           aria-label={open ? "Close menu" : "Open menu"}
@@ -94,7 +95,7 @@ export default function LandingNav() {
                 onClick={() => setOpen(false)}
                 className="gold-pill block w-full py-3 text-center text-sm font-semibold"
               >
-                Build My Page
+                Build My Page Free
               </Link>
             </li>
           </ul>
@@ -103,3 +104,4 @@ export default function LandingNav() {
     </nav>
   );
 }
+

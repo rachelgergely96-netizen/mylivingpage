@@ -25,12 +25,17 @@ export interface ResolvedMarketingSample extends MarketingSample {
 }
 
 export const CREDIBILITY_POINTS = [
-  "Live in minutes",
-  "Own your URL",
+  "Free account",
   "Keep your PDF",
-  "Free to start",
+  "Personal page URL",
   "No design skills",
 ];
+
+export const PRO_PLAN_PRICE = {
+  amount: "$9",
+  interval: "/month",
+  label: "$9/month",
+};
 
 export const PROCESS_STEPS = [
   {
@@ -78,10 +83,10 @@ export const PRICING_REASSURANCE = {
     "Start free with no credit card",
   ],
   pro: [
-    "More premium themes",
-    "PDF export and share card downloads",
-    "Remove the badge",
-    "Upgrade only when you need more polish",
+    "Stand out with premium themes built for creative, technical, and leadership roles",
+    "Download a polished PDF or share card from your page",
+    "Remove the MyLivingPage badge for a cleaner link",
+    `Upgrade anytime for ${PRO_PLAN_PRICE.label}`,
   ],
 };
 

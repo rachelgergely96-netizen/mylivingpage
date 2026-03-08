@@ -2,6 +2,7 @@ import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import ComparisonTable from "@/components/marketing/demo/ComparisonTable";
 import { COMPARISON_FEATURES } from "@/components/marketing/demo/demo-data";
+import { PRO_PLAN_PRICE } from "@/lib/marketing-samples";
 
 const freeFeatures = COMPARISON_FEATURES.filter((f) => f.free).map((f) => f.feature);
 const proOnlyFeatures = COMPARISON_FEATURES.filter((f) => f.pro && !f.free).map((f) => f.feature);
@@ -31,7 +32,7 @@ export default function PricingPage() {
               href="/signup?ref=pricing_nav"
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Build My Page
+              Build My Page Free
             </Link>
           </nav>
         </header>
@@ -44,7 +45,7 @@ export default function PricingPage() {
               Simple, transparent pricing
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-              Start free. Upgrade when you&apos;re ready for premium themes, analytics, and more.
+              Start free. Upgrade when you want premium themes, share-ready exports, and a cleaner branded page.
             </p>
           </div>
 
@@ -69,7 +70,7 @@ export default function PricingPage() {
                 href="/signup?ref=pricing_free_card"
                 className="block w-full rounded-full border border-[rgba(255,255,255,0.18)] py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.75)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
               >
-                Start Free
+                Build My Page Free
               </Link>
             </div>
 
@@ -80,8 +81,8 @@ export default function PricingPage() {
               </div>
               <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Pro</p>
               <div className="mb-6 flex items-baseline gap-1">
-                <span className="font-heading text-4xl font-bold text-[#F0F4FF]">$9</span>
-                <span className="text-sm text-[rgba(240,244,255,0.4)]">/month</span>
+                <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amount}</span>
+                <span className="text-sm text-[rgba(240,244,255,0.4)]">{PRO_PLAN_PRICE.interval}</span>
               </div>
               <p className="mb-4 text-xs text-[rgba(240,244,255,0.45)]">Everything in Spark, plus:</p>
               <ul className="mb-8 space-y-3">

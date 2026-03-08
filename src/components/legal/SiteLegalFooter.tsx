@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  getLegalSiteConfig,
   getLegalNavItems,
   SECOND_SITE_DOMAIN_PLACEHOLDER,
   type LegalSiteId,
@@ -19,7 +20,8 @@ function BrandMark({ siteId }: { siteId: LegalSiteId }) {
 
 export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {
   const links = getLegalNavItems(siteId);
-  const copyrightOwner = siteId === "mylivingpage" ? "{{COMPANY_NAME}}" : "{{SECOND_SITE_COMPANY_NAME}}";
+  const site = getLegalSiteConfig(siteId);
+  const copyrightOwner = site.companyNamePlaceholder;
 
   return (
     <footer className="border-t border-[rgba(255,255,255,0.08)] px-4 py-8 sm:px-6 sm:py-10">

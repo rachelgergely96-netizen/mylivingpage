@@ -74,14 +74,21 @@ export default async function PublicLivingPage({ params }: { params: { username:
   return (
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
-      <PageOwnerBar pageId={page.id} pageUserId={pageUserId} />
       <ThemeCanvas themeId={themeId} height="100dvh" className="rounded-none min-h-screen">
-        <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
-          <ResumeLayout data={page.resume_data} />
-        </div>
+        <PageOwnerBar pageId={page.id} pageUserId={pageUserId}>
+          <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
+            <ResumeLayout data={page.resume_data} />
+          </div>
+        </PageOwnerBar>
       </ThemeCanvas>
       <DownloadResumeButton data={page.resume_data} premium={premium} />
-      <ShareCardDownload pageUserId={pageUserId} slug={page.slug} premium={premium} />
+      <ShareCardDownload
+        pageUserId={pageUserId}
+        slug={page.slug}
+        themeId={themeId}
+        resumeData={page.resume_data}
+        premium={premium}
+      />
       <MadeWithBadge pageUserId={pageUserId} premium={premium} />
     </main>
   );

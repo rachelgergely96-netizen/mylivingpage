@@ -196,7 +196,7 @@ export default function ShareCardDownload({
 
                 <div className="relative mt-5 grid gap-4 rounded-[22px] border border-[rgba(255,255,255,0.1)] bg-[rgba(6,14,28,0.54)] p-4 sm:grid-cols-[1fr_156px] sm:items-center">
                   <div>
-                    <p className="text-sm font-semibold text-[#F0F4FF]">Scan to visit {firstName}'s living page</p>
+                    <p className="text-sm font-semibold text-[#F0F4FF]">Scan to visit {firstName}&rsquo;s living page</p>
                     <p className="mt-1 text-xs text-[rgba(240,244,255,0.56)]">
                       This QR code is unique to @{slug} and opens {displayUrl}.
                     </p>

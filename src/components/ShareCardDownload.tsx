@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   buildQrDataUrl,
@@ -29,6 +29,7 @@ export default function ShareCardDownload({
   resumeData,
   premium = false,
 }: ShareCardDownloadProps) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -75,19 +76,23 @@ export default function ShareCardDownload({
   const initial = safeName.slice(0, 1).toUpperCase() || "?";
 
   const handleDownload = async () => {
+    if (!cardRef.current) {
+      return;
+    }
+
     setDownloading(true);
     try {
-      const res = await fetch(`/${slug}/opengraph-image?download=${Date.now()}`, {
-        cache: "no-store",
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#07111C",
       });
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
-      a.href = url;
+      a.href = dataUrl;
       a.download = `${slug}-share-card.png`;
       a.click();
-      URL.revokeObjectURL(url);
     } catch {
       // Silently fail
     } finally {
@@ -138,6 +143,7 @@ export default function ShareCardDownload({
 
             <div className="grid gap-5 p-5 sm:grid-cols-[minmax(0,1.25fr)_320px] sm:p-6">
               <div
+                ref={cardRef}
                 className="relative overflow-hidden rounded-[26px] border border-[rgba(255,255,255,0.1)] p-5 sm:p-6"
                 style={{
                   background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
@@ -170,6 +176,7 @@ export default function ShareCardDownload({
                     <img
                       src={resumeData.avatar_url}
                       alt={safeName}
+                      crossOrigin="anonymous"
                       className="h-20 w-20 shrink-0 rounded-full border-2 object-cover shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
                       style={{ borderColor: visual.accent }}
                     />

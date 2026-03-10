@@ -1,7 +1,8 @@
 import type { ThemeId } from "@/themes/types";
 
 export const FREE_THEMES: ThemeId[] = ["cosmic", "fluid", "ember", "monolith", "aurora", "terracotta", "sakura", "circuit", "dusk"];
-export const MAX_FREE_PAGES = 1;
+export const MAX_PAGES_PER_ACCOUNT = 1;
+export const MAX_FREE_PAGES = MAX_PAGES_PER_ACCOUNT;
 export const MAX_FREE_ARCHIVES = 5;
 
 export function isPremiumTheme(themeId: string): boolean {

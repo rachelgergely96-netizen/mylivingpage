@@ -38,6 +38,22 @@ export interface LegalNavItem {
 
 export const SECOND_SITE_DOMAIN_PLACEHOLDER = "second-site.example.com";
 
+function getEnvValue(key: string, fallback: string): string {
+  const value = process.env[key]?.trim();
+  return value ? value : fallback;
+}
+
+const MYLIVINGPAGE_COMPANY_NAME = getEnvValue("NEXT_PUBLIC_LEGAL_COMPANY_NAME", "MyLivingPage");
+const MYLIVINGPAGE_CONTACT_EMAIL = getEnvValue("NEXT_PUBLIC_LEGAL_CONTACT_EMAIL", "support@mylivingpage.com");
+const MYLIVINGPAGE_MAILING_ADDRESS = getEnvValue(
+  "NEXT_PUBLIC_LEGAL_MAILING_ADDRESS",
+  "MyLivingPage, mailing address available upon verified legal request",
+);
+const SECOND_SITE_DOMAIN = getEnvValue("NEXT_PUBLIC_SECOND_SITE_DOMAIN", SECOND_SITE_DOMAIN_PLACEHOLDER);
+const SECOND_SITE_COMPANY_NAME = getEnvValue("NEXT_PUBLIC_SECOND_SITE_COMPANY_NAME", "Second Site");
+const SECOND_SITE_CONTACT_EMAIL = getEnvValue("NEXT_PUBLIC_SECOND_SITE_CONTACT_EMAIL", MYLIVINGPAGE_CONTACT_EMAIL);
+const SECOND_SITE_MAILING_ADDRESS = getEnvValue("NEXT_PUBLIC_SECOND_SITE_MAILING_ADDRESS", MYLIVINGPAGE_MAILING_ADDRESS);
+
 export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
   terms: {
     href: "/terms",
@@ -113,20 +129,20 @@ const LEGAL_SITES: Record<LegalSiteId, LegalSiteConfig> = {
     id: "mylivingpage",
     brandName: "MyLivingPage.com",
     domain: "mylivingpage.com",
-    companyNamePlaceholder: "MyLivingPage",
-    contactEmailPlaceholder: "{{CONTACT_EMAIL}}",
-    mailingAddressPlaceholder: "{{MAILING_ADDRESS}}",
+    companyNamePlaceholder: MYLIVINGPAGE_COMPANY_NAME,
+    contactEmailPlaceholder: MYLIVINGPAGE_CONTACT_EMAIL,
+    mailingAddressPlaceholder: MYLIVINGPAGE_MAILING_ADDRESS,
     productDescription:
-      "A consumer web app where people create and manage personal living pages containing text, photos, links, notes, reminders, exports, and AI-assisted writing with private, link-share, or public controls.",
+      "A web application where people create and manage resume-based living pages containing text, photos, links, exports, analytics, and public sharing controls.",
     supportedPolicies: MYLIVINGPAGE_POLICIES,
   },
   "second-site": {
     id: "second-site",
-    brandName: SECOND_SITE_DOMAIN_PLACEHOLDER,
-    domain: SECOND_SITE_DOMAIN_PLACEHOLDER,
-    companyNamePlaceholder: "{{SECOND_SITE_COMPANY_NAME}}",
-    contactEmailPlaceholder: "{{SECOND_SITE_CONTACT_EMAIL}}",
-    mailingAddressPlaceholder: "{{SECOND_SITE_MAILING_ADDRESS}}",
+    brandName: SECOND_SITE_DOMAIN,
+    domain: SECOND_SITE_DOMAIN,
+    companyNamePlaceholder: SECOND_SITE_COMPANY_NAME,
+    contactEmailPlaceholder: SECOND_SITE_CONTACT_EMAIL,
+    mailingAddressPlaceholder: SECOND_SITE_MAILING_ADDRESS,
     productDescription:
       "A web application where users create and manage profile pages with structured content, media, and sharing controls.",
     supportedPolicies: SECOND_SITE_POLICIES,
@@ -151,7 +167,7 @@ function isTemplateValue(value: string): boolean {
 
 export function resolveLegalSiteFromHost(host: string | null | undefined): LegalSiteId {
   const normalizedHost = normalizeHost(host);
-  const configuredSecondDomain = normalizeHost(process.env.NEXT_PUBLIC_SECOND_SITE_DOMAIN ?? SECOND_SITE_DOMAIN_PLACEHOLDER);
+  const configuredSecondDomain = normalizeHost(SECOND_SITE_DOMAIN);
   const validSecondDomain = configuredSecondDomain && !isTemplateValue(configuredSecondDomain);
 
   if (

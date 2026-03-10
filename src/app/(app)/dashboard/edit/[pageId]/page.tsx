@@ -7,7 +7,6 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { slugifyUsername } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord, ResumeData } from "@/types/resume";
@@ -16,7 +15,6 @@ import { FREE_THEMES, isPremiumPlan } from "@/lib/plans";
 interface EditDraft {
   data: ResumeData;
   themeId: ThemeId;
-  customSlug: string;
 }
 
 type Tab = "content" | "theme" | "preview";
@@ -36,10 +34,7 @@ export default function EditPage() {
   const [page, setPage] = useState<PageRecord | null>(null);
   const [data, setData] = useState<ResumeData | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
-  const [customSlug, setCustomSlug] = useState("");
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [slugMessage, setSlugMessage] = useState("");
-  const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [userPlan, setUserPlan] = useState<string>("spark");
@@ -51,24 +46,23 @@ export default function EditPage() {
 
   const isDirty = useMemo(() => {
     if (!data || !initialSnapshotRef.current) return false;
-    const current = JSON.stringify({ data, themeId, customSlug });
+    const current = JSON.stringify({ data, themeId });
     return current !== initialSnapshotRef.current;
-  }, [data, themeId, customSlug]);
+  }, [data, themeId]);
 
   useUnsavedChanges(isDirty);
 
   // Save draft on changes
   useEffect(() => {
     if (!data || !isDirty) return;
-    saveDraft({ data, themeId, customSlug });
-  }, [data, themeId, customSlug, isDirty, saveDraft]);
+    saveDraft({ data, themeId });
+  }, [data, themeId, isDirty, saveDraft]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) return;
     const d = pendingDraft.data;
     setData(d.data);
     setThemeId(d.themeId);
-    setCustomSlug(d.customSlug);
     dismissDraft();
   }, [pendingDraft, dismissDraft]);
 
@@ -91,14 +85,15 @@ export default function EditPage() {
         }
         setData(rd);
         setThemeId(row.theme_id as ThemeId);
-        setCustomSlug(row.slug);
+        setPublicSlug(row.slug);
         // Set initial snapshot for dirty tracking
-        initialSnapshotRef.current = JSON.stringify({ data: rd, themeId: row.theme_id, customSlug: row.slug });
+        initialSnapshotRef.current = JSON.stringify({ data: rd, themeId: row.theme_id });
         // Fetch user plan
         const profileRes = await fetch("/api/profile");
         if (profileRes.ok) {
-          const prof = (await profileRes.json()) as { plan?: string };
+          const prof = (await profileRes.json()) as { plan?: string; username?: string };
           setUserPlan(prof.plan ?? "spark");
+          setPublicSlug(prof.username ?? row.slug);
         }
       } catch {
         setError("Failed to load page.");
@@ -108,32 +103,6 @@ export default function EditPage() {
     };
     load();
   }, [pageId, router]);
-
-  const checkSlug = useCallback(async (value: string) => {
-    const clean = slugifyUsername(value);
-    if (!clean || clean.length < 3) {
-      setSlugStatus("invalid");
-      setSlugMessage("At least 3 characters required.");
-      return;
-    }
-    setSlugStatus("checking");
-    try {
-      const res = await fetch(`/api/username?slug=${encodeURIComponent(clean)}`);
-      const json = (await res.json()) as { available: boolean; slug: string; reason: string | null };
-      setSlugStatus(json.available ? "available" : "taken");
-      setSlugMessage(json.available ? "Available!" : (json.reason ?? "Already taken."));
-    } catch {
-      setSlugStatus("idle");
-    }
-  }, []);
-
-  const handleSlugChange = (value: string) => {
-    setCustomSlug(value.toLowerCase().replace(/[^a-z0-9-_.]/g, ""));
-    setSlugStatus("idle");
-    setSlugMessage("");
-    if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
-    slugTimerRef.current = setTimeout(() => checkSlug(value), 400);
-  };
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
@@ -163,35 +132,15 @@ export default function EditPage() {
 
   const save = async () => {
     if (!data || !page || saving) return;
-    if (slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking") return;
     setSaving(true);
     setError("");
     setSuccess("");
     try {
-      // If slug changed, update username via API
-      const desiredSlug = slugifyUsername(customSlug) || page.slug;
-      if (desiredSlug !== page.slug) {
-        const patchRes = await fetch("/api/username", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: desiredSlug }),
-        });
-        if (!patchRes.ok) {
-          const body = (await patchRes.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(body?.error ?? "Could not update URL.");
-        }
-        // Update local page state with new slug
-        setPage((prev) => prev ? { ...prev, slug: desiredSlug } : prev);
-      }
-
       const payload: Record<string, unknown> = {
         resume_data: data,
         theme_id: themeId,
         updated_at: new Date().toISOString(),
       };
-      if (desiredSlug !== page.slug) {
-        payload.slug = desiredSlug;
-      }
       const saveRes = await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -202,7 +151,7 @@ export default function EditPage() {
         throw new Error(body?.error ?? "Save failed.");
       }
       clearDraft();
-      initialSnapshotRef.current = JSON.stringify({ data, themeId, customSlug: desiredSlug });
+      initialSnapshotRef.current = JSON.stringify({ data, themeId });
       setSuccess("Saved successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
@@ -251,7 +200,7 @@ export default function EditPage() {
           </button>
           <button
             type="button"
-            disabled={saving || slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking"}
+            disabled={saving}
             onClick={save}
             className="gold-pill px-5 py-2 sm:px-6 sm:py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
           >
@@ -289,25 +238,15 @@ export default function EditPage() {
       {/* Content Tab */}
       {tab === "content" ? (
         <div className="space-y-5">
-          {/* Page URL */}
+          {/* Public URL */}
           <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Page URL</legend>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
-              <span className="rounded-lg sm:rounded-l-lg sm:rounded-r-none border sm:border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(240,244,255,0.45)]">
-                mylivingpage.com/
-              </span>
-              <input
-                type="text"
-                value={customSlug}
-                onChange={(e) => handleSlugChange(e.target.value)}
-                className="flex-1 rounded-lg sm:rounded-l-none sm:rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD] focus:border-[#3B82F6] focus:outline-none"
-              />
+            <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Public URL</legend>
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
+              mylivingpage.com/{publicSlug || page?.slug || "your-username"}
             </div>
-            {slugMessage ? (
-              <p className={`text-xs ${slugStatus === "available" ? "text-[#88ee88]" : slugStatus === "checking" ? "text-[rgba(240,244,255,0.4)]" : "text-[#ff8e8e]"}`}>
-                {slugStatus === "checking" ? "Checking..." : slugMessage}
-              </p>
-            ) : null}
+            <p className="text-xs text-[rgba(240,244,255,0.42)]">
+              Change this in account settings. Editing this page does not change your public URL.
+            </p>
           </fieldset>
 
           {/* Basic Info */}
@@ -589,7 +528,7 @@ export default function EditPage() {
             <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
             <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-              mylivingpage.com/<span className="text-[#93C5FD]">{page?.slug}</span>
+              mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || page?.slug}</span>
             </div>
           </div>
           <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">

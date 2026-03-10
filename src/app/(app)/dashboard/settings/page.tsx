@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { slugifyUsername } from "@/lib/usernames";
+import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
 import { isPremiumPlan } from "@/lib/plans";
 
 interface Profile {
@@ -115,17 +115,33 @@ export default function SettingsPage() {
   const checkTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
     if (!profile) return;
-    const slug = slugifyUsername(username);
-    if (slug === profile.username) { setUsernameAvail(null); return; }
-    if (slug.length < 3) { setUsernameAvail({ available: false, reason: "Must be at least 3 characters." }); return; }
+    const validation = validateUsernameSlug(username);
+    if (validation.error) {
+      setUsernameChecking(false);
+      setUsernameAvail({ available: false, reason: validation.error });
+      clearTimeout(checkTimeoutRef.current);
+      return;
+    }
+
+    if (validation.slug === profile.username) {
+      setUsernameChecking(false);
+      setUsernameAvail(null);
+      clearTimeout(checkTimeoutRef.current);
+      return;
+    }
 
     setUsernameChecking(true);
     clearTimeout(checkTimeoutRef.current);
     checkTimeoutRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/username?slug=${encodeURIComponent(slug)}`);
-      const data = await res.json();
-      setUsernameAvail({ available: data.available, reason: data.reason });
-      setUsernameChecking(false);
+      try {
+        const res = await fetch(`/api/username?slug=${encodeURIComponent(validation.slug)}`);
+        const data = await res.json();
+        setUsernameAvail({ available: data.available, reason: data.reason });
+      } catch {
+        setUsernameAvail({ available: false, reason: "Could not check username availability." });
+      } finally {
+        setUsernameChecking(false);
+      }
     }, 400);
 
     return () => clearTimeout(checkTimeoutRef.current);
@@ -148,7 +164,12 @@ export default function SettingsPage() {
 
   // Save username
   const onSaveUsername = async () => {
-    const slug = slugifyUsername(username);
+    const validation = validateUsernameSlug(username);
+    if (validation.error) {
+      showToast(validation.error);
+      return;
+    }
+    const slug = validation.slug;
     if (!usernameAvail?.available) return;
     setSavingUsername(true);
     const res = await fetch("/api/username", {
@@ -159,6 +180,7 @@ export default function SettingsPage() {
     setSavingUsername(false);
     if (res.ok) {
       setProfile((p) => p ? { ...p, username: slug } : p);
+      setUsername(slug);
       setUsernameAvail(null);
       showToast("Username updated");
     }
@@ -246,7 +268,7 @@ export default function SettingsPage() {
     );
   }
 
-  const usernameChanged = slugifyUsername(username) !== profile.username;
+  const usernameChanged = normalizeUsernameSlug(username) !== profile.username;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 sm:py-10 md:px-10">
@@ -351,6 +373,9 @@ export default function SettingsPage() {
               {usernameAvail.available ? "Available" : usernameAvail.reason}
             </p>
           )}
+          <p className="mt-1.5 text-[10px] text-[rgba(240,244,255,0.32)]">
+            This is your public page URL. Use 3-40 letters, numbers, hyphens, underscores, or periods.
+          </p>
         </div>
 
         {/* Email (read-only) */}
@@ -453,7 +478,7 @@ export default function SettingsPage() {
         </div>
         {!isPremiumPlan(profile.plan) && (
           <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
-            Unlock all themes, unlimited pages, analytics, and more.
+            Unlock premium themes, PDF export, PNG share cards, analytics, and remove the badge.
           </p>
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAnthropicClient } from "@/lib/anthropic";
+import { getParseRateLimitWindowStart, isParseRateLimited } from "@/lib/parse-rate-limit";
+import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 import type { ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
@@ -105,12 +108,44 @@ function sse(payload: Record<string, unknown>) {
 
 export async function POST(request: Request) {
   try {
+    const authClient = createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = (await request.json()) as { resumeText?: string };
     const resumeText = body.resumeText?.trim();
 
     if (!resumeText) {
       return NextResponse.json({ error: "Resume text is required." }, { status: 400 });
     }
+
+    const supabase = createServiceRoleSupabaseClient();
+    const windowStart = getParseRateLimitWindowStart();
+    const { count } = await supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("event_name", "resume.parse")
+      .gte("created_at", windowStart.toISOString());
+
+    if (isParseRateLimited(count ?? 0)) {
+      return NextResponse.json(
+        {
+          error: "Resume parsing limit reached. Try again in about an hour.",
+          resetAt: new Date(windowStart.getTime() + 60 * 60 * 1000).toISOString(),
+        },
+        { status: 429 },
+      );
+    }
+
+    await trackEvent(user.id, "resume.parse", {
+      characters: resumeText.length,
+    });
 
     const encoder = new TextEncoder();
 

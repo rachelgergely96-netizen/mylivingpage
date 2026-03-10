@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
+import { FREE_THEMES, isPremiumPlan, isPremiumTheme } from "@/lib/plans";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
-import { FREE_THEMES, MAX_FREE_PAGES, isPremiumPlan, isPremiumTheme } from "@/lib/plans";
+import { usernameFromEmail } from "@/lib/usernames";
 
 interface PublishBody {
-  slug: string;
   title: string;
   theme_id: string;
   resume_data: unknown;
@@ -14,7 +14,6 @@ interface PublishBody {
 
 export async function POST(request: Request) {
   try {
-    // Authenticate the caller via session cookies
     const authClient = createServerSupabaseClient();
     const {
       data: { user },
@@ -25,22 +24,20 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as Partial<PublishBody>;
-    if (!body.slug || !body.theme_id || !body.resume_data) {
+    if (!body.theme_id || !body.resume_data) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Use service-role client to bypass RLS
     const supabase = createServiceRoleSupabaseClient();
-
-    // Check plan limits
     const { data: profile } = await supabase
       .from("profiles")
-      .select("plan")
+      .select("plan, username")
       .eq("id", user.id)
       .maybeSingle();
 
     const userPlan = profile?.plan ?? "spark";
     const premium = isPremiumPlan(userPlan);
+    const username = profile?.username ?? usernameFromEmail(user.email);
 
     if (!premium && isPremiumTheme(body.theme_id)) {
       return NextResponse.json(
@@ -49,38 +46,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find existing page by either ownership column
+    if (!profile?.username) {
+      await supabase.from("profiles").upsert(
+        {
+          id: user.id,
+          username,
+          email: user.email,
+          plan: userPlan,
+        },
+        { onConflict: "id" },
+      );
+    }
+
     const { data: existing } = await supabase
       .from("pages")
       .select("id")
       .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .eq("slug", body.slug)
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const existingId = existing?.id ?? null;
-
-    // Enforce page limit for free users (only on new pages)
-    if (!premium && !existingId) {
-      const { count } = await supabase
-        .from("pages")
-        .select("*", { count: "exact", head: true })
-        .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`);
-
-      if (count !== null && count >= MAX_FREE_PAGES) {
-        return NextResponse.json(
-          { error: "Free plan allows 1 page. Upgrade to create more." },
-          { status: 403 },
-        );
-      }
-    }
-
-    // Build fields — include everything, unknown columns are silently ignored by Supabase
     const now = new Date().toISOString();
     const allFields: Record<string, unknown> = {
       user_id: user.id,
       owner_id: user.id,
-      slug: body.slug,
+      slug: username,
       status: "live",
       visibility: "public",
       title: body.title || "My Living Page",
@@ -91,41 +81,40 @@ export async function POST(request: Request) {
       published_at: now,
     };
 
-    if (existingId) {
-      // Update existing page
+    if (existing?.id) {
       const { error } = await supabase
         .from("pages")
         .update(allFields)
-        .eq("id", existingId);
+        .eq("id", existing.id);
 
       if (error) {
-        // If update fails (maybe unknown columns), try with minimal fields
         const { error: retryErr } = await supabase
           .from("pages")
           .update({
             status: "live",
+            visibility: "public",
             theme_id: body.theme_id,
             resume_data: body.resume_data,
             raw_resume: body.raw_resume ?? "",
             page_config: body.page_config ?? {},
             published_at: now,
           })
-          .eq("id", existingId);
+          .eq("id", existing.id);
 
         if (retryErr) {
           return NextResponse.json({ error: retryErr.message }, { status: 500 });
         }
       }
     } else {
-      // Fresh insert
       const { error } = await supabase.from("pages").insert(allFields);
 
       if (error) {
-        // Retry with MVP-only columns
         const { error: retryErr } = await supabase.from("pages").insert({
           user_id: user.id,
-          slug: body.slug,
+          owner_id: user.id,
+          slug: username,
           status: "live",
+          visibility: "public",
           theme_id: body.theme_id,
           resume_data: body.resume_data,
           raw_resume: body.raw_resume ?? "",
@@ -139,13 +128,13 @@ export async function POST(request: Request) {
       }
     }
 
-    trackEvent(user.id, "page.publish", {
+    await trackEvent(user.id, "page.publish", {
       theme_id: body.theme_id,
-      slug: body.slug,
-      is_update: !!existingId,
+      slug: username,
+      is_update: Boolean(existing?.id),
     });
 
-    return NextResponse.json({ slug: body.slug });
+    return NextResponse.json({ slug: username });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Publish failed" },

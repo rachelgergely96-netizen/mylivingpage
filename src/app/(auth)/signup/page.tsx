@@ -58,7 +58,7 @@ export default function SignupPage() {
         signupMetadata.signup_referrer = signupReferrer;
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -70,13 +70,20 @@ export default function SignupPage() {
         throw error;
       }
 
-      await fetch("/api/legal/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "signup" }),
-      }).catch(() => {});
+      if (data.session) {
+        await fetch("/api/legal/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source: "signup" }),
+        }).catch(() => {});
 
-      router.push(nextPath);
+        router.push(nextPath);
+        return;
+      }
+
+      setStatus("success");
+      setPassword("");
+      setMessage("Check your email to confirm your account, then return here to sign in.");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to create account.");

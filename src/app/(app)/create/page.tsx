@@ -9,11 +9,11 @@ import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { slugifyUsername, usernameFromEmail } from "@/lib/usernames";
+import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
-import { FREE_THEMES, MAX_FREE_PAGES, isPremiumPlan } from "@/lib/plans";
+import { FREE_THEMES, MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 
 type Step = "input" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
@@ -116,17 +116,14 @@ export default function CreatePage() {
   const [error, setError] = useState("");
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const [customSlug, setCustomSlug] = useState("");
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [slugMessage, setSlugMessage] = useState("");
-  const slugTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const guidedModeRef = useRef(false);
   const [userPlan, setUserPlan] = useState<string>("spark");
   const [pageCount, setPageCount] = useState<number>(0);
   const premium = isPremiumPlan(userPlan);
-  const atPageLimit = !premium && pageCount >= MAX_FREE_PAGES;
+  const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
 
   // Draft persistence
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<CreateDraft>("mlp-draft-create");
@@ -159,10 +156,11 @@ export default function CreatePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const [profileRes, pagesRes] = await Promise.all([
-          supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
+          supabase.from("profiles").select("plan, username").eq("id", user.id).maybeSingle(),
           supabase.from("pages").select("id", { count: "exact", head: true }).or(`user_id.eq.${user.id},owner_id.eq.${user.id}`),
         ]);
         setUserPlan(profileRes.data?.plan ?? "spark");
+        setPublicSlug(profileRes.data?.username ?? usernameFromEmail(user.email));
         setPageCount(pagesRes.count ?? 0);
       } catch { /* ignore */ }
     };
@@ -170,48 +168,6 @@ export default function CreatePage() {
   }, []);
 
   const themes = useMemo(() => THEME_REGISTRY.filter((theme) => PREVIEW_THEMES.includes(theme.id)), []);
-
-  const checkSlug = useCallback(async (value: string) => {
-    const clean = slugifyUsername(value);
-    if (!clean || clean.length < 3) {
-      setSlugStatus("invalid");
-      setSlugMessage("At least 3 characters required.");
-      return;
-    }
-    setSlugStatus("checking");
-    try {
-      const res = await fetch(`/api/username?slug=${encodeURIComponent(clean)}`);
-      const data = (await res.json()) as { available: boolean; slug: string; reason: string | null };
-      setSlugStatus(data.available ? "available" : "taken");
-      setSlugMessage(data.available ? "Available!" : (data.reason ?? "Already taken."));
-    } catch {
-      setSlugStatus("idle");
-    }
-  }, []);
-
-  const handleSlugChange = (value: string) => {
-    setCustomSlug(value.toLowerCase().replace(/[^a-z0-9-_.]/g, ""));
-    setSlugStatus("idle");
-    setSlugMessage("");
-    if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
-    slugTimerRef.current = setTimeout(() => checkSlug(value), 400);
-  };
-
-  // Initialize slug from user's existing username on preview step
-  useEffect(() => {
-    if (step === "preview" && !customSlug) {
-      const init = async () => {
-        const supabase = createBrowserSupabaseClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle<{ username: string }>();
-          const fallback = usernameFromEmail(user.email);
-          setCustomSlug(profile?.username ?? fallback);
-        }
-      };
-      init();
-    }
-  }, [step, customSlug]);
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
@@ -249,6 +205,13 @@ export default function CreatePage() {
         },
         body: JSON.stringify({ resumeText }),
       });
+
+      if (response.status === 401) {
+        setStep("input");
+        setProgress(0);
+        router.push("/login?next=/create");
+        return;
+      }
 
       if (!response.ok || !response.body) {
         const fallback = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -310,43 +273,10 @@ export default function CreatePage() {
         return;
       }
 
-      // Ensure profile exists
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", user.id)
-        .maybeSingle<{ username: string }>();
-
-      const derivedUsername = usernameFromEmail(user.email);
-      const currentUsername = existingProfile?.username ?? derivedUsername;
-
-      if (!existingProfile) {
-        await supabase.from("profiles").upsert(
-          { id: user.id, username: currentUsername, email: user.email },
-          { onConflict: "id" },
-        );
-      }
-
-      // If user chose a custom slug different from their current one, update it
-      const desiredSlug = slugifyUsername(customSlug) || currentUsername;
-      if (desiredSlug !== currentUsername) {
-        const patchRes = await fetch("/api/username", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: desiredSlug }),
-        });
-        if (!patchRes.ok) {
-          const body = (await patchRes.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(body?.error ?? "Could not claim that URL.");
-        }
-      }
-
-      // Publish via server-side API (service-role bypasses RLS)
       const res = await fetch("/api/pages/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slug: desiredSlug,
           title: parsedData.name || "My Living Page",
           theme_id: selectedTheme,
           resume_data: parsedData,
@@ -361,7 +291,9 @@ export default function CreatePage() {
       }
 
       clearDraft();
-      router.push(`/${result.slug ?? desiredSlug}`);
+      const nextSlug = result.slug ?? publicSlug ?? usernameFromEmail(user.email);
+      setPublicSlug(nextSlug);
+      router.push(`/${nextSlug}`);
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
     } finally {
@@ -411,14 +343,14 @@ export default function CreatePage() {
           <p className="text-2xl mb-3">&#x1F512;</p>
           <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#F0F4FF]">Page limit reached</h2>
           <p className="mt-2 text-sm text-[rgba(240,244,255,0.55)]">
-            The free Spark plan includes {MAX_FREE_PAGES} living page. Upgrade to create unlimited pages.
+            Each account supports {MAX_PAGES_PER_ACCOUNT} public page in v1. Edit your current page, or delete it before creating a replacement.
           </p>
           <button
             type="button"
-            onClick={() => router.push("/dashboard/settings")}
+            onClick={() => router.push("/dashboard")}
             className="mt-5 gold-pill px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.16em]"
           >
-            Upgrade Plan
+            Go to Dashboard
           </button>
         </section>
       ) : null}
@@ -609,26 +541,15 @@ export default function CreatePage() {
             <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Preview and publish</h2>
           </div>
 
-          {/* URL Chooser */}
+          {/* Public URL */}
           <div className="mb-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-            <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Choose your URL</p>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
-              <span className="rounded-lg sm:rounded-l-lg sm:rounded-r-none border sm:border-r-0 border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] px-3 py-2 font-mono text-sm text-[rgba(240,244,255,0.45)]">
-                mylivingpage.com/
-              </span>
-              <input
-                type="text"
-                value={customSlug}
-                onChange={(e) => handleSlugChange(e.target.value)}
-                placeholder="your-name"
-                className="flex-1 rounded-lg sm:rounded-l-none sm:rounded-r-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD] focus:border-[#3B82F6] focus:outline-none"
-              />
+            <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Public URL</p>
+            <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
+              mylivingpage.com/{publicSlug || "your-username"}
             </div>
-            {slugMessage ? (
-              <p className={`mt-2 text-xs ${slugStatus === "available" ? "text-[#88ee88]" : slugStatus === "checking" ? "text-[rgba(240,244,255,0.4)]" : "text-[#ff8e8e]"}`}>
-                {slugStatus === "checking" ? "Checking..." : slugMessage}
-              </p>
-            ) : null}
+            <p className="mt-2 text-xs text-[rgba(240,244,255,0.42)]">
+              Change this in account settings. Your page uses the same public URL everywhere.
+            </p>
           </div>
 
           {/* Avatar Upload */}
@@ -683,7 +604,7 @@ export default function CreatePage() {
               <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
               <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-                mylivingpage.com/<span className="text-[#93C5FD]">{slugifyUsername(customSlug) || "your-name"}</span>
+                mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || "your-username"}</span>
               </div>
             </div>
             <ThemeCanvas themeId={selectedTheme} height="min(620px, calc(100dvh - 200px))" className="rounded-none">
@@ -702,7 +623,7 @@ export default function CreatePage() {
             </button>
             <button
               type="button"
-              disabled={publishing || slugStatus === "taken" || slugStatus === "invalid" || slugStatus === "checking"}
+              disabled={publishing}
               onClick={publishPage}
               className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
             >

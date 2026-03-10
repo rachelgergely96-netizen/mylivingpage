@@ -40,7 +40,7 @@ export async function PATCH(request: Request, { params }: { params: { pageId: st
   if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
   const body = (await request.json()) as Record<string, unknown>;
-  const allowed = ["resume_data", "theme_id", "slug", "updated_at", "page_config"];
+  const allowed = ["resume_data", "theme_id", "updated_at", "page_config"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];

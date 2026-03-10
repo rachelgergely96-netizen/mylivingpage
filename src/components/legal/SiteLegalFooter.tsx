@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   getLegalSiteConfig,
   getLegalNavItems,
-  SECOND_SITE_DOMAIN_PLACEHOLDER,
   type LegalSiteId,
 } from "@/lib/legal/site-config";
 
@@ -15,7 +14,7 @@ function BrandMark({ siteId }: { siteId: LegalSiteId }) {
     );
   }
 
-  return <span className="font-heading text-xl text-[#F0F4FF]">{SECOND_SITE_DOMAIN_PLACEHOLDER}</span>;
+  return <span className="font-heading text-xl text-[#F0F4FF]">{getLegalSiteConfig(siteId).brandName}</span>;
 }
 
 export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {

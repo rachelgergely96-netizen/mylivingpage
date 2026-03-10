@@ -30,8 +30,8 @@ export default function LegalIndexPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Last updated: {LEGAL_EFFECTIVE_DATE}</p>
           <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl">Legal and Policies</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.68)] sm:text-base">
-            These policies apply to {site.brandName}. Replace placeholders before launch, including contact channels,
-            company details, jurisdiction, and designated agent information.
+            These policies apply to {site.brandName}. They cover account use, billing, privacy, and how to contact the
+            business about legal or security issues.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import type { ThemeId } from "@/themes/types";
-import AiGeneratorPreview from "./AiGeneratorPreview";
 import AnalyticsPreview from "./AnalyticsPreview";
 import BrowserMockup from "./BrowserMockup";
 import ComparisonTable from "./ComparisonTable";
@@ -54,7 +53,6 @@ export default function FreeProDemo() {
         <div className="space-y-3 p-4">
           <AnalyticsPreview isPro={isPro} />
           <ShareCardPreview isPro={isPro} />
-          <AiGeneratorPreview isPro={isPro} />
         </div>
       </BrowserMockup>
 

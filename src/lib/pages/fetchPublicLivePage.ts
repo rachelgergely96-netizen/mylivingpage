@@ -1,49 +1,45 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PageRecord } from "@/types/resume";
 
-const LIVE_VISIBILITY_FILTER = "status.eq.live,visibility.eq.public";
-
 export async function fetchPublicLivePage(
   supabase: SupabaseClient,
-  identifier: string,
+  username: string,
 ): Promise<PageRecord | null> {
-  if (!identifier) {
+  if (!username) {
     return null;
   }
 
-  // Primary path: direct slug lookup.
-  const { data: slugPage } = await supabase
-    .from("pages")
-    .select("*")
-    .eq("slug", identifier)
-    .or(LIVE_VISIBILITY_FILTER)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (slugPage) {
-    return slugPage as PageRecord;
-  }
-
-  // Fallback: profile username -> latest publicly visible page.
   const { data: profile } = await supabase
     .from("profiles")
     .select("id")
-    .eq("username", identifier)
+    .eq("username", username)
     .maybeSingle();
 
   if (!profile) {
     return null;
   }
 
-  const { data: ownerPage } = await supabase
+  const { data: publicPage } = await supabase
     .from("pages")
     .select("*")
-    .or(`user_id.eq.${profile.id},owner_id.eq.${profile.id}`)
-    .or(LIVE_VISIBILITY_FILTER)
+    .eq("owner_id", profile.id)
+    .eq("visibility", "public")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  return (ownerPage as PageRecord | null) ?? null;
+  if (publicPage) {
+    return publicPage as PageRecord;
+  }
+
+  const { data: legacyPage } = await supabase
+    .from("pages")
+    .select("*")
+    .eq("user_id", profile.id)
+    .eq("status", "live")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return (legacyPage as PageRecord | null) ?? null;
 }

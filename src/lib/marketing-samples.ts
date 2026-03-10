@@ -78,14 +78,15 @@ export const COMPARISON_ROWS = [
 export const PRICING_REASSURANCE = {
   free: [
     "One living page",
-    "Core themes and AI resume structuring",
+    "Core themes and guided resume setup",
     "Public page URL",
     "Start free with no credit card",
   ],
   pro: [
-    "Stand out with premium themes built for creative, technical, and leadership roles",
-    "Download a polished PDF or share card from your page",
-    "Remove the MyLivingPage badge for a cleaner link",
+    "Unlock premium themes built for creative, technical, and leadership roles",
+    "Download a polished PDF from your page",
+    "Download a PNG share card for outreach and follow-ups",
+    "See page analytics and remove the MyLivingPage badge",
     `Upgrade anytime for ${PRO_PLAN_PRICE.label}`,
   ],
 };

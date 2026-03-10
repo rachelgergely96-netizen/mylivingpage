@@ -4,6 +4,8 @@ import SignOutButton from "@/components/ui/SignOutButton";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ADMIN_EMAIL } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { slugifyUsername } from "@/lib/usernames";
+import { validateUsernameSlug } from "@/lib/usernames";
 
 const RESERVED_SLUGS = new Set([
   "login", "signup", "dashboard", "create", "api", "callback",
@@ -13,13 +13,10 @@ const RESERVED_SLUGS = new Set([
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const raw = searchParams.get("slug") ?? "";
-  const slug = slugifyUsername(raw);
+  const { slug, error } = validateUsernameSlug(raw);
 
-  if (!slug || slug.length < 3) {
-    return NextResponse.json({ available: false, slug, reason: "Must be at least 3 characters." });
-  }
-  if (slug.length > 40) {
-    return NextResponse.json({ available: false, slug, reason: "Must be 40 characters or fewer." });
+  if (error) {
+    return NextResponse.json({ available: false, slug, reason: error });
   }
   if (RESERVED_SLUGS.has(slug)) {
     return NextResponse.json({ available: false, slug, reason: "This name is reserved." });
@@ -49,13 +46,10 @@ export async function PATCH(request: Request) {
   }
 
   const body = (await request.json()) as { slug?: string };
-  const slug = slugifyUsername(body.slug ?? "");
+  const { slug, error } = validateUsernameSlug(body.slug ?? "");
 
-  if (!slug || slug.length < 3) {
-    return NextResponse.json({ error: "URL must be at least 3 characters." }, { status: 400 });
-  }
-  if (slug.length > 40) {
-    return NextResponse.json({ error: "URL must be 40 characters or fewer." }, { status: 400 });
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
   }
   if (RESERVED_SLUGS.has(slug)) {
     return NextResponse.json({ error: "This name is reserved." }, { status: 400 });
@@ -74,15 +68,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "This URL is already taken." }, { status: 409 });
   }
 
-  // Get old username to update page slugs
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .single<{ username: string }>();
-
-  const oldUsername = profile?.username;
-
   // Update profile username
   const { error: profileError } = await supabase
     .from("profiles")
@@ -93,14 +78,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Failed to update username." }, { status: 500 });
   }
 
-  // Update all page slugs that matched the old username
-  if (oldUsername) {
-    await supabase
-      .from("pages")
-      .update({ slug })
-      .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .eq("slug", oldUsername);
-  }
+  // Mirror the account username into legacy page slug fields.
+  await supabase
+    .from("pages")
+    .update({ slug })
+    .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`);
 
   return NextResponse.json({ success: true, slug });
 }

@@ -28,6 +28,15 @@ export interface LegalPolicyDocument {
 
 const LAST_UPDATED = LEGAL_EFFECTIVE_DATE;
 
+function getDmcaAgentDetail(key: string, fallback: string): string {
+  const value = process.env[key]?.trim();
+  return value ? value : fallback;
+}
+
+function getSecurityEmail(site: LegalSiteConfig): string {
+  return process.env.NEXT_PUBLIC_SECURITY_EMAIL?.trim() || site.contactEmailPlaceholder;
+}
+
 function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
   return [
     {
@@ -682,10 +691,10 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "Agent name: {{DMCA_AGENT_NAME}}",
-              "Agent email: {{DMCA_AGENT_EMAIL}}",
-              "Agent mailing address: {{DMCA_AGENT_ADDRESS}}",
-              "Agent phone (optional): {{DMCA_AGENT_PHONE}}",
+              `Agent name: ${getDmcaAgentDetail("NEXT_PUBLIC_DMCA_AGENT_NAME", `${site.companyNamePlaceholder} DMCA Agent`)}`,
+              `Agent email: ${getDmcaAgentDetail("NEXT_PUBLIC_DMCA_AGENT_EMAIL", site.contactEmailPlaceholder)}`,
+              `Agent mailing address: ${getDmcaAgentDetail("NEXT_PUBLIC_DMCA_AGENT_ADDRESS", site.mailingAddressPlaceholder)}`,
+              `Agent phone (optional): ${getDmcaAgentDetail("NEXT_PUBLIC_DMCA_AGENT_PHONE", "Not provided")}`,
             ],
           },
         ],
@@ -833,7 +842,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "Send responsible disclosures to {{SECURITY_EMAIL}} and include reproduction steps, affected URLs or endpoints, and impact details.",
+            text: `Send responsible disclosures to ${getSecurityEmail(site)} and include reproduction steps, affected URLs or endpoints, and impact details.`,
           },
           {
             type: "paragraph",

@@ -4,6 +4,7 @@ import { trackEvent } from "@/lib/track-event";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const AVATAR_PATH_BASENAME = "headshot";
 
 /** POST /api/avatar — upload a headshot */
 export async function POST(request: Request) {
@@ -26,16 +27,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "File must be under 2 MB." }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${user.id}/headshot.${ext}`;
+  const path = `${user.id}/${AVATAR_PATH_BASENAME}`;
 
   const supabase = createServiceRoleSupabaseClient();
-
-  // Remove any existing headshot first
   const { data: existing } = await supabase.storage.from("avatars").list(user.id);
-  if (existing?.length) {
-    await supabase.storage.from("avatars").remove(existing.map((f) => `${user.id}/${f.name}`));
-  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const { error: uploadError } = await supabase.storage
@@ -47,6 +42,14 @@ export async function POST(request: Request) {
 
   if (uploadError) {
     return NextResponse.json({ error: "Upload failed." }, { status: 500 });
+  }
+
+  const legacyPaths = (existing ?? [])
+    .filter((entry) => entry.name !== AVATAR_PATH_BASENAME)
+    .map((entry) => `${user.id}/${entry.name}`);
+
+  if (legacyPaths.length) {
+    await supabase.storage.from("avatars").remove(legacyPaths);
   }
 
   const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);

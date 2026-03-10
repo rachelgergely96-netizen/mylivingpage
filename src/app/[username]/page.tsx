@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
 import MadeWithBadge from "@/components/MadeWithBadge";
@@ -19,9 +20,10 @@ const VALID_THEMES: Set<string> = new Set([
   "dusk", "matrix", "coral", "stardust", "ink",
 ]);
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
+  noStore();
   const supabase = createServiceRoleSupabaseClient();
   const page = await fetchPublicLivePage(supabase, params.username);
   if (!page) {
@@ -55,6 +57,7 @@ export async function generateMetadata({ params }: { params: { username: string 
 }
 
 export default async function PublicLivingPage({ params }: { params: { username: string } }) {
+  noStore();
   const supabase = createServiceRoleSupabaseClient();
   const page = await fetchPublicLivePage(supabase, params.username);
   if (!page || (page.status !== "live" && page.visibility !== "public")) {

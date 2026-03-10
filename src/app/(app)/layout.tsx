@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import SignOutButton from "@/components/ui/SignOutButton";
 import { ADMIN_EMAIL } from "@/lib/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
+import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 export default async function AuthenticatedLayout({
   children,
@@ -16,6 +17,9 @@ export default async function AuthenticatedLayout({
   if (!user) {
     redirect("/login");
   }
+
+  const admin = createServiceRoleSupabaseClient();
+  await ensureUserProfile(admin, user);
 
   return (
     <div className="min-h-screen">

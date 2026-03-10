@@ -12,6 +12,35 @@ interface PublishBody {
   page_config?: Record<string, unknown>;
 }
 
+async function persistPageRecord(
+  supabase: ReturnType<typeof createServiceRoleSupabaseClient>,
+  userId: string,
+  fields: Record<string, unknown>,
+) {
+  const { data: existing } = await supabase
+    .from("pages")
+    .select("id")
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  const upsertResult = await supabase.from("pages").upsert(fields, { onConflict: "owner_id" });
+  if (!upsertResult.error) {
+    return { error: null, existingId: existing?.id ?? null };
+  }
+
+  if (!upsertResult.error.message.includes("no unique or exclusion constraint matching the ON CONFLICT specification")) {
+    return { error: upsertResult.error, existingId: existing?.id ?? null };
+  }
+
+  if (existing?.id) {
+    const { error } = await supabase.from("pages").update(fields).eq("id", existing.id);
+    return { error, existingId: existing.id };
+  }
+
+  const { error } = await supabase.from("pages").insert(fields);
+  return { error, existingId: null };
+}
+
 export async function POST(request: Request) {
   try {
     const authClient = createServerSupabaseClient();
@@ -58,12 +87,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: existing } = await supabase
-      .from("pages")
-      .select("id")
-      .eq("owner_id", user.id)
-      .maybeSingle();
-
     const now = new Date().toISOString();
     const allFields: Record<string, unknown> = {
       user_id: user.id,
@@ -79,9 +102,7 @@ export async function POST(request: Request) {
       published_at: now,
     };
 
-    const { error } = await supabase
-      .from("pages")
-      .upsert(allFields, { onConflict: "owner_id" });
+    const { error, existingId } = await persistPageRecord(supabase, user.id, allFields);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -90,7 +111,7 @@ export async function POST(request: Request) {
     await trackEvent(user.id, "page.publish", {
       theme_id: body.theme_id,
       slug: username,
-      is_update: Boolean(existing?.id),
+      is_update: Boolean(existingId),
     });
 
     return NextResponse.json({ slug: username });

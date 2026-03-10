@@ -5,6 +5,7 @@ import {
   recordLegalAcceptance,
 } from "@/lib/legal/acceptance";
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
+import { requireSupabasePublishableConfig } from "@/lib/supabase/env";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { usernameFromEmail } from "@/lib/usernames";
 
@@ -16,14 +17,9 @@ function safeRedirectPath(value: string | null): string {
 }
 
 function createRouteHandlerSupabaseClient(request: NextRequest, response: NextResponse) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { url, publishableKey } = requireSupabasePublishableConfig();
 
-  if (!url || !anonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-
-  return createServerClient(url, anonKey, {
+  return createServerClient(url, publishableKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

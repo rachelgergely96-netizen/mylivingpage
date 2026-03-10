@@ -11,6 +11,7 @@ import {
   toLivePageUrl,
   truncate,
 } from "@/lib/share-card";
+import { getSupabaseSecretKey, getSupabaseUrl } from "@/lib/supabase/env";
 import type { ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
@@ -49,13 +50,13 @@ function getSafeLocation(resume: ResumeData): string {
 }
 
 function createEdgeSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
+  const url = getSupabaseUrl();
+  const secretKey = getSupabaseSecretKey();
+  if (!url || !secretKey) {
     return null;
   }
 
-  return createClient(url, serviceRoleKey, {
+  return createClient(url, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

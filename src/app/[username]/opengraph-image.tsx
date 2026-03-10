@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import {
-  buildQrDataUrl,
+  buildQrMatrix,
   getFirstName,
   getShareCardTags,
   getShareCardVisual,
@@ -118,7 +118,9 @@ export default async function OGImage({ params }: { params: { username: string }
   const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   const livePageUrl = toLivePageUrl(appUrl, page.slug);
   const displayUrl = truncate(toDisplayDomainUrl(appUrl, page.slug), 48);
-  const qrDataUrl = buildQrDataUrl(livePageUrl);
+  const qrMatrix = buildQrMatrix(livePageUrl);
+  const qrCellSize = qrMatrix?.length ? Math.max(3, Math.floor(148 / qrMatrix.length)) : 0;
+  const qrRenderSize = qrMatrix?.length ? qrMatrix.length * qrCellSize : 0;
   const resume = page.resume_data;
   const visual = getShareCardVisual(page.theme_id);
   const safeName = getSafeName(resume);
@@ -346,12 +348,8 @@ export default async function OGImage({ params }: { params: { username: string }
               </div>
             </div>
 
-            {qrDataUrl ? (
-              <img
-                src={qrDataUrl}
-                alt=""
-                width={172}
-                height={172}
+            {qrMatrix?.length ? (
+              <div
                 style={{
                   width: 172,
                   height: 172,
@@ -359,8 +357,42 @@ export default async function OGImage({ params }: { params: { username: string }
                   border: "1px solid rgba(255,255,255,0.14)",
                   background: "#FFFFFF",
                   padding: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                <div
+                  style={{
+                    width: qrRenderSize,
+                    height: qrRenderSize,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {qrMatrix.map((row, rowIndex) => (
+                    <div
+                      key={`row-${rowIndex}`}
+                      style={{
+                        display: "flex",
+                        width: qrRenderSize,
+                        height: qrCellSize,
+                      }}
+                    >
+                      {row.map((isDark, cellIndex) => (
+                        <div
+                          key={`cell-${rowIndex}-${cellIndex}`}
+                          style={{
+                            width: qrCellSize,
+                            height: qrCellSize,
+                            background: isDark ? "#0A1628" : "#FFFFFF",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <div
                 style={{

@@ -63,26 +63,47 @@ export function toLivePageUrl(appUrl: string, slug: string): string {
   return `${normalizeAppUrl(appUrl)}/${slug}`;
 }
 
-export function buildQrDataUrl(value: string): string | null {
+export function buildQrMatrix(value: string, margin = 3): boolean[][] | null {
   try {
     const qr = qrcode(0, "H");
     qr.addData(value, "Byte");
     qr.make();
 
     const moduleCount = qr.getModuleCount();
+    return Array.from({ length: moduleCount + margin * 2 }, (_, row) =>
+      Array.from({ length: moduleCount + margin * 2 }, (_, col) => {
+        const qrRow = row - margin;
+        const qrCol = col - margin;
+        if (qrRow < 0 || qrCol < 0 || qrRow >= moduleCount || qrCol >= moduleCount) {
+          return false;
+        }
+        return qr.isDark(qrRow, qrCol);
+      }),
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function buildQrDataUrl(value: string): string | null {
+  try {
+    const matrix = buildQrMatrix(value, 3);
+    if (!matrix?.length) {
+      return null;
+    }
+
     const cellSize = 5;
-    const margin = 3;
-    const side = (moduleCount + margin * 2) * cellSize;
+    const side = matrix.length * cellSize;
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${side}" height="${side}" viewBox="0 0 ${side} ${side}" fill="none">`;
     svg += `<rect width="${side}" height="${side}" rx="18" fill="#FFFFFF"/>`;
     svg += `<g fill="#0A1628">`;
 
-    for (let row = 0; row < moduleCount; row += 1) {
-      for (let col = 0; col < moduleCount; col += 1) {
-        if (!qr.isDark(row, col)) continue;
-        const x = (col + margin) * cellSize;
-        const y = (row + margin) * cellSize;
+    for (let row = 0; row < matrix.length; row += 1) {
+      for (let col = 0; col < matrix.length; col += 1) {
+        if (!matrix[row]?.[col]) continue;
+        const x = col * cellSize;
+        const y = row * cellSize;
         svg += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="1.2" />`;
       }
     }

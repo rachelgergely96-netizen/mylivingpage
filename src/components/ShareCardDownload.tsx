@@ -77,7 +77,9 @@ export default function ShareCardDownload({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(`/${slug}/opengraph-image`);
+      const res = await fetch(`/${slug}/opengraph-image?download=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

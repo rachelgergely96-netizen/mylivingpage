@@ -1,3 +1,4 @@
+import { ADMIN_EMAIL } from "@/lib/admin";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import AdminUsersTable from "@/components/admin/AdminUsersTable";
 
@@ -52,6 +53,7 @@ export default async function AdminUsersPage() {
       sign_in_count: p.sign_in_count ?? 0,
       pageCount: stats.pageCount,
       totalViews: stats.totalViews,
+      isAdmin: p.email === ADMIN_EMAIL,
     };
   });
 

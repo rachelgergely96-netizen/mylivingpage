@@ -1,10 +1,11 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getClientIp,
   recordLegalAcceptance,
 } from "@/lib/legal/acceptance";
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
-import { createServiceRoleSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { usernameFromEmail } from "@/lib/usernames";
 
 function safeRedirectPath(value: string | null): string {
@@ -12,6 +13,32 @@ function safeRedirectPath(value: string | null): string {
     return "/dashboard";
   }
   return value;
+}
+
+function createRouteHandlerSupabaseClient(request: NextRequest, response: NextResponse) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+
+  return createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -28,7 +55,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const supabase = createServerSupabaseClient();
+  const response = NextResponse.redirect(redirectUrl);
+  const supabase = createRouteHandlerSupabaseClient(request, response);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     const errorRedirect = new URL("/login", requestUrl.origin);
@@ -116,5 +144,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(redirectUrl);
+  return response;
 }

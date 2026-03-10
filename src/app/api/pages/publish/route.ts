@@ -61,9 +61,7 @@ export async function POST(request: Request) {
     const { data: existing } = await supabase
       .from("pages")
       .select("id")
-      .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .order("updated_at", { ascending: false })
-      .limit(1)
+      .eq("owner_id", user.id)
       .maybeSingle();
 
     const now = new Date().toISOString();
@@ -81,51 +79,12 @@ export async function POST(request: Request) {
       published_at: now,
     };
 
-    if (existing?.id) {
-      const { error } = await supabase
-        .from("pages")
-        .update(allFields)
-        .eq("id", existing.id);
+    const { error } = await supabase
+      .from("pages")
+      .upsert(allFields, { onConflict: "owner_id" });
 
-      if (error) {
-        const { error: retryErr } = await supabase
-          .from("pages")
-          .update({
-            status: "live",
-            visibility: "public",
-            theme_id: body.theme_id,
-            resume_data: body.resume_data,
-            raw_resume: body.raw_resume ?? "",
-            page_config: body.page_config ?? {},
-            published_at: now,
-          })
-          .eq("id", existing.id);
-
-        if (retryErr) {
-          return NextResponse.json({ error: retryErr.message }, { status: 500 });
-        }
-      }
-    } else {
-      const { error } = await supabase.from("pages").insert(allFields);
-
-      if (error) {
-        const { error: retryErr } = await supabase.from("pages").insert({
-          user_id: user.id,
-          owner_id: user.id,
-          slug: username,
-          status: "live",
-          visibility: "public",
-          theme_id: body.theme_id,
-          resume_data: body.resume_data,
-          raw_resume: body.raw_resume ?? "",
-          page_config: body.page_config ?? {},
-          published_at: now,
-        });
-
-        if (retryErr) {
-          return NextResponse.json({ error: retryErr.message }, { status: 500 });
-        }
-      }
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     await trackEvent(user.id, "page.publish", {

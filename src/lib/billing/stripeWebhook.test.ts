@@ -130,6 +130,64 @@ describe("processStripeWebhookEvent", () => {
     );
   });
 
+  it("does not block plan upgrades when legal acceptance recording fails", async () => {
+    const repository = {
+      updatePlanByCustomerId: vi.fn().mockResolvedValue(undefined),
+      findUserIdByCustomerId: vi.fn().mockResolvedValue("user-789"),
+    };
+    const recordLegalAcceptance = vi
+      .fn()
+      .mockRejectedValue(new Error("legal_acceptances missing"));
+    const trackEvent = vi.fn().mockResolvedValue(undefined);
+
+    await processStripeWebhookEvent({
+      event: buildEvent("checkout.session.completed", {
+        id: "cs_test_789",
+        object: "checkout.session",
+        created: 1_762_562_400,
+        customer: "cus_789",
+        metadata: {
+          supabase_user_id: "user-789",
+          terms_version: TERMS_VERSION,
+          privacy_version: PRIVACY_VERSION,
+        },
+      }),
+      repository,
+      recordLegalAcceptance,
+      trackEvent,
+      processedAt: new Date("2026-03-10T12:00:02.000Z"),
+    });
+
+    expect(repository.updatePlanByCustomerId).toHaveBeenCalledWith("cus_789", "pro");
+    expect(trackEvent).toHaveBeenNthCalledWith(
+      1,
+      "user-789",
+      "billing.legal_acceptance.record_failed",
+      expect.objectContaining({
+        source: "checkout",
+        error: "legal_acceptances missing",
+      }),
+    );
+    expect(trackEvent).toHaveBeenNthCalledWith(
+      2,
+      "user-789",
+      "billing.plan.upgraded",
+      expect.objectContaining({
+        plan: "pro",
+        customer_id: "cus_789",
+      }),
+    );
+    expect(trackEvent).toHaveBeenNthCalledWith(
+      3,
+      "user-789",
+      "billing.webhook.processed",
+      expect.objectContaining({
+        plan: "pro",
+        customer_id: "cus_789",
+      }),
+    );
+  });
+
   it("tracks unsupported events as ignored without mutating plans", async () => {
     const repository = {
       updatePlanByCustomerId: vi.fn().mockResolvedValue(undefined),

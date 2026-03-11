@@ -90,6 +90,34 @@ async function trackWebhookProcessed(
   });
 }
 
+async function recordCheckoutAcceptanceSafely(
+  recordLegalAcceptance: BillingAcceptanceRecorder,
+  trackEvent: BillingEventTracker,
+  userId: string,
+  session: Stripe.Checkout.Session,
+) {
+  try {
+    await recordLegalAcceptance({
+      userId,
+      source: "checkout",
+      acceptedAt: getAcceptedAt(session.created ?? null),
+      termsVersion:
+        typeof session.metadata?.terms_version === "string"
+          ? session.metadata.terms_version
+          : TERMS_VERSION,
+      privacyVersion:
+        typeof session.metadata?.privacy_version === "string"
+          ? session.metadata.privacy_version
+          : PRIVACY_VERSION,
+    });
+  } catch (error) {
+    await trackEvent(userId, "billing.legal_acceptance.record_failed", {
+      source: "checkout",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
 export async function processStripeWebhookEvent({
   event,
   repository,
@@ -113,20 +141,12 @@ export async function processStripeWebhookEvent({
       }
 
       if (userId) {
-        await recordLegalAcceptance({
+        await recordCheckoutAcceptanceSafely(
+          recordLegalAcceptance,
+          trackEvent,
           userId,
-          source: "checkout",
-          acceptedAt: getAcceptedAt(session.created ?? event.created),
-          termsVersion:
-            typeof session.metadata?.terms_version === "string"
-              ? session.metadata.terms_version
-              : TERMS_VERSION,
-          privacyVersion:
-            typeof session.metadata?.privacy_version === "string"
-              ? session.metadata.privacy_version
-              : PRIVACY_VERSION,
-        });
-
+          session,
+        );
         await trackEvent(userId, "billing.plan.upgraded", {
           plan: "pro",
           customer_id: customerId,

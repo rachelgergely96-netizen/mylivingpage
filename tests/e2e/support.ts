@@ -297,14 +297,18 @@ export async function sendStripeWebhook(
   });
 
   const response = await request.post("/api/webhooks/stripe", {
-    data: payload,
+    data: Buffer.from(payload),
     headers: {
       "content-type": "application/json",
       "stripe-signature": signature,
     },
   });
 
-  expect(response.ok()).toBeTruthy();
+  const responseText = await response.text();
+  expect(
+    response.ok(),
+    `Stripe webhook failed with ${response.status()}: ${responseText}`,
+  ).toBeTruthy();
   return response;
 }
 

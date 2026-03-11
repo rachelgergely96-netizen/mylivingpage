@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ResumeData } from "@/types/resume";
 
 interface ResumeLayoutProps {
@@ -110,9 +111,12 @@ export default function ResumeLayout({
             ) : null}
           </div>
           {data.avatar_url ? (
-            <img
+            <Image
               src={data.avatar_url}
               alt={data.name}
+              width={56}
+              height={56}
+              sizes="(min-width: 640px) 56px, 44px"
               className="h-11 w-11 sm:h-14 sm:w-14 shrink-0 rounded-full object-cover ring-2 ring-[#3B82F6] shadow-[0_0_28px_rgba(59,130,246,0.3)]"
             />
           ) : (

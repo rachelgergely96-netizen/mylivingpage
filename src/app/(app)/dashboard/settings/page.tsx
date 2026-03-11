@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -294,7 +295,13 @@ export default function SettingsPage() {
         <div className="flex items-center gap-4 mb-6">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)]">
             {avatarUrl ? (
-              <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              <Image
+                src={avatarUrl}
+                alt="Avatar"
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xl text-[rgba(240,244,255,0.3)]">
                 {(profile.full_name?.[0] ?? profile.username?.[0] ?? "?").toUpperCase()}

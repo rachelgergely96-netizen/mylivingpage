@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import GuidedFlow from "@/components/create/GuidedFlow";
@@ -557,7 +558,14 @@ export default function CreatePage() {
             <p className="mb-3 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Profile Photo</p>
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               {parsedData.avatar_url ? (
-                <img src={parsedData.avatar_url} alt="Avatar" className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover ring-2 ring-[#3B82F6] shadow-[0_0_28px_rgba(59,130,246,0.3)]" />
+                <Image
+                  src={parsedData.avatar_url}
+                  alt="Avatar"
+                  width={64}
+                  height={64}
+                  sizes="(min-width: 640px) 64px, 56px"
+                  className="h-14 w-14 rounded-full object-cover ring-2 ring-[#3B82F6] shadow-[0_0_28px_rgba(59,130,246,0.3)] sm:h-16 sm:w-16"
+                />
               ) : (
                 <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#E8845C] font-heading text-xl sm:text-2xl font-bold text-[#0a1628] shadow-[0_0_28px_rgba(59,130,246,0.3)]">
                   {(parsedData.name || "?").slice(0, 1).toUpperCase()}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -114,9 +115,12 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
           >
             <div className="flex items-center gap-3">
               {user.avatar_url ? (
-                <img
+                <Image
                   src={user.avatar_url}
                   alt=""
+                  width={36}
+                  height={36}
+                  sizes="36px"
                   className="h-9 w-9 rounded-full object-cover ring-1 ring-[rgba(59,130,246,0.3)]"
                 />
               ) : (

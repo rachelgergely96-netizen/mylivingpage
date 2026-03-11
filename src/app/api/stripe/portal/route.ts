@@ -6,7 +6,7 @@ import { trackEvent } from "@/lib/track-event";
 export async function POST() {
   const startedAt = Date.now();
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

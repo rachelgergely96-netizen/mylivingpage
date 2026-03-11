@@ -9,7 +9,7 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 export default async function AuthenticatedLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

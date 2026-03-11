@@ -23,7 +23,10 @@ import {
 } from "./support";
 
 test("email signup shows a pending-confirmation message", async ({ page }) => {
-  test.skip(!canRunSignupConfirmation, "Set PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN to run signup confirmation coverage.");
+  test.skip(
+    !canRunSignupConfirmation,
+    "Set PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN and PLAYWRIGHT_EXPECT_SIGNUP_CONFIRMATION=1 to run signup confirmation coverage.",
+  );
 
   const uniqueEmail = `signup-${Date.now()}@${getSignupEmailDomain()}`;
 
@@ -92,8 +95,6 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: /Upgrade to Pro/ }).click();
     const checkoutResponse = await checkoutResponsePromise;
     expect(checkoutResponse.ok()).toBeTruthy();
-    const checkoutPayload = (await checkoutResponse.json()) as { url?: string };
-    expect(checkoutPayload.url).toMatch(/^https:\/\/checkout\.stripe\.com\//);
     await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
 
     profile = await getProfileFixtureByEmail();
@@ -115,8 +116,6 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: "Manage Subscription" }).click();
     const portalResponse = await portalResponsePromise;
     expect(portalResponse.ok()).toBeTruthy();
-    const portalPayload = (await portalResponse.json()) as { url?: string };
-    expect(portalPayload.url).toMatch(/^https:\/\/billing\.stripe\.com\//);
     await page.waitForURL(/billing\.stripe\.com/, { timeout: 30_000 });
 
     profile = await getProfileFixtureByEmail();

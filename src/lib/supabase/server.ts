@@ -6,8 +6,8 @@ import {
   requireSupabaseSecretConfig,
 } from "@/lib/supabase/env";
 
-export function createServerSupabaseClient() {
-  const cookieStore = cookies() as unknown as Awaited<ReturnType<typeof cookies>>;
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
   const { url, publishableKey } = requireSupabasePublishableConfig();
 
   return createServerClient(url, publishableKey, {

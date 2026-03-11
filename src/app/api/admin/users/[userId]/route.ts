@@ -12,7 +12,7 @@ export async function DELETE(
   { params }: { params: Promise<{ userId: string }> },
 ) {
   const { userId } = await params;
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();

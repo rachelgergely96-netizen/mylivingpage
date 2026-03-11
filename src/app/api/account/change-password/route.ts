@@ -4,7 +4,7 @@ import { trackEvent } from "@/lib/track-event";
 
 /** POST /api/account/change-password — update the user's password */
 export async function POST(request: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing pageId" }, { status: 400 });
     }
 
-    const authClient = createServerSupabaseClient();
+    const authClient = await createServerSupabaseClient();
     const {
       data: { user },
     } = await authClient.auth.getUser();

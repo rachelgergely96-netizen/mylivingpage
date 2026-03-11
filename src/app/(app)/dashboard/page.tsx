@@ -5,7 +5,7 @@ import DeletePageButton from "@/components/DeletePageButton";
 import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 
 export default async function DashboardPage() {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();

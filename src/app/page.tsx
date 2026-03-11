@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LandingPage() {
-  const site = getRequestLegalSite();
+export default async function LandingPage() {
+  const site = await getRequestLegalSite();
   const sampleGroups = getMarketingSampleGroups();
 
   return (

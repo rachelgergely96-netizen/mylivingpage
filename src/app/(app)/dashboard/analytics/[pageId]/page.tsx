@@ -13,7 +13,7 @@ export default async function AnalyticsPage({
   params,
 }: AnalyticsPageProps) {
   const { pageId } = await params;
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();

@@ -5,7 +5,7 @@ import { MAX_FREE_ARCHIVES } from "@/lib/plans";
 
 /** Authenticate the caller and return their user id, or null */
 async function getAuthUserId() {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
   return user?.id ?? null;
 }

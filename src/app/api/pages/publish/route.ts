@@ -29,7 +29,7 @@ async function persistPageRecord(
 
 export async function POST(request: Request) {
   try {
-    const authClient = createServerSupabaseClient();
+    const authClient = await createServerSupabaseClient();
     const {
       data: { user },
     } = await authClient.auth.getUser();

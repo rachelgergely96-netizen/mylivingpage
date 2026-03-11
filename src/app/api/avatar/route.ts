@@ -9,7 +9,7 @@ const ENABLE_E2E_FAILURE_INJECTION = process.env.ENABLE_E2E_FAILURE_INJECTION ==
 
 /** POST /api/avatar — upload a headshot */
 export async function POST(request: Request) {
-  const authSupabase = createServerSupabaseClient();
+  const authSupabase = await createServerSupabaseClient();
   const { data: { user } } = await authSupabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
 /** DELETE /api/avatar — remove headshot */
 export async function DELETE() {
-  const authSupabase = createServerSupabaseClient();
+  const authSupabase = await createServerSupabaseClient();
   const { data: { user } } = await authSupabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

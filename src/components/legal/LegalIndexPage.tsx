@@ -4,8 +4,8 @@ import { LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getLegalNavItems } from "@/lib/legal/site-config";
 
-export default function LegalIndexPage() {
-  const site = getRequestLegalSite();
+export default async function LegalIndexPage() {
+  const site = await getRequestLegalSite();
   const links = getLegalNavItems(site.id, false);
 
   return (

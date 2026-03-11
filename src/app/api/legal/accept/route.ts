@@ -14,7 +14,7 @@ interface LegalAcceptBody {
 const ALLOWED_SOURCES: LegalAcceptanceSource[] = ["signup", "checkout"];
 
 export async function POST(request: NextRequest) {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();

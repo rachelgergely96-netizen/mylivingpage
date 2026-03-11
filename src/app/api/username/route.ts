@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     .maybeSingle<{ id: string }>();
 
   // If it's the current user's own username, it's "available" to keep
-  const authSupabase = createServerSupabaseClient();
+  const authSupabase = await createServerSupabaseClient();
   const { data: { user } } = await authSupabase.auth.getUser();
   const isSelf = user && existing?.id === user.id;
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
 /** PATCH /api/username — update the user's username + page slugs */
 export async function PATCH(request: Request) {
-  const authSupabase = createServerSupabaseClient();
+  const authSupabase = await createServerSupabaseClient();
   const { data: { user } } = await authSupabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

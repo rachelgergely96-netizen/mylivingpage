@@ -24,6 +24,8 @@ export interface PageFixture {
 
 const samplePage = DEMO_PAGES[0];
 const signupEmailDomain = process.env.PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN;
+const expectSignupConfirmation =
+  process.env.PLAYWRIGHT_EXPECT_SIGNUP_CONFIRMATION === "1";
 const appAuthEmail = process.env.PLAYWRIGHT_TEST_EMAIL;
 const appAuthPassword = process.env.PLAYWRIGHT_TEST_PASSWORD;
 const googleEmail = process.env.PLAYWRIGHT_GOOGLE_EMAIL;
@@ -59,7 +61,9 @@ const stripeClient =
       })
     : null;
 
-export const canRunSignupConfirmation = Boolean(signupEmailDomain);
+export const canRunSignupConfirmation = Boolean(
+  signupEmailDomain && expectSignupConfirmation,
+);
 export const canRunAuthenticatedFlows = Boolean(appAuthEmail && appAuthPassword);
 export const canRunAdminFixtureFlows = Boolean(
   canRunAuthenticatedFlows && supabaseAdmin,

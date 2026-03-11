@@ -29,8 +29,8 @@ function renderBlock(block: LegalBlock, key: string) {
   );
 }
 
-export default function LegalPolicyPage({ policyId }: { policyId: LegalPolicyId }) {
-  const site = getRequestLegalSite();
+export default async function LegalPolicyPage({ policyId }: { policyId: LegalPolicyId }) {
+  const site = await getRequestLegalSite();
   if (!isPolicyAvailableOnSite(site.id, policyId)) {
     notFound();
   }

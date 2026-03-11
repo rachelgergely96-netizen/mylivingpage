@@ -7,7 +7,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /** POST /api/account/delete — permanently delete user account and all data */
 export async function POST() {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();

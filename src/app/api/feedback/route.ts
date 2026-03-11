@@ -6,7 +6,7 @@ const ALLOWED_TYPES = ["bug", "feature", "general"] as const;
 type FeedbackType = (typeof ALLOWED_TYPES)[number];
 
 export async function POST(request: NextRequest) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

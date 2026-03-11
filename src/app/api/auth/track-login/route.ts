@@ -3,7 +3,7 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 
 /** POST /api/auth/track-login — record email/password sign-in */
 export async function POST() {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

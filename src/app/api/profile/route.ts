@@ -3,7 +3,7 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 
 /** GET /api/profile — fetch the authenticated user's profile */
 export async function GET() {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -27,7 +27,7 @@ export async function GET() {
 
 /** PATCH /api/profile — update full_name */
 export async function PATCH(request: Request) {
-  const authClient = createServerSupabaseClient();
+  const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

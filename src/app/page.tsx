@@ -5,6 +5,7 @@ import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
 import LandingSampleShowcase from "@/components/marketing/LandingSampleShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
+import { PRO_PLAN_PRICE } from "@/lib/billing";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   COMPARISON_ROWS,
@@ -12,7 +13,6 @@ import {
   getMarketingSampleGroups,
   PRICING_REASSURANCE,
   PROCESS_STEPS,
-  PRO_PLAN_PRICE,
 } from "@/lib/marketing-samples";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://mylivingpage.com";
@@ -252,8 +252,8 @@ export default function LandingPage() {
                   <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(240,244,255,0.48)]">Upgrade later</p>
                     <div className="mt-2 flex items-baseline gap-1">
-                      <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amount}</span>
-                      <span className="text-sm text-[rgba(240,244,255,0.42)]">{PRO_PLAN_PRICE.interval}</span>
+                      <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
+                      <span className="text-sm text-[rgba(240,244,255,0.42)]">{PRO_PLAN_PRICE.intervalLabel}</span>
                     </div>
                     <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.72)]">
                       {PRICING_REASSURANCE.pro.map((item) => (

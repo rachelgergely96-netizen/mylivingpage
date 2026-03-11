@@ -23,22 +23,8 @@ async function persistPageRecord(
     .eq("owner_id", userId)
     .maybeSingle();
 
-  const upsertResult = await supabase.from("pages").upsert(fields, { onConflict: "owner_id" });
-  if (!upsertResult.error) {
-    return { error: null, existingId: existing?.id ?? null };
-  }
-
-  if (!upsertResult.error.message.includes("no unique or exclusion constraint matching the ON CONFLICT specification")) {
-    return { error: upsertResult.error, existingId: existing?.id ?? null };
-  }
-
-  if (existing?.id) {
-    const { error } = await supabase.from("pages").update(fields).eq("id", existing.id);
-    return { error, existingId: existing.id };
-  }
-
-  const { error } = await supabase.from("pages").insert(fields);
-  return { error, existingId: null };
+  const { error } = await supabase.from("pages").upsert(fields, { onConflict: "owner_id" });
+  return { error, existingId: existing?.id ?? null };
 }
 
 export async function POST(request: Request) {
@@ -105,6 +91,11 @@ export async function POST(request: Request) {
     const { error, existingId } = await persistPageRecord(supabase, user.id, allFields);
 
     if (error) {
+      await trackEvent(user.id, "page.publish.failed", {
+        slug: username,
+        theme_id: body.theme_id,
+        error: error.message,
+      });
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -116,6 +107,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ slug: username });
   } catch (err) {
+    await trackEvent(null, "page.publish.failed", {
+      error: err instanceof Error ? err.message : "Publish failed",
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Publish failed" },
       { status: 500 },

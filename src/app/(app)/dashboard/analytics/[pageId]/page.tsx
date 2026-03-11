@@ -5,11 +5,14 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import type { PageRecord } from "@/types/resume";
 import { isPremiumPlan } from "@/lib/plans";
 
+interface AnalyticsPageProps {
+  params: Promise<{ pageId: string }>;
+}
+
 export default async function AnalyticsPage({
   params,
-}: {
-  params: { pageId: string };
-}) {
+}: AnalyticsPageProps) {
+  const { pageId } = await params;
   const authClient = createServerSupabaseClient();
   const {
     data: { user },
@@ -35,7 +38,7 @@ export default async function AnalyticsPage({
   const { data: page } = await supabase
     .from("pages")
     .select("*")
-    .eq("id", params.pageId)
+    .eq("id", pageId)
     .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
     .maybeSingle();
 
@@ -50,7 +53,7 @@ export default async function AnalyticsPage({
   const { data: views } = await supabase
     .from("page_views")
     .select("viewed_at, referrer, user_agent, viewer_ip, country")
-    .eq("page_id", params.pageId)
+    .eq("page_id", pageId)
     .gte("viewed_at", ninetyDaysAgo.toISOString())
     .order("viewed_at", { ascending: true });
 

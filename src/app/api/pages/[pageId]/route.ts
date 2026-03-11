@@ -22,21 +22,23 @@ async function fetchOwnedPage(pageId: string, userId: string) {
   return page;
 }
 
-export async function GET(_request: Request, { params }: { params: { pageId: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ pageId: string }> }) {
+  const { pageId } = await params;
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const page = await fetchOwnedPage(params.pageId, userId);
+  const page = await fetchOwnedPage(pageId, userId);
   if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
   return NextResponse.json(page);
 }
 
-export async function PATCH(request: Request, { params }: { params: { pageId: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ pageId: string }> }) {
+  const { pageId } = await params;
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const page = await fetchOwnedPage(params.pageId, userId);
+  const page = await fetchOwnedPage(pageId, userId);
   if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
   const body = (await request.json()) as Record<string, unknown>;
@@ -58,13 +60,13 @@ export async function PATCH(request: Request, { params }: { params: { pageId: st
     const { count } = await supabase
       .from("page_archives")
       .select("*", { count: "exact", head: true })
-      .eq("page_id", params.pageId);
+      .eq("page_id", pageId);
 
     if (count !== null && count >= MAX_FREE_ARCHIVES) {
       const { data: oldest } = await supabase
         .from("page_archives")
         .select("id")
-        .eq("page_id", params.pageId)
+        .eq("page_id", pageId)
         .order("archived_at", { ascending: true })
         .limit(count - MAX_FREE_ARCHIVES + 1);
 
@@ -77,33 +79,34 @@ export async function PATCH(request: Request, { params }: { params: { pageId: st
     }
 
     await supabase.from("page_archives").insert({
-      page_id: params.pageId,
+      page_id: pageId,
       owner_id: userId,
       resume_data: page.resume_data,
       theme_id: page.theme_id,
       slug: page.slug,
     });
 
-    trackEvent(userId, "page.archive_created", { page_id: params.pageId });
+    trackEvent(userId, "page.archive_created", { page_id: pageId });
   } catch {
     // Archive failure should not block the save
   }
 
-  const { error } = await supabase.from("pages").update(updates).eq("id", params.pageId);
+  const { error } = await supabase.from("pages").update(updates).eq("id", pageId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(_request: Request, { params }: { params: { pageId: string } }) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ pageId: string }> }) {
+  const { pageId } = await params;
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const page = await fetchOwnedPage(params.pageId, userId);
+  const page = await fetchOwnedPage(pageId, userId);
   if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
   const supabase = createServiceRoleSupabaseClient();
-  const { error: deleteError } = await supabase.from("pages").delete().eq("id", params.pageId);
+  const { error: deleteError } = await supabase.from("pages").delete().eq("id", pageId);
   if (deleteError) return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
 
   return NextResponse.json({ success: true });

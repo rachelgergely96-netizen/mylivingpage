@@ -22,10 +22,15 @@ const VALID_THEMES: Set<string> = new Set([
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
+interface PublicPageProps {
+  params: Promise<{ username: string }>;
+}
+
+export async function generateMetadata({ params }: PublicPageProps): Promise<Metadata> {
   noStore();
+  const { username } = await params;
   const supabase = createServiceRoleSupabaseClient();
-  const page = await fetchPublicLivePage(supabase, params.username);
+  const page = await fetchPublicLivePage(supabase, username);
   if (!page) {
     return {
       title: "MyLivingPage",
@@ -36,7 +41,7 @@ export async function generateMetadata({ params }: { params: { username: string 
   const resume = page.resume_data;
   const title = `${resume.name} - ${resume.headline} | MyLivingPage`;
   const description = resume.summary;
-  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${params.username}`;
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${username}`;
 
   return {
     title,
@@ -56,10 +61,11 @@ export async function generateMetadata({ params }: { params: { username: string 
   };
 }
 
-export default async function PublicLivingPage({ params }: { params: { username: string } }) {
+export default async function PublicLivingPage({ params }: PublicPageProps) {
   noStore();
+  const { username } = await params;
   const supabase = createServiceRoleSupabaseClient();
-  const page = await fetchPublicLivePage(supabase, params.username);
+  const page = await fetchPublicLivePage(supabase, username);
   if (!page || (page.status !== "live" && page.visibility !== "public")) {
     notFound();
   }

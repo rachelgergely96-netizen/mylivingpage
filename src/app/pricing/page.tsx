@@ -2,7 +2,7 @@ import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import ComparisonTable from "@/components/marketing/demo/ComparisonTable";
 import { COMPARISON_FEATURES } from "@/components/marketing/demo/demo-data";
-import { PRO_PLAN_PRICE } from "@/lib/marketing-samples";
+import { PRO_PLAN_PRICE } from "@/lib/billing";
 
 const freeFeatures = COMPARISON_FEATURES.filter((f) => f.free).map((f) => f.feature);
 const proOnlyFeatures = COMPARISON_FEATURES.filter((f) => f.pro && !f.free).map((f) => f.feature);
@@ -81,8 +81,8 @@ export default function PricingPage() {
               </div>
               <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Pro</p>
               <div className="mb-6 flex items-baseline gap-1">
-                <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amount}</span>
-                <span className="text-sm text-[rgba(240,244,255,0.4)]">{PRO_PLAN_PRICE.interval}</span>
+                <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
+                <span className="text-sm text-[rgba(240,244,255,0.4)]">{PRO_PLAN_PRICE.intervalLabel}</span>
               </div>
               <p className="mb-4 text-xs text-[rgba(240,244,255,0.45)]">Everything in Spark, plus:</p>
               <ul className="mb-8 space-y-3">

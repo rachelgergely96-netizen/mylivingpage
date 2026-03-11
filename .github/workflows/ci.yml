@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: quality
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID }}
+      NEXT_PUBLIC_LEGAL_COMPANY_NAME: ${{ secrets.NEXT_PUBLIC_LEGAL_COMPANY_NAME }}
+      NEXT_PUBLIC_LEGAL_CONTACT_EMAIL: ${{ secrets.NEXT_PUBLIC_LEGAL_CONTACT_EMAIL }}
+      NEXT_PUBLIC_LEGAL_MAILING_ADDRESS: ${{ secrets.NEXT_PUBLIC_LEGAL_MAILING_ADDRESS }}
+      NEXT_PUBLIC_DMCA_AGENT_NAME: ${{ secrets.NEXT_PUBLIC_DMCA_AGENT_NAME }}
+      NEXT_PUBLIC_DMCA_AGENT_EMAIL: ${{ secrets.NEXT_PUBLIC_DMCA_AGENT_EMAIL }}
+      NEXT_PUBLIC_DMCA_AGENT_ADDRESS: ${{ secrets.NEXT_PUBLIC_DMCA_AGENT_ADDRESS }}
+      NEXT_PUBLIC_DMCA_AGENT_PHONE: ${{ secrets.NEXT_PUBLIC_DMCA_AGENT_PHONE }}
+      NEXT_PUBLIC_SECURITY_EMAIL: ${{ secrets.NEXT_PUBLIC_SECURITY_EMAIL }}
+      PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
+      PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
+      PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN: ${{ secrets.PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN }}
+      PLAYWRIGHT_SUPABASE_URL: ${{ secrets.PLAYWRIGHT_SUPABASE_URL }}
+      PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PLAYWRIGHT_SUPABASE_SERVICE_ROLE_KEY }}
+      PLAYWRIGHT_STRIPE_SECRET_KEY: ${{ secrets.PLAYWRIGHT_STRIPE_SECRET_KEY }}
+      PLAYWRIGHT_STRIPE_WEBHOOK_SECRET: ${{ secrets.PLAYWRIGHT_STRIPE_WEBHOOK_SECRET }}
+      PLAYWRIGHT_GOOGLE_EMAIL: ${{ secrets.PLAYWRIGHT_GOOGLE_EMAIL }}
+      PLAYWRIGHT_GOOGLE_PASSWORD: ${{ secrets.PLAYWRIGHT_GOOGLE_PASSWORD }}
+      ENABLE_E2E_FAILURE_INJECTION: "1"
+      RUN_LIVE_STRIPE_CONFIG_TESTS: "1"
+      CI: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Determine integration readiness
+        id: readiness
+        run: |
+          missing=0
+          for key in \
+            NEXT_PUBLIC_SUPABASE_URL \
+            SUPABASE_SECRET_KEY \
+            DATABASE_URL \
+            STRIPE_SECRET_KEY \
+            STRIPE_WEBHOOK_SECRET \
+            STRIPE_PRICE_ID \
+            PLAYWRIGHT_TEST_EMAIL \
+            PLAYWRIGHT_TEST_PASSWORD
+          do
+            if [ -z "${!key}" ]; then
+              echo "Missing $key"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -eq 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip integration checks when secrets are unavailable
+        if: steps.readiness.outputs.ready != 'true'
+        run: echo "Integration checks skipped. Configure staging/test secrets to enable schema, Stripe, and Playwright release gates."
+
+      - name: Install dependencies
+        if: steps.readiness.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Install Playwright browser
+        if: steps.readiness.outputs.ready == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify single-page schema
+        if: steps.readiness.outputs.ready == 'true'
+        run: npm run check:single-page-schema
+
+      - name: Verify live Stripe pricing contract
+        if: steps.readiness.outputs.ready == 'true'
+        run: npx vitest run src/lib/billing.stripe-config.test.ts
+
+      - name: Run Playwright smoke suite
+        if: steps.readiness.outputs.ready == 'true'
+        run: npm run test:e2e

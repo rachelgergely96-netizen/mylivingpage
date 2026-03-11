@@ -1,5 +1,6 @@
 import type { DemoPage } from "@/lib/demo-data";
 import { DEMO_PAGES } from "@/lib/demo-data";
+import { PRO_PLAN_PRICE } from "@/lib/billing";
 
 export interface MarketingSample {
   id: string;
@@ -30,12 +31,6 @@ export const CREDIBILITY_POINTS = [
   "Personal page URL",
   "No design skills",
 ];
-
-export const PRO_PLAN_PRICE = {
-  amount: "$9",
-  interval: "/month",
-  label: "$9/month",
-};
 
 export const PROCESS_STEPS = [
   {
@@ -87,7 +82,7 @@ export const PRICING_REASSURANCE = {
     "Download a polished PDF from your page",
     "Download a PNG share card for outreach and follow-ups",
     "See page analytics and remove the MyLivingPage badge",
-    `Upgrade anytime for ${PRO_PLAN_PRICE.label}`,
+    `Upgrade anytime for ${PRO_PLAN_PRICE.displayLabel}`,
   ],
 };
 

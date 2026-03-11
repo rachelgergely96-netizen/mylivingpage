@@ -8,6 +8,7 @@ import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
 import { requireSupabasePublishableConfig } from "@/lib/supabase/env";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 
 function safeRedirectPath(value: string | null): string {
   if (!value || !value.startsWith("/")) {
@@ -55,6 +56,10 @@ export async function GET(request: NextRequest) {
   const supabase = createRouteHandlerSupabaseClient(request, response);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
+    await trackEvent(null, "auth.callback.failed", {
+      error: error.message,
+      next,
+    });
     const errorRedirect = new URL("/login", requestUrl.origin);
     errorRedirect.searchParams.set("error", error.message);
     return NextResponse.redirect(errorRedirect);
@@ -97,6 +102,10 @@ export async function GET(request: NextRequest) {
           userAgent: request.headers.get("user-agent"),
         });
       } catch (acceptanceError) {
+        await trackEvent(user.id, "auth.callback.legal_acceptance_failed", {
+          error: acceptanceError instanceof Error ? acceptanceError.message : "Unknown error",
+          source: legalSource,
+        });
         console.error("Failed to record legal acceptance in callback", acceptanceError);
       }
     }

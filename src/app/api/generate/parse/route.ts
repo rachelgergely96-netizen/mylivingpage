@@ -134,6 +134,10 @@ export async function POST(request: Request) {
       .gte("created_at", windowStart.toISOString());
 
     if (isParseRateLimited(count ?? 0)) {
+      await trackEvent(user.id, "resume.parse.rate_limited", {
+        characters: resumeText.length,
+        attempts_in_window: count ?? 0,
+      });
       return NextResponse.json(
         {
           error: "Resume parsing limit reached. Try again in about an hour.",
@@ -185,6 +189,10 @@ export async function POST(request: Request) {
           push({ type: "result", data: parsed });
           controller.close();
         } catch (error) {
+          await trackEvent(user.id, "resume.parse.failed", {
+            characters: resumeText.length,
+            error: error instanceof Error ? error.message : "Unable to parse resume",
+          });
           push({
             type: "error",
             message: error instanceof Error ? error.message : "Unable to parse resume",

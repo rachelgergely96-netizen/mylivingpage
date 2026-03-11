@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const headersList = headers();
+    const headersList = await headers();
     const rawIp =
       headersList.get("x-real-ip") ??
       headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??

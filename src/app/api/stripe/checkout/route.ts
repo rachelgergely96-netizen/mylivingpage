@@ -5,8 +5,10 @@ import {
 } from "@/lib/legal/legal-version";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe, getOrCreateStripeCustomer } from "@/lib/stripe";
+import { trackEvent } from "@/lib/track-event";
 
 export async function POST() {
+  const startedAt = Date.now();
   try {
     const supabase = createServerSupabaseClient();
     const {
@@ -53,8 +55,20 @@ export async function POST() {
       },
     });
 
+    await trackEvent(user.id, "billing.checkout.session_created", {
+      customer_id: customerId,
+      price_id: priceId,
+      checkout_session_id: session.id,
+      latency_ms: Date.now() - startedAt,
+    });
+
     return NextResponse.json({ url: session.url });
   } catch (error) {
+    await trackEvent(null, "billing.checkout.session_failed", {
+      latency_ms: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to create checkout session." },
       { status: 500 },

@@ -20,6 +20,10 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "MyLivingPage share card";
 
+interface OgImageProps {
+  params: Promise<{ username: string }>;
+}
+
 type OgFont = {
   name: string;
   data: ArrayBuffer;
@@ -99,7 +103,8 @@ function renderFallbackCard(fonts: OgFont[], playfairLoaded: boolean, dmSansLoad
   );
 }
 
-export default async function OGImage({ params }: { params: { username: string } }) {
+export default async function OGImage({ params }: OgImageProps) {
+  const { username } = await params;
   const [playfairFont, dmSansFont] = await Promise.all([
     fetchFont("https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiukDQ.ttf"),
     fetchFont("https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf"),
@@ -111,7 +116,7 @@ export default async function OGImage({ params }: { params: { username: string }
   ].filter((font): font is OgFont => Boolean(font));
 
   const supabase = createEdgeSupabaseClient();
-  const page = supabase ? await fetchPublicLivePage(supabase, params.username) : null;
+  const page = supabase ? await fetchPublicLivePage(supabase, username) : null;
   if (!page) {
     return renderFallbackCard(fonts, Boolean(playfairFont), Boolean(dmSansFont));
   }

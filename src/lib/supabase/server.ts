@@ -7,7 +7,7 @@ import {
 } from "@/lib/supabase/env";
 
 export function createServerSupabaseClient() {
-  const cookieStore = cookies();
+  const cookieStore = cookies() as unknown as Awaited<ReturnType<typeof cookies>>;
   const { url, publishableKey } = requireSupabasePublishableConfig();
 
   return createServerClient(url, publishableKey, {

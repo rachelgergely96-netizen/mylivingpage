@@ -5,6 +5,7 @@ import { trackEvent } from "@/lib/track-event";
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const AVATAR_PATH_BASENAME = "headshot";
+const ENABLE_E2E_FAILURE_INJECTION = process.env.ENABLE_E2E_FAILURE_INJECTION === "1";
 
 /** POST /api/avatar — upload a headshot */
 export async function POST(request: Request) {
@@ -33,6 +34,14 @@ export async function POST(request: Request) {
   const { data: existing } = await supabase.storage.from("avatars").list(user.id);
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  if (ENABLE_E2E_FAILURE_INJECTION && request.headers.get("x-test-avatar-failure") === "before-upload") {
+    await trackEvent(user.id, "avatar.upload.failed", {
+      injected: true,
+      stage: "before-upload",
+    });
+    return NextResponse.json({ error: "Injected avatar upload failure." }, { status: 500 });
+  }
+
   const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(path, buffer, {
@@ -41,6 +50,10 @@ export async function POST(request: Request) {
     });
 
   if (uploadError) {
+    await trackEvent(user.id, "avatar.upload.failed", {
+      error: uploadError.message,
+      stage: "storage-upload",
+    });
     return NextResponse.json({ error: "Upload failed." }, { status: 500 });
   }
 
@@ -58,9 +71,16 @@ export async function POST(request: Request) {
   const url = `${urlData.publicUrl}?t=${Date.now()}`;
 
   // Persist avatar URL to profiles
-  await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+  const { error: profileUpdateError } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+  if (profileUpdateError) {
+    await trackEvent(user.id, "avatar.upload.failed", {
+      error: profileUpdateError.message,
+      stage: "profile-update",
+    });
+    return NextResponse.json({ error: "Upload failed." }, { status: 500 });
+  }
 
-  trackEvent(user.id, "avatar.upload");
+  await trackEvent(user.id, "avatar.upload");
 
   return NextResponse.json({ url });
 }
@@ -81,9 +101,15 @@ export async function DELETE() {
   }
 
   // Clear avatar URL from profiles
-  await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+  const { error } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+  if (error) {
+    await trackEvent(user.id, "avatar.remove.failed", {
+      error: error.message,
+    });
+    return NextResponse.json({ error: "Unable to remove avatar." }, { status: 500 });
+  }
 
-  trackEvent(user.id, "avatar.remove");
+  await trackEvent(user.id, "avatar.remove");
 
   return NextResponse.json({ success: true });
 }

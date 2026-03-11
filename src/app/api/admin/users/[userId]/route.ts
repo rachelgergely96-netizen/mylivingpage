@@ -9,8 +9,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { userId: string } },
+  { params }: { params: Promise<{ userId: string }> },
 ) {
+  const { userId } = await params;
   const authClient = createServerSupabaseClient();
   const {
     data: { user },
@@ -24,12 +25,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (!params.userId) {
+  if (!userId) {
     return NextResponse.json({ error: "Missing user id." }, { status: 400 });
   }
 
   try {
-    const profile = await getDeletionTargetProfile(params.userId);
+    const profile = await getDeletionTargetProfile(userId);
     if (!profile) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
@@ -39,7 +40,7 @@ export async function DELETE(
     }
 
     await deleteUserAccount({
-      targetUserId: params.userId,
+      targetUserId: userId,
       actorUserId: user.id,
       auditEventName: "admin.user_deleted",
     });

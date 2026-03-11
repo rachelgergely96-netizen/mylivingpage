@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { PRO_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
 import { isPremiumPlan } from "@/lib/plans";
@@ -443,7 +445,7 @@ export default function SettingsPage() {
           </span>
           {isPremiumPlan(profile.plan) ? (
             <>
-              <span className="text-xs text-[rgba(240,244,255,0.5)]">$9/month</span>
+              <span className="text-xs text-[rgba(240,244,255,0.5)]">{PRO_PLAN_PRICE.displayLabel}</span>
               <button
                 type="button"
                 disabled={billingLoading}
@@ -472,7 +474,7 @@ export default function SettingsPage() {
               }}
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
             >
-              {billingLoading ? "Loading..." : "Upgrade to Pro — $9/mo"}
+              {billingLoading ? "Loading..." : `Upgrade to Pro — ${PRO_PLAN_PRICE.amountLabel}/mo`}
             </button>
           )}
         </div>
@@ -483,13 +485,13 @@ export default function SettingsPage() {
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
           Pro auto-renews monthly until canceled. By upgrading, you agree to our{" "}
-          <a href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+          <Link href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
             Terms
-          </a>{" "}
+          </Link>{" "}
           and{" "}
-          <a href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+          <Link href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
             Privacy Policy
-          </a>
+          </Link>
           . Cancel anytime from the billing portal. No refunds except where required by law.
         </p>
       </section>

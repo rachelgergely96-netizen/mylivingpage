@@ -263,6 +263,25 @@ export async function removeAvatarViaApi(page: Page) {
   return page.context().request.delete("/api/avatar");
 }
 
+export async function expectAvatarToResolveTo(page: Page, expectedUrl: string) {
+  const avatar = page.getByAltText("Avatar");
+  await expect
+    .poll(async () => {
+      const renderedSrc = await avatar.getAttribute("src");
+      if (!renderedSrc) {
+        return null;
+      }
+
+      if (renderedSrc.startsWith("/_next/image")) {
+        const resolved = new URL(renderedSrc, page.url());
+        return resolved.searchParams.get("url");
+      }
+
+      return renderedSrc;
+    })
+    .toBe(expectedUrl);
+}
+
 export function buildStripeEvent(
   type: Stripe.Event.Type,
   dataObject: Record<string, unknown>,

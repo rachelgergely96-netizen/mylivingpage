@@ -10,6 +10,7 @@ import {
   canRunSignupConfirmation,
   clearPageViewState,
   ensureLivePageForProfile,
+  expectAvatarToResolveTo,
   fetchCurrentProfile,
   getGoogleCredentials,
   getPageViewState,
@@ -144,7 +145,7 @@ test.describe.serial("authenticated user journeys", () => {
     expect(profile.avatar_url).toBe(firstAvatarUrl);
 
     await page.goto("/dashboard/settings");
-    await expect(page.getByAltText("Avatar")).toHaveAttribute("src", firstAvatarUrl);
+    await expectAvatarToResolveTo(page, firstAvatarUrl);
 
     const cleanupResponse = await removeAvatarViaApi(page);
     expect(cleanupResponse.ok()).toBeTruthy();

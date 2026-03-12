@@ -42,6 +42,16 @@ const SHARE_CARD_VISUALS: Record<string, ShareCardVisual> = {
   silk: { accent: "#7DD3FC", glow: "rgba(125,211,252,0.30)", gradientFrom: "#080A17", gradientMid: "#101A32", gradientTo: "#0A0B18" },
   tempest: { accent: "#38BDF8", glow: "rgba(56,189,248,0.30)", gradientFrom: "#06080F", gradientMid: "#0E1323", gradientTo: "#070911" },
   obsidian: { accent: "#FB7185", glow: "rgba(251,113,133,0.30)", gradientFrom: "#080404", gradientMid: "#1A0C0C", gradientTo: "#090405" },
+  apex: { accent: "#7CC3FF", glow: "rgba(124,195,255,0.30)", gradientFrom: "#07101E", gradientMid: "#0A1830", gradientTo: "#08101A" },
+  atlas: { accent: "#38BDF8", glow: "rgba(56,189,248,0.30)", gradientFrom: "#07141A", gradientMid: "#0B2030", gradientTo: "#081018" },
+  forge: { accent: "#F97316", glow: "rgba(249,115,22,0.32)", gradientFrom: "#140705", gradientMid: "#25100B", gradientTo: "#120606" },
+  vector: { accent: "#60A5FA", glow: "rgba(96,165,250,0.30)", gradientFrom: "#091225", gradientMid: "#12203A", gradientTo: "#08101D" },
+  vault: { accent: "#CBD5E1", glow: "rgba(203,213,225,0.26)", gradientFrom: "#0B1018", gradientMid: "#161D2A", gradientTo: "#090C12" },
+  velvet: { accent: "#FB7185", glow: "rgba(251,113,133,0.28)", gradientFrom: "#170811", gradientMid: "#2A0F1A", gradientTo: "#12070E" },
+  opaline: { accent: "#93C5FD", glow: "rgba(147,197,253,0.28)", gradientFrom: "#0C1020", gradientMid: "#171C33", gradientTo: "#0C0F1A" },
+  halo: { accent: "#F9A8D4", glow: "rgba(249,168,212,0.30)", gradientFrom: "#150913", gradientMid: "#23111F", gradientTo: "#12070F" },
+  sonata: { accent: "#FDBA74", glow: "rgba(253,186,116,0.28)", gradientFrom: "#150815", gradientMid: "#241122", gradientTo: "#12070D" },
+  mosaic: { accent: "#67E8F9", glow: "rgba(103,232,249,0.30)", gradientFrom: "#08101B", gradientMid: "#102133", gradientTo: "#0A0C14" },
 };
 
 export function normalizeAppUrl(url?: string): string {

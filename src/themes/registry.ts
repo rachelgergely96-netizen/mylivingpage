@@ -2,7 +2,9 @@ import { renderBloom } from "./renderers/bloom";
 import { renderObsidian } from "./renderers/obsidian";
 import { renderSilk } from "./renderers/silk";
 import { renderTempest } from "./renderers/tempest";
+import { renderApex } from "./renderers/apex";
 import { renderAurora } from "./renderers/aurora";
+import { renderAtlas } from "./renderers/atlas";
 import { renderBiolume } from "./renderers/biolume";
 import { renderCircuit } from "./renderers/circuit";
 import { renderCoral } from "./renderers/coral";
@@ -10,18 +12,26 @@ import { renderCosmic } from "./renderers/cosmic";
 import { renderDusk } from "./renderers/dusk";
 import { renderEmber } from "./renderers/ember";
 import { renderFluid } from "./renderers/fluid";
+import { renderForge } from "./renderers/forge";
 import { renderGlacier } from "./renderers/glacier";
+import { renderHalo } from "./renderers/halo";
 import { renderInk } from "./renderers/ink";
 import { renderLuxe } from "./renderers/luxe";
 import { renderMatrix } from "./renderers/matrix";
 import { renderMonolith } from "./renderers/monolith";
+import { renderMosaic } from "./renderers/mosaic";
 import { renderNeon } from "./renderers/neon";
+import { renderOpaline } from "./renderers/opaline";
 import { renderPrism } from "./renderers/prism";
 import { renderSakura } from "./renderers/sakura";
+import { renderSonata } from "./renderers/sonata";
 import { renderStardust } from "./renderers/stardust";
 import { renderTerracotta } from "./renderers/terracotta";
 import { renderTopo } from "./renderers/topo";
+import { renderVector } from "./renderers/vector";
 import { renderVerdant } from "./renderers/verdant";
+import { renderVault } from "./renderers/vault";
+import { renderVelvet } from "./renderers/velvet";
 import type { ThemeDefinition, ThemeId } from "./types";
 
 export const THEME_REGISTRY: ThemeDefinition[] = [
@@ -240,6 +250,96 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     vibe: "Fierce & Primal",
     background: "#040100",
     renderer: renderObsidian,
+  },
+  {
+    id: "apex",
+    name: "Apex",
+    description:
+      "Architectural light towers rise from a precision floor grid while beacon lines sweep toward a moving horizon.",
+    vibe: "Decisive & Elite",
+    background: "#03060B",
+    renderer: renderApex,
+  },
+  {
+    id: "atlas",
+    name: "Atlas",
+    description:
+      "Luminous globe meridians, latitude bands, and route signals pulse through a dark cartographic field.",
+    vibe: "Strategic & Worldly",
+    background: "#03070B",
+    renderer: renderAtlas,
+  },
+  {
+    id: "forge",
+    name: "Forge",
+    description:
+      "Forged steel rings orbit a heated core while disciplined sparks rise through industrial darkness.",
+    vibe: "Powerful & Driven",
+    background: "#020101",
+    renderer: renderForge,
+  },
+  {
+    id: "vector",
+    name: "Vector",
+    description:
+      "Blueprint grids, targeting reticles, and scanning measurement lines animate like a living design system.",
+    vibe: "Precise & Technical",
+    background: "#040811",
+    renderer: renderVector,
+  },
+  {
+    id: "vault",
+    name: "Vault",
+    description:
+      "Monumental arches recede through atmospheric light shafts with dust drifting down a central aisle.",
+    vibe: "Stately & Monumental",
+    background: "#030406",
+    renderer: renderVault,
+  },
+  {
+    id: "velvet",
+    name: "Velvet",
+    description:
+      "Plush jewel-toned folds breathe with soft sheen and floating gold dust across a dark editorial stage.",
+    vibe: "Rich & Poised",
+    background: "#080307",
+    renderer: renderVelvet,
+  },
+  {
+    id: "opaline",
+    name: "Opaline",
+    description:
+      "Pearlescent opal discs drift through iridescent haze with subtle refraction and crystalline sparkles.",
+    vibe: "Luminous & Graceful",
+    background: "#060813",
+    renderer: renderOpaline,
+  },
+  {
+    id: "halo",
+    name: "Halo",
+    description:
+      "Rose-gold halos pulse in layered ellipses with atmospheric bloom and refined floating particles.",
+    vibe: "Polished & Magnetic",
+    background: "#050204",
+    renderer: renderHalo,
+  },
+  {
+    id: "sonata",
+    name: "Sonata",
+    description:
+      "Elegant ribbon staves sweep across the frame while luminous notes travel in choreographed motion.",
+    vibe: "Expressive & Composed",
+    background: "#060205",
+    renderer: renderSonata,
+  },
+  {
+    id: "mosaic",
+    name: "Mosaic",
+    description:
+      "Faceted glass tiles shimmer with caustic light sweeps and polished editorial color transitions.",
+    vibe: "Artful & Modern",
+    background: "#05060B",
+    renderer: renderMosaic,
   },
 ];
 

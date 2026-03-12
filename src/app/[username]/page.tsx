@@ -12,14 +12,9 @@ import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { isPremiumPlan } from "@/lib/plans";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import type { ThemeId } from "@/themes/types";
+import { THEME_IDS, type ThemeId } from "@/themes/types";
 
-const VALID_THEMES: Set<string> = new Set([
-  "cosmic", "fluid", "ember", "monolith", "aurora",
-  "terracotta", "prism", "biolume", "circuit", "sakura",
-  "glacier", "verdant", "neon", "topo", "luxe",
-  "dusk", "matrix", "coral", "stardust", "ink",
-]);
+const VALID_THEMES: Set<string> = new Set(THEME_IDS);
 
 export const dynamic = "force-dynamic";
 

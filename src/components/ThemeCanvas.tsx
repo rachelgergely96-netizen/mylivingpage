@@ -24,6 +24,10 @@ export default function ThemeCanvas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
+  const runningRef = useRef(false);
+  const visibleRef = useRef(true);
+  const elapsedRef = useRef(0);
+  const lastFrameRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
 
@@ -49,6 +53,47 @@ export default function ThemeCanvas({
     };
 
     const container = containerRef.current;
+    const renderFrame = (elapsed: number) => {
+      context.fillStyle = theme.background;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      try {
+        theme.renderer(context, canvas.width, canvas.height, elapsed, mouseRef.current.x, mouseRef.current.y);
+      } catch {
+        // Prevent a single renderer error from killing the animation loop
+      }
+    };
+
+    const stop = () => {
+      runningRef.current = false;
+      lastFrameRef.current = null;
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+
+    const draw = (now: number) => {
+      if (!runningRef.current) {
+        return;
+      }
+      if (lastFrameRef.current === null) {
+        lastFrameRef.current = now;
+      }
+      const delta = Math.min(0.05, (now - lastFrameRef.current) * 0.001);
+      lastFrameRef.current = now;
+      elapsedRef.current += delta;
+      renderFrame(elapsedRef.current);
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    const start = () => {
+      if (runningRef.current || document.hidden || !visibleRef.current) {
+        return;
+      }
+      runningRef.current = true;
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
     const handleMove = (event: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       mouseRef.current = {
@@ -65,9 +110,18 @@ export default function ThemeCanvas({
         y: (touch.clientY - rect.top) / rect.height,
       };
     };
+    const handleVisibility = () => {
+      if (document.hidden || !visibleRef.current) {
+        stop();
+      } else {
+        start();
+      }
+    };
 
     resize();
+    renderFrame(elapsedRef.current);
     window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", handleVisibility);
 
     // ResizeObserver catches late layout shifts that the initial resize() misses
     let observer: ResizeObserver | null = null;
@@ -76,31 +130,37 @@ export default function ThemeCanvas({
       observer.observe(container);
     }
 
+    let intersectionObserver: IntersectionObserver | null = null;
+    if (container && "IntersectionObserver" in window) {
+      intersectionObserver = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          visibleRef.current = entry?.isIntersecting ?? true;
+          if (visibleRef.current) {
+            start();
+          } else {
+            stop();
+          }
+        },
+        { threshold: 0.05 },
+      );
+      intersectionObserver.observe(container);
+    } else {
+      visibleRef.current = true;
+    }
+
     if (interactive && container) {
       container.addEventListener("mousemove", handleMove);
       container.addEventListener("touchmove", handleTouch, { passive: true });
     }
-
-    const start = performance.now();
-    const draw = () => {
-      const elapsed = (performance.now() - start) * 0.001;
-      context.fillStyle = theme.background;
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      try {
-        theme.renderer(context, canvas.width, canvas.height, elapsed, mouseRef.current.x, mouseRef.current.y);
-      } catch {
-        // Prevent a single renderer error from killing the animation loop
-      }
-      animationRef.current = requestAnimationFrame(draw);
-    };
-    draw();
+    start();
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      stop();
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", handleVisibility);
       observer?.disconnect();
+      intersectionObserver?.disconnect();
       if (interactive && container) {
         container.removeEventListener("mousemove", handleMove);
         container.removeEventListener("touchmove", handleTouch);

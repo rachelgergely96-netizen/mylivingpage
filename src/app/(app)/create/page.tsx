@@ -36,13 +36,6 @@ const STAGES = [
   "Finalizing JSON output...",
 ];
 
-const PREVIEW_THEMES: ThemeId[] = [
-  "cosmic", "fluid", "ember", "monolith", "aurora",
-  "terracotta", "neon", "luxe", "prism", "biolume",
-  "circuit", "sakura", "glacier", "verdant", "topo",
-  "dusk", "matrix", "coral", "stardust", "ink",
-];
-
 const SAMPLE_RESUME = `RAY
 Attorney & Technology Entrepreneur
 New York, NY | ray@email.com | linkedin.com/in/ray | github.com/ray-dev
@@ -292,7 +285,7 @@ export default function CreatePage() {
     });
   };
 
-  const themes = useMemo(() => THEME_REGISTRY.filter((theme) => PREVIEW_THEMES.includes(theme.id)), []);
+  const themes = THEME_REGISTRY;
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
@@ -618,7 +611,7 @@ export default function CreatePage() {
                   }}
                 >
                   <div className="relative">
-                    <ThemeCanvas themeId={theme.id} height={120} />
+                    <ThemeCanvas themeId={theme.id} height={120} interactive={false} />
                     {locked ? (
                       <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
                         <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">

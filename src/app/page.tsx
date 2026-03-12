@@ -95,7 +95,7 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Ember and Aurora are shown as free-ready themes. Matrix and Share Card + QR are shown honestly as Pro previews.
+                Switch themes, preview the living page, and see how the share card and QR workflow look without leaving the homepage.
               </p>
             </div>
           </section>

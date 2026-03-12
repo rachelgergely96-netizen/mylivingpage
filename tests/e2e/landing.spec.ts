@@ -26,17 +26,18 @@ test("landing page is simplified around hero, showcase, how-it-works, pricing, a
   await expect(page.getByRole("heading", { name: "A few questions people ask before they trust a new career tool." })).toHaveCount(0);
 });
 
-test("landing showcase switches themes and previews share card plus QR with honest pro markers", async ({ page }) => {
+test("landing showcase switches themes and previews share card plus QR without extra pricing tags", async ({ page }) => {
   await page.goto("/");
 
-  const showcase = page.getByTestId("landing-showcase");
+  const demoSection = page.locator("#demo-section");
+
   await expect(page.getByRole("heading", { name: "Switch the theme. Preview the page and the share card in one place." })).toBeVisible();
 
   const emberTab = page.getByRole("tab", { name: "Ember" });
   const auroraTab = page.getByRole("tab", { name: "Aurora" });
-  const matrixTab = page.getByRole("tab", { name: "Matrix Pro" });
+  const matrixTab = page.getByRole("tab", { name: "Matrix" });
   const livingPageTab = page.getByRole("tab", { name: "Living Page" });
-  const shareCardTab = page.getByRole("tab", { name: "Share Card + QR Pro" });
+  const shareCardTab = page.getByRole("tab", { name: "Share Card + QR" });
 
   await expect(emberTab).toHaveAttribute("aria-selected", "true");
   await expect(livingPageTab).toHaveAttribute("aria-selected", "true");
@@ -44,11 +45,10 @@ test("landing showcase switches themes and previews share card plus QR with hone
 
   await auroraTab.click();
   await expect(auroraTab).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Shown as a Pro preview.")).toHaveCount(0);
 
   await matrixTab.click();
   await expect(matrixTab).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Shown as a Pro preview.")).toBeVisible();
+  await expect(demoSection.getByText("Pro", { exact: true })).toHaveCount(0);
 
   await shareCardTab.click();
   await expect(shareCardTab).toHaveAttribute("aria-selected", "true");
@@ -57,7 +57,6 @@ test("landing showcase switches themes and previews share card plus QR with hone
   await expect(page.getByText("Download PNG")).toBeVisible();
   await expect(page.getByRole("img", { name: /QR code preview for/i })).toBeVisible();
 
-  const demoSection = page.locator("#demo-section");
   await expect(demoSection.getByRole("link", { name: "Browse sample pages" })).toHaveAttribute("href", "/examples");
   await expect(demoSection.getByRole("link", { name: "Start Free" })).toHaveAttribute(
     "href",

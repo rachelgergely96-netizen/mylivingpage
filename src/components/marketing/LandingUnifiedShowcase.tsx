@@ -41,14 +41,6 @@ function getSignupHref(ref: string) {
   return `/signup?ref=${ref}&next=/create`;
 }
 
-function ProPill() {
-  return (
-    <span className="rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(229,183,107,0.12)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#F5D7A2]">
-      Pro
-    </span>
-  );
-}
-
 function ShareCardPreview({ themeId }: { themeId: ShowcaseThemeId }) {
   const resume = SHOWCASE_RESUME;
 
@@ -142,7 +134,6 @@ function ShareCardPreview({ themeId }: { themeId: ShowcaseThemeId }) {
         <span className="rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)]">
           Download PNG
         </span>
-        <ProPill />
       </div>
 
       <p className="relative mt-4 font-mono text-xs text-[rgba(240,244,255,0.56)]">{displayUrl}</p>
@@ -154,10 +145,6 @@ export default function LandingUnifiedShowcase() {
   const [themeId, setThemeId] = useState<ShowcaseThemeId>("ember");
   const [viewId, setViewId] = useState<ShowcaseViewId>("living-page");
 
-  const activeTheme = useMemo(
-    () => SHOWCASE_THEMES.find((theme) => theme.id === themeId) ?? SHOWCASE_THEMES[0],
-    [themeId],
-  );
   const activeView = useMemo(
     () => SHOWCASE_VIEWS.find((view) => view.id === viewId) ?? SHOWCASE_VIEWS[0],
     [viewId],
@@ -191,9 +178,9 @@ export default function LandingUnifiedShowcase() {
               </p>
             </div>
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-sm font-semibold text-[#F0F4FF]">Keep one link, then export follow-up assets on Pro</p>
+              <p className="text-sm font-semibold text-[#F0F4FF]">Keep one link, then reuse it for follow-up assets</p>
               <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Matrix and Share Card + QR are shown honestly as premium capabilities so the homepage stays aligned with pricing.
+                Switch between the page view and the QR-ready share card to see how one profile can stay consistent across follow-up moments.
               </p>
             </div>
           </div>
@@ -239,7 +226,6 @@ export default function LandingUnifiedShowcase() {
                       }`}
                     >
                       <span>{themeOption.label}</span>
-                      {themeOption.premium ? <ProPill /> : null}
                     </button>
                   );
                 })}
@@ -269,7 +255,6 @@ export default function LandingUnifiedShowcase() {
                       }`}
                     >
                       <span>{viewOption.label}</span>
-                      {viewOption.premium ? <ProPill /> : null}
                     </button>
                   );
                 })}
@@ -280,9 +265,6 @@ export default function LandingUnifiedShowcase() {
               <span className="font-semibold text-[#F0F4FF]">{theme.name}</span>
               <span className="mx-2 text-[rgba(240,244,255,0.28)]">/</span>
               <span>{activeView.label}</span>
-              {(activeTheme.premium || activeView.premium) ? (
-                <span className="ml-2 text-[#F5D7A2]">Shown as a Pro preview.</span>
-              ) : null}
             </div>
           </div>
 
@@ -307,7 +289,6 @@ export default function LandingUnifiedShowcase() {
                     <span className="text-[#5BD67C]">&#x1F512;</span>
                     <span>{livePageUrl.replace(/^https?:\/\//, "")}</span>
                   </div>
-                  {activeTheme.premium ? <ProPill /> : null}
                 </div>
 
                 <div data-testid="landing-living-page-preview" className="overflow-hidden">

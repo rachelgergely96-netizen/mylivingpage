@@ -307,7 +307,7 @@ export default function CreatePage() {
       <div className="mb-5 sm:mb-7 flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create Flow</p>
-          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">Generate Your Living Page</h1>
+          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">Build Your Living Page</h1>
         </div>
         <div className="hidden gap-2 md:flex">
           {(["input", "theme", "processing", "preview"] as Step[]).map((id, index) => {
@@ -360,7 +360,9 @@ export default function CreatePage() {
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">How would you like to start?</h2>
-          <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">Choose the path that works best for you.</p>
+          <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">
+            Start from the resume you already use for applications, then turn it into a page people can scan faster once they click.
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <button
               type="button"
@@ -370,7 +372,7 @@ export default function CreatePage() {
               <p className="mb-3 text-2xl text-[#3B82F6]">&#x25C8;</p>
               <h3 className="font-heading text-xl font-bold text-[#F0F4FF]">Paste Resume</h3>
               <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
-                Already have your resume? Paste it and let AI structure it for you.
+                Already have an ATS-safe resume? Paste the text and let AI structure it for your page.
               </p>
               <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] group-hover:text-[#3B82F6] transition-colors">
                 Quick &mdash; ~2 min
@@ -384,7 +386,7 @@ export default function CreatePage() {
               <p className="mb-3 text-2xl text-[#3B82F6]">&#x2726;</p>
               <h3 className="font-heading text-xl font-bold text-[#F0F4FF]">Build It Together</h3>
               <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
-                Answer a few friendly prompts and we&apos;ll build your page step by step.
+                Answer a few prompts and build a page recruiters and hiring managers can understand faster.
               </p>
               <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] group-hover:text-[#3B82F6] transition-colors">
                 Guided &mdash; ~5 min
@@ -398,7 +400,9 @@ export default function CreatePage() {
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Paste resume text</h2>
-          <p className="mt-2 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">Drop your full resume text and continue to theme selection.</p>
+          <p className="mt-2 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">
+            Paste the resume text you already use for applications, keep that machine-readable source intact, and continue to theme selection.
+          </p>
           <textarea
             value={resumeText}
             onChange={(event) => setResumeText(event.target.value)}
@@ -459,7 +463,9 @@ export default function CreatePage() {
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 2</p>
             <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Pick your living theme</h2>
-            <p className="mt-2 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">Each option is rendered live on Canvas.</p>
+            <p className="mt-2 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">
+              Choose the page people will open after your resume has already done its machine job.
+            </p>
           </div>
           <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
             <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.35)]">Your resume input</p>
@@ -549,7 +555,7 @@ export default function CreatePage() {
               mylivingpage.com/{publicSlug || "your-username"}
             </div>
             <p className="mt-2 text-xs text-[rgba(240,244,255,0.42)]">
-              Change this in account settings. Your page uses the same public URL everywhere.
+              Change this in account settings. This is the page link you can use anywhere a recruiter or hiring manager can click.
             </p>
           </div>
 

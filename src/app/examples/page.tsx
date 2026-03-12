@@ -6,7 +6,7 @@ import { getMarketingSampleGroups } from "@/lib/marketing-samples";
 export const metadata = {
   title: "Examples | MyLivingPage",
   description:
-    "Browse sample living pages for different job-search moments, from layoffs and pivots to polished professional applications.",
+    "Browse sample living pages that help recruiters understand you faster once your ATS-safe resume gets you seen.",
 };
 
 export default function ExamplesPage() {
@@ -42,10 +42,10 @@ export default function ExamplesPage() {
           <section className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-10 sm:px-10 sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Sample pages</p>
             <h1 className="mt-3 max-w-4xl font-heading text-4xl font-bold leading-[1.04] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              Find the page shape that fits your search.
+              See what the human click can look like.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.64)] sm:text-lg">
-              These are sample pages, not customer testimonials. Use them to see how different job-search moments can be framed when you need more than a resume attachment.
+              These are sample pages, not customer testimonials. Use them to see how different job-search moments can be framed once your ATS-safe resume has done the machine work of getting you seen.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
@@ -88,10 +88,10 @@ export default function ExamplesPage() {
           <section className="mt-14 text-center sm:mt-20">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.18)] px-6 py-10 sm:px-10 sm:py-12">
               <h2 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                Ready to turn yours into a link you can actually share?
+                Ready to keep your ATS-safe resume and send a better page?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-                Start with the resume you already have. Publish a page when it feels right, and keep using your PDF anywhere an application still requires it.
+                Start with the resume you already use. Publish a page that is easier to scan, and keep using your ATS-safe resume anywhere an application still requires it.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

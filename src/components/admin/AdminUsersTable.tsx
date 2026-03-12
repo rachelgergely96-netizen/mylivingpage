@@ -15,6 +15,7 @@ interface AdminUser {
   auth_provider: string | null;
   last_sign_in_at: string | null;
   sign_in_count: number;
+  signup_referrer: string | null;
   pageCount: number;
   totalViews: number;
   isAdmin: boolean;
@@ -152,6 +153,11 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
               <span className="font-mono text-[#93C5FD]">{user.pageCount} page{user.pageCount !== 1 ? "s" : ""}</span>
               <span className="font-mono text-[rgba(240,244,255,0.4)]">{user.totalViews.toLocaleString()} views</span>
               <span className="font-mono text-[rgba(240,244,255,0.4)]">{user.sign_in_count} login{user.sign_in_count !== 1 ? "s" : ""}</span>
+              {user.signup_referrer ? (
+                <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-2 py-0.5 text-[10px] text-[#BFDBFE]">
+                  <span className="font-mono">{user.signup_referrer}</span>
+                </span>
+              ) : null}
               {user.last_sign_in_at ? (
                 <span className="text-[10px] font-mono text-[rgba(240,244,255,0.35)]" title={new Date(user.last_sign_in_at).toLocaleString()}>
                   seen {timeAgo(user.last_sign_in_at)}

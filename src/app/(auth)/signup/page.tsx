@@ -126,19 +126,19 @@ export default function SignupPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
       <div className="glass-card w-full rounded-2xl p-7 md:p-8">
         <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Start Free</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Build the page you send with your resume</h1>
+        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Keep your ATS-safe resume. Build the page people read.</h1>
         <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.55)]">
-          Start with email or Google. Use your current resume, keep your PDF for ATS systems, and publish when you are ready.
+          Start with email or Google. Keep the ATS-safe resume you already use for applications, then build one page recruiters and hiring managers can understand faster once they click.
         </p>
         <div className="mt-5 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.45)]">
           <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
             No credit card
           </span>
           <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-            Start with your current resume
+            Keep ATS-safe resume
           </span>
           <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-            Publish when ready
+            Start from current resume
           </span>
         </div>
         <label className="mt-5 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">

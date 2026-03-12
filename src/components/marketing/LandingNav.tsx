@@ -5,10 +5,9 @@ import { useState } from "react";
 
 const NAV_LINKS = [
   { href: "#demo-section", label: "Demo", external: false },
-  { href: "#visibility", label: "Workflow", external: false },
-  { href: "#examples", label: "Examples", external: false },
+  { href: "#how", label: "How It Works", external: false },
+  { href: "/examples", label: "Examples", external: true },
   { href: "#pricing", label: "Pricing", external: false },
-  { href: "#guides", label: "Guides", external: false },
 ];
 
 export default function LandingNav() {

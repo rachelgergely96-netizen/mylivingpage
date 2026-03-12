@@ -64,8 +64,8 @@ export interface ResolvedMarketingSample extends MarketingSample {
 }
 
 export const CREDIBILITY_POINTS = [
-  "Resume stays intact",
-  "No credit card",
+  "Start with your current resume",
+  "One page link stays current",
 ];
 
 export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [

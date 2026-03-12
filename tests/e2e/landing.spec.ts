@@ -1,61 +1,68 @@
 import { expect, test } from "@playwright/test";
 
-test("landing page leads with the recruiter click moment and includes demo, trust, and FAQ sections", async ({ page }) => {
+test("landing page is simplified around hero, showcase, how-it-works, pricing, and final CTA", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "When a recruiter clicks your name, make the next 10 seconds count." }),
+    page.getByRole("heading", { name: "Keep your resume for the system. Give people a page they can scan fast." }),
   ).toBeVisible();
+  await expect(page.getByText("Start with your current resume")).toBeVisible();
+  await expect(page.getByText("One page link stays current")).toBeVisible();
 
-  await expect(
-    page.getByText("Your resume gets you found. MyLivingPage gives them a page worth remembering."),
-  ).toBeVisible();
-
-  const demoLink = page.getByRole("link", { name: "See What Your Page Could Look Like" }).first();
-  await expect(demoLink).toHaveAttribute("href", "#demo-section");
-  await expect(page.locator("#hero-section").getByRole("link", { name: "Start Free" })).toHaveAttribute(
+  const hero = page.locator("#hero-section");
+  await expect(hero.getByRole("link", { name: "See the Demo" })).toHaveAttribute("href", "#demo-section");
+  await expect(hero.getByRole("link", { name: "Start Free" })).toHaveAttribute(
     "href",
     "/signup?ref=landing_start_free&next=/create",
   );
 
-  const demoSection = page.locator("#demo-section");
-  const workflowSection = page.locator("#visibility");
-  await expect(demoSection.getByRole("heading", { name: "This is the kind of page a recruiter opens after your name gets surfaced." })).toBeVisible();
-  await expect(workflowSection.getByRole("heading", { name: "How hiring usually works for active applicants." })).toBeVisible();
+  await expect(page.locator("#demo-section")).toBeVisible();
+  await expect(page.locator("#how")).toBeVisible();
+  await expect(page.locator("#pricing")).toBeVisible();
+  await expect(page.locator("#final-cta")).toBeVisible();
 
-  const demoBox = await demoSection.boundingBox();
-  const workflowBox = await workflowSection.boundingBox();
-  expect(demoBox?.y ?? 0).toBeLessThan(workflowBox?.y ?? 0);
-
-  await expect(page.getByRole("heading", { name: "Answer the high-stakes questions before you sign up." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your resume stays intact" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "A few questions people ask before they trust a new career tool." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Will this replace my resume?" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Is it actually free?" })).toBeVisible();
+  await expect(page.getByPlaceholder("Email for updates")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Answer the high-stakes questions before you sign up." })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "A few questions people ask before they trust a new career tool." })).toHaveCount(0);
 });
 
-test("landing samples open in a larger preview and the fallback updates form submits", async ({ page }) => {
-  await page.route("**/api/waitlist", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ message: "stubbed" }),
-    });
-  });
-
+test("landing showcase switches themes and previews share card plus QR with honest pro markers", async ({ page }) => {
   await page.goto("/");
 
-  await page.locator("#examples").scrollIntoViewIfNeeded();
-  await page.getByRole("button", { name: "Open large preview" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Back to samples" })).toBeVisible();
-  await page.getByRole("button", { name: "Close large preview" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
+  const showcase = page.getByTestId("landing-showcase");
+  await expect(page.getByRole("heading", { name: "Switch the theme. Preview the page and the share card in one place." })).toBeVisible();
 
-  await page.locator("#final-cta").scrollIntoViewIfNeeded();
-  await page.getByPlaceholder("Email for updates").fill("person@example.com");
-  await page.getByRole("button", { name: "Get Updates" }).click();
-  await expect(page.getByText("You are in. We will email product updates and new examples.")).toBeVisible();
+  const emberTab = page.getByRole("tab", { name: "Ember" });
+  const auroraTab = page.getByRole("tab", { name: "Aurora" });
+  const matrixTab = page.getByRole("tab", { name: "Matrix Pro" });
+  const livingPageTab = page.getByRole("tab", { name: "Living Page" });
+  const shareCardTab = page.getByRole("tab", { name: "Share Card + QR Pro" });
+
+  await expect(emberTab).toHaveAttribute("aria-selected", "true");
+  await expect(livingPageTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("landing-living-page-preview")).toBeVisible();
+
+  await auroraTab.click();
+  await expect(auroraTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("Shown as a Pro preview.")).toHaveCount(0);
+
+  await matrixTab.click();
+  await expect(matrixTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("Shown as a Pro preview.")).toBeVisible();
+
+  await shareCardTab.click();
+  await expect(shareCardTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("landing-share-card-preview")).toBeVisible();
+  await expect(page.getByText("PNG Share Card Preview")).toBeVisible();
+  await expect(page.getByText("Download PNG")).toBeVisible();
+  await expect(page.getByRole("img", { name: /QR code preview for/i })).toBeVisible();
+
+  const demoSection = page.locator("#demo-section");
+  await expect(demoSection.getByRole("link", { name: "Browse sample pages" })).toHaveAttribute("href", "/examples");
+  await expect(demoSection.getByRole("link", { name: "Start Free" })).toHaveAttribute(
+    "href",
+    "/signup?ref=landing_demo_primary&next=/create",
+  );
 });
 
 test("mobile menu works and sticky CTA appears after the hero then hides near the final CTA", async ({ page }) => {
@@ -66,6 +73,8 @@ test("mobile menu works and sticky CTA appears after the hero then hides near th
   await menuButton.click();
   const mobileMenu = page.locator("#landing-mobile-nav");
   await expect(mobileMenu.getByRole("link", { name: "Demo" })).toBeVisible();
+  await expect(mobileMenu.getByRole("link", { name: "How It Works" })).toBeVisible();
+  await expect(mobileMenu.getByRole("link", { name: "Examples" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Close menu" })).toBeVisible();
   await page.getByRole("button", { name: "Close menu" }).click();
   await expect(mobileMenu).toBeHidden();
@@ -73,7 +82,7 @@ test("mobile menu works and sticky CTA appears after the hero then hides near th
   const sticky = page.getByTestId("mobile-sticky-cta");
   await expect(sticky).toHaveAttribute("aria-hidden", "true");
 
-  await page.locator("#visibility").scrollIntoViewIfNeeded();
+  await page.locator("#how").scrollIntoViewIfNeeded();
   await expect(sticky).toHaveAttribute("aria-hidden", "false");
 
   await page.locator("#final-cta").scrollIntoViewIfNeeded();
@@ -85,13 +94,13 @@ test("mobile sticky CTA can be dismissed for the current browser session", async
   await page.goto("/");
 
   const sticky = page.getByTestId("mobile-sticky-cta");
-  await page.locator("#visibility").scrollIntoViewIfNeeded();
+  await page.locator("#how").scrollIntoViewIfNeeded();
   await expect(sticky).toHaveAttribute("aria-hidden", "false");
 
   await page.getByRole("button", { name: "Dismiss sticky call to action" }).click();
   await expect(sticky).toHaveAttribute("aria-hidden", "true");
 
   await page.reload();
-  await page.locator("#visibility").scrollIntoViewIfNeeded();
+  await page.locator("#how").scrollIntoViewIfNeeded();
   await expect(sticky).toHaveAttribute("aria-hidden", "true");
 });

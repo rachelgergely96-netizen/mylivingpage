@@ -52,6 +52,21 @@ const SHARE_CARD_VISUALS: Record<string, ShareCardVisual> = {
   halo: { accent: "#F9A8D4", glow: "rgba(249,168,212,0.30)", gradientFrom: "#150913", gradientMid: "#23111F", gradientTo: "#12070F" },
   sonata: { accent: "#FDBA74", glow: "rgba(253,186,116,0.28)", gradientFrom: "#150815", gradientMid: "#241122", gradientTo: "#12070D" },
   mosaic: { accent: "#67E8F9", glow: "rgba(103,232,249,0.30)", gradientFrom: "#08101B", gradientMid: "#102133", gradientTo: "#0A0C14" },
+  bastion: { accent: "#93C5FD", glow: "rgba(147,197,253,0.28)", gradientFrom: "#0B1018", gradientMid: "#151D2A", gradientTo: "#090C12" },
+  carbon: { accent: "#CBD5E1", glow: "rgba(203,213,225,0.24)", gradientFrom: "#06080A", gradientMid: "#12161B", gradientTo: "#07090B" },
+  caliber: { accent: "#7DD3FC", glow: "rgba(125,211,252,0.28)", gradientFrom: "#09101C", gradientMid: "#131B2D", gradientTo: "#0A0E16" },
+  quarry: { accent: "#E7B98A", glow: "rgba(231,185,138,0.24)", gradientFrom: "#120D0A", gradientMid: "#201611", gradientTo: "#0F0B08" },
+  harbor: { accent: "#93C5FD", glow: "rgba(147,197,253,0.28)", gradientFrom: "#08121C", gradientMid: "#112434", gradientTo: "#090F15" },
+  relay: { accent: "#5EEAD4", glow: "rgba(94,234,212,0.28)", gradientFrom: "#07121A", gradientMid: "#102131", gradientTo: "#081017" },
+  meridian: { accent: "#60A5FA", glow: "rgba(96,165,250,0.28)", gradientFrom: "#08111C", gradientMid: "#122030", gradientTo: "#090F16" },
+  atelier: { accent: "#FDBA74", glow: "rgba(253,186,116,0.28)", gradientFrom: "#120E17", gradientMid: "#1D1B2C", gradientTo: "#0D0E14" },
+  porcelain: { accent: "#BFDBFE", glow: "rgba(191,219,254,0.26)", gradientFrom: "#192230", gradientMid: "#263143", gradientTo: "#161C26" },
+  filigree: { accent: "#FCD34D", glow: "rgba(252,211,77,0.26)", gradientFrom: "#110C17", gradientMid: "#1C1630", gradientTo: "#0E0B14" },
+  cameo: { accent: "#FBCFE8", glow: "rgba(251,207,232,0.28)", gradientFrom: "#140D18", gradientMid: "#251626", gradientTo: "#110A12" },
+  solstice: { accent: "#FDBA74", glow: "rgba(253,186,116,0.30)", gradientFrom: "#180D0B", gradientMid: "#2A1712", gradientTo: "#140A08" },
+  tulle: { accent: "#DDD6FE", glow: "rgba(221,214,254,0.28)", gradientFrom: "#0E0F19", gradientMid: "#191C2D", gradientTo: "#0A0C12" },
+  parasol: { accent: "#F9A8D4", glow: "rgba(249,168,212,0.28)", gradientFrom: "#140913", gradientMid: "#25111F", gradientTo: "#10070E" },
+  gossamer: { accent: "#BAE6FD", glow: "rgba(186,230,253,0.28)", gradientFrom: "#09111A", gradientMid: "#132231", gradientTo: "#0A1016" },
 };
 
 export function normalizeAppUrl(url?: string): string {

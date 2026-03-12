@@ -3,31 +3,46 @@ import { renderObsidian } from "./renderers/obsidian";
 import { renderSilk } from "./renderers/silk";
 import { renderTempest } from "./renderers/tempest";
 import { renderApex } from "./renderers/apex";
+import { renderAtelier } from "./renderers/atelier";
 import { renderAurora } from "./renderers/aurora";
 import { renderAtlas } from "./renderers/atlas";
+import { renderBastion } from "./renderers/bastion";
 import { renderBiolume } from "./renderers/biolume";
+import { renderCaliber } from "./renderers/caliber";
+import { renderCameo } from "./renderers/cameo";
+import { renderCarbon } from "./renderers/carbon";
 import { renderCircuit } from "./renderers/circuit";
 import { renderCoral } from "./renderers/coral";
 import { renderCosmic } from "./renderers/cosmic";
 import { renderDusk } from "./renderers/dusk";
 import { renderEmber } from "./renderers/ember";
+import { renderFiligree } from "./renderers/filigree";
 import { renderFluid } from "./renderers/fluid";
 import { renderForge } from "./renderers/forge";
 import { renderGlacier } from "./renderers/glacier";
+import { renderGossamer } from "./renderers/gossamer";
 import { renderHalo } from "./renderers/halo";
+import { renderHarbor } from "./renderers/harbor";
 import { renderInk } from "./renderers/ink";
 import { renderLuxe } from "./renderers/luxe";
 import { renderMatrix } from "./renderers/matrix";
+import { renderMeridian } from "./renderers/meridian";
 import { renderMonolith } from "./renderers/monolith";
 import { renderMosaic } from "./renderers/mosaic";
 import { renderNeon } from "./renderers/neon";
 import { renderOpaline } from "./renderers/opaline";
+import { renderParasol } from "./renderers/parasol";
+import { renderPorcelain } from "./renderers/porcelain";
 import { renderPrism } from "./renderers/prism";
+import { renderQuarry } from "./renderers/quarry";
+import { renderRelay } from "./renderers/relay";
 import { renderSakura } from "./renderers/sakura";
 import { renderSonata } from "./renderers/sonata";
+import { renderSolstice } from "./renderers/solstice";
 import { renderStardust } from "./renderers/stardust";
 import { renderTerracotta } from "./renderers/terracotta";
 import { renderTopo } from "./renderers/topo";
+import { renderTulle } from "./renderers/tulle";
 import { renderVector } from "./renderers/vector";
 import { renderVerdant } from "./renderers/verdant";
 import { renderVault } from "./renderers/vault";
@@ -340,6 +355,141 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     vibe: "Artful & Modern",
     background: "#05060B",
     renderer: renderMosaic,
+  },
+  {
+    id: "bastion",
+    name: "Bastion",
+    description:
+      "Hex-armored shield cells pulse with seam lights and tactical energy sweeps across a steel-dark field.",
+    vibe: "Commanding & Secure",
+    background: "#040507",
+    renderer: renderBastion,
+  },
+  {
+    id: "carbon",
+    name: "Carbon",
+    description:
+      "Woven carbon-fiber texture catches chrome highlights as diagonal specular bands glide across the surface.",
+    vibe: "High-Performance & Refined",
+    background: "#050608",
+    renderer: renderCarbon,
+  },
+  {
+    id: "caliber",
+    name: "Caliber",
+    description:
+      "Precision instrument rings, tick marks, and sweeping indicators spin like a luxury control dial.",
+    vibe: "Measured & Elite",
+    background: "#03050A",
+    renderer: renderCaliber,
+  },
+  {
+    id: "quarry",
+    name: "Quarry",
+    description:
+      "Layered stone terraces breathe with mineral shadow, warm seam glints, and drifting quarry dust.",
+    vibe: "Solid & Grounded",
+    background: "#050403",
+    renderer: renderQuarry,
+  },
+  {
+    id: "harbor",
+    name: "Harbor",
+    description:
+      "Night watch beams skim over dark water while beacon lights ripple across reflective harbor waves.",
+    vibe: "Calm & Commanding",
+    background: "#04070B",
+    renderer: renderHarbor,
+  },
+  {
+    id: "relay",
+    name: "Relay",
+    description:
+      "Signal towers trade luminous packets through arcing links over a dark infrastructure horizon.",
+    vibe: "Connected & Future-Ready",
+    background: "#03070A",
+    renderer: renderRelay,
+  },
+  {
+    id: "meridian",
+    name: "Meridian",
+    description:
+      "Compass spokes, bearing arcs, and orbital markers turn like a living navigation instrument.",
+    vibe: "Directed & Global",
+    background: "#04070B",
+    renderer: renderMeridian,
+  },
+  {
+    id: "atelier",
+    name: "Atelier",
+    description:
+      "Painterly ribbon strokes sweep across the canvas with layered pigment trails and luminous droplets.",
+    vibe: "Curated & Creative",
+    background: "#06070B",
+    renderer: renderAtelier,
+  },
+  {
+    id: "porcelain",
+    name: "Porcelain",
+    description:
+      "Ceramic glaze blooms beneath fine crack lines and soft gilded kintsugi shimmer.",
+    vibe: "Delicate & Polished",
+    background: "#11161F",
+    renderer: renderPorcelain,
+  },
+  {
+    id: "filigree",
+    name: "Filigree",
+    description:
+      "Ornamental metallic curls unfurl from the center in elegant looping arabesques.",
+    vibe: "Intricate & Regal",
+    background: "#05060A",
+    renderer: renderFiligree,
+  },
+  {
+    id: "cameo",
+    name: "Cameo",
+    description:
+      "Floating medallions reveal layered relief ovals, pearl highlights, and soft shadow depth.",
+    vibe: "Classic & Feminine",
+    background: "#060508",
+    renderer: renderCameo,
+  },
+  {
+    id: "solstice",
+    name: "Solstice",
+    description:
+      "Radiant sun discs, flare halos, and warm atmospheric dust bathe the frame in golden light.",
+    vibe: "Warm & Radiant",
+    background: "#0A0605",
+    renderer: renderSolstice,
+  },
+  {
+    id: "tulle",
+    name: "Tulle",
+    description:
+      "Translucent mesh drapes sway with pearl nodes and airy couture structure.",
+    vibe: "Airy & Couture",
+    background: "#06070B",
+    renderer: renderTulle,
+  },
+  {
+    id: "parasol",
+    name: "Parasol",
+    description:
+      "Pleated fan arcs open in layered jewel tones with delicate rib lines and drifting dust.",
+    vibe: "Elegant & Playful",
+    background: "#060306",
+    renderer: renderParasol,
+  },
+  {
+    id: "gossamer",
+    name: "Gossamer",
+    description:
+      "Dewy web structures glimmer with fine threads, suspended droplets, and lunar glow.",
+    vibe: "Ethereal & Refined",
+    background: "#04070C",
+    renderer: renderGossamer,
   },
 ];
 

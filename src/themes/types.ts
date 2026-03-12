@@ -33,6 +33,21 @@ export const THEME_IDS = [
   "halo",
   "sonata",
   "mosaic",
+  "bastion",
+  "carbon",
+  "caliber",
+  "quarry",
+  "harbor",
+  "relay",
+  "meridian",
+  "atelier",
+  "porcelain",
+  "filigree",
+  "cameo",
+  "solstice",
+  "tulle",
+  "parasol",
+  "gossamer",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];

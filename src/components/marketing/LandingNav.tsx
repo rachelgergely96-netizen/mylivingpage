@@ -10,6 +10,10 @@ const NAV_LINKS = [
   { href: "#pricing", label: "Pricing", external: false },
 ];
 
+const LOGIN_HREF = "/login?next=/dashboard";
+const SIGNUP_HREF = "/signup?ref=landing_apply_nav&next=/create";
+const MOBILE_SIGNUP_HREF = "/signup?ref=landing_apply_nav_mobile&next=/create";
+
 export default function LandingNav() {
   const [open, setOpen] = useState(false);
 
@@ -36,7 +40,13 @@ export default function LandingNav() {
 
       <div className="flex items-center gap-2 sm:gap-3">
         <Link
-          href="/signup?ref=landing_apply_nav&next=/create"
+          href={LOGIN_HREF}
+          className="hidden rounded-full border border-[rgba(255,255,255,0.16)] px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.72)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:inline-flex sm:px-5 sm:text-xs sm:tracking-[0.16em]"
+        >
+          Log In
+        </Link>
+        <Link
+          href={SIGNUP_HREF}
           className="gold-pill px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] sm:px-5 sm:text-xs sm:tracking-[0.16em]"
         >
           <span className="sm:hidden">Start</span>
@@ -95,13 +105,22 @@ export default function LandingNav() {
               </li>
             ))}
             <li className="mt-2 border-t border-[rgba(255,255,255,0.08)] pt-3">
-              <Link
-                href="/signup?ref=landing_apply_nav_mobile&next=/create"
-                onClick={() => setOpen(false)}
-                className="gold-pill block w-full py-3 text-center text-sm font-semibold"
-              >
-                Start Free
-              </Link>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Link
+                  href={LOGIN_HREF}
+                  onClick={() => setOpen(false)}
+                  className="block w-full rounded-full border border-[rgba(255,255,255,0.16)] py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href={MOBILE_SIGNUP_HREF}
+                  onClick={() => setOpen(false)}
+                  className="gold-pill block w-full py-3 text-center text-sm font-semibold"
+                >
+                  Start Free
+                </Link>
+              </div>
             </li>
           </ul>
         </div>

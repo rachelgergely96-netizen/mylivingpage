@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test("landing page is simplified around hero, showcase, how-it-works, pricing, and final CTA", async ({ page }) => {
   await page.goto("/");
 
+  const header = page.locator("header");
   await expect(
     page.getByRole("heading", { name: "Keep your resume for the system. Give people a page they can scan fast." }),
   ).toBeVisible();
@@ -15,6 +16,8 @@ test("landing page is simplified around hero, showcase, how-it-works, pricing, a
     "href",
     "/signup?ref=landing_start_free&next=/create",
   );
+  await expect(hero.getByRole("link", { name: "Log In" })).toHaveAttribute("href", "/login?next=/dashboard");
+  await expect(header.getByRole("link", { name: "Log In" })).toHaveAttribute("href", "/login?next=/dashboard");
 
   await expect(page.locator("#demo-section")).toBeVisible();
   await expect(page.locator("#how")).toBeVisible();
@@ -74,6 +77,11 @@ test("mobile menu works and sticky CTA appears after the hero then hides near th
   await expect(mobileMenu.getByRole("link", { name: "Demo" })).toBeVisible();
   await expect(mobileMenu.getByRole("link", { name: "How It Works" })).toBeVisible();
   await expect(mobileMenu.getByRole("link", { name: "Examples" })).toBeVisible();
+  await expect(mobileMenu.getByRole("link", { name: "Log In" })).toHaveAttribute("href", "/login?next=/dashboard");
+  await expect(mobileMenu.getByRole("link", { name: "Start Free" })).toHaveAttribute(
+    "href",
+    "/signup?ref=landing_apply_nav_mobile&next=/create",
+  );
   await expect(page.getByRole("button", { name: "Close menu" })).toBeVisible();
   await page.getByRole("button", { name: "Close menu" }).click();
   await expect(mobileMenu).toBeHidden();

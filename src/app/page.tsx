@@ -20,6 +20,10 @@ function getSignupHref(ref: string) {
   return `/signup?ref=${ref}&next=/create`;
 }
 
+function getLoginHref() {
+  return "/login?next=/dashboard";
+}
+
 export const metadata: Metadata = {
   title: `${SITE_NAME} | ${SITE_TAGLINE}`,
   description: SITE_DESCRIPTION,
@@ -80,18 +84,24 @@ export default async function LandingPage() {
               </div>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <a
-                  href="#demo-section"
-                  className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
-                >
-                  See the Demo
-                </a>
                 <Link
                   href={getSignupHref("landing_start_free")}
-                  className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
+                  className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
                 >
                   Start Free
                 </Link>
+                <Link
+                  href={getLoginHref()}
+                  className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
+                >
+                  Log In
+                </Link>
+                <a
+                  href="#demo-section"
+                  className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                >
+                  See the Demo
+                </a>
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">

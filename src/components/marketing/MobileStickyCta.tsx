@@ -45,7 +45,7 @@ export default function MobileStickyCta({ href, label, targetId }: MobileStickyC
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Ready to start</p>
-            <p className="mt-1 text-sm text-[rgba(240,244,255,0.7)]">Keep your PDF. Build one link you can keep improving.</p>
+            <p className="mt-1 text-sm text-[rgba(240,244,255,0.7)]">Keep your ATS-safe resume. Build one link you can keep improving.</p>
           </div>
           <Link
             href={href}

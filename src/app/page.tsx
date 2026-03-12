@@ -13,18 +13,22 @@ import {
   getMarketingSampleGroups,
   PRICING_REASSURANCE,
   PROCESS_STEPS,
+  READABILITY_FAILURE_SIGNALS,
+  READABILITY_TEST_STEPS,
+  SEARCH_OPERATOR_EXAMPLES,
+  SEARCH_VISIBILITY_CHECKLIST,
 } from "@/lib/marketing-samples";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://mylivingpage.com";
 const ogDescription =
-  "Stop being the resume attachment they never open. Build one living page you can keep updating and share everywhere your job search goes.";
+  "Keep an ATS-safe resume for the machines and one living page recruiters actually remember once they click.";
 
 export const metadata: Metadata = {
-  title: "MyLivingPage | The Page Employers Remember",
+  title: "MyLivingPage | Visible to ATS, Memorable to People",
   description: ogDescription,
   alternates: { canonical: appUrl },
   openGraph: {
-    title: "MyLivingPage | The Page Employers Remember",
+    title: "MyLivingPage | Visible to ATS, Memorable to People",
     description: ogDescription,
     url: appUrl,
     siteName: "MyLivingPage",
@@ -32,7 +36,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MyLivingPage | The Page Employers Remember",
+    title: "MyLivingPage | Visible to ATS, Memorable to People",
     description: ogDescription,
   },
 };
@@ -57,14 +61,14 @@ export default async function LandingPage() {
             <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(147,197,253,0.5)] to-transparent" />
               <p className="inline-flex rounded-full border border-[rgba(59,130,246,0.28)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD] sm:text-xs sm:tracking-[0.22em]">
-                Tired of being another PDF?
+                Visible to machines. Memorable to people.
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  Turn your resume into the page they actually remember.
+                  Keep your resume ATS-safe. Send a page people actually remember.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  Stop being the attachment they never open. Build one professional page you can update in minutes, share with the same link every time, and keep alongside your PDF when an application still requires it.
+                  Your resume still needs clean text, exact titles, and explicit keywords to show up in search. MyLivingPage gives recruiters and hiring managers a faster, clearer page to understand once they click.
                 </p>
               </div>
 
@@ -95,8 +99,128 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Use the same link in applications, networking, and follow-ups while keeping your PDF for ATS systems.
+                Keep your ATS-safe resume for applications. Use one page link everywhere a person can click.
               </p>
+            </div>
+          </section>
+
+          <section id="visibility" className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 md:px-10">
+            <div className="mb-8 max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Visibility</p>
+              <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.02] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
+                First make sure your resume can be read and found.
+              </h2>
+              <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
+                Before someone forms an opinion, your resume has to survive two machine layers: clean text extraction and exact search language. MyLivingPage does not replace that resume. It helps the human click feel sharper once you are found.
+              </p>
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <article className="glass-card rounded-[1.75rem] border border-[rgba(255,255,255,0.08)] p-6 sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#3B82F6]">Readability</p>
+                <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+                  The 30-second readability test
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.64)] sm:text-base">
+                  If copy and paste fails, some systems may read a broken version of your resume even when the PDF looks polished.
+                </p>
+
+                <ol className="mt-6 space-y-3">
+                  {READABILITY_TEST_STEPS.map((step, index) => (
+                    <li
+                      key={step}
+                      className="flex items-start gap-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(59,130,246,0.4)] font-mono text-xs text-[#93C5FD]">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <p className="pt-1 text-sm leading-6 text-[rgba(240,244,255,0.72)]">{step}</p>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="mt-6">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(240,244,255,0.42)]">
+                    Check for
+                  </p>
+                  <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {READABILITY_FAILURE_SIGNALS.map((signal) => (
+                      <li
+                        key={signal}
+                        className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3 text-sm leading-6 text-[rgba(240,244,255,0.64)]"
+                      >
+                        {signal}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+
+              <article className="glass-card rounded-[1.75rem] border border-[rgba(255,255,255,0.08)] p-6 sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#3B82F6]">Search language</p>
+                <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+                  Recruiter search reality
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.64)] sm:text-base">
+                  Recruiters often search by exact titles and terms. If your resume implies a skill but never names it, you can be missed before a person ever reads the rest.
+                </p>
+
+                <div className="mt-6 space-y-3">
+                  {SEARCH_OPERATOR_EXAMPLES.map((item) => (
+                    <div
+                      key={item.operator}
+                      className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD]">
+                          {item.operator}
+                        </span>
+                        <code className="rounded-lg bg-[rgba(255,255,255,0.04)] px-3 py-1 font-mono text-xs text-[rgba(240,244,255,0.74)]">
+                          {item.example}
+                        </code>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.64)]">{item.guidance}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(240,244,255,0.42)]">
+                    Make sure your resume includes
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {SEARCH_VISIBILITY_CHECKLIST.map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-start gap-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3 text-sm leading-6 text-[rgba(240,244,255,0.68)]"
+                      >
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3B82F6]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            </div>
+
+            <div className="mt-8 glass-card rounded-[1.75rem] border border-[rgba(59,130,246,0.18)] px-6 py-8 sm:px-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Use both assets well</p>
+              <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-2xl">
+                  <h3 className="font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+                    Keep the ATS-safe resume. Give people a better click.
+                  </h3>
+                  <p className="mt-3 text-base leading-7 text-[rgba(240,244,255,0.64)]">
+                    Keep your clean resume for applications, then use MyLivingPage to give recruiters and hiring managers a faster, clearer first impression once they open your link.
+                  </p>
+                </div>
+                <Link
+                  href="/signup?ref=landing_visibility_primary"
+                  className="gold-pill inline-flex items-center justify-center px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
+                >
+                  Build My Page Free
+                </Link>
+              </div>
             </div>
           </section>
 
@@ -104,10 +228,10 @@ export default async function LandingPage() {
             <div className="mb-8 max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Sample pages</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.02] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                Explore one job-search scenario at a time.
+                See what the human click can look like.
               </h2>
               <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                These are sample pages, not testimonials. Browse the scenario that feels closest to your search, then see how the same idea could work for your own background.
+                These are sample pages, not testimonials. Use them to see how a living page can clarify your story once your resume has already done the machine work of getting you seen.
               </p>
             </div>
 
@@ -116,10 +240,10 @@ export default async function LandingPage() {
             <div className="mt-8 glass-card rounded-[1.75rem] border border-[rgba(59,130,246,0.18)] px-6 py-8 text-center sm:px-8">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready to build yours?</p>
               <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-                Start with the resume you already have.
+                Make the click count.
               </h3>
               <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.62)]">
-                You do not need a redesign project. Start free, publish when you are ready, and keep improving one link as your search moves.
+                You do not need a redesign project. Start free, publish when you are ready, and give people a page that is easier to scan than another attachment.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
@@ -143,10 +267,10 @@ export default async function LandingPage() {
               <div className="border-b border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Why it works</p>
                 <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                  Better than sending another dead PDF attachment.
+                  Your resume gets you surfaced. Your page makes the click count.
                 </h2>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.68)]">
-                  Keep your resume for ATS systems. Use your page to give recruiters and hiring managers a faster, clearer first impression the moment they click.
+                  A clean resume helps you appear in search. Use your page to give recruiters and hiring managers a faster, clearer first impression once they open it.
                 </p>
               </div>
 
@@ -179,7 +303,7 @@ export default async function LandingPage() {
             <div className="mb-8 max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">How it works</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                From existing resume to live page in three steps.
+                From ATS-safe resume to live page in three steps.
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -204,10 +328,10 @@ export default async function LandingPage() {
                 <div className="max-w-2xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Pricing</p>
                   <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                    Everything you need to get noticed is free.
+                    Everything you need to make the click count is free.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Start with one living page, keep your PDF for ATS systems, and upgrade later only if you want premium themes, share-ready exports, and a cleaner branded page.
+                    Start with one living page while keeping your ATS-safe resume for applications, and upgrade later only if you want premium themes, share-ready exports, and a cleaner branded page.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
@@ -279,10 +403,10 @@ export default async function LandingPage() {
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 sm:px-10 sm:py-12">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-[3.2rem]">
-                Your next application deserves more than another attachment.
+                Keep your ATS-safe resume. Give people a better first impression.
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                Start with the resume you already have, publish a page that feels current, and keep the same link everywhere your search goes.
+                Start with the resume you already use, publish a page that is easier to scan, and keep the same link wherever a recruiter or hiring manager can click.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

@@ -21,59 +21,65 @@ export interface MarketingSampleGroup {
   description: string;
 }
 
+export interface SearchOperatorExample {
+  operator: string;
+  example: string;
+  guidance: string;
+}
+
 export interface ResolvedMarketingSample extends MarketingSample {
   demo: DemoPage;
 }
 
 export const CREDIBILITY_POINTS = [
-  "Free account",
-  "Keep your PDF",
+  "Keep your ATS-safe resume",
   "Personal page URL",
+  "Start from current resume text",
   "No design skills",
 ];
 
 export const PROCESS_STEPS = [
   {
-    title: "Paste your current resume",
-    body: "Start with what you already have. No redesign or formatting marathon required.",
+    title: "Start with resume text that already works",
+    body: "Paste the resume you already use for applications and keep the clean structure that ATS systems need.",
   },
   {
-    title: "Choose a living theme",
-    body: "Pick a visual direction that feels like you without touching code or layout tools.",
+    title: "Turn it into a living page",
+    body: "Choose a theme and shape the same experience into a page recruiters and hiring managers can scan quickly.",
   },
   {
-    title: "Publish one link",
-    body: "Share the same page in outreach, referrals, LinkedIn, and follow-up emails while keeping your PDF for ATS systems.",
+    title: "Send one link after the click",
+    body: "Keep your ATS-safe resume attached when required, then use the same page in outreach, referrals, LinkedIn, and follow-ups.",
   },
 ];
 
 export const COMPARISON_ROWS = [
   {
-    label: "How you update it",
-    resume: "Create a new PDF every time something changes.",
-    livingPage: "Edit once and keep sharing the same link.",
+    label: "How you get surfaced",
+    resume: "Needs clean extraction, exact titles, and explicit keywords to appear in recruiter searches.",
+    livingPage: "Gives someone instant context once they open your link after the search result or email.",
   },
   {
-    label: "What someone sees first",
-    resume: "A download tab and a dense document.",
-    livingPage: "A page with your story, links, and work already live.",
+    label: "What happens after the click",
+    resume: "Often opens as a download tab or dense document that takes work to scan.",
+    livingPage: "Presents your story, links, and proof in a format built for quick understanding.",
   },
   {
-    label: "Where it works",
-    resume: "Mostly as an attachment.",
-    livingPage: "In applications, outreach, referrals, and your LinkedIn profile.",
+    label: "How you keep it current",
+    resume: "Create and resend a new file whenever something changes.",
+    livingPage: "Update one page and keep sharing the same URL everywhere your search goes.",
   },
   {
-    label: "What you own",
-    resume: "Another file in somebody else's inbox.",
-    livingPage: "A professional URL that stays current as your search moves.",
+    label: "Where it helps",
+    resume: "Mostly inside applications that require attachments.",
+    livingPage: "Works in networking, referrals, LinkedIn, follow-ups, and any moment a human can click.",
   },
 ];
 
 export const PRICING_REASSURANCE = {
   free: [
     "One living page",
-    "Core themes and guided resume setup",
+    "Core themes and guided setup from your current resume",
     "Public page URL",
     "Start free with no credit card",
   ],
@@ -85,6 +91,44 @@ export const PRICING_REASSURANCE = {
     `Upgrade anytime for ${PRO_PLAN_PRICE.displayLabel}`,
   ],
 };
+
+export const READABILITY_TEST_STEPS = [
+  "Open your resume PDF and highlight a few lines with your mouse.",
+  "Copy that text and paste it into Notepad or TextEdit.",
+  "If the pasted text breaks, fix the resume before you send it anywhere.",
+];
+
+export const READABILITY_FAILURE_SIGNALS = [
+  "Sections disappear even though they looked fine visually.",
+  "Bullets turn into question marks or odd symbols.",
+  "Words run together without normal spacing.",
+  "Random characters replace clean text.",
+];
+
+export const SEARCH_OPERATOR_EXAMPLES: SearchOperatorExample[] = [
+  {
+    operator: "AND",
+    example: '"Product Manager" AND "SQL"',
+    guidance: "Use exact titles and explicit skill names, not only implied concepts.",
+  },
+  {
+    operator: "OR",
+    example: '"Product Manager" OR "Product Owner"',
+    guidance: "Include relevant title variations when they honestly match the work you have done.",
+  },
+  {
+    operator: "NOT",
+    example: '"Engineer" NOT "Intern"',
+    guidance: "Be deliberate about how level words appear, because they can affect which searches include you.",
+  },
+];
+
+export const SEARCH_VISIBILITY_CHECKLIST = [
+  "Use the exact target title in your headline when it genuinely fits.",
+  "Mention critical skills explicitly, not just conceptually.",
+  "Add a small set of relevant title variations in your summary when helpful.",
+  'Use both full and abbreviated forms, such as "User Experience (UX)."',
+];
 
 export const MARKETING_SAMPLE_GROUPS: MarketingSampleGroup[] = [
   {

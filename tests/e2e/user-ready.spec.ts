@@ -35,7 +35,7 @@ test("email signup shows a pending-confirmation message", async ({ page }) => {
   await page.getByRole("checkbox").check();
   await page.getByPlaceholder("Email address").fill(uniqueEmail);
   await page.getByPlaceholder("Create password").fill("PlaywrightPass123!");
-  await page.getByRole("button", { name: "Create My Page" }).click();
+  await page.getByRole("button", { name: "Start From My Resume" }).click();
 
   await expect(page.getByText("Check your email to confirm your account")).toBeVisible();
 });
@@ -76,6 +76,22 @@ test.describe.serial("authenticated user journeys", () => {
     await publicUrlInput.fill(nextSlug);
     await page.getByRole("button", { name: "Save" }).nth(1).click();
     await expect(page.getByText("Username updated")).toBeVisible();
+  });
+
+  test("signup intent can carry an ATS-focused ref into the create flow for existing users", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await page.goto("/signup?ref=landing_self_test&next=/create");
+    await page.getByRole("link", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/login\?next=%2Fcreate%3Fref%3Dlanding_self_test/);
+
+    await page.getByPlaceholder("Email address").fill(process.env.PLAYWRIGHT_TEST_EMAIL ?? "");
+    await page.getByPlaceholder("Password").fill(process.env.PLAYWRIGHT_TEST_PASSWORD ?? "");
+    await page.getByRole("button", { name: "Sign In" }).click();
+
+    await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
+    await expect(page.getByRole("heading", { name: "Start from the ATS-safe resume you already use." })).toBeVisible();
+    await expect(page.getByText("Recommended")).toBeVisible();
   });
 
   test("billing checkout, webhook unlock, portal access, and downgrade stay healthy", async ({ page }) => {

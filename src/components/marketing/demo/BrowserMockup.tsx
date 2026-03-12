@@ -7,6 +7,11 @@ interface BrowserMockupProps {
   viewMode: ViewMode;
   onThemeChange: (key: DemoThemeKey) => void;
   onViewModeChange: (mode: ViewMode) => void;
+  themeOptions?: DemoThemeKey[];
+  viewModeOptions?: ViewMode[];
+  showThemeControls?: boolean;
+  showViewModeControls?: boolean;
+  maxViewportHeightClassName?: string;
   children: ReactNode;
 }
 
@@ -19,6 +24,11 @@ export default function BrowserMockup({
   viewMode,
   onThemeChange,
   onViewModeChange,
+  themeOptions = themes,
+  viewModeOptions = viewModes,
+  showThemeControls = true,
+  showViewModeControls = true,
+  maxViewportHeightClassName = "max-h-[75vh]",
   children,
 }: BrowserMockupProps) {
   return (
@@ -46,8 +56,8 @@ export default function BrowserMockup({
         {/* Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Theme dots */}
-          <div className={`flex gap-1 transition-all duration-400 ${isPro ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            {themes.map((key) => (
+          <div className={`flex gap-1 transition-all duration-400 ${isPro && showThemeControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+            {themeOptions.map((key) => (
               <button
                 key={key}
                 type="button"
@@ -60,8 +70,8 @@ export default function BrowserMockup({
           </div>
 
           {/* View mode tabs */}
-          <div className={`hidden sm:flex gap-1 transition-all duration-400 ${isPro ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            {viewModes.map((mode) => (
+          <div className={`hidden sm:flex gap-1 transition-all duration-400 ${isPro && showViewModeControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+            {viewModeOptions.map((mode) => (
               <button
                 key={mode}
                 type="button"
@@ -83,7 +93,7 @@ export default function BrowserMockup({
       </div>
 
       {/* Viewport */}
-      <div className="max-h-[75vh] overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(59,130,246,0.15) transparent" }}>
+      <div className={`${maxViewportHeightClassName} overflow-y-auto`} style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(59,130,246,0.15) transparent" }}>
         {children}
       </div>
     </div>

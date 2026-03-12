@@ -10,6 +10,10 @@ import { getMarketingSampleGroups } from "@/lib/marketing-samples";
 
 const canonicalUrl = getAbsoluteUrl("/examples");
 
+function getSignupHref(ref: string) {
+  return `/signup?ref=${ref}&next=/create`;
+}
+
 export const metadata: Metadata = {
   title: `Examples | ${SITE_NAME}`,
   description:
@@ -60,10 +64,10 @@ export default function ExamplesPage() {
                 Back Home
               </Link>
               <Link
-                href="/signup?ref=examples_nav"
+                href={getSignupHref("examples_nav_start")}
                 className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
               >
-                Build My Page
+                Start Free
               </Link>
             </div>
           </nav>
@@ -73,17 +77,17 @@ export default function ExamplesPage() {
           <section className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-10 sm:px-10 sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Sample pages</p>
             <h1 className="mt-3 max-w-4xl font-heading text-4xl font-bold leading-[1.04] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              See what the human click can look like.
+              See what the human click can look like after the application is already in.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.64)] sm:text-lg">
-              These are sample pages, not customer testimonials. Use them to see how different job-search moments can be framed once your ATS-safe resume has done the machine work of getting you seen.
+              These are sample pages, not customer testimonials. Use them to see how different follow-up moments can be framed once your ATS-safe resume has already handled extraction and search visibility.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                href="/signup?ref=examples_hero_primary"
+                href={getSignupHref("examples_after_apply")}
                 className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
               >
-                Build My Page Free
+                Start Free
               </Link>
               <Link
                 href="/pricing"
@@ -108,7 +112,8 @@ export default function ExamplesPage() {
                       sample={sample}
                       anchorId={sample.id}
                       interactivePreview
-                      signupHref={`/signup?ref=examples_${sample.id}`}
+                      previewHeight={500}
+                      signupHref={getSignupHref(`examples_${sample.id}`)}
                     />
                   ))}
                 </div>
@@ -122,10 +127,10 @@ export default function ExamplesPage() {
                 <div className="max-w-3xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Guides</p>
                   <h2 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                    Read the ATS and recruiter search guides behind these examples.
+                    Read the guide sequence behind these examples.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.62)]">
-                    These examples show the human click. The guides explain the machine visibility and recruiter search behavior that happen before it.
+                    Use the guides in order: check whether the resume can be read, make sure the search terms are explicit, then decide how to use a page after the click.
                   </p>
                 </div>
                 <Link
@@ -158,14 +163,14 @@ export default function ExamplesPage() {
                 Ready to keep your ATS-safe resume and send a better page?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-                Start with the resume you already use. Publish a page that is easier to scan, keep the same link live everywhere, and upgrade later if you want a fresh PDF and QR-ready share card from the same source.
+                Start with the resume you already use for applications. Then publish one page that is easier for people to scan in follow-ups, referrals, and recruiter outreach.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href="/signup?ref=examples_final_cta"
+                  href={getSignupHref("examples_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                 >
-                  Build My Page Free
+                  Start Free
                 </Link>
                 <Link
                   href="/"

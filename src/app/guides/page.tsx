@@ -11,6 +11,10 @@ const description =
   "Answer-first guides on ATS readability, recruiter keyword search behavior, and when to use a living page alongside your PDF resume.";
 const canonicalUrl = getAbsoluteUrl("/guides");
 
+function getSignupHref(ref: string) {
+  return `/signup?ref=${ref}&next=/create`;
+}
+
 export const metadata: Metadata = {
   title,
   description,
@@ -49,10 +53,10 @@ export default async function GuidesPage() {
                 Examples
               </Link>
               <Link
-                href="/signup?ref=guides_nav"
+                href={getSignupHref("guides_nav_start")}
                 className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
               >
-                Build My Page
+                Start From My Resume
               </Link>
             </div>
           </nav>
@@ -62,17 +66,17 @@ export default async function GuidesPage() {
           <section className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-10 sm:px-10 sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Guides</p>
             <h1 className="mt-3 max-w-4xl font-heading text-4xl font-bold leading-[1.04] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              Learn how to stay visible and easier to scan.
+              Use the right guide at the right moment in the funnel.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.64)] sm:text-lg">
-              Start with the resume you already use, publish a page that is easier to scan, download a fresh PDF from the same information, generate a QR-ready share card, and keep one link wherever a recruiter or hiring manager can click.
+              Start with the resume you already use. First make sure it can be read, then make sure it can be found, then decide how to use one living page after a human clicks.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                href="/signup?ref=guides_hero_primary"
+                href={getSignupHref("guides_start_here")}
                 className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
               >
-                Build My Page Free
+                Start From My Resume
               </Link>
               <Link
                 href="/pricing"
@@ -85,25 +89,25 @@ export default async function GuidesPage() {
 
           <GuideLinkGrid
             eyebrow="Start here"
-            title="Three practical guides for ATS visibility and the human click"
-            description="These pages focus on the parts of the job search that matter first: whether the system can read you, whether the recruiter can find you, and how to use one living page, one fresh PDF, and one share card together."
+            title="Three practical guides, in the order active applicants usually need them"
+            description="Guide one helps you check the file. Guide two helps you match recruiter search behavior. Guide three shows where a living page fits after the click."
             className="mt-12"
           />
 
           <section className="mt-14 text-center sm:mt-20">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.18)] px-6 py-10 sm:px-10 sm:py-12">
               <h2 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                Ready to turn your resume into a page people actually open?
+                Ready to start from the resume you already use?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-                Keep the ATS-safe resume for applications, then use MyLivingPage to publish a clearer page, export a fresh PDF, and share one link everywhere the search takes you.
+                Keep the ATS-safe resume for applications, then use MyLivingPage to publish a clearer page for the moment a recruiter, hiring manager, or referral can click.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href="/signup?ref=guides_final_cta"
+                  href={getSignupHref("guides_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                 >
-                  Build My Page Free
+                  Start From My Resume
                 </Link>
                 <Link
                   href="/examples"

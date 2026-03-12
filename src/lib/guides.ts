@@ -17,6 +17,7 @@ export interface GuideEntry {
   slug: GuideSlug;
   title: string;
   description: string;
+  decisionStage: string;
   answer: string;
   summary: string;
   hubSummary: string;
@@ -34,6 +35,7 @@ export const GUIDES: GuideEntry[] = [
     title: "ATS Resume Test: How to Check If Your Resume Is Readable",
     description:
       "Run a 30-second ATS resume test to see whether your PDF extracts clean text and what to fix before you apply.",
+    decisionStage: "Before you apply",
     answer:
       "Open the PDF, highlight a few lines, copy them into plain text, and compare the result. If sections disappear, bullets break, or spacing collapses, fix the resume before you apply.",
     summary:
@@ -80,6 +82,7 @@ export const GUIDES: GuideEntry[] = [
     title: "Recruiter Search Keywords: How Exact Titles and Skills Affect Visibility",
     description:
       "Learn how exact job titles, explicit skill names, and title variations affect whether a recruiter ever sees your resume in search.",
+    decisionStage: "Get found in search",
     answer:
       "Recruiters often search with exact titles and exact skill strings. If your resume implies a concept but never names it, you can be invisible to the search before a person reviews the rest.",
     summary:
@@ -125,6 +128,7 @@ export const GUIDES: GuideEntry[] = [
     title: "Living Page vs PDF Resume: When Job Seekers Should Use Each One",
     description:
       "Use an ATS-safe resume for machine visibility and a living page for the human click, then create a fresh PDF and share card from the same source.",
+    decisionStage: "After the click",
     answer:
       "Use both. Keep the ATS-safe resume for applications that require a document, then use a living page when you need something faster to scan, easier to share, and easier to keep current.",
     summary:

@@ -8,6 +8,7 @@ interface ThemeCanvasProps {
   themeId: ThemeId;
   height?: number | string;
   className?: string;
+  style?: React.CSSProperties;
   interactive?: boolean;
   children?: React.ReactNode;
 }
@@ -16,6 +17,7 @@ export default function ThemeCanvas({
   themeId,
   height = 320,
   className,
+  style,
   interactive = true,
   children,
 }: ThemeCanvasProps) {
@@ -107,7 +109,16 @@ export default function ThemeCanvas({
   }, [interactive, theme]);
 
   return (
-    <div ref={containerRef} className={className} style={{ position: "relative", overflow: "hidden", ...(!className?.includes("rounded-none") ? { borderRadius: 16 } : {}) }}>
+    <div
+      ref={containerRef}
+      className={className}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        ...(!className?.includes("rounded-none") ? { borderRadius: 16 } : {}),
+        ...style,
+      }}
+    >
       <canvas
         ref={canvasRef}
         style={{

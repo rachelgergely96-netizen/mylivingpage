@@ -50,8 +50,8 @@ export default function LandingSampleShowcase({ groups }: LandingSampleShowcaseP
               onClick={() => setActiveGroupId(group.id)}
               className={`rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition-all ${
                 isActive
-                  ? "border-[rgba(59,130,246,0.4)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
-                  : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.48)] hover:border-[rgba(59,130,246,0.24)] hover:text-[#BFDBFE]"
+                  ? "border-[rgba(229,183,107,0.4)] bg-[rgba(229,183,107,0.12)] text-[#F5D7A2]"
+                  : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.48)] hover:border-[rgba(229,183,107,0.24)] hover:text-[#F7F1E8]"
               }`}
               aria-pressed={isActive}
             >
@@ -125,8 +125,9 @@ export default function LandingSampleShowcase({ groups }: LandingSampleShowcaseP
       <div className="mt-6">
         <SamplePageCard
           sample={activeSample}
-          signupHref={`/signup?ref=${activeSample.ctaRef}`}
+          signupHref={`/signup?ref=${activeSample.ctaRef}&next=/create`}
           previewHref={`/examples#${activeSample.id}`}
+          previewHeight={460}
         />
       </div>
     </div>

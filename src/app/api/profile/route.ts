@@ -10,7 +10,7 @@ export async function GET() {
   const supabase = createServiceRoleSupabaseClient();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, username, full_name, email, avatar_url, plan, created_at")
+    .select("id, username, full_name, email, avatar_url, plan, created_at, signup_referrer")
     .eq("id", user.id)
     .single();
 
@@ -22,7 +22,12 @@ export async function GET() {
   const providers = user.app_metadata?.providers as string[] | undefined;
   const hasPassword = providers?.includes("email") ?? !!user.email;
 
-  return NextResponse.json({ ...profile, hasPassword });
+  return NextResponse.json({
+    ...profile,
+    signup_referrer:
+      profile.signup_referrer ?? ((user.user_metadata?.signup_referrer as string | undefined) ?? null),
+    hasPassword,
+  });
 }
 
 /** PATCH /api/profile — update full_name */

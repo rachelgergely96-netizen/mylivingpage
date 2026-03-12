@@ -13,6 +13,10 @@ interface GuidePageProps {
   params: Promise<{ slug: string }>;
 }
 
+function getSignupHref(ref: string) {
+  return `/signup?ref=${ref}&next=/create`;
+}
+
 function formatGuideDate(value: string): string {
   return new Date(value).toLocaleDateString("en-US", {
     month: "long",
@@ -93,10 +97,10 @@ export default async function GuidePage({ params }: GuidePageProps) {
               </Link>
             </div>
             <Link
-              href={`/signup?ref=guide_${guide.slug}_nav`}
+              href={getSignupHref(`guide_${guide.slug}_nav`)}
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Build My Page
+              Start From My Resume
             </Link>
           </nav>
         </header>
@@ -112,6 +116,9 @@ export default async function GuidePage({ params }: GuidePageProps) {
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.45)]">
+              <span className="rounded-full border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-[#93C5FD]">
+                {guide.decisionStage}
+              </span>
               <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
                 By {guide.author}
               </span>
@@ -154,13 +161,13 @@ export default async function GuidePage({ params }: GuidePageProps) {
 
           <section className="mt-10 grid gap-4 lg:grid-cols-3">
             <Link
-              href={`/signup?ref=guide_${guide.slug}_signup`}
+              href={getSignupHref(`guide_${guide.slug}_build`)}
               className="glass-card rounded-[1.75rem] border border-[rgba(59,130,246,0.18)] px-6 py-6 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.35)]"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Build</p>
-              <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">Build a page from the resume you already use</h2>
+              <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">Start from the resume you already use</h2>
               <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-                Keep the ATS-safe resume for applications, then publish one page that is easier to scan after the click.
+                Keep the ATS-safe resume for applications, then publish one page that is easier to scan once a person wants more context.
               </p>
             </Link>
             <Link
@@ -180,7 +187,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Examples</p>
               <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">See sample pages recruiters can scan quickly</h2>
               <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-                Review real page shapes for layoffs, pivots, and credibility-first searches before you build your own.
+                Review real page shapes for follow-up, recruiter-click, and referral moments before you build your own.
               </p>
             </Link>
           </section>
@@ -200,6 +207,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
                     >
                       {relatedGuide.title}
                     </Link>
+                    <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">{relatedGuide.decisionStage}</p>
                     <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">{relatedGuide.summary}</p>
                     <Link
                       href={`/guides/${relatedGuide.slug}`}

@@ -2,7 +2,19 @@
 
 import { FormEvent, useState } from "react";
 
-export default function WaitlistForm() {
+interface WaitlistFormProps {
+  buttonLabel?: string;
+  successMessage?: string;
+  className?: string;
+  inputPlaceholder?: string;
+}
+
+export default function WaitlistForm({
+  buttonLabel = "Join Waitlist",
+  successMessage = "You are on the list.",
+  className = "",
+  inputPlaceholder = "your@email.com",
+}: WaitlistFormProps) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -31,7 +43,7 @@ export default function WaitlistForm() {
       }
 
       setStatus("success");
-      setMessage(payload.message ?? "You are on the list.");
+      setMessage(successMessage || payload.message || "You are on the list.");
       setEmail("");
     } catch (error) {
       setStatus("error");
@@ -40,13 +52,17 @@ export default function WaitlistForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row">
+    <form
+      onSubmit={onSubmit}
+      className={`mx-auto mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row ${className}`.trim()}
+      data-testid="waitlist-fallback-form"
+    >
       <input
         className="h-12 w-full rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)] px-5 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
-        placeholder="your@email.com"
+        placeholder={inputPlaceholder}
         required
       />
       <button
@@ -54,7 +70,7 @@ export default function WaitlistForm() {
         disabled={status === "loading"}
         className="gold-pill h-12 shrink-0 px-7 text-sm font-semibold transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {status === "loading" ? "Joining..." : "Join Waitlist"}
+        {status === "loading" ? "Joining..." : buttonLabel}
       </button>
       {message ? (
         <p className={`w-full text-xs ${status === "error" ? "text-[#ff8e8e]" : "text-[#3B82F6]"}`}>{message}</p>

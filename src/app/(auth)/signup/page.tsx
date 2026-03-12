@@ -15,7 +15,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
-  const [nextPath, setNextPath] = useState("/dashboard");
+  const [nextPath, setNextPath] = useState("/create");
   const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
 
@@ -28,6 +28,12 @@ export default function SignupPage() {
     const ref = params.get("ref") || params.get("utm_source") || null;
     if (ref) setSignupReferrer(ref);
   }, []);
+
+  const signInNextPath =
+    signupReferrer && nextPath.startsWith("/create") && !nextPath.includes("ref=")
+      ? `${nextPath}${nextPath.includes("?") ? "&" : "?"}ref=${encodeURIComponent(signupReferrer)}`
+      : nextPath;
+  const signInHref = `/login?next=${encodeURIComponent(signInNextPath)}`;
 
   const onSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,25 +129,16 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
-      <div className="glass-card w-full rounded-2xl p-7 md:p-8">
+    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-5 py-10 sm:px-6 sm:py-12">
+      <div className="glass-card w-full rounded-2xl p-6 md:p-7">
         <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Start Free</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Keep your ATS-safe resume. Build the page people read.</h1>
-        <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.55)]">
-          Start with email or Google. Keep the ATS-safe resume you already use for applications, then build one page recruiters and hiring managers can understand faster once they click.
+        <h1 className="mt-2 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-[2.2rem]">
+          Start from the resume you already use.
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+          Keep your resume intact for applications, then publish one page when you are ready.
         </p>
-        <div className="mt-5 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.45)]">
-          <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-            No credit card
-          </span>
-          <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-            Keep ATS-safe resume
-          </span>
-          <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-            Start from current resume
-          </span>
-        </div>
-        <label className="mt-5 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+        <label className="mt-4 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
           <input
             type="checkbox"
             checked={acceptedLegal}
@@ -168,12 +165,12 @@ export default function SignupPage() {
           type="button"
           onClick={onGoogleSignup}
           disabled={status === "loading"}
-          className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-4 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Start with Google
         </button>
 
-        <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
+        <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
           <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
           Or
           <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
@@ -202,7 +199,7 @@ export default function SignupPage() {
             disabled={status === "loading"}
             className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
           >
-            {status === "loading" ? "Creating..." : "Create My Page"}
+            {status === "loading" ? "Starting..." : "Start From My Resume"}
           </button>
         </form>
 
@@ -210,9 +207,13 @@ export default function SignupPage() {
           <p className={`mt-4 text-sm ${status === "error" ? "text-[#ff8e8e]" : "text-[#3B82F6]"}`}>{message}</p>
         ) : null}
 
-        <p className="mt-5 text-sm text-[rgba(240,244,255,0.45)]">
+        <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
+          No credit card. One free page to start. Upgrade later only if you want exports, premium themes, or analytics.
+        </p>
+
+        <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#3B82F6] hover:text-[#93C5FD]">
+          <Link href={signInHref} className="text-[#3B82F6] hover:text-[#93C5FD]">
             Sign in
           </Link>
         </p>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
@@ -18,6 +18,7 @@ import { FREE_THEMES, MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 
 type Step = "input" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
+type EntryPreference = "resume-first" | "page-first" | "neutral";
 
 interface CreateDraft {
   resumeText: string;
@@ -99,8 +100,63 @@ function parseSseChunk(chunk: string, onMessage: (payload: { type: string; [key:
   return remainder;
 }
 
+function getEntryPreference(referrer: string | null): EntryPreference {
+  if (!referrer) {
+    return "neutral";
+  }
+
+  const value = referrer.toLowerCase();
+
+  if (
+    value.includes("example") ||
+    value.includes("recruiter_click") ||
+    value.includes("referral") ||
+    value.includes("after_click")
+  ) {
+    return "page-first";
+  }
+
+  if (
+    value.includes("ats") ||
+    value.includes("keyword") ||
+    value.includes("self_test") ||
+    value.includes("apply")
+  ) {
+    return "resume-first";
+  }
+
+  return "neutral";
+}
+
+function getCreateIntro(referrer: string | null) {
+  const preference = getEntryPreference(referrer);
+
+  if (preference === "resume-first") {
+    return {
+      heading: "Start from the ATS-safe resume you already use.",
+      body: "You came from ATS or search guidance, so paste mode is recommended first. Keep the application resume intact, then turn it into the page people read after the click.",
+      recommendedMode: "paste" as const,
+    };
+  }
+
+  if (preference === "page-first") {
+    return {
+      heading: "Start from the page you want people to open.",
+      body: "You came from sample pages or follow-up content, so guided mode is recommended first. Shape the human click without replacing the resume you still use for applications.",
+      recommendedMode: "guided" as const,
+    };
+  }
+
+  return {
+    heading: "How would you like to start?",
+    body: "Start from the resume you already use for applications, then turn it into a page people can scan faster once they click.",
+    recommendedMode: "paste" as const,
+  };
+}
+
 export default function CreatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
   const [inputMode, setInputMode] = useState<InputMode>("choose");
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>({
@@ -121,10 +177,34 @@ export default function CreatePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const guidedModeRef = useRef(false);
+  const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string>("spark");
   const [pageCount, setPageCount] = useState<number>(0);
   const premium = isPremiumPlan(userPlan);
   const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
+  const queryReferrer = searchParams.get("ref");
+  const activeReferrer = queryReferrer ?? signupReferrer;
+  const createIntro = useMemo(() => getCreateIntro(activeReferrer), [activeReferrer]);
+  const inputOptions = useMemo(() => {
+    const pasteOption = {
+      mode: "paste" as const,
+      icon: "◈",
+      title: "Paste Resume",
+      body: "Paste the ATS-safe resume you already use and let AI structure it for the page people read after the click.",
+      duration: "Quick — ~2 min",
+    };
+    const guidedOption = {
+      mode: "guided" as const,
+      icon: "✦",
+      title: "Build It Together",
+      body: "Answer a few prompts and shape a page recruiters and hiring managers can understand faster once they click.",
+      duration: "Guided — ~5 min",
+    };
+
+    return createIntro.recommendedMode === "guided"
+      ? [guidedOption, pasteOption]
+      : [pasteOption, guidedOption];
+  }, [createIntro.recommendedMode]);
 
   // Draft persistence
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<CreateDraft>("mlp-draft-create");
@@ -145,9 +225,23 @@ export default function CreatePage() {
     setGuidedData(d.guidedData ?? { name: "", headline: "", location: "", email: null, linkedin: null, github: null, website: null, avatar_url: null, summary: "", experience: [], education: [], projects: [], skills: [{ category: "General", items: [] }], certifications: [], stats: [] });
     setSelectedTheme(d.selectedTheme ?? "cosmic");
     setInputMode(d.inputMode ?? "choose");
+    guidedModeRef.current = d.inputMode === "guided";
     if (d.step === "theme") setStep("theme");
     dismissDraft();
   }, [pendingDraft, dismissDraft]);
+
+  const trackCreateEvent = useCallback(async (eventName: string, metadata: Record<string, unknown> = {}) => {
+    try {
+      await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({ eventName, metadata }),
+      });
+    } catch {
+      // Ignore tracking failures.
+    }
+  }, []);
 
   // Fetch user plan and page count on mount
   useEffect(() => {
@@ -157,16 +251,46 @@ export default function CreatePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const [profileRes, pagesRes] = await Promise.all([
-          supabase.from("profiles").select("plan, username").eq("id", user.id).maybeSingle(),
+          supabase.from("profiles").select("plan, username, signup_referrer").eq("id", user.id).maybeSingle(),
           supabase.from("pages").select("id", { count: "exact", head: true }).or(`user_id.eq.${user.id},owner_id.eq.${user.id}`),
         ]);
         setUserPlan(profileRes.data?.plan ?? "spark");
         setPublicSlug(profileRes.data?.username ?? usernameFromEmail(user.email));
+        setSignupReferrer(profileRes.data?.signup_referrer ?? null);
         setPageCount(pagesRes.count ?? 0);
       } catch { /* ignore */ }
     };
     fetchPlanInfo();
   }, []);
+
+  useEffect(() => {
+    const fetchReferrer = async () => {
+      try {
+        const response = await fetch("/api/profile");
+        if (!response.ok) {
+          return;
+        }
+        const profile = (await response.json()) as { signup_referrer?: string | null };
+        setSignupReferrer(profile.signup_referrer ?? null);
+      } catch {
+        // Ignore.
+      }
+    };
+
+    if (!queryReferrer) {
+      void fetchReferrer();
+    }
+  }, [queryReferrer]);
+
+  const handleInputModeSelect = (mode: Extract<InputMode, "paste" | "guided">) => {
+    setInputMode(mode);
+    guidedModeRef.current = mode === "guided";
+    void trackCreateEvent("create.mode_selected", {
+      mode,
+      source_ref: activeReferrer,
+      recommended_mode: createIntro.recommendedMode,
+    });
+  };
 
   const themes = useMemo(() => THEME_REGISTRY.filter((theme) => PREVIEW_THEMES.includes(theme.id)), []);
 
@@ -291,6 +415,11 @@ export default function CreatePage() {
         throw new Error(result.error ?? "Publish failed.");
       }
 
+      await trackCreateEvent("create.completed", {
+        source_ref: activeReferrer,
+        input_mode: guidedModeRef.current ? "guided" : "paste",
+        theme_id: selectedTheme,
+      });
       clearDraft();
       const nextSlug = result.slug ?? publicSlug ?? usernameFromEmail(user.email);
       setPublicSlug(nextSlug);
@@ -359,39 +488,37 @@ export default function CreatePage() {
       {!atPageLimit && step === "input" && inputMode === "choose" ? (
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
-          <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">How would you like to start?</h2>
+          <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">{createIntro.heading}</h2>
           <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">
-            Start from the resume you already use for applications, then turn it into a page people can scan faster once they click.
+            {createIntro.body}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => { setInputMode("paste"); guidedModeRef.current = false; }}
-              className="group rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 sm:p-6 text-left transition-all duration-300 ease-soft hover:-translate-y-1 hover:border-[rgba(59,130,246,0.3)] hover:bg-[rgba(59,130,246,0.05)]"
-            >
-              <p className="mb-3 text-2xl text-[#3B82F6]">&#x25C8;</p>
-              <h3 className="font-heading text-xl font-bold text-[#F0F4FF]">Paste Resume</h3>
-              <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
-                Already have an ATS-safe resume? Paste the text and let AI structure it for your page.
-              </p>
-              <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] group-hover:text-[#3B82F6] transition-colors">
-                Quick &mdash; ~2 min
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setInputMode("guided"); guidedModeRef.current = true; }}
-              className="group rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 sm:p-6 text-left transition-all duration-300 ease-soft hover:-translate-y-1 hover:border-[rgba(59,130,246,0.3)] hover:bg-[rgba(59,130,246,0.05)]"
-            >
-              <p className="mb-3 text-2xl text-[#3B82F6]">&#x2726;</p>
-              <h3 className="font-heading text-xl font-bold text-[#F0F4FF]">Build It Together</h3>
-              <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
-                Answer a few prompts and build a page recruiters and hiring managers can understand faster.
-              </p>
-              <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] group-hover:text-[#3B82F6] transition-colors">
-                Guided &mdash; ~5 min
-              </p>
-            </button>
+            {inputOptions.map((option) => {
+              const recommended = option.mode === createIntro.recommendedMode;
+
+              return (
+                <button
+                  key={option.mode}
+                  type="button"
+                  onClick={() => handleInputModeSelect(option.mode)}
+                  className="group rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 sm:p-6 text-left transition-all duration-300 ease-soft hover:-translate-y-1 hover:border-[rgba(59,130,246,0.3)] hover:bg-[rgba(59,130,246,0.05)]"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="mb-3 text-2xl text-[#3B82F6]">{option.icon}</p>
+                    {recommended ? (
+                      <span className="rounded-full border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD]">
+                        Recommended
+                      </span>
+                    ) : null}
+                  </div>
+                  <h3 className="font-heading text-xl font-bold text-[#F0F4FF]">{option.title}</h3>
+                  <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.5)]">{option.body}</p>
+                  <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] group-hover:text-[#3B82F6] transition-colors">
+                    {option.duration}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </section>
       ) : null}

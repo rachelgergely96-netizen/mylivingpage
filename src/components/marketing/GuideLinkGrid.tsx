@@ -30,9 +30,10 @@ export default function GuideLinkGrid({
             key={guide.slug}
             className="rounded-[1.5rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5"
           >
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">{guide.decisionStage}</p>
             <Link
               href={`/guides/${guide.slug}`}
-              className="font-heading text-2xl font-bold leading-tight text-[#F0F4FF] transition-colors hover:text-[#BFDBFE]"
+              className="mt-3 block font-heading text-2xl font-bold leading-tight text-[#F0F4FF] transition-colors hover:text-[#BFDBFE]"
             >
               {guide.title}
             </Link>

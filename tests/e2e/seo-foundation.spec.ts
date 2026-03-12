@@ -113,11 +113,12 @@ test("guide articles link into the funnel with distinct CTA refs", async ({ page
   await page.goto("/guides/ats-resume-test");
 
   await expect(page.getByText("Short answer")).toBeVisible();
+  await expect(page.getByText("Before you apply", { exact: true })).toBeVisible();
   await expect(page.getByText("By MyLivingPage Editorial Team")).toBeVisible();
   await expect(page.locator('time[dateTime="2026-03-12"]')).toHaveText("March 12, 2026");
-  await expect(page.getByRole("link", { name: "Build a page from the resume you already use" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Start from the resume you already use" })).toHaveAttribute(
     "href",
-    "/signup?ref=guide_ats-resume-test_signup",
+    "/signup?ref=guide_ats-resume-test_build&next=/create",
   );
   await expect(page.getByRole("link", { name: "See sample pages recruiters can scan quickly" })).toHaveAttribute(
     "href",

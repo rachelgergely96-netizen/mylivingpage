@@ -10,6 +10,7 @@ import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { isPremiumPlan } from "@/lib/plans";
+import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { ThemeId } from "@/themes/types";
 
@@ -33,24 +34,27 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
   const page = await fetchPublicLivePage(supabase, username);
   if (!page) {
     return {
-      title: "MyLivingPage",
+      title: SITE_NAME,
       description: "Living digital pages for professionals.",
     };
   }
 
   const resume = page.resume_data;
-  const title = `${resume.name} - ${resume.headline} | MyLivingPage`;
-  const description = resume.summary;
-  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${username}`;
+  const title = `${resume.name} - ${resume.headline} | ${SITE_NAME}`;
+  const description = resume.summary || `${resume.name}'s professional profile on ${SITE_NAME}.`;
+  const url = absoluteUrl(`/${username}`);
 
   return {
     title,
     description,
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
       title,
       description,
       url,
-      siteName: "MyLivingPage",
+      siteName: SITE_NAME,
       type: "profile",
     },
     twitter: {

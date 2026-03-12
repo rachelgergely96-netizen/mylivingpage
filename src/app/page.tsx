@@ -6,6 +6,7 @@ import LandingNav from "@/components/marketing/LandingNav";
 import LandingSampleShowcase from "@/components/marketing/LandingSampleShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { GUIDES } from "@/lib/guides";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   COMPARISON_ROWS,
@@ -18,32 +19,32 @@ import {
   SEARCH_OPERATOR_EXAMPLES,
   SEARCH_VISIBILITY_CHECKLIST,
 } from "@/lib/marketing-samples";
+import { getAbsoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://mylivingpage.com";
-const ogDescription =
-  "Keep an ATS-safe resume for the machines and one living page recruiters actually remember once they click.";
+const canonicalUrl = getAbsoluteUrl("/");
 
 export const metadata: Metadata = {
-  title: "MyLivingPage | Visible to ATS, Memorable to People",
-  description: ogDescription,
-  alternates: { canonical: appUrl },
+  title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: canonicalUrl },
   openGraph: {
-    title: "MyLivingPage | Visible to ATS, Memorable to People",
-    description: ogDescription,
-    url: appUrl,
-    siteName: "MyLivingPage",
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    url: canonicalUrl,
+    siteName: SITE_NAME,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MyLivingPage | Visible to ATS, Memorable to People",
-    description: ogDescription,
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
   },
 };
 
 export default async function LandingPage() {
   const site = await getRequestLegalSite();
   const sampleGroups = getMarketingSampleGroups();
+  const seoGuides = GUIDES.slice(0, 3);
 
   return (
     <div className="relative isolate min-h-screen overflow-x-hidden">
@@ -99,7 +100,7 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Keep your ATS-safe resume for applications. Use one page link everywhere a person can click.
+                Start with the resume you already use, publish one page link everywhere a person can click, and upgrade later for fresh PDF and QR-ready share-card exports.
               </p>
             </div>
           </section>
@@ -211,7 +212,7 @@ export default async function LandingPage() {
                     Keep the ATS-safe resume. Give people a better click.
                   </h3>
                   <p className="mt-3 text-base leading-7 text-[rgba(240,244,255,0.64)]">
-                    Keep your clean resume for applications, then use MyLivingPage to give recruiters and hiring managers a faster, clearer first impression once they open your link.
+                    Keep your clean resume for applications, then use MyLivingPage to publish a page that is easier to scan, keep the same link everywhere, and create a fresh PDF or QR-ready share card when you need portable follow-up assets.
                   </p>
                 </div>
                 <Link
@@ -399,6 +400,52 @@ export default async function LandingPage() {
             </div>
           </section>
 
+          <section id="guides" className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 md:px-10">
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Guides</p>
+                <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
+                  Learn the ATS and recruiter search mechanics behind this pitch.
+                </h2>
+                <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
+                  These answer-first guides explain how ATS readability, recruiter keyword search, and one stable page link work together with PDF export and share-card follow-up assets in a real job search.
+                </p>
+              </div>
+              <Link
+                href="/guides"
+                className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+              >
+                Browse all ATS and recruiter search guides
+              </Link>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              {seoGuides.map((guide) => (
+                <article
+                  key={guide.slug}
+                  className="glass-card rounded-[1.75rem] border border-[rgba(255,255,255,0.08)] p-6"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Guide</p>
+                  <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">
+                    <Link href={`/guides/${guide.slug}`} className="transition-colors hover:text-[#BFDBFE]">
+                      {guide.title}
+                    </Link>
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">{guide.hubSummary}</p>
+                  <div className="mt-6 flex items-center justify-between gap-3 text-xs text-[rgba(240,244,255,0.4)]">
+                    <span>{guide.readTime}</span>
+                    <Link
+                      href={`/guides/${guide.slug}`}
+                      className="font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                    >
+                      Read guide
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <section className="mx-auto w-full max-w-4xl px-4 pb-20 text-center sm:px-6 sm:pb-24 md:px-10">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 sm:px-10 sm:py-12">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
@@ -406,7 +453,7 @@ export default async function LandingPage() {
                 Keep your ATS-safe resume. Give people a better first impression.
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                Start with the resume you already use, publish a page that is easier to scan, and keep the same link wherever a recruiter or hiring manager can click.
+                Start with the resume you already use, publish a page that is easier to scan, and keep the same link wherever a recruiter or hiring manager can click. Upgrade later if you want a fresh PDF and QR-ready share card from the same source.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

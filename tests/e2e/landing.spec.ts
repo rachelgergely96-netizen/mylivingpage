@@ -7,7 +7,7 @@ test("landing page highlights ATS visibility and recruiter search reality", asyn
     page.getByRole("heading", { name: "Keep your resume ATS-safe. Send a page people actually remember." }),
   ).toBeVisible();
 
-  const visibilityNavLink = page.getByRole("link", { name: "Visibility" });
+  const visibilityNavLink = page.getByRole("link", { name: "Visibility", exact: true }).first();
   await expect(visibilityNavLink).toHaveAttribute("href", "#visibility");
 
   const visibilitySection = page.locator("#visibility");

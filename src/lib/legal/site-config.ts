@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_NAME } from "@/lib/site";
 
 export type LegalSiteId = "mylivingpage" | "second-site";
 
@@ -217,14 +218,40 @@ export function getLegalNavItems(siteId: LegalSiteId, includeIndex: boolean = tr
 export function getPolicyMetadata(policyId: LegalPolicyId): Metadata {
   const route = POLICY_ROUTES[policyId];
   return {
-    title: `${route.pageTitle} | MyLivingPage.com`,
+    title: `${route.pageTitle} | ${SITE_NAME}`,
     description: route.seoDescription,
+    alternates: { canonical: route.href },
+    openGraph: {
+      title: `${route.pageTitle} | ${SITE_NAME}`,
+      description: route.seoDescription,
+      url: route.href,
+      siteName: SITE_NAME,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${route.pageTitle} | ${SITE_NAME}`,
+      description: route.seoDescription,
+    },
   };
 }
 
 export function getLegalIndexMetadata(): Metadata {
   return {
-    title: "Legal and Policies | MyLivingPage.com",
-    description: "Browse Terms, Privacy, Cookie, Acceptable Use, DMCA, Disclaimer, and related legal policies.",
+    title: `Legal and Policies | ${SITE_NAME}`,
+    description: "Browse MyLivingPage terms, privacy, and related legal information.",
+    alternates: { canonical: "/legal" },
+    openGraph: {
+      title: `Legal and Policies | ${SITE_NAME}`,
+      description: "Browse MyLivingPage terms, privacy, and related legal information.",
+      url: "/legal",
+      siteName: SITE_NAME,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `Legal and Policies | ${SITE_NAME}`,
+      description: "Browse MyLivingPage terms, privacy, and related legal information.",
+    },
   };
 }

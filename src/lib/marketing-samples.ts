@@ -32,10 +32,10 @@ export interface ResolvedMarketingSample extends MarketingSample {
 }
 
 export const CREDIBILITY_POINTS = [
-  "Keep your ATS-safe resume",
   "Personal page URL",
   "Start from current resume text",
-  "No design skills",
+  "Easier-to-scan page",
+  "PDF and share card options",
 ];
 
 export const PROCESS_STEPS = [
@@ -48,8 +48,8 @@ export const PROCESS_STEPS = [
     body: "Choose a theme and shape the same experience into a page recruiters and hiring managers can scan quickly.",
   },
   {
-    title: "Send one link after the click",
-    body: "Keep your ATS-safe resume attached when required, then use the same page in outreach, referrals, LinkedIn, and follow-ups.",
+    title: "Keep one link and export fresh assets",
+    body: "Keep using the same page link everywhere a person can click, and upgrade later if you want a fresh PDF and QR-ready share card from the same source.",
   },
 ];
 
@@ -67,7 +67,7 @@ export const COMPARISON_ROWS = [
   {
     label: "How you keep it current",
     resume: "Create and resend a new file whenever something changes.",
-    livingPage: "Update one page and keep sharing the same URL everywhere your search goes.",
+    livingPage: "Update one page, keep sharing the same URL, and create fresh sendable assets from the same source when you need them.",
   },
   {
     label: "Where it helps",
@@ -81,6 +81,7 @@ export const PRICING_REASSURANCE = {
     "One living page",
     "Core themes and guided setup from your current resume",
     "Public page URL",
+    "Keep one page link current",
     "Start free with no credit card",
   ],
   pro: [

@@ -1,13 +1,40 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import ComparisonTable from "@/components/marketing/demo/ComparisonTable";
 import { COMPARISON_FEATURES } from "@/components/marketing/demo/demo-data";
 import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { GUIDES } from "@/lib/guides";
+import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
 
 const freeFeatures = COMPARISON_FEATURES.filter((f) => f.free).map((f) => f.feature);
 const proOnlyFeatures = COMPARISON_FEATURES.filter((f) => f.pro && !f.free).map((f) => f.feature);
+const canonicalUrl = getAbsoluteUrl("/pricing");
+
+export const metadata: Metadata = {
+  title: `Pricing | ${SITE_NAME}`,
+  description:
+    "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+  alternates: { canonical: canonicalUrl },
+  openGraph: {
+    title: `Pricing | ${SITE_NAME}`,
+    description:
+      "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+    url: canonicalUrl,
+    siteName: SITE_NAME,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `Pricing | ${SITE_NAME}`,
+    description:
+      "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+  },
+};
 
 export default function PricingPage() {
+  const seoGuides = GUIDES.slice(0, 3);
+
   return (
     <div className="relative isolate min-h-screen overflow-x-hidden">
       <CosmicBackground />
@@ -45,7 +72,7 @@ export default function PricingPage() {
               Simple, transparent pricing
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-              Start free. Upgrade when you want premium themes, share-ready exports, and a cleaner branded page.
+              Start free with the resume you already use, one stable page link, and a page that is easier to scan. Upgrade when you want premium themes, a fresh PDF export, and a QR-ready share card.
             </p>
           </div>
 
@@ -109,6 +136,42 @@ export default function PricingPage() {
             </h2>
             <ComparisonTable />
           </div>
+
+          <section className="mx-auto mt-16 max-w-5xl sm:mt-20">
+            <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="max-w-3xl">
+                  <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Guides</p>
+                  <h2 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
+                    Learn the search mechanics before you compare plans.
+                  </h2>
+                  <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.62)]">
+                    Pricing only matters after the fundamentals work. These guides explain ATS readability, recruiter keyword search, and how a living page fits beside your PDF.
+                  </p>
+                </div>
+                <Link
+                  href="/guides"
+                  className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                >
+                  Browse all ATS and recruiter search guides
+                </Link>
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                {seoGuides.map((guide) => (
+                  <Link
+                    key={guide.slug}
+                    href={`/guides/${guide.slug}`}
+                    className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.28)]"
+                  >
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Guide</p>
+                    <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">{guide.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.6)]">{guide.hubSummary}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     </div>

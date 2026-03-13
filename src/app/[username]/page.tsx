@@ -82,7 +82,12 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
   return (
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
-      <ThemeCanvas themeId={themeId} height="100dvh" className="rounded-none min-h-screen">
+      <ThemeCanvas
+        themeId={themeId}
+        height="100dvh"
+        className="rounded-none min-h-screen"
+        mobileAmbientMotion
+      >
         <PageOwnerBar pageId={page.id} pageUserId={pageUserId}>
           <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
             <ResumeLayout data={page.resume_data} />

@@ -10,6 +10,7 @@ interface ThemeCanvasProps {
   className?: string;
   style?: React.CSSProperties;
   interactive?: boolean;
+  mobileAmbientMotion?: boolean;
   children?: React.ReactNode;
 }
 
@@ -19,6 +20,7 @@ export default function ThemeCanvas({
   className,
   style,
   interactive = true,
+  mobileAmbientMotion = false,
   children,
 }: ThemeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -29,6 +31,9 @@ export default function ThemeCanvas({
   const elapsedRef = useRef(0);
   const lastFrameRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const touchActiveRef = useRef(false);
+  const ambientResumeAtRef = useRef(0);
+  const ambientEnabledRef = useRef(false);
   const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
 
   useEffect(() => {
@@ -41,6 +46,58 @@ export default function ThemeCanvas({
     if (!context) {
       return;
     }
+
+    const TOUCH_IDLE_MS = 1600;
+
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+    const getAmbientPointer = (elapsed: number) => ({
+      x: clamp(0.5 + Math.sin(elapsed * 0.18) * 0.12 + Math.cos(elapsed * 0.07) * 0.04, 0.24, 0.76),
+      y: clamp(0.5 + Math.cos(elapsed * 0.15) * 0.09 + Math.sin(elapsed * 0.11) * 0.05, 0.28, 0.72),
+    });
+
+    const pointerCoarseQuery =
+      typeof window.matchMedia === "function" ? window.matchMedia("(pointer: coarse)") : null;
+    const pointerFineQuery =
+      typeof window.matchMedia === "function" ? window.matchMedia("(pointer: fine)") : null;
+    const anyPointerCoarseQuery =
+      typeof window.matchMedia === "function" ? window.matchMedia("(any-pointer: coarse)") : null;
+    const reducedMotionQuery =
+      typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+
+    const syncAmbientMode = () => {
+      const hasTouchCapability = window.navigator.maxTouchPoints > 0;
+      const coarsePrimary = pointerCoarseQuery?.matches ?? false;
+      const finePrimary = pointerFineQuery?.matches ?? false;
+      const anyCoarse = anyPointerCoarseQuery?.matches ?? false;
+      const prefersReducedMotion = reducedMotionQuery?.matches ?? false;
+
+      ambientEnabledRef.current =
+        mobileAmbientMotion &&
+        !prefersReducedMotion &&
+        (coarsePrimary || (!finePrimary && (anyCoarse || hasTouchCapability)));
+
+      if (ambientEnabledRef.current && !touchActiveRef.current && performance.now() >= ambientResumeAtRef.current) {
+        mouseRef.current = getAmbientPointer(elapsedRef.current);
+      }
+    };
+
+    const updatePointer = (clientX: number, clientY: number) => {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(rect.width, 1);
+      const height = Math.max(rect.height, 1);
+      mouseRef.current = {
+        x: clamp((clientX - rect.left) / width, 0, 1),
+        y: clamp((clientY - rect.top) / height, 0, 1),
+      };
+    };
+
+    const applyAmbientPointer = (elapsed: number, now: number) => {
+      if (!ambientEnabledRef.current || touchActiveRef.current || now < ambientResumeAtRef.current) {
+        return;
+      }
+      mouseRef.current = getAmbientPointer(elapsed);
+    };
 
     const resize = () => {
       const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -82,6 +139,7 @@ export default function ThemeCanvas({
       const delta = Math.min(0.05, (now - lastFrameRef.current) * 0.001);
       lastFrameRef.current = now;
       elapsedRef.current += delta;
+      applyAmbientPointer(elapsedRef.current, now);
       renderFrame(elapsedRef.current);
       animationRef.current = requestAnimationFrame(draw);
     };
@@ -95,20 +153,25 @@ export default function ThemeCanvas({
     };
 
     const handleMove = (event: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current = {
-        x: (event.clientX - rect.left) / rect.width,
-        y: (event.clientY - rect.top) / rect.height,
-      };
+      updatePointer(event.clientX, event.clientY);
+    };
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      touchActiveRef.current = true;
+      ambientResumeAtRef.current = Number.POSITIVE_INFINITY;
+      updatePointer(touch.clientX, touch.clientY);
     };
     const handleTouch = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current = {
-        x: (touch.clientX - rect.left) / rect.width,
-        y: (touch.clientY - rect.top) / rect.height,
-      };
+      touchActiveRef.current = true;
+      ambientResumeAtRef.current = Number.POSITIVE_INFINITY;
+      updatePointer(touch.clientX, touch.clientY);
+    };
+    const handleTouchEnd = () => {
+      touchActiveRef.current = false;
+      ambientResumeAtRef.current = performance.now() + TOUCH_IDLE_MS;
     };
     const handleVisibility = () => {
       if (document.hidden || !visibleRef.current) {
@@ -118,10 +181,35 @@ export default function ThemeCanvas({
       }
     };
 
+    const mediaQueryDisposers: Array<() => void> = [];
+    const watchMediaQuery = (query: MediaQueryList | null) => {
+      if (!query) {
+        return;
+      }
+      const handleChange = () => syncAmbientMode();
+      if (typeof query.addEventListener === "function" && typeof query.removeEventListener === "function") {
+        query.addEventListener("change", handleChange);
+        mediaQueryDisposers.push(() => query.removeEventListener("change", handleChange));
+        return;
+      }
+      const legacyQuery = query as MediaQueryList & {
+        addListener?: (listener: () => void) => void;
+        removeListener?: (listener: () => void) => void;
+      };
+      legacyQuery.addListener?.(handleChange);
+      mediaQueryDisposers.push(() => legacyQuery.removeListener?.(handleChange));
+    };
+
+    syncAmbientMode();
     resize();
+    applyAmbientPointer(elapsedRef.current, performance.now());
     renderFrame(elapsedRef.current);
     window.addEventListener("resize", resize);
     document.addEventListener("visibilitychange", handleVisibility);
+    watchMediaQuery(pointerCoarseQuery);
+    watchMediaQuery(pointerFineQuery);
+    watchMediaQuery(anyPointerCoarseQuery);
+    watchMediaQuery(reducedMotionQuery);
 
     // ResizeObserver catches late layout shifts that the initial resize() misses
     let observer: ResizeObserver | null = null;
@@ -151,7 +239,10 @@ export default function ThemeCanvas({
 
     if (interactive && container) {
       container.addEventListener("mousemove", handleMove);
+      container.addEventListener("touchstart", handleTouchStart, { passive: true });
       container.addEventListener("touchmove", handleTouch, { passive: true });
+      container.addEventListener("touchend", handleTouchEnd, { passive: true });
+      container.addEventListener("touchcancel", handleTouchEnd, { passive: true });
     }
     start();
 
@@ -159,14 +250,18 @@ export default function ThemeCanvas({
       stop();
       window.removeEventListener("resize", resize);
       document.removeEventListener("visibilitychange", handleVisibility);
+      mediaQueryDisposers.forEach((dispose) => dispose());
       observer?.disconnect();
       intersectionObserver?.disconnect();
       if (interactive && container) {
         container.removeEventListener("mousemove", handleMove);
+        container.removeEventListener("touchstart", handleTouchStart);
         container.removeEventListener("touchmove", handleTouch);
+        container.removeEventListener("touchend", handleTouchEnd);
+        container.removeEventListener("touchcancel", handleTouchEnd);
       }
     };
-  }, [interactive, theme]);
+  }, [interactive, mobileAmbientMotion, theme]);
 
   return (
     <div

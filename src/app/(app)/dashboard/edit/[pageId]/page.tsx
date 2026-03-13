@@ -3,23 +3,26 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import AtsReviewPanel from "@/components/ats/AtsReviewPanel";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { getDefaultAtsTargeting, mergeResumePatch } from "@/lib/ats-review";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
-import type { PageRecord, ResumeData } from "@/types/resume";
+import type { AtsSuggestion, AtsTargeting, PageConfig, PageRecord, ResumeData } from "@/types/resume";
 import { isPremiumPlan } from "@/lib/plans";
 
 interface EditDraft {
   data: ResumeData;
   themeId: ThemeId;
+  pageConfig: PageConfig;
 }
 
-type Tab = "content" | "theme" | "preview";
+type Tab = "content" | "optimize" | "theme" | "preview";
 
 export default function EditPage() {
   const { pageId } = useParams<{ pageId: string }>();
@@ -33,36 +36,47 @@ export default function EditPage() {
 
   const [page, setPage] = useState<PageRecord | null>(null);
   const [data, setData] = useState<ResumeData | null>(null);
+  const [pageConfig, setPageConfig] = useState<PageConfig>({});
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
   const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [userPlan, setUserPlan] = useState<string>("spark");
   const premium = isPremiumPlan(userPlan);
+  const [atsTargeting, setAtsTargeting] = useState<AtsTargeting>({
+    primaryTitle: "",
+    titleVariants: [],
+    jobDescription: "",
+    lastExtractedKeywords: [],
+  });
+  const [reviewingAts, setReviewingAts] = useState(false);
 
   // Draft persistence & dirty tracking
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(`mlp-draft-edit-${pageId}`);
   const initialSnapshotRef = useRef<string>("");
+  const atsReview = pageConfig.ats ?? null;
 
   const isDirty = useMemo(() => {
     if (!data || !initialSnapshotRef.current) return false;
-    const current = JSON.stringify({ data, themeId });
+    const current = JSON.stringify({ data, themeId, pageConfig });
     return current !== initialSnapshotRef.current;
-  }, [data, themeId]);
+  }, [data, themeId, pageConfig]);
 
   useUnsavedChanges(isDirty);
 
   // Save draft on changes
   useEffect(() => {
     if (!data || !isDirty) return;
-    saveDraft({ data, themeId });
-  }, [data, themeId, isDirty, saveDraft]);
+    saveDraft({ data, themeId, pageConfig });
+  }, [data, themeId, pageConfig, isDirty, saveDraft]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) return;
     const d = pendingDraft.data;
     setData(d.data);
     setThemeId(d.themeId);
+    setPageConfig(d.pageConfig ?? {});
+    setAtsTargeting(d.pageConfig?.ats?.targeting ?? getDefaultAtsTargeting(d.data));
     dismissDraft();
   }, [pendingDraft, dismissDraft]);
 
@@ -84,10 +98,12 @@ export default function EditPage() {
           rd.certifications = (rd.certifications as unknown as string[]).map((c) => ({ name: c, issuer: null, date: null }));
         }
         setData(rd);
+        setPageConfig(row.page_config ?? {});
         setThemeId(row.theme_id as ThemeId);
         setPublicSlug(row.slug);
+        setAtsTargeting(row.page_config?.ats?.targeting ?? getDefaultAtsTargeting(rd));
         // Set initial snapshot for dirty tracking
-        initialSnapshotRef.current = JSON.stringify({ data: rd, themeId: row.theme_id });
+        initialSnapshotRef.current = JSON.stringify({ data: rd, themeId: row.theme_id, pageConfig: row.page_config ?? {} });
         // Fetch user plan
         const profileRes = await fetch("/api/profile");
         if (profileRes.ok) {
@@ -130,6 +146,93 @@ export default function EditPage() {
     setData((prev) => prev ? { ...prev, [key]: value } : prev);
   }, []);
 
+  const trackOptimizeEvent = useCallback(async (eventName: string, metadata: Record<string, unknown> = {}) => {
+    try {
+      await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({ eventName, metadata }),
+      });
+    } catch {
+      // Ignore tracking failures.
+    }
+  }, []);
+
+  const runAtsReview = useCallback(
+    async (overrideData?: ResumeData, overrideTargeting?: AtsTargeting, appliedSuggestionIds?: string[]) => {
+      const nextData = overrideData ?? data;
+      const nextTargeting = overrideTargeting ?? atsTargeting;
+      if (!nextData) {
+        return;
+      }
+
+      setReviewingAts(true);
+      setError("");
+      try {
+        const response = await fetch("/api/generate/ats-review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resumeData: nextData,
+            rawResume: page?.raw_resume ?? "",
+            targeting: nextTargeting,
+            appliedSuggestionIds: appliedSuggestionIds ?? atsReview?.appliedSuggestionIds ?? [],
+          }),
+        });
+
+        if (response.status === 401) {
+          router.push("/login?next=/dashboard");
+          return;
+        }
+
+        const payload = (await response.json().catch(() => null)) as unknown;
+        if (
+          !response.ok ||
+          !payload ||
+          typeof payload !== "object" ||
+          "error" in payload
+        ) {
+          const failure = payload as { error?: string } | null;
+          throw new Error(failure?.error ?? "ATS review failed.");
+        }
+
+        const result = payload as NonNullable<PageConfig["ats"]>;
+
+        setAtsTargeting(result.targeting);
+        setPageConfig((prev) => ({ ...prev, ats: result }));
+        void trackOptimizeEvent("ats.review.run", {
+          page_id: page?.id,
+          issues: result.issues.length,
+          fits_one_page: result.exportCheck.fitsOnOnePage,
+        });
+      } catch (reviewError) {
+        setError(reviewError instanceof Error ? reviewError.message : "Unable to review ATS searchability.");
+      } finally {
+        setReviewingAts(false);
+      }
+    },
+    [atsReview?.appliedSuggestionIds, atsTargeting, data, page?.id, page?.raw_resume, router, trackOptimizeEvent],
+  );
+
+  const applySuggestion = useCallback(
+    (suggestion: AtsSuggestion) => {
+      if (!data) {
+        return;
+      }
+
+      const nextData = mergeResumePatch(data, suggestion.applyData);
+      const nextAppliedIds = Array.from(new Set([...(atsReview?.appliedSuggestionIds ?? []), suggestion.id]));
+      setData(nextData);
+      void trackOptimizeEvent("ats.suggestion.applied", {
+        page_id: page?.id,
+        suggestion_id: suggestion.id,
+      });
+      void runAtsReview(nextData, atsTargeting, nextAppliedIds);
+    },
+    [atsReview?.appliedSuggestionIds, atsTargeting, data, page?.id, runAtsReview, trackOptimizeEvent],
+  );
+
   const save = async () => {
     if (!data || !page || saving) return;
     setSaving(true);
@@ -139,6 +242,7 @@ export default function EditPage() {
       const payload: Record<string, unknown> = {
         resume_data: data,
         theme_id: themeId,
+        page_config: pageConfig,
         updated_at: new Date().toISOString(),
       };
       const saveRes = await fetch(`/api/pages/${page.id}`, {
@@ -151,7 +255,7 @@ export default function EditPage() {
         throw new Error(body?.error ?? "Save failed.");
       }
       clearDraft();
-      initialSnapshotRef.current = JSON.stringify({ data, themeId });
+      initialSnapshotRef.current = JSON.stringify({ data, themeId, pageConfig });
       setSuccess("Saved successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
@@ -218,7 +322,7 @@ export default function EditPage() {
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1">
-        {(["content", "theme", "preview"] as Tab[]).map((t) => (
+        {(["content", "optimize", "theme", "preview"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -234,6 +338,21 @@ export default function EditPage() {
           </button>
         ))}
       </div>
+
+      {tab === "optimize" ? (
+        <AtsReviewPanel
+          data={data}
+          review={atsReview}
+          targeting={atsTargeting}
+          reviewing={reviewingAts}
+          onTargetingChange={setAtsTargeting}
+          onRunReview={() => void runAtsReview()}
+          onApplySuggestion={applySuggestion}
+          stepLabel="Optimize"
+          heading="Make your page and ATS PDF easier to find"
+          body="Use the same source content to improve machine visibility, exact-title coverage, explicit skill naming, and one-page ATS export before you save."
+        />
+      ) : null}
 
       {/* Content Tab */}
       {tab === "content" ? (

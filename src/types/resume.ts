@@ -38,6 +38,71 @@ export interface ResumeData {
   stats: Array<{ value: string; label: string }>;
 }
 
+export type AtsIssueCategory =
+  | "machine_readability"
+  | "recruiter_searchability"
+  | "one_page_pdf";
+
+export type AtsIssueSeverity = "info" | "warning" | "critical";
+
+export interface AtsTargeting {
+  primaryTitle: string;
+  titleVariants: string[];
+  jobDescription: string;
+  lastExtractedKeywords: string[];
+}
+
+export interface AtsIssue {
+  id: string;
+  category: AtsIssueCategory;
+  severity: AtsIssueSeverity;
+  title: string;
+  description: string;
+  field?: keyof ResumeData | "targeting";
+  suggestedFix?: string;
+}
+
+export interface AtsSuggestion {
+  id: string;
+  category: AtsIssueCategory;
+  title: string;
+  description: string;
+  applyLabel: string;
+  preview?: string;
+  applyData: Partial<ResumeData>;
+}
+
+export interface AtsExportCheck {
+  pageCount: number;
+  fitsOnOnePage: boolean;
+  overflowReasons: string[];
+  recommendedFixes: string[];
+}
+
+export interface AtsScoreBreakdown {
+  machineReadability: number;
+  recruiterSearchability: number;
+  onePagePdf: number;
+  overall: number;
+}
+
+export interface AtsReviewSnapshot {
+  targeting: AtsTargeting;
+  score: AtsScoreBreakdown;
+  issues: AtsIssue[];
+  suggestions: AtsSuggestion[];
+  appliedSuggestionIds: string[];
+  exportCheck: AtsExportCheck;
+  lastReviewedAt: string;
+  contentHash: string;
+  source: "rules" | "rules+ai";
+}
+
+export interface PageConfig {
+  ats?: AtsReviewSnapshot | null;
+  [key: string]: unknown;
+}
+
 export interface PageRecord {
   id: string;
   user_id?: string;
@@ -50,7 +115,7 @@ export interface PageRecord {
   resume_data: ResumeData;
   raw_resume: string | null;
   portfolio_url: string | null;
-  page_config: Record<string, unknown> | null;
+  page_config: PageConfig | null;
   views: number;
   published_at: string | null;
   created_at: string;

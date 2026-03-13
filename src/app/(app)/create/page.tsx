@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import AtsReviewPanel from "@/components/ats/AtsReviewPanel";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
@@ -10,23 +11,28 @@ import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { getDefaultAtsTargeting, mergeResumePatch } from "@/lib/ats-review";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
-import type { ResumeData } from "@/types/resume";
+import type { AtsReviewSnapshot, AtsSuggestion, AtsTargeting, ResumeData } from "@/types/resume";
 import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 
-type Step = "input" | "theme" | "processing" | "preview";
+type Step = "input" | "review" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
 type EntryPreference = "resume-first" | "page-first" | "neutral";
+const PROGRESS_STEPS: Array<Exclude<Step, "processing">> = ["input", "review", "theme", "preview"];
 
 interface CreateDraft {
   resumeText: string;
   guidedData: Partial<ResumeData>;
+  parsedData: ResumeData | null;
   selectedTheme: ThemeId;
   inputMode: InputMode;
   step: Step;
+  atsTargeting: AtsTargeting;
+  atsReview: AtsReviewSnapshot | null;
 }
 
 const STAGES = [
@@ -166,6 +172,14 @@ export default function CreatePage() {
   const [stage, setStage] = useState(STAGES[0]);
   const [error, setError] = useState("");
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
+  const [atsTargeting, setAtsTargeting] = useState<AtsTargeting>({
+    primaryTitle: "",
+    titleVariants: [],
+    jobDescription: "",
+    lastExtractedKeywords: [],
+  });
+  const [atsReview, setAtsReview] = useState<AtsReviewSnapshot | null>(null);
+  const [reviewingAts, setReviewingAts] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -209,18 +223,21 @@ export default function CreatePage() {
   useEffect(() => {
     if (step === "processing" || step === "preview") return;
     if (!isDirty) return;
-    saveDraft({ resumeText, guidedData, selectedTheme, inputMode, step });
-  }, [resumeText, guidedData, selectedTheme, inputMode, step, isDirty, saveDraft]);
+    saveDraft({ resumeText, guidedData, parsedData, selectedTheme, inputMode, step, atsTargeting, atsReview });
+  }, [resumeText, guidedData, parsedData, selectedTheme, inputMode, step, isDirty, saveDraft, atsTargeting, atsReview]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) return;
     const d = pendingDraft.data;
     setResumeText(d.resumeText ?? "");
     setGuidedData(d.guidedData ?? { name: "", headline: "", location: "", email: null, linkedin: null, github: null, website: null, avatar_url: null, summary: "", experience: [], education: [], projects: [], skills: [{ category: "General", items: [] }], certifications: [], stats: [] });
+    setParsedData(d.parsedData ?? null);
     setSelectedTheme(d.selectedTheme ?? "cosmic");
     setInputMode(d.inputMode ?? "choose");
+    setAtsTargeting(d.atsTargeting ?? { primaryTitle: "", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] });
+    setAtsReview(d.atsReview ?? null);
     guidedModeRef.current = d.inputMode === "guided";
-    if (d.step === "theme") setStep("theme");
+    if (d.step === "review" || d.step === "theme") setStep(d.step);
     dismissDraft();
   }, [pendingDraft, dismissDraft]);
 
@@ -307,6 +324,84 @@ export default function CreatePage() {
     setParsedData((prev) => prev ? { ...prev, avatar_url: null } : prev);
   };
 
+  const runAtsReview = useCallback(
+    async (
+      overrideData?: ResumeData,
+      overrideTargeting?: AtsTargeting,
+      appliedSuggestionIds?: string[],
+    ) => {
+      const data = overrideData ?? parsedData;
+      const targeting = overrideTargeting ?? atsTargeting;
+      if (!data) {
+        return;
+      }
+
+      setReviewingAts(true);
+      setError("");
+      try {
+        const response = await fetch("/api/generate/ats-review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resumeData: data,
+            rawResume: resumeText,
+            targeting,
+            appliedSuggestionIds: appliedSuggestionIds ?? atsReview?.appliedSuggestionIds ?? [],
+          }),
+        });
+
+        if (response.status === 401) {
+          router.push("/login?next=/create");
+          return;
+        }
+
+        const payload = (await response.json().catch(() => null)) as unknown;
+        if (
+          !response.ok ||
+          !payload ||
+          typeof payload !== "object" ||
+          "error" in payload
+        ) {
+          const failure = payload as { error?: string } | null;
+          throw new Error(failure?.error ?? "ATS review failed.");
+        }
+
+        const result = payload as AtsReviewSnapshot;
+
+        setAtsTargeting(result.targeting);
+        setAtsReview(result);
+        void trackCreateEvent("ats.review.run", {
+          issues: result.issues.length,
+          source_ref: activeReferrer,
+          fits_one_page: result.exportCheck.fitsOnOnePage,
+        });
+      } catch (reviewError) {
+        setError(reviewError instanceof Error ? reviewError.message : "Unable to review ATS searchability.");
+      } finally {
+        setReviewingAts(false);
+      }
+    },
+    [activeReferrer, atsReview?.appliedSuggestionIds, atsTargeting, parsedData, resumeText, router, trackCreateEvent],
+  );
+
+  const applySuggestion = useCallback(
+    (suggestion: AtsSuggestion) => {
+      if (!parsedData) {
+        return;
+      }
+
+      const nextData = mergeResumePatch(parsedData, suggestion.applyData);
+      const nextAppliedIds = Array.from(new Set([...(atsReview?.appliedSuggestionIds ?? []), suggestion.id]));
+      setParsedData(nextData);
+      void trackCreateEvent("ats.suggestion.applied", {
+        suggestion_id: suggestion.id,
+        source_ref: activeReferrer,
+      });
+      void runAtsReview(nextData, atsTargeting, nextAppliedIds);
+    },
+    [activeReferrer, atsReview?.appliedSuggestionIds, atsTargeting, parsedData, runAtsReview, trackCreateEvent],
+  );
+
   const startProcessing = async () => {
     setError("");
     setProgress(4);
@@ -355,10 +450,15 @@ export default function CreatePage() {
               }
             }
             if (payload.type === "result") {
-              setParsedData(payload.data as ResumeData);
+              const nextData = payload.data as ResumeData;
+              const nextTargeting = getDefaultAtsTargeting(nextData);
+              setParsedData(nextData);
+              setAtsTargeting(nextTargeting);
+              setAtsReview(null);
               setProgress(100);
               setStage("Done!");
-              setStep("preview");
+              setStep("review");
+              void runAtsReview(nextData, nextTargeting, []);
             }
             if (payload.type === "error") {
               throw new Error(typeof payload.message === "string" ? payload.message : "AI parsing failed.");
@@ -398,7 +498,7 @@ export default function CreatePage() {
           theme_id: selectedTheme,
           resume_data: parsedData,
           raw_resume: resumeText,
-          page_config: {},
+          page_config: { ats: atsReview },
         }),
       });
 
@@ -431,8 +531,9 @@ export default function CreatePage() {
           <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">Build Your Living Page</h1>
         </div>
         <div className="hidden gap-2 md:flex">
-          {(["input", "theme", "processing", "preview"] as Step[]).map((id, index) => {
-            const currentIndex = ["input", "theme", "processing", "preview"].indexOf(step);
+          {PROGRESS_STEPS.map((id, index) => {
+            const progressStep = step === "processing" ? "review" : step;
+            const currentIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
             return (
               <span
                 key={id}
@@ -520,7 +621,7 @@ export default function CreatePage() {
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Paste resume text</h2>
           <p className="mt-2 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">
-            Paste the resume text you already use for applications, keep that machine-readable source intact, and continue to theme selection.
+            Paste the resume text you already use for applications, keep that machine-readable source intact, and let us review searchability before you choose the page theme.
           </p>
           <textarea
             value={resumeText}
@@ -556,10 +657,10 @@ export default function CreatePage() {
             <button
               type="button"
               disabled={!resumeText.trim()}
-              onClick={() => setStep("theme")}
+              onClick={startProcessing}
               className="gold-pill h-12 px-7 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Continue to Theme Selection
+              Run ATS Review
             </button>
           </div>
         </section>
@@ -570,17 +671,40 @@ export default function CreatePage() {
           guidedData={guidedData}
           onUpdate={setGuidedData}
           onComplete={(data) => {
+            const nextTargeting = getDefaultAtsTargeting(data);
             setParsedData(data);
-            setStep("theme");
+            setAtsTargeting(nextTargeting);
+            setAtsReview(null);
+            setStep("review");
+            void runAtsReview(data, nextTargeting, []);
           }}
           onBack={() => setInputMode("choose")}
+        />
+      ) : null}
+
+      {step === "review" && parsedData ? (
+        <AtsReviewPanel
+          data={parsedData}
+          review={atsReview}
+          targeting={atsTargeting}
+          reviewing={reviewingAts}
+          onTargetingChange={setAtsTargeting}
+          onRunReview={() => void runAtsReview()}
+          onApplySuggestion={applySuggestion}
+          onBack={() => setStep("input")}
+          onContinue={() => setStep("theme")}
+          continueLabel="Continue to Theme Selection"
+          backLabel="Back"
+          stepLabel="Step 2"
+          heading="Review ATS visibility and searchability"
+          body="We check whether the exported ATS PDF stays machine-readable, whether your exact titles and skills are easy to find, and whether the resume fits one page before download."
         />
       ) : null}
 
       {step === "theme" ? (
         <section className="space-y-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 2</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 3</p>
             <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Pick your living theme</h2>
             <p className="mt-2 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">
               Choose the page people will open after your resume has already done its machine job.
@@ -605,17 +729,18 @@ export default function CreatePage() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setStep("input")}
+              onClick={() => setStep("review")}
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
             >
               Back
             </button>
             <button
               type="button"
-              onClick={guidedModeRef.current && parsedData ? () => setStep("preview") : startProcessing}
+              onClick={() => setStep("preview")}
+              disabled={!parsedData}
               className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
             >
-              {guidedModeRef.current && parsedData ? "Preview My Living Page" : "Generate My Living Page"}
+              Preview My Living Page
             </button>
           </div>
         </section>
@@ -642,6 +767,17 @@ export default function CreatePage() {
             <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 4</p>
             <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold">Preview and publish</h2>
           </div>
+
+          {atsReview ? (
+            <div className="mb-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">ATS status</p>
+              <p className="mt-2 text-sm text-[#F0F4FF]">
+                {atsReview.exportCheck.fitsOnOnePage
+                  ? "Visible to systems, easier to find in recruiter search, and ready for a one-page ATS PDF."
+                  : "The living page is ready, but the ATS PDF still needs one-page fixes before export."}
+              </p>
+            </div>
+          ) : null}
 
           {/* Public URL */}
           <div className="mb-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">

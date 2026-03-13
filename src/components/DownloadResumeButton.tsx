@@ -17,19 +17,35 @@ export default function DownloadResumeButton({ data, premium }: DownloadResumeBu
     setGenerating(true);
     setError(null);
     try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const { default: ResumePDFDocument } = await import(
-        "@/lib/pdf/ResumePDFDocument"
-      );
-      const blob = await pdf(<ResumePDFDocument data={data} />).toBlob();
+      const response = await fetch("/api/resume/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeData: data }),
+      });
+
+      if (response.status === 409) {
+        const payload = (await response.json()) as { recommendedFixes?: string[]; overflowReasons?: string[] };
+        throw new Error(
+          payload.recommendedFixes?.[0] ??
+          payload.overflowReasons?.[0] ??
+          "The ATS PDF is still over one page. Tighten the flagged sections first.",
+        );
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "PDF generation failed. Try again.");
+      }
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${(data.name || "resume").replace(/\s+/g, "-").toLowerCase()}-resume.pdf`;
+      a.download = `${(data.name || "resume").replace(/\s+/g, "-").toLowerCase()}-ats-resume.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      setError("PDF generation failed. Try again.");
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : "PDF generation failed. Try again.");
       setTimeout(() => setError(null), 4000);
     } finally {
       setGenerating(false);
@@ -79,7 +95,7 @@ export default function DownloadResumeButton({ data, premium }: DownloadResumeBu
             />
           </svg>
         )}
-        <span>{generating ? "Generating..." : "Download PDF"}</span>
+        <span>{generating ? "Checking..." : "Download ATS PDF"}</span>
         {!premium ? <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span> : null}
       </button>
       {error ? (

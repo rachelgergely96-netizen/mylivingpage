@@ -13,11 +13,13 @@ import {
   expectAvatarToResolveTo,
   fetchCurrentProfile,
   getGoogleCredentials,
+  getLatestPageEngagementState,
   getPageViewState,
   getProfileFixtureByEmail,
   getSignupEmailDomain,
   removeAvatarViaApi,
   sendStripeWebhook,
+  seedPageAnalyticsHistory,
   setPlanForProfile,
   signIn,
   uploadAvatarViaApi,
@@ -57,8 +59,10 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "Create Your Page" }).click();
     await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByRole("button", { name: "Load Sample" }).click();
+    await page.getByRole("button", { name: "Run ATS Review" }).click();
+    await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Continue to Theme Selection" }).click();
-    await page.getByRole("button", { name: /Generate My Living Page|Preview My Living Page/ }).click();
+    await page.getByRole("button", { name: "Preview My Living Page" }).click();
     await expect(page.getByRole("button", { name: "Publish and Go Live" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish and Go Live" }).click();
     await expect(page).not.toHaveURL(/\/create/);
@@ -178,8 +182,17 @@ test.describe.serial("authenticated user journeys", () => {
     const livePage = await ensureLivePageForProfile(profile);
     await clearPageViewState(livePage.id);
 
+    const ownerTrackingResponsePromise = page.waitForResponse((response) =>
+      response.url().includes("/api/pages/view"),
+    );
     await page.goto(`/${profile.username}`);
-    await page.waitForResponse((response) => response.url().includes("/api/pages/view"));
+    const ownerTrackingResponse = await ownerTrackingResponsePromise;
+    const ownerTrackingPayload = (await ownerTrackingResponse.json()) as {
+      ignored?: boolean;
+      pageViewId?: string;
+    };
+    expect(ownerTrackingPayload.ignored).toBe(true);
+    expect(ownerTrackingPayload.pageViewId).toBeUndefined();
     await expect(await getPageViewState(livePage.id)).toEqual({
       pageViews: 0,
       pageViewRows: 0,
@@ -188,21 +201,157 @@ test.describe.serial("authenticated user journeys", () => {
     const viewerContext = await browser.newContext();
     const viewerPage = await viewerContext.newPage();
 
+    const firstViewerTrackingResponsePromise = viewerPage.waitForResponse((response) =>
+      response.url().includes("/api/pages/view"),
+    );
     await viewerPage.goto(`/${profile.username}`);
-    await viewerPage.waitForResponse((response) => response.url().includes("/api/pages/view"));
+    const firstViewerTrackingResponse = await firstViewerTrackingResponsePromise;
+    const firstViewerTrackingPayload = (await firstViewerTrackingResponse.json()) as {
+      deduped?: boolean;
+      pageViewId?: string;
+    };
+    expect(firstViewerTrackingPayload.deduped).toBeUndefined();
+    expect(firstViewerTrackingPayload.pageViewId).toMatch(
+      /^[0-9a-f-]{36}$/i,
+    );
     await expect.poll(() => getPageViewState(livePage.id)).toEqual({
       pageViews: 1,
       pageViewRows: 1,
     });
 
+    const secondViewerTrackingResponsePromise = viewerPage.waitForResponse((response) =>
+      response.url().includes("/api/pages/view"),
+    );
     await viewerPage.reload();
-    await viewerPage.waitForResponse((response) => response.url().includes("/api/pages/view"));
+    const secondViewerTrackingResponse = await secondViewerTrackingResponsePromise;
+    const secondViewerTrackingPayload = (await secondViewerTrackingResponse.json()) as {
+      deduped?: boolean;
+      pageViewId?: string;
+    };
+    expect(secondViewerTrackingPayload.deduped).toBe(true);
+    expect(secondViewerTrackingPayload.pageViewId).toBe(
+      firstViewerTrackingPayload.pageViewId,
+    );
     await expect.poll(() => getPageViewState(livePage.id)).toEqual({
       pageViews: 1,
       pageViewRows: 1,
     });
 
     await viewerContext.close();
+  });
+
+  test("public engagement tracking records clicks and content signals", async ({ page, browser }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run analytics release coverage.",
+    );
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    const livePage = await ensureLivePageForProfile(profile);
+    await clearPageViewState(livePage.id);
+
+    const viewerContext = await browser.newContext();
+    const viewerPage = await viewerContext.newPage();
+
+    await viewerPage.goto(`/${profile.username}`);
+    await viewerPage.waitForResponse((response) => response.url().includes("/api/pages/view"));
+
+    await viewerPage.locator("[data-analytics-section='projects']").scrollIntoViewIfNeeded();
+    await viewerPage.waitForTimeout(750);
+    await viewerPage
+      .locator("a[href^='mailto:']")
+      .evaluate((element) => (element as HTMLAnchorElement).click());
+    await viewerPage.waitForTimeout(500);
+    await viewerPage.goto("about:blank");
+
+    await expect
+      .poll(() => getLatestPageEngagementState(livePage.id))
+      .toMatchObject({
+        hadOutboundClick: true,
+      });
+
+    const engagementState = await getLatestPageEngagementState(livePage.id);
+    expect(engagementState.pageViewId).toBeTruthy();
+    expect(engagementState.engagedSeconds).toBeGreaterThan(0);
+    expect(engagementState.maxScrollDepthPct).toBeGreaterThan(25);
+    expect(engagementState.primarySection).toBeTruthy();
+    expect(engagementState.interactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          target_key: "email",
+        }),
+      ]),
+    );
+
+    await viewerContext.close();
+  });
+
+  test("analytics dashboard range filters swap the selected window", async ({ page }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run analytics release coverage.",
+    );
+
+    const daysAgo = (days: number) =>
+      new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    await setPlanForProfile(profile.id, "pro");
+    const livePage = await ensureLivePageForProfile(profile);
+    await clearPageViewState(livePage.id);
+    await seedPageAnalyticsHistory(livePage.id, [
+      {
+        viewedAt: daysAgo(2),
+        viewerIp: "seed-range-1",
+        referrer: "https://www.linkedin.com/feed/",
+        userAgent: "Mozilla/5.0",
+        country: "US",
+        engagedSeconds: 95,
+        maxScrollDepthPct: 88,
+        primarySection: "projects",
+        hadOutboundClick: true,
+        clicks: [{ targetKey: "project", targetLabel: "TraceBoard", clickCount: 1 }],
+      },
+      {
+        viewedAt: daysAgo(20),
+        viewerIp: "seed-range-2",
+        referrer: null,
+        userAgent: "Mozilla/5.0 (iPhone)",
+        country: "CA",
+        engagedSeconds: 45,
+        maxScrollDepthPct: 62,
+        primarySection: "experience",
+      },
+      {
+        viewedAt: daysAgo(60),
+        viewerIp: "seed-range-3",
+        referrer: "https://example.com/ref",
+        userAgent: "Mozilla/5.0 (iPad)",
+        country: "GB",
+      },
+    ]);
+
+    await page.goto(`/dashboard/analytics/${livePage.id}`);
+    await expect(page.getByTestId("analytics-trend-total")).toHaveText(
+      "2 views in this range.",
+    );
+    await expect(page.getByTestId("analytics-stat-views")).toContainText("2");
+
+    await page.getByRole("link", { name: "7 days" }).click();
+    await page.waitForURL(new RegExp(`/dashboard/analytics/${livePage.id}\\?range=7d`));
+    await expect(page.getByTestId("analytics-trend-total")).toHaveText(
+      "1 views in this range.",
+    );
+    await expect(page.getByTestId("analytics-stat-views")).toContainText("1");
+
+    await page.getByRole("link", { name: "90 days" }).click();
+    await page.waitForURL(new RegExp(`/dashboard/analytics/${livePage.id}\\?range=90d`));
+    await expect(page.getByTestId("analytics-trend-total")).toHaveText(
+      "3 views in this range.",
+    );
+    await expect(page.getByTestId("analytics-stat-views")).toContainText("3");
   });
 });
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { Document, Link, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import { normalizeAtsText, normalizeResumeDataForAts } from "@/lib/ats-review";
 import type { AtsExportCheck, ResumeData } from "@/types/resume";
 
@@ -30,14 +30,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   contactRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     marginBottom: 10,
   },
   contactText: {
     fontSize: 8.5,
-    color: "#2563EB",
-    marginRight: 8,
+    color: "#374151",
   },
   sectionTitle: {
     fontSize: 8.5,
@@ -106,14 +103,10 @@ function displayLink(value: string | null) {
   return clean.replace(/^https?:\/\//i, "");
 }
 
-function formatLinkUrl(value: string) {
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("mailto:")) {
-    return value;
-  }
-  if (value.includes("@") && !value.includes("/")) {
-    return `mailto:${value}`;
-  }
-  return `https://${value}`;
+function buildContactLine(data: ResumeData) {
+  return [data.email, displayLink(data.linkedin), displayLink(data.github), displayLink(data.website)]
+    .filter(Boolean)
+    .join(" | ");
 }
 
 function countOverflowReasons(data: ResumeData) {
@@ -174,26 +167,40 @@ export function countPdfPages(buffer: Uint8Array) {
 
 export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportCheck> {
   const exportData = buildAtsPdfData(data);
-  const buffer = await renderToBuffer(<AtsResumePDFDocument data={exportData} />);
-  const pageCount = countPdfPages(buffer);
   const heuristics = countOverflowReasons(exportData);
 
-  return {
-    pageCount,
-    fitsOnOnePage: pageCount === 1,
-    overflowReasons:
-      pageCount === 1
-        ? []
-        : heuristics.overflowReasons.length
-          ? heuristics.overflowReasons
-          : ["The exported resume still spans more than one page."],
-    recommendedFixes:
-      pageCount === 1
-        ? []
-        : heuristics.recommendedFixes.length
-          ? heuristics.recommendedFixes
-          : ["Trim lower-priority sections and shorten long bullets before exporting again."],
-  };
+  try {
+    const buffer = await renderToBuffer(<AtsResumePDFDocument data={exportData} />);
+    const pageCount = countPdfPages(buffer);
+
+    return {
+      pageCount,
+      fitsOnOnePage: pageCount === 1,
+      overflowReasons:
+        pageCount === 1
+          ? []
+          : heuristics.overflowReasons.length
+            ? heuristics.overflowReasons
+            : ["The exported resume still spans more than one page."],
+      recommendedFixes:
+        pageCount === 1
+          ? []
+          : heuristics.recommendedFixes.length
+            ? heuristics.recommendedFixes
+            : ["Trim lower-priority sections and shorten long bullets before exporting again."],
+    };
+  } catch {
+    return {
+      pageCount: 2,
+      fitsOnOnePage: false,
+      overflowReasons: [
+        "The ATS PDF could not be validated with the current content shape.",
+      ],
+      recommendedFixes: [
+        "Shorten long sections or rerun the ATS review so the export can rebuild cleanly.",
+      ],
+    };
+  }
 }
 
 export async function renderAtsResumePdf(data: ResumeData) {
@@ -203,6 +210,7 @@ export async function renderAtsResumePdf(data: ResumeData) {
 
 export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
   const normalized = buildAtsPdfData(data);
+  const contactLine = buildContactLine(normalized);
 
   return (
     <Document>
@@ -211,47 +219,30 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
         {normalized.headline ? <Text style={styles.headline}>{normalized.headline}</Text> : null}
         {normalized.location ? <Text style={styles.location}>{normalized.location}</Text> : null}
 
-        {(normalized.email || normalized.linkedin || normalized.github || normalized.website) ? (
+        {contactLine ? (
           <View style={styles.contactRow}>
-            {normalized.email ? (
-              <Link src={`mailto:${normalized.email}`} style={styles.contactText}>
-                {normalized.email}
-              </Link>
-            ) : null}
-            {normalized.linkedin ? (
-              <Link src={formatLinkUrl(normalized.linkedin)} style={styles.contactText}>
-                {displayLink(normalized.linkedin)}
-              </Link>
-            ) : null}
-            {normalized.github ? (
-              <Link src={formatLinkUrl(normalized.github)} style={styles.contactText}>
-                {displayLink(normalized.github)}
-              </Link>
-            ) : null}
-            {normalized.website ? (
-              <Link src={formatLinkUrl(normalized.website)} style={styles.contactText}>
-                {displayLink(normalized.website)}
-              </Link>
-            ) : null}
+            <Text style={styles.contactText}>{contactLine}</Text>
           </View>
         ) : null}
 
         {normalized.summary ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>Summary</Text>
             <Text style={styles.summary}>{normalized.summary}</Text>
-          </>
+          </View>
         ) : null}
 
         {normalized.experience.length ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>Experience</Text>
             {normalized.experience.map((entry, index) => (
               <View key={`experience-${index}`} style={styles.entryBlock} wrap={false}>
                 <View style={styles.entryRow}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.entryTitle}>{entry.title}</Text>
-                    <Text style={styles.entrySubtitle}>{`${entry.company}${entry.url ? ` | ${displayLink(entry.url)}` : ""}`}</Text>
+                    <Text style={styles.entrySubtitle}>
+                      {`${entry.company}${entry.url ? ` | ${displayLink(entry.url)}` : ""}`}
+                    </Text>
                   </View>
                   <Text style={styles.entryDate}>{entry.dates}</Text>
                 </View>
@@ -262,23 +253,22 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
                 ))}
               </View>
             ))}
-          </>
+          </View>
         ) : null}
 
         {normalized.skills.length ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>Skills</Text>
             {normalized.skills.map((group, index) => (
               <Text key={`skill-${index}`} style={styles.skillLine}>
-                <Text style={styles.entryTitle}>{`${group.category}: `}</Text>
-                {group.items.join(", ")}
+                {`${group.category}: ${group.items.join(", ")}`}
               </Text>
             ))}
-          </>
+          </View>
         ) : null}
 
         {normalized.education.length ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>Education</Text>
             {normalized.education.map((entry, index) => (
               <View key={`education-${index}`} style={styles.entryBlock} wrap={false}>
@@ -291,11 +281,11 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
                 </View>
               </View>
             ))}
-          </>
+          </View>
         ) : null}
 
         {normalized.projects.length ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>Projects</Text>
             {normalized.projects.map((project, index) => (
               <View key={`project-${index}`} style={styles.entryBlock} wrap={false}>
@@ -306,25 +296,23 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
                 ) : null}
               </View>
             ))}
-          </>
+          </View>
         ) : null}
 
         {normalized.certifications.length ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>Certifications</Text>
             {normalized.certifications.map((certification, index) => (
               <View key={`certification-${index}`} style={styles.entryBlock} wrap={false}>
                 <View style={styles.entryRow}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.entryTitle}>{certification.name}</Text>
-                    <Text style={styles.entrySubtitle}>
-                      {[certification.issuer, certification.date].filter(Boolean).join(" | ")}
-                    </Text>
+                    <Text style={styles.entrySubtitle}>{[certification.issuer, certification.date].filter(Boolean).join(" | ")}</Text>
                   </View>
                 </View>
               </View>
             ))}
-          </>
+          </View>
         ) : null}
       </Page>
     </Document>

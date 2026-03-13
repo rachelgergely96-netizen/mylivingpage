@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type {
   AtsIssue,
   AtsReviewSnapshot,
@@ -67,6 +68,86 @@ export default function AtsReviewPanel({
 }: AtsReviewPanelProps) {
   const applied = new Set(review?.appliedSuggestionIds ?? []);
   const canContinue = Boolean(review) && !reviewing;
+  const previewUrlRef = useRef<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const replacePreviewUrl = (next: string | null) => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      previewUrlRef.current = next;
+      setPreviewUrl(next);
+    };
+
+    if (!review) {
+      replacePreviewUrl(null);
+      setPreviewLoading(false);
+      setPreviewError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPreview() {
+      setPreviewLoading(true);
+      setPreviewError(null);
+
+      try {
+        const response = await fetch("/api/resume/export/preview", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ resumeData: data }),
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(payload?.error || "Unable to load the ATS PDF preview.");
+        }
+
+        const blob = await response.blob();
+        const nextUrl = URL.createObjectURL(blob);
+
+        if (cancelled) {
+          URL.revokeObjectURL(nextUrl);
+          return;
+        }
+
+        replacePreviewUrl(nextUrl);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        replacePreviewUrl(null);
+        setPreviewError(
+          error instanceof Error ? error.message : "Unable to load the ATS PDF preview.",
+        );
+      } finally {
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
+      }
+    }
+
+    void loadPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data, review]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
 
   return (
     <section data-testid="ats-review-panel" className="space-y-5">
@@ -170,6 +251,56 @@ export default function AtsReviewPanel({
                   {review.exportCheck.fitsOnOnePage
                     ? "Your current content is export-safe and fits the ATS PDF."
                     : "Tighten the flagged sections before the ATS PDF can download."}
+                </p>
+              </div>
+
+              <div
+                data-testid="ats-pdf-preview"
+                className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+                      ATS PDF Preview
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                      This is the plain one-column resume recruiters and systems see, separate from
+                      your public page.
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
+                    {review.exportCheck.fitsOnOnePage
+                      ? "Fits one page"
+                      : `${review.exportCheck.pageCount} pages right now`}
+                  </div>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.28)]">
+                  {previewLoading ? (
+                    <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
+                      Generating the ATS PDF preview...
+                    </div>
+                  ) : previewError ? (
+                    <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
+                      {previewError}
+                    </div>
+                  ) : previewUrl ? (
+                    <iframe
+                      data-testid="ats-pdf-preview-frame"
+                      title="ATS PDF Preview"
+                      src={previewUrl}
+                      className="min-h-[420px] w-full bg-white md:min-h-[540px]"
+                    />
+                  ) : (
+                    <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
+                      Run the ATS review to generate a preview of your export-safe PDF.
+                    </div>
+                  )}
+                </div>
+
+                <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
+                  Use this preview to catch overflow and confirm the ATS PDF stays clean, direct,
+                  and easy to scan before you download it.
                 </p>
               </div>
 

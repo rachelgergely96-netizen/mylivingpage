@@ -83,7 +83,7 @@ export default function SignupPage() {
           body: JSON.stringify({ source: "signup" }),
         }).catch(() => {});
 
-        router.push(nextPath);
+        window.location.replace(nextPath);
         return;
       }
 

@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -26,14 +24,16 @@ export default function LoginPage() {
     setMessage("");
     try {
       const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         throw error;
       }
+      if (!data.session) {
+        throw new Error("Sign-in succeeded but no session was created.");
+      }
       // Track login (fire-and-forget)
       fetch("/api/auth/track-login", { method: "POST" }).catch(() => {});
-      router.refresh();
-      router.replace(nextPath);
+      window.location.replace(nextPath);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to sign in.");

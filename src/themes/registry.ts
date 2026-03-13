@@ -3,6 +3,7 @@ import { renderObsidian } from "./renderers/obsidian";
 import { renderSilk } from "./renderers/silk";
 import { renderTempest } from "./renderers/tempest";
 import { renderApex } from "./renderers/apex";
+import { renderAxiom } from "./renderers/axiom";
 import { renderAtelier } from "./renderers/atelier";
 import { renderAurora } from "./renderers/aurora";
 import { renderAtlas } from "./renderers/atlas";
@@ -12,30 +13,38 @@ import { renderCaliber } from "./renderers/caliber";
 import { renderCameo } from "./renderers/cameo";
 import { renderCarbon } from "./renderers/carbon";
 import { renderCircuit } from "./renderers/circuit";
+import { renderCitadel } from "./renderers/citadel";
 import { renderCoral } from "./renderers/coral";
 import { renderCosmic } from "./renderers/cosmic";
 import { renderDusk } from "./renderers/dusk";
+import { renderEchelon } from "./renderers/echelon";
 import { renderEmber } from "./renderers/ember";
 import { renderFiligree } from "./renderers/filigree";
+import { renderFresco } from "./renderers/fresco";
 import { renderFluid } from "./renderers/fluid";
 import { renderForge } from "./renderers/forge";
 import { renderGlacier } from "./renderers/glacier";
 import { renderGossamer } from "./renderers/gossamer";
 import { renderHalo } from "./renderers/halo";
 import { renderHarbor } from "./renderers/harbor";
+import { renderHelix } from "./renderers/helix";
 import { renderInk } from "./renderers/ink";
+import { renderJetstream } from "./renderers/jetstream";
+import { renderLustre } from "./renderers/lustre";
 import { renderLuxe } from "./renderers/luxe";
 import { renderMatrix } from "./renderers/matrix";
 import { renderMeridian } from "./renderers/meridian";
 import { renderMonolith } from "./renderers/monolith";
 import { renderMosaic } from "./renderers/mosaic";
 import { renderNeon } from "./renderers/neon";
+import { renderNocturne } from "./renderers/nocturne";
 import { renderOpaline } from "./renderers/opaline";
 import { renderParasol } from "./renderers/parasol";
 import { renderPorcelain } from "./renderers/porcelain";
 import { renderPrism } from "./renderers/prism";
 import { renderQuarry } from "./renderers/quarry";
 import { renderRelay } from "./renderers/relay";
+import { renderRosaline } from "./renderers/rosaline";
 import { renderSakura } from "./renderers/sakura";
 import { renderSonata } from "./renderers/sonata";
 import { renderSolstice } from "./renderers/solstice";
@@ -46,10 +55,73 @@ import { renderTulle } from "./renderers/tulle";
 import { renderVector } from "./renderers/vector";
 import { renderVerdant } from "./renderers/verdant";
 import { renderVault } from "./renderers/vault";
+import { renderVellum } from "./renderers/vellum";
 import { renderVelvet } from "./renderers/velvet";
-import type { ThemeDefinition, ThemeId } from "./types";
+import type { ThemeCollectionId, ThemeDefinition, ThemeId } from "./types";
 
-export const THEME_REGISTRY: ThemeDefinition[] = [
+const THEME_COLLECTIONS = {
+  cosmic: "cinematic",
+  fluid: "organic-material",
+  ember: "cinematic",
+  monolith: "executive-tech",
+  aurora: "cinematic",
+  terracotta: "organic-material",
+  prism: "cinematic",
+  biolume: "organic-material",
+  circuit: "executive-tech",
+  sakura: "organic-material",
+  glacier: "organic-material",
+  verdant: "organic-material",
+  neon: "executive-tech",
+  topo: "executive-tech",
+  luxe: "editorial-luxe",
+  dusk: "editorial-luxe",
+  matrix: "executive-tech",
+  coral: "organic-material",
+  stardust: "art-lab",
+  ink: "art-lab",
+  bloom: "organic-material",
+  silk: "editorial-luxe",
+  tempest: "cinematic",
+  obsidian: "cinematic",
+  apex: "executive-tech",
+  atlas: "executive-tech",
+  forge: "cinematic",
+  vector: "executive-tech",
+  vault: "cinematic",
+  velvet: "editorial-luxe",
+  opaline: "editorial-luxe",
+  halo: "editorial-luxe",
+  sonata: "art-lab",
+  mosaic: "art-lab",
+  bastion: "executive-tech",
+  carbon: "executive-tech",
+  caliber: "executive-tech",
+  quarry: "organic-material",
+  harbor: "cinematic",
+  relay: "executive-tech",
+  meridian: "executive-tech",
+  atelier: "art-lab",
+  porcelain: "editorial-luxe",
+  filigree: "art-lab",
+  cameo: "editorial-luxe",
+  solstice: "cinematic",
+  tulle: "editorial-luxe",
+  parasol: "editorial-luxe",
+  gossamer: "art-lab",
+  citadel: "executive-tech",
+  axiom: "executive-tech",
+  helix: "executive-tech",
+  jetstream: "cinematic",
+  echelon: "executive-tech",
+  vellum: "editorial-luxe",
+  nocturne: "cinematic",
+  lustre: "editorial-luxe",
+  fresco: "organic-material",
+  rosaline: "editorial-luxe",
+} as const satisfies Record<ThemeId, ThemeCollectionId>;
+
+const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   {
     id: "cosmic",
     name: "Cosmic",
@@ -491,7 +563,102 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
     background: "#04070C",
     renderer: renderGossamer,
   },
+  {
+    id: "citadel",
+    name: "Citadel",
+    description:
+      "Brutalist tower canyons rise around a vanishing corridor while slit-window sweeps scan the walls.",
+    vibe: "Architectural & Commanding",
+    background: "#030508",
+    renderer: renderCitadel,
+  },
+  {
+    id: "axiom",
+    name: "Axiom",
+    description:
+      "Theorem lines, proof arcs, and luminous node pulses map across a disciplined analytical field.",
+    vibe: "Intellectual & Precise",
+    background: "#040713",
+    renderer: renderAxiom,
+  },
+  {
+    id: "helix",
+    name: "Helix",
+    description:
+      "Chrome double-helix ribbons twist through orbital beads and cool laboratory light.",
+    vibe: "Advanced & Kinetic",
+    background: "#04060D",
+    renderer: renderHelix,
+  },
+  {
+    id: "jetstream",
+    name: "Jetstream",
+    description:
+      "Contrails, turbulence ribbons, and speed streaks cut across a high-altitude cinematic sky.",
+    vibe: "Fast & Aerodynamic",
+    background: "#040913",
+    renderer: renderJetstream,
+  },
+  {
+    id: "echelon",
+    name: "Echelon",
+    description:
+      "Staggered chevron planes advance in formation as tactical sweep lights rake across the stack.",
+    vibe: "Strategic & Elite",
+    background: "#04070D",
+    renderer: renderEchelon,
+  },
+  {
+    id: "vellum",
+    name: "Vellum",
+    description:
+      "Translucent paper layers drift in soft overlap with shadowed edges and couture calm.",
+    vibe: "Editorial & Airy",
+    background: "#09080D",
+    renderer: renderVellum,
+  },
+  {
+    id: "nocturne",
+    name: "Nocturne",
+    description:
+      "Moonlit crescents, indigo haze, and floating dust motes unfold like a midnight stage set.",
+    vibe: "Dreamlike & Poised",
+    background: "#050713",
+    renderer: renderNocturne,
+  },
+  {
+    id: "lustre",
+    name: "Lustre",
+    description:
+      "Molten champagne-metal ribbons pour through darkness with polished glints and warm bloom.",
+    vibe: "Luxurious & Fluid",
+    background: "#090608",
+    renderer: renderLustre,
+  },
+  {
+    id: "fresco",
+    name: "Fresco",
+    description:
+      "Mineral plaster washes breathe with soft cracking, chalk bloom, and painterly pigment drift.",
+    vibe: "Textural & Collected",
+    background: "#0D0907",
+    renderer: renderFresco,
+  },
+  {
+    id: "rosaline",
+    name: "Rosaline",
+    description:
+      "Rose-quartz facets refract blush halos and soft crystalline gleam across an elegant frame.",
+    vibe: "Radiant & Refined",
+    background: "#09060A",
+    renderer: renderRosaline,
+  },
 ];
+
+export const THEME_REGISTRY: ThemeDefinition[] = THEME_DEFINITIONS.map((theme) => ({
+  ...theme,
+  collection: THEME_COLLECTIONS[theme.id],
+}));
 
 export const THEME_MAP = THEME_REGISTRY.reduce<Record<ThemeId, ThemeDefinition>>((acc, theme) => {
   acc[theme.id] = theme;

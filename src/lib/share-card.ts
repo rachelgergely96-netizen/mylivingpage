@@ -67,6 +67,16 @@ const SHARE_CARD_VISUALS: Record<string, ShareCardVisual> = {
   tulle: { accent: "#DDD6FE", glow: "rgba(221,214,254,0.28)", gradientFrom: "#0E0F19", gradientMid: "#191C2D", gradientTo: "#0A0C12" },
   parasol: { accent: "#F9A8D4", glow: "rgba(249,168,212,0.28)", gradientFrom: "#140913", gradientMid: "#25111F", gradientTo: "#10070E" },
   gossamer: { accent: "#BAE6FD", glow: "rgba(186,230,253,0.28)", gradientFrom: "#09111A", gradientMid: "#132231", gradientTo: "#0A1016" },
+  citadel: { accent: "#A5C8FF", glow: "rgba(165,200,255,0.28)", gradientFrom: "#08101A", gradientMid: "#111A29", gradientTo: "#06080E" },
+  axiom: { accent: "#7DD3FC", glow: "rgba(125,211,252,0.30)", gradientFrom: "#07101F", gradientMid: "#0E1C35", gradientTo: "#090D18" },
+  helix: { accent: "#C4B5FD", glow: "rgba(196,181,253,0.30)", gradientFrom: "#080B18", gradientMid: "#111831", gradientTo: "#0A0D15" },
+  jetstream: { accent: "#93C5FD", glow: "rgba(147,197,253,0.30)", gradientFrom: "#081120", gradientMid: "#11233C", gradientTo: "#090E18" },
+  echelon: { accent: "#5EEAD4", glow: "rgba(94,234,212,0.28)", gradientFrom: "#081018", gradientMid: "#11202A", gradientTo: "#070B10" },
+  vellum: { accent: "#F5E1D4", glow: "rgba(245,225,212,0.24)", gradientFrom: "#171219", gradientMid: "#231A22", gradientTo: "#0D0B10" },
+  nocturne: { accent: "#A78BFA", glow: "rgba(167,139,250,0.28)", gradientFrom: "#081022", gradientMid: "#111C39", gradientTo: "#0A0D18" },
+  lustre: { accent: "#FCD34D", glow: "rgba(252,211,77,0.28)", gradientFrom: "#130A0B", gradientMid: "#241416", gradientTo: "#10080A" },
+  fresco: { accent: "#E7C9A2", glow: "rgba(231,201,162,0.24)", gradientFrom: "#120D0B", gradientMid: "#201610", gradientTo: "#0E0A07" },
+  rosaline: { accent: "#F9A8D4", glow: "rgba(249,168,212,0.30)", gradientFrom: "#140A13", gradientMid: "#25111F", gradientTo: "#10070E" },
 };
 
 export function normalizeAppUrl(url?: string): string {

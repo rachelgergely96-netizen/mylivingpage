@@ -5,13 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
+import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord, ResumeData } from "@/types/resume";
-import { FREE_THEMES, isPremiumPlan } from "@/lib/plans";
+import { isPremiumPlan } from "@/lib/plans";
 
 interface EditDraft {
   data: ResumeData;
@@ -19,8 +20,6 @@ interface EditDraft {
 }
 
 type Tab = "content" | "theme" | "preview";
-
-const ALL_THEMES = THEME_REGISTRY;
 
 export default function EditPage() {
   const { pageId } = useParams<{ pageId: string }>();
@@ -496,36 +495,12 @@ export default function EditPage() {
 
       {/* Theme Tab */}
       {tab === "theme" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ALL_THEMES.map((theme) => {
-            const locked = !premium && !FREE_THEMES.includes(theme.id);
-            return (
-              <button
-                key={theme.id}
-                type="button"
-                onClick={() => { if (!locked) setThemeId(theme.id); }}
-                className={`glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft ${locked ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-1"}`}
-                style={{
-                  borderColor: themeId === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
-                  background: themeId === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
-                }}
-              >
-                <div className="relative">
-                  <ThemeCanvas themeId={theme.id} height={120} interactive={false} />
-                  {locked ? (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
-                      <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
-                        Pro
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-                <p className="mt-3 font-heading text-xl">{theme.name}</p>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
-              </button>
-            );
-          })}
-        </div>
+        <ThemePicker
+          themes={THEME_REGISTRY}
+          selectedThemeId={themeId}
+          onSelectTheme={setThemeId}
+          premium={premium}
+        />
       ) : null}
 
       {/* Preview Tab */}

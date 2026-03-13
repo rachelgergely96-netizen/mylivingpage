@@ -48,9 +48,48 @@ export const THEME_IDS = [
   "tulle",
   "parasol",
   "gossamer",
+  "citadel",
+  "axiom",
+  "helix",
+  "jetstream",
+  "echelon",
+  "vellum",
+  "nocturne",
+  "lustre",
+  "fresco",
+  "rosaline",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
+
+export const THEME_COLLECTION_IDS = [
+  "executive-tech",
+  "cinematic",
+  "organic-material",
+  "editorial-luxe",
+  "art-lab",
+] as const;
+
+export const THEME_COLLECTION_FILTER_IDS = [
+  "all",
+  "executive-tech",
+  "cinematic",
+  "organic-material",
+  "editorial-luxe",
+  "art-lab",
+] as const;
+
+export type ThemeCollectionId = (typeof THEME_COLLECTION_IDS)[number];
+export type ThemeCollectionFilterId = (typeof THEME_COLLECTION_FILTER_IDS)[number];
+
+export const THEME_COLLECTION_META = {
+  all: { label: "All" },
+  "executive-tech": { label: "Executive Tech" },
+  cinematic: { label: "Cinematic" },
+  "organic-material": { label: "Organic Material" },
+  "editorial-luxe": { label: "Editorial Luxe" },
+  "art-lab": { label: "Art Lab" },
+} as const satisfies Record<ThemeCollectionFilterId, { label: string }>;
 
 export type ThemeRenderer = (
   ctx: CanvasRenderingContext2D,
@@ -63,6 +102,7 @@ export type ThemeRenderer = (
 
 export interface ThemeMeta {
   id: ThemeId;
+  collection: ThemeCollectionId;
   name: string;
   description: string;
   vibe: string;

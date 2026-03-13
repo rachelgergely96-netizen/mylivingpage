@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
+import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
@@ -14,7 +15,7 @@ import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
-import { FREE_THEMES, MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
+import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 
 type Step = "input" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
@@ -284,8 +285,6 @@ export default function CreatePage() {
       recommended_mode: createIntro.recommendedMode,
     });
   };
-
-  const themes = THEME_REGISTRY;
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
@@ -596,37 +595,13 @@ export default function CreatePage() {
               {resumeText.length.toLocaleString()} characters · {resumeText.split(/\n/).length} lines
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {themes.map((theme) => {
-              const locked = !premium && !FREE_THEMES.includes(theme.id);
-              return (
-                <button
-                  key={theme.id}
-                  type="button"
-                  onClick={() => { if (!locked) setSelectedTheme(theme.id); }}
-                  className={`glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft ${locked ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-1"}`}
-                  style={{
-                    borderColor: selectedTheme === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
-                    background: selectedTheme === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
-                  }}
-                >
-                  <div className="relative">
-                    <ThemeCanvas themeId={theme.id} height={120} interactive={false} />
-                    {locked ? (
-                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
-                        <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
-                          Pro
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                  <p className="mt-3 font-heading text-xl">{theme.name}</p>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
-                  <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.45)]">{theme.description}</p>
-                </button>
-              );
-            })}
-          </div>
+          <ThemePicker
+            themes={THEME_REGISTRY}
+            selectedThemeId={selectedTheme}
+            onSelectTheme={setSelectedTheme}
+            premium={premium}
+            showDescription
+          />
           <div className="flex flex-wrap gap-3">
             <button
               type="button"

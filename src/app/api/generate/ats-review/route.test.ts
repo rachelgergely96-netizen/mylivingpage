@@ -115,10 +115,16 @@ describe("POST /api/generate/ats-review", () => {
     );
 
     expect(response.status).toBe(200);
-    const payload = (await response.json()) as { mode: string; proposals: Array<{ id: string }> };
+    const payload = (await response.json()) as {
+      mode: string;
+      status: string;
+      candidateResumeData: { headline: string } | null;
+      candidateExportCheck: { fitsOnOnePage: boolean } | null;
+    };
 
     expect(payload.mode).toBe("fast");
-    expect(Array.isArray(payload.proposals)).toBe(true);
+    expect(payload.candidateResumeData).not.toBeNull();
+    expect(payload.candidateExportCheck).not.toBeNull();
     expect(mocks.anthropicCreate).not.toHaveBeenCalled();
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-1",
@@ -129,12 +135,18 @@ describe("POST /api/generate/ats-review", () => {
     );
   });
 
-  it("returns proposals alongside issues and scores during a full review", async () => {
+  it("returns an auto-optimized ATS candidate and concise review summary during a full review", async () => {
     mocks.checkExport.mockResolvedValueOnce({
       pageCount: 2,
       fitsOnOnePage: false,
       overflowReasons: ["The summary is still too long for a one-page ATS resume."],
       recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+    });
+    mocks.checkExport.mockResolvedValueOnce({
+      pageCount: 1,
+      fitsOnOnePage: true,
+      overflowReasons: [],
+      recommendedFixes: [],
     });
 
     const response = await POST(
@@ -165,12 +177,15 @@ describe("POST /api/generate/ats-review", () => {
     expect(response.status).toBe(200);
     const payload = (await response.json()) as {
       issues: Array<{ id: string }>;
-      proposals: Array<{ group: string; beforeText: string; afterText: string }>;
+      changeSummary: Array<{ id: string }>;
+      candidateResumeData: { summary: string } | null;
+      candidateExportCheck: { fitsOnOnePage: boolean } | null;
+      status: string;
     };
 
-    expect(payload.issues.map((issue) => issue.id)).toContain("pdf-overflow");
-    expect(payload.proposals.length).toBeGreaterThan(0);
-    expect(payload.proposals.some((proposal) => proposal.group === "summary")).toBe(true);
-    expect(payload.proposals.every((proposal) => proposal.beforeText !== proposal.afterText)).toBe(true);
+    expect(payload.status).toBe("ready");
+    expect(payload.candidateExportCheck?.fitsOnOnePage).toBe(true);
+    expect(payload.candidateResumeData?.summary.length).toBeLessThan(420);
+    expect(payload.changeSummary.length).toBeGreaterThan(0);
   });
 });

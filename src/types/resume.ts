@@ -104,6 +104,13 @@ export interface AtsProposalDecision {
   lastDecisionAt: string | null;
 }
 
+export interface AtsChangeSummaryItem {
+  id: string;
+  title: string;
+  description: string;
+  category: AtsIssueCategory;
+}
+
 export interface AtsExportCheck {
   pageCount: number;
   fitsOnOnePage: boolean;
@@ -120,6 +127,7 @@ export interface AtsScoreBreakdown {
 
 export type AtsScoreDimension = Exclude<keyof AtsScoreBreakdown, "overall">;
 export type AtsReviewMode = "full" | "fast";
+export type AtsReviewStatus = "ready" | "needs_attention";
 
 export interface AtsReviewSnapshot {
   targeting: AtsTargeting;
@@ -130,10 +138,19 @@ export interface AtsReviewSnapshot {
   appliedSuggestionIds: string[];
   proposalDecision: AtsProposalDecision;
   exportCheck: AtsExportCheck;
+  candidateResumeData: ResumeData | null;
+  candidateExportCheck: AtsExportCheck | null;
+  changeSummary: AtsChangeSummaryItem[];
+  status: AtsReviewStatus;
   lastReviewedAt: string;
   contentHash: string;
   mode: AtsReviewMode;
   source: "rules" | "rules+ai";
+  approvedResumeData?: ResumeData | null;
+  approvedExportCheck?: AtsExportCheck | null;
+  approvedAt?: string | null;
+  approvedContentHash?: string | null;
+  availabilityReason?: string | null;
 }
 
 export type AtsSuggestionFeedbackState = "applying" | "confirmed" | "still_needs_work";

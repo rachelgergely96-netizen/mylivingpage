@@ -1,4 +1,5 @@
 import type {
+  AtsChangeSummaryItem,
   AtsExportCheck,
   AtsIssue,
   AtsProposalDecision,
@@ -514,6 +515,82 @@ export function stampProposalDecision(
   };
 }
 
+export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  return (
+    review?.availabilityReason ??
+    review?.candidateExportCheck?.recommendedFixes?.[0] ??
+    review?.candidateExportCheck?.overflowReasons?.[0] ??
+    review?.exportCheck?.recommendedFixes?.[0] ??
+    review?.exportCheck?.overflowReasons?.[0] ??
+    "Rerun ATS review and save to rebuild your ATS PDF."
+  );
+}
+
+export function hasApprovedAtsResume(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  return Boolean(review?.approvedResumeData && review?.approvedExportCheck?.fitsOnOnePage);
+}
+
+export function inheritApprovedAtsResume(
+  review: AtsReviewSnapshot,
+  existing: Partial<AtsReviewSnapshot> | null | undefined,
+): AtsReviewSnapshot {
+  return {
+    ...review,
+    approvedResumeData: review.approvedResumeData ?? existing?.approvedResumeData ?? null,
+    approvedExportCheck: review.approvedExportCheck ?? existing?.approvedExportCheck ?? null,
+    approvedAt: review.approvedAt ?? existing?.approvedAt ?? null,
+    approvedContentHash: review.approvedContentHash ?? existing?.approvedContentHash ?? null,
+    availabilityReason: review.availabilityReason ?? existing?.availabilityReason ?? null,
+  };
+}
+
+export function finalizeApprovedAtsResume(review: AtsReviewSnapshot, data: ResumeData): AtsReviewSnapshot {
+  if (!review.exportCheck.fitsOnOnePage) {
+    return {
+      ...review,
+      approvedResumeData: null,
+      approvedExportCheck: null,
+      approvedAt: null,
+      approvedContentHash: null,
+      availabilityReason: getAtsAvailabilityReason(review),
+    };
+  }
+
+  return {
+    ...review,
+    approvedResumeData: normalizeResumeDataForAts(data),
+    approvedExportCheck: review.exportCheck,
+    approvedAt: new Date().toISOString(),
+    approvedContentHash: review.contentHash,
+    availabilityReason: null,
+  };
+}
+
+export function approveCandidateAtsResume(review: AtsReviewSnapshot): AtsReviewSnapshot {
+  if (!review.candidateResumeData || !review.candidateExportCheck?.fitsOnOnePage) {
+    return {
+      ...review,
+      approvedResumeData: null,
+      approvedExportCheck: null,
+      approvedAt: null,
+      approvedContentHash: null,
+      availabilityReason: getAtsAvailabilityReason({
+        ...review,
+        exportCheck: review.candidateExportCheck ?? review.exportCheck,
+      }),
+    };
+  }
+
+  return {
+    ...review,
+    approvedResumeData: normalizeResumeDataForAts(review.candidateResumeData),
+    approvedExportCheck: review.candidateExportCheck,
+    approvedAt: new Date().toISOString(),
+    approvedContentHash: buildResumeContentHash(review.candidateResumeData, review.targeting),
+    availabilityReason: null,
+  };
+}
+
 export function mergeResumePatch(base: ResumeData, patch: Partial<ResumeData>) {
   const next: ResumeData = {
     ...base,
@@ -572,6 +649,296 @@ function collectProblematicPunctuation(data: ResumeData) {
   const source = JSON.stringify(data);
   const matches = source.match(/â€¢|Â·|â€”|â€“|[\u2018\u2019\u201C\u201D\u2022\u2023\u25E6\u2043\u00B7\u2013\u2014\u2212]/g);
   return dedupe(matches ?? []);
+}
+
+function collectTopSkillItems(data: ResumeData, maxItems = 4) {
+  return dedupe(
+    data.skills
+      .flatMap((group) => group.items)
+      .map((item) => normalizeAtsText(item))
+      .filter(Boolean),
+  ).slice(0, maxItems);
+}
+
+function getEffectivePrimaryTitle(data: ResumeData, targeting: AtsTargeting) {
+  return normalizeAtsText(
+    targeting.primaryTitle ||
+      data.headline ||
+      data.experience[0]?.title ||
+      getDefaultAtsTargeting(data).primaryTitle,
+  );
+}
+
+function buildOptimizedHeadline(data: ResumeData, targeting: AtsTargeting) {
+  const currentHeadline = normalizeAtsText(data.headline);
+  const primaryTitle = getEffectivePrimaryTitle(data, targeting);
+
+  if (!primaryTitle) {
+    return currentHeadline;
+  }
+
+  if (!currentHeadline) {
+    return primaryTitle;
+  }
+
+  if (includesExactPhrase(currentHeadline.toLowerCase(), primaryTitle.toLowerCase())) {
+    return currentHeadline;
+  }
+
+  return primaryTitle;
+}
+
+function buildOptimizedSummary(data: ResumeData, targeting: AtsTargeting, maxLength: number) {
+  const primaryTitle = getEffectivePrimaryTitle(data, targeting);
+  const summary = normalizeAtsText(data.summary);
+  const topSkills = collectTopSkillItems(data, 3);
+  const searchableLead = [primaryTitle, topSkills.length ? `with ${topSkills.join(", ")}` : ""]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const leadSentence = searchableLead
+    ? `${searchableLead}${/[.!?]$/.test(searchableLead) ? "" : "."}`
+    : "";
+
+  if (!summary) {
+    return trimSentence(leadSentence, maxLength);
+  }
+
+  const needsTitle = primaryTitle
+    ? !includesExactPhrase(summary.toLowerCase(), primaryTitle.toLowerCase())
+    : false;
+  const candidate = needsTitle ? `${leadSentence} ${summary}`.trim() : summary;
+
+  return trimSentence(candidate, maxLength);
+}
+
+function trimExperienceHighlights(
+  data: ResumeData,
+  limitForIndex: (index: number, entry: ResumeData["experience"][number]) => number,
+) {
+  return {
+    ...data,
+    experience: data.experience.map((entry, index) => ({
+      ...entry,
+      highlights: entry.highlights.slice(0, Math.max(1, limitForIndex(index, entry))),
+    })),
+  } satisfies ResumeData;
+}
+
+function trimProjectsForAts(data: ResumeData, maxProjects: number) {
+  return {
+    ...data,
+    projects: data.projects.slice(0, Math.max(0, maxProjects)),
+  } satisfies ResumeData;
+}
+
+function trimCertificationsForAts(data: ResumeData, maxCertifications: number) {
+  return {
+    ...data,
+    certifications: data.certifications.slice(0, Math.max(0, maxCertifications)),
+  } satisfies ResumeData;
+}
+
+function trimExperienceCountForAts(data: ResumeData, maxRoles: number) {
+  return {
+    ...data,
+    experience: data.experience.slice(0, Math.max(1, maxRoles)),
+  } satisfies ResumeData;
+}
+
+function trimSkillsForAts(data: ResumeData, maxItems: number) {
+  let remaining = maxItems;
+  const nextSkills = data.skills
+    .map((group) => {
+      if (remaining <= 0) {
+        return null;
+      }
+
+      const items = group.items.slice(0, remaining);
+      remaining -= items.length;
+
+      return items.length
+        ? {
+            ...group,
+            items,
+          }
+        : null;
+    })
+    .filter((group): group is ResumeData["skills"][number] => group !== null);
+
+  return {
+    ...data,
+    skills: nextSkills,
+  } satisfies ResumeData;
+}
+
+function summarizeCandidateChanges(baseData: ResumeData, candidateData: ResumeData) {
+  const summary: AtsChangeSummaryItem[] = [];
+
+  if (formatHeadlineText(baseData) !== formatHeadlineText(candidateData)) {
+    summary.push({
+      id: "headline-searchable",
+      title: "Made the headline easier to find",
+      description: "Used a more explicit role title so recruiter search can match faster.",
+      category: "recruiter_searchability",
+    });
+  }
+
+  if (formatSummaryText(baseData) !== formatSummaryText(candidateData)) {
+    summary.push({
+      id: "summary-tightened",
+      title: "Tightened the summary",
+      description: "Shortened the summary and made the role and core skills more explicit.",
+      category: "recruiter_searchability",
+    });
+  }
+
+  if (formatExperienceText(baseData) !== formatExperienceText(candidateData)) {
+    summary.push({
+      id: "experience-prioritized",
+      title: "Prioritized the strongest experience points",
+      description: "Trimmed role bullets so the ATS PDF can stay one page without losing the core story.",
+      category: "one_page_pdf",
+    });
+  }
+
+  if (formatProjectsText(baseData) !== formatProjectsText(candidateData)) {
+    summary.push({
+      id: "projects-trimmed",
+      title: "Reduced lower-priority project detail",
+      description: "Kept projects lighter so experience and skills stay on the first page.",
+      category: "one_page_pdf",
+    });
+  }
+
+  if (formatCertificationsText(baseData) !== formatCertificationsText(candidateData)) {
+    summary.push({
+      id: "certifications-trimmed",
+      title: "Trimmed certifications for fit",
+      description: "Reduced certification detail to protect one-page ATS fit.",
+      category: "one_page_pdf",
+    });
+  }
+
+  if (formatSkillsText(baseData) !== formatSkillsText(candidateData)) {
+    summary.push({
+      id: "skills-focused",
+      title: "Focused the skills list",
+      description: "Kept the most searchable skill terms and removed lower-priority extras from the ATS version.",
+      category: "one_page_pdf",
+    });
+  }
+
+  if (formatContactText(baseData) !== formatContactText(candidateData)) {
+    summary.push({
+      id: "contact-normalized",
+      title: "Normalized contact details",
+      description: "Cleaned contact information into ATS-safe text for the export copy.",
+      category: "machine_readability",
+    });
+  }
+
+  return summary;
+}
+
+export async function buildAutoOptimizedAtsCandidate(input: {
+  data: ResumeData;
+  targeting: AtsTargeting;
+  checkExport: (data: ResumeData) => Promise<AtsExportCheck>;
+}) {
+  const originalData = normalizeResumeDataForAts(input.data);
+  let candidateResumeData = originalData;
+  let candidateExportCheck = await input.checkExport(candidateResumeData);
+
+  const maybeApply = async (nextData: ResumeData) => {
+    const normalizedNext = normalizeResumeDataForAts(nextData);
+    if (JSON.stringify(normalizedNext) === JSON.stringify(candidateResumeData)) {
+      return false;
+    }
+
+    candidateResumeData = normalizedNext;
+    candidateExportCheck = await input.checkExport(candidateResumeData);
+    return true;
+  };
+
+  await maybeApply({
+    ...candidateResumeData,
+    headline: buildOptimizedHeadline(candidateResumeData, input.targeting),
+    summary: buildOptimizedSummary(candidateResumeData, input.targeting, 260),
+  });
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply({
+      ...candidateResumeData,
+      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 220),
+    });
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimExperienceHighlights(candidateResumeData, () => 2));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimExperienceHighlights(candidateResumeData, (index) => (index < 2 ? 2 : 1)));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimProjectsForAts(candidateResumeData, 2));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimProjectsForAts(candidateResumeData, 1));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimProjectsForAts(candidateResumeData, 0));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimCertificationsForAts(candidateResumeData, 2));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimCertificationsForAts(candidateResumeData, 1));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimCertificationsForAts(candidateResumeData, 0));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage && candidateResumeData.experience.length > 4) {
+    await maybeApply(trimExperienceCountForAts(candidateResumeData, 4));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage && candidateResumeData.experience.length > 3) {
+    await maybeApply(trimExperienceCountForAts(candidateResumeData, 3));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimSkillsForAts(candidateResumeData, 14));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimSkillsForAts(candidateResumeData, 10));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimExperienceHighlights(candidateResumeData, () => 1));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply({
+      ...candidateResumeData,
+      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 160),
+    });
+  }
+
+  return {
+    candidateResumeData,
+    candidateExportCheck,
+    changeSummary: summarizeCandidateChanges(originalData, candidateResumeData),
+    status: candidateExportCheck.fitsOnOnePage ? ("ready" as const) : ("needs_attention" as const),
+  };
 }
 
 function buildKeywordCoverageIssue(jobKeywords: string[], searchableText: string): AtsIssue | null {
@@ -817,6 +1184,10 @@ export function createRuleBasedAtsReview(input: {
   data: ResumeData;
   targeting?: Partial<AtsTargeting>;
   exportCheck: AtsExportCheck;
+  candidateResumeData?: ResumeData | null;
+  candidateExportCheck?: AtsExportCheck | null;
+  changeSummary?: AtsChangeSummaryItem[];
+  status?: "ready" | "needs_attention";
   appliedSuggestionIds?: string[];
   aiSuggestions?: AtsSuggestion[];
   mode?: AtsReviewMode;
@@ -831,11 +1202,13 @@ export function createRuleBasedAtsReview(input: {
     lastExtractedKeywords: extractJobKeywords(input.targeting?.jobDescription ?? ""),
   };
 
-  const searchableText = collectSearchableText(normalizedData);
+  const reviewData = normalizeResumeDataForAts(input.candidateResumeData ?? normalizedData);
+  const reviewExportCheck = input.candidateExportCheck ?? input.exportCheck;
+  const searchableText = collectSearchableText(reviewData);
   const issues: AtsIssue[] = [];
-  const problematicPunctuation = collectProblematicPunctuation(normalizedData);
+  const problematicPunctuation = collectProblematicPunctuation(reviewData);
 
-  if (!normalizedData.headline) {
+  if (!reviewData.headline) {
     issues.push({
       id: "missing-headline",
       category: "recruiter_searchability",
@@ -859,7 +1232,7 @@ export function createRuleBasedAtsReview(input: {
     });
   } else if (
     !includesExactPhrase(searchableText, targeting.primaryTitle.toLowerCase()) &&
-    !includesExactPhrase(normalizedData.headline.toLowerCase(), targeting.primaryTitle.toLowerCase())
+    !includesExactPhrase(reviewData.headline.toLowerCase(), targeting.primaryTitle.toLowerCase())
   ) {
     issues.push({
       id: "primary-title-not-explicit",
@@ -872,19 +1245,7 @@ export function createRuleBasedAtsReview(input: {
     });
   }
 
-  if (targeting.titleVariants.length === 0) {
-    issues.push({
-      id: "missing-title-variants",
-      category: "recruiter_searchability",
-      severity: "info",
-      title: "Add title variants for adjacent recruiter searches",
-      description: "A small set of nearby titles helps you pressure-test whether your wording covers common search variations.",
-      field: "targeting",
-      suggestedFix: "Add up to two role variations you also want to show up for.",
-    });
-  }
-
-  if (countExplicitSkillItems(normalizedData) < 6) {
+  if (countExplicitSkillItems(reviewData) < 6) {
     issues.push({
       id: "skills-too-thin",
       category: "recruiter_searchability",
@@ -924,7 +1285,7 @@ export function createRuleBasedAtsReview(input: {
     });
   }
 
-  if (!normalizedData.email && !normalizedData.linkedin && !normalizedData.github && !normalizedData.website) {
+  if (!reviewData.email && !reviewData.linkedin && !reviewData.github && !reviewData.website) {
     issues.push({
       id: "missing-contact",
       category: "machine_readability",
@@ -941,22 +1302,22 @@ export function createRuleBasedAtsReview(input: {
     issues.push(keywordCoverageIssue);
   }
 
-  if (!input.exportCheck.fitsOnOnePage) {
+  if (!reviewExportCheck.fitsOnOnePage) {
     issues.push({
       id: "pdf-overflow",
       category: "one_page_pdf",
       severity: "critical",
       title: "The ATS PDF is still over one page",
       description:
-        input.exportCheck.overflowReasons[0] ??
+        reviewExportCheck.overflowReasons[0] ??
         "The exported resume still needs trimming before it can become a one-page ATS-safe PDF.",
       field: "summary",
-      suggestedFix: input.exportCheck.recommendedFixes[0] ?? "Trim lower-priority sections and shorten long bullets.",
+      suggestedFix: reviewExportCheck.recommendedFixes[0] ?? "Trim lower-priority sections and shorten long bullets.",
     });
   }
 
   const combinedSuggestions = [
-    ...buildRuleSuggestions(normalizedData, targeting, input.exportCheck).map((suggestion) => ({
+    ...buildRuleSuggestions(reviewData, targeting, reviewExportCheck).map((suggestion) => ({
       ...suggestion,
       source: "rules" as const,
     })),
@@ -968,7 +1329,7 @@ export function createRuleBasedAtsReview(input: {
   const suggestions = dedupe(combinedSuggestions.map((suggestion) => suggestion.id)).map((id) => {
     return combinedSuggestions.find((suggestion) => suggestion.id === id) as AtsSuggestion;
   });
-  const proposals = buildProposalSections(normalizedData, suggestions);
+  const proposals = buildProposalSections(reviewData, suggestions);
 
   const score = buildScores(issues);
 
@@ -985,9 +1346,18 @@ export function createRuleBasedAtsReview(input: {
       lastDecisionAt: null,
     },
     exportCheck: input.exportCheck,
+    candidateResumeData: reviewData,
+    candidateExportCheck: reviewExportCheck,
+    changeSummary: input.changeSummary ?? [],
+    status: input.status ?? (reviewExportCheck.fitsOnOnePage ? "ready" : "needs_attention"),
     lastReviewedAt: new Date().toISOString(),
     contentHash: buildResumeContentHash(normalizedData, targeting),
     mode: input.mode ?? "full",
     source: input.aiSuggestions?.length ? "rules+ai" : "rules",
+    approvedResumeData: null,
+    approvedExportCheck: null,
+    approvedAt: null,
+    approvedContentHash: null,
+    availabilityReason: null,
   } satisfies AtsReviewSnapshot;
 }

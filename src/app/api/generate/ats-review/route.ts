@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAnthropicClient } from "@/lib/anthropic";
 import {
+  buildAutoOptimizedAtsCandidate,
   createRuleBasedAtsReview,
   normalizeAtsText,
   normalizeResumeDataForAts,
@@ -179,6 +180,12 @@ export async function POST(request: Request) {
     const normalized = normalizeResumeDataForAts(body.resumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
     const mode: AtsReviewMode = body.mode === "fast" ? "fast" : "full";
+    const resolvedTargeting: AtsTargeting = {
+      primaryTitle: normalizeAtsText(body.targeting?.primaryTitle ?? normalized.headline),
+      titleVariants: (body.targeting?.titleVariants ?? []).map((item) => normalizeAtsText(item)).filter(Boolean),
+      jobDescription: body.targeting?.jobDescription ?? "",
+      lastExtractedKeywords: [],
+    };
     let aiSuggestions: AtsSuggestion[] = [];
 
     if (mode === "full") {
@@ -190,12 +197,7 @@ export async function POST(request: Request) {
           messages: [
             {
               role: "user",
-              content: buildPrompt(normalized, {
-                primaryTitle: normalizeAtsText(body.targeting?.primaryTitle ?? normalized.headline),
-                titleVariants: (body.targeting?.titleVariants ?? []).map((item) => normalizeAtsText(item)).filter(Boolean),
-                jobDescription: body.targeting?.jobDescription ?? "",
-                lastExtractedKeywords: [],
-              }, body.rawResume ?? null),
+              content: buildPrompt(normalized, resolvedTargeting, body.rawResume ?? null),
             },
           ],
         });
@@ -210,10 +212,20 @@ export async function POST(request: Request) {
       }
     }
 
+    const candidate = await buildAutoOptimizedAtsCandidate({
+      data: normalized,
+      targeting: resolvedTargeting,
+      checkExport: checkAtsResumeExport,
+    });
+
     const review = createRuleBasedAtsReview({
       data: normalized,
       targeting: body.targeting,
       exportCheck,
+      candidateResumeData: candidate.candidateResumeData,
+      candidateExportCheck: candidate.candidateExportCheck,
+      changeSummary: candidate.changeSummary,
+      status: candidate.status,
       appliedSuggestionIds: body.appliedSuggestionIds,
       aiSuggestions,
       mode,
@@ -224,7 +236,7 @@ export async function POST(request: Request) {
       issues: review.issues.length,
       suggestions: review.suggestions.length,
       proposals: review.proposals.length,
-      fits_one_page: review.exportCheck.fitsOnOnePage,
+      fits_one_page: review.candidateExportCheck?.fitsOnOnePage ?? review.exportCheck.fitsOnOnePage,
       job_description: Boolean(review.targeting.jobDescription),
     });
 

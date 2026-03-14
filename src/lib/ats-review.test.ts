@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  approveCandidateAtsResume,
   applyProposalSelection,
+  buildAutoOptimizedAtsCandidate,
   buildAtsRelevantFingerprint,
   createRuleBasedAtsReview,
   evaluateSuggestionOutcome,
   extractJobKeywords,
+  finalizeApprovedAtsResume,
   getDefaultAtsTargeting,
+  hasApprovedAtsResume,
+  inheritApprovedAtsResume,
   normalizeAtsText,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
@@ -106,6 +111,89 @@ describe("ATS review helpers", () => {
     expect(review.proposals.map((proposal) => proposal.group)).toContain("projects");
     expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedIssueIds).toContain("pdf-overflow");
     expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedScoreDimensions).toContain("onePagePdf");
+  });
+
+  it("builds an auto-optimized ATS candidate that reaches one page for common overflow cases", async () => {
+    const data = buildResume({
+      summary: "A".repeat(420),
+      experience: [
+        {
+          title: "Founder",
+          company: "Northwind",
+          dates: "2022 - Present",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Product Lead",
+          company: "Contoso",
+          dates: "2020 - 2022",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Analyst",
+          company: "Fabrikam",
+          dates: "2019 - 2020",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Coordinator",
+          company: "Tailspin",
+          dates: "2018 - 2019",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Assistant",
+          company: "Legacy Co",
+          dates: "2017 - 2018",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+      ],
+      projects: [
+        { name: "One", description: "Project", tech: ["TypeScript"], url: null },
+        { name: "Two", description: "Project", tech: ["React"], url: null },
+        { name: "Three", description: "Project", tech: ["SQL"], url: null },
+      ],
+      certifications: [
+        { name: "One", issuer: "Issuer", date: "2023" },
+        { name: "Two", issuer: "Issuer", date: "2024" },
+        { name: "Three", issuer: "Issuer", date: "2025" },
+      ],
+      skills: [{ category: "Tools", items: Array.from({ length: 20 }, (_, index) => `Skill ${index + 1}`) }],
+    });
+
+    const candidate = await buildAutoOptimizedAtsCandidate({
+      data,
+      targeting: getDefaultAtsTargeting(data),
+      checkExport: async (resume) => {
+        const totalHighlights = resume.experience.reduce((count, entry) => count + entry.highlights.length, 0);
+        const totalSkills = resume.skills.reduce((count, group) => count + group.items.length, 0);
+        const fits =
+          resume.summary.length <= 220 &&
+          resume.experience.length <= 4 &&
+          totalHighlights <= 6 &&
+          resume.projects.length <= 1 &&
+          resume.certifications.length <= 1 &&
+          totalSkills <= 10;
+
+        return {
+          pageCount: fits ? 1 : 2,
+          fitsOnOnePage: fits,
+          overflowReasons: fits ? [] : ["Still over one page."],
+          recommendedFixes: fits ? [] : ["Trim more content."],
+        };
+      },
+    });
+
+    expect(candidate.status).toBe("ready");
+    expect(candidate.candidateExportCheck.fitsOnOnePage).toBe(true);
+    expect(candidate.candidateResumeData.summary.length).toBeLessThanOrEqual(220);
+    expect(candidate.candidateResumeData.experience.length).toBeLessThanOrEqual(4);
+    expect(candidate.changeSummary.length).toBeGreaterThan(0);
   });
 
   it("builds at most one proposal per section group with normalized before and after text", () => {
@@ -256,5 +344,105 @@ describe("ATS review helpers", () => {
 
     expect(outcome.status).toBe("still_needs_work");
     expect(outcome.remainingIssueIds).toContain("pdf-overflow");
+  });
+
+  it("stores a separate approved ATS resume only when the export fits one page", () => {
+    const fittingReview = createRuleBasedAtsReview({
+      data: buildResume(),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 1,
+        fitsOnOnePage: true,
+        overflowReasons: [],
+        recommendedFixes: [],
+      },
+    });
+
+    const approvedReview = finalizeApprovedAtsResume(fittingReview, buildResume());
+    expect(hasApprovedAtsResume(approvedReview)).toBe(true);
+    expect(approvedReview.approvedResumeData?.stats).toEqual([{ value: "6+", label: "Years" }]);
+    expect(approvedReview.availabilityReason).toBeNull();
+
+    const overflowingReview = createRuleBasedAtsReview({
+      data: buildResume({ summary: "A".repeat(420) }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      },
+    });
+
+    const unavailableReview = finalizeApprovedAtsResume(overflowingReview, buildResume({ summary: "A".repeat(420) }));
+    expect(hasApprovedAtsResume(unavailableReview)).toBe(false);
+    expect(unavailableReview.approvedResumeData).toBeNull();
+    expect(unavailableReview.availabilityReason).toContain("Shorten the summary");
+  });
+
+  it("approves the generated ATS candidate separately from the public page content", () => {
+    const review = createRuleBasedAtsReview({
+      data: buildResume({ headline: "Builder", summary: "A".repeat(420) }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The current version is too long."],
+        recommendedFixes: ["Tighten the summary."],
+      },
+      candidateResumeData: buildResume({ headline: "Product Manager", summary: "Product Manager with SQL, Figma, Analytics experience." }),
+      candidateExportCheck: {
+        pageCount: 1,
+        fitsOnOnePage: true,
+        overflowReasons: [],
+        recommendedFixes: [],
+      },
+      changeSummary: [
+        {
+          id: "headline-searchable",
+          title: "Made the headline easier to find",
+          description: "Used a clearer title.",
+          category: "recruiter_searchability",
+        },
+      ],
+      status: "ready",
+    });
+
+    const approved = approveCandidateAtsResume(review);
+    expect(approved.approvedResumeData?.headline).toBe("Product Manager");
+    expect(approved.approvedExportCheck?.fitsOnOnePage).toBe(true);
+    expect(approved.approvedResumeData?.headline).not.toBe("Builder");
+  });
+
+  it("preserves the saved approved ATS resume across transient review reruns", () => {
+    const savedReview = finalizeApprovedAtsResume(
+      createRuleBasedAtsReview({
+        data: buildResume(),
+        targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+        exportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      }),
+      buildResume(),
+    );
+
+    const transientReview = createRuleBasedAtsReview({
+      data: buildResume({ summary: "A".repeat(420) }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      },
+    });
+
+    const mergedReview = inheritApprovedAtsResume(transientReview, savedReview);
+    expect(hasApprovedAtsResume(mergedReview)).toBe(true);
+    expect(mergedReview.approvedContentHash).toBe(savedReview.approvedContentHash);
+    expect(mergedReview.exportCheck.fitsOnOnePage).toBe(false);
   });
 });

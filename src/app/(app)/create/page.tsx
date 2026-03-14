@@ -11,7 +11,14 @@ import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { applyProposalSelection, getDefaultAtsTargeting, stampProposalDecision } from "@/lib/ats-review";
+import {
+  approveCandidateAtsResume,
+  finalizeApprovedAtsResume,
+  getAtsAvailabilityReason,
+  getDefaultAtsTargeting,
+  hasApprovedAtsResume,
+  inheritApprovedAtsResume,
+} from "@/lib/ats-review";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
@@ -224,6 +231,7 @@ export default function CreatePage() {
       ? [guidedOption, pasteOption]
       : [pasteOption, guidedOption];
   }, [createIntro.recommendedMode]);
+  const atsPdfReady = hasApprovedAtsResume(atsReview);
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
 
@@ -407,7 +415,7 @@ export default function CreatePage() {
           throw new Error(failure?.error ?? "ATS review failed.");
         }
 
-        const result = payload as AtsReviewSnapshot;
+        const result = inheritApprovedAtsResume(payload as AtsReviewSnapshot, atsReview);
         if (requestId !== atsReviewRequestIdRef.current) {
           return null;
         }
@@ -418,7 +426,7 @@ export default function CreatePage() {
           mode,
           issues: result.issues.length,
           source_ref: activeReferrer,
-          fits_one_page: result.exportCheck.fitsOnOnePage,
+          fits_one_page: result.candidateExportCheck?.fitsOnOnePage ?? result.exportCheck.fitsOnOnePage,
         });
         return result;
       } catch (reviewError) {
@@ -436,7 +444,7 @@ export default function CreatePage() {
         }
       }
     },
-    [activeReferrer, atsReview?.appliedSuggestionIds, atsTargeting, parsedData, resumeText, router, trackCreateEvent],
+    [activeReferrer, atsReview, atsTargeting, parsedData, resumeText, router, trackCreateEvent],
   );
 
   const beginAtsReviewStep = useCallback(
@@ -458,92 +466,71 @@ export default function CreatePage() {
         return;
       }
 
-      if (result.proposals.length === 0) {
-        setAtsReadyNotice("No ATS edits were suggested. You can keep your wording and pick a theme.");
+      if (result.status === "ready" && result.changeSummary.length === 0) {
+        const finalizedReview = approveCandidateAtsResume(result);
+        setAtsReview(finalizedReview);
+        setAtsReadyNotice(
+          hasApprovedAtsResume(finalizedReview)
+            ? "Your ATS PDF is already ready. We did not need to change anything before you continue."
+            : getAtsAvailabilityReason(finalizedReview),
+        );
         setStep("theme");
         return;
       }
 
       void trackCreateEvent("ats.proposal.review_shown", {
-        proposal_count: result.proposals.length,
+        proposal_count: result.changeSummary.length,
         source_ref: activeReferrer,
       });
     },
     [activeReferrer, runAtsReview, trackCreateEvent],
   );
 
-  const handleApplySelectedAtsChanges = useCallback(
-    async (decision: NonNullable<AtsReviewSnapshot["proposalDecision"]>) => {
+  const handleUseGeneratedAtsVersion = useCallback(
+    async () => {
       if (!parsedData || !atsReview) {
         return;
       }
 
       setApplyingAtsDecision(true);
-      const decisionWithTimestamp = {
-        ...decision,
-        lastDecisionAt: new Date().toISOString(),
-      };
-      const nextData = applyProposalSelection(parsedData, atsReview.proposals, decision.acceptedProposalIds);
-
-      setParsedData(nextData);
-      if (decision.acceptedProposalIds.length) {
-        void trackCreateEvent("ats.proposal.accepted", {
-          accepted_count: decision.acceptedProposalIds.length,
-          source_ref: activeReferrer,
-        });
-      }
-      if (decision.declinedProposalIds.length) {
-        void trackCreateEvent("ats.proposal.declined", {
-          declined_count: decision.declinedProposalIds.length,
-          source_ref: activeReferrer,
-        });
-      }
-
-      const fastReview = await runAtsReview({
-        mode: "fast",
-        overrideData: nextData,
-        overrideTargeting: atsTargeting,
-        appliedSuggestionIds: decision.acceptedProposalIds,
+      void trackCreateEvent("ats.proposal.accepted", {
+        accepted_count: atsReview.changeSummary.length,
+        source_ref: activeReferrer,
       });
 
-      if (fastReview) {
-        setAtsReview(stampProposalDecision(fastReview, decisionWithTimestamp));
-      } else {
-        setAtsReview(stampProposalDecision(atsReview, decisionWithTimestamp));
-      }
-
+      const nextReview = approveCandidateAtsResume(atsReview);
+      setAtsReview(nextReview);
       setAtsReadyNotice(
-        decision.acceptedProposalIds.length
-          ? `Applied ${decision.acceptedProposalIds.length} ATS-ready change${decision.acceptedProposalIds.length === 1 ? "" : "s"}. You can keep editing after your page is created.`
-          : "You kept your current wording. You can still fine-tune the page after it is created.",
+        hasApprovedAtsResume(nextReview)
+          ? "Your ATS PDF is ready to go live with this page."
+          : getAtsAvailabilityReason(nextReview),
       );
       setApplyingAtsDecision(false);
       setStep("theme");
     },
-    [activeReferrer, atsReview, atsTargeting, parsedData, runAtsReview, trackCreateEvent],
+    [activeReferrer, atsReview, parsedData, trackCreateEvent],
   );
 
   const handleKeepCurrentAtsCopy = useCallback(
-    async (decision: NonNullable<AtsReviewSnapshot["proposalDecision"]>) => {
-      if (!atsReview) {
+    async () => {
+      if (!atsReview || !parsedData) {
         return;
       }
 
-      const decisionWithTimestamp = {
-        ...decision,
-        lastDecisionAt: new Date().toISOString(),
-      };
-      if (decision.declinedProposalIds.length) {
-        void trackCreateEvent("ats.proposal.declined", {
-          declined_count: decision.declinedProposalIds.length,
-          source_ref: activeReferrer,
-        });
-      }
-      setAtsReview(stampProposalDecision(atsReview, decisionWithTimestamp));
-      setAtsReadyNotice("You kept your original wording. You can make more ATS-aware edits after the page is created.");
+      void trackCreateEvent("ats.proposal.declined", {
+        declined_count: atsReview.changeSummary.length || 1,
+        source_ref: activeReferrer,
+      });
+      const finalizedReview = finalizeApprovedAtsResume(atsReview, parsedData);
+      setAtsReview(finalizedReview);
+      setAtsReadyNotice(
+        hasApprovedAtsResume(finalizedReview)
+          ? "You kept your original wording. Your ATS PDF is ready once you publish."
+          : getAtsAvailabilityReason(finalizedReview),
+      );
       setStep("theme");
     },
-    [activeReferrer, atsReview, trackCreateEvent],
+    [activeReferrer, atsReview, parsedData, trackCreateEvent],
   );
 
   const startProcessing = async () => {
@@ -828,15 +815,15 @@ export default function CreatePage() {
           onTargetingChange={setAtsTargeting}
           onRunReview={() => void runAtsReview({ mode: "full" })}
           onBack={() => setStep("input")}
-          onPrimaryAction={(decision) => void handleApplySelectedAtsChanges(decision)}
-          onSecondaryAction={(decision) => void handleKeepCurrentAtsCopy(decision)}
-          primaryActionLabel="Apply Selected and Continue"
-          secondaryActionLabel="Keep Current and Continue"
+          onPrimaryAction={() => void handleUseGeneratedAtsVersion()}
+          onSecondaryAction={() => void handleKeepCurrentAtsCopy()}
+          primaryActionLabel="Use This ATS Version"
+          secondaryActionLabel="Keep Current"
           backLabel="Back"
-          runReviewLabel="Run Full ATS Review"
+          runReviewLabel="Run ATS Review"
           stepLabel="Step 2"
-          heading="Review the ATS-ready before and after"
-          body="We suggest section-by-section edits you can accept or decline before your living page is created. Detailed ATS diagnostics stay under Details whenever you want them."
+          heading="Review the ATS version before you continue"
+          body="We auto-build the strongest one-page ATS version we can, keep your public page content separate, and only ask whether you want to use that ATS copy or keep your current one."
         />
       ) : null}
 
@@ -917,9 +904,9 @@ export default function CreatePage() {
             <div className="mb-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
               <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">ATS status</p>
               <p className="mt-2 text-sm text-[#F0F4FF]">
-                {atsReview.exportCheck.fitsOnOnePage
-                  ? "Visible to systems, easier to find in recruiter search, and ready for a one-page ATS PDF."
-                  : "The living page is ready, but the ATS PDF still needs one-page fixes before export."}
+                {atsPdfReady
+                  ? "Visible to systems, easier to find in recruiter search, and ready to publish with a saved one-page ATS PDF."
+                  : getAtsAvailabilityReason(atsReview)}
               </p>
             </div>
           ) : null}

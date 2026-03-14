@@ -20,6 +20,7 @@ import {
   removeAvatarViaApi,
   sendStripeWebhook,
   seedPageAnalyticsHistory,
+  setPublicAtsDownloadState,
   setPlanForProfile,
   signIn,
   uploadAvatarViaApi,
@@ -61,10 +62,10 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "Create Your Page" }).click();
     await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByRole("button", { name: "Load Sample" }).click();
-    await page.getByRole("button", { name: "Run Full ATS Review" }).click();
+    await page.getByRole("button", { name: "Run ATS Review" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("Review the ATS-ready before and after")).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Apply Selected and Continue" }).click();
+    await expect(page.getByText("Review the ATS version before you continue")).toBeVisible({ timeout: 45_000 });
+    await page.getByRole("button", { name: "Use This ATS Version" }).click();
     await page.getByRole("button", { name: "Preview My Living Page" }).click();
     await expect(page.getByRole("button", { name: "Publish and Go Live" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish and Go Live" }).click();
@@ -75,8 +76,8 @@ test.describe.serial("authenticated user journeys", () => {
     const headlineInput = page.locator('input[type="text"]').nth(1);
     await headlineInput.fill(`Updated headline ${Date.now()}`);
     await page.getByRole("button", { name: "Save Changes" }).click();
-    await expect(page.getByRole("button", { name: "Save With Selected ATS Edits" })).toBeVisible();
-    await page.getByRole("button", { name: "Save With Selected ATS Edits" }).click();
+    await expect(page.getByRole("button", { name: "Save With This ATS Version" })).toBeVisible();
+    await page.getByRole("button", { name: "Save With This ATS Version" }).click();
     await expect(page.getByText("Saved successfully!")).toBeVisible();
 
     await page.goto("/dashboard/settings");
@@ -183,6 +184,34 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.reload();
     await expect(page.getByText("You have an unsaved draft")).toBeVisible();
+  });
+
+  test("public ATS download only appears when an approved ATS resume exists", async ({ page, browser }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run ATS public download coverage.",
+    );
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    await setPlanForProfile(profile.id, "pro");
+    const livePage = await ensureLivePageForProfile(profile);
+
+    await setPublicAtsDownloadState(livePage.id, "needs_review");
+    await page.goto(`/${profile.username}`);
+    await expect(page.getByText("ATS PDF not ready")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Download ATS PDF" })).toHaveCount(0);
+
+    const viewerContext = await browser.newContext();
+    const viewerPage = await viewerContext.newPage();
+    await viewerPage.goto(`/${profile.username}`);
+    await expect(viewerPage.getByText("ATS PDF not ready")).toHaveCount(0);
+    await expect(viewerPage.getByRole("button", { name: "Download ATS PDF" })).toHaveCount(0);
+    await viewerContext.close();
+
+    await setPublicAtsDownloadState(livePage.id, "ready");
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Download ATS PDF" })).toBeVisible();
   });
 
   test("billing checkout, webhook unlock, portal access, and downgrade stay healthy", async ({ page }) => {

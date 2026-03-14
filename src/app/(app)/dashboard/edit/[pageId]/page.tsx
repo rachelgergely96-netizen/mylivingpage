@@ -11,10 +11,13 @@ import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
-  applyProposalSelection,
+  approveCandidateAtsResume,
   buildAtsRelevantFingerprint,
+  finalizeApprovedAtsResume,
+  getAtsAvailabilityReason,
   getDefaultAtsTargeting,
-  stampProposalDecision,
+  hasApprovedAtsResume,
+  inheritApprovedAtsResume,
 } from "@/lib/ats-review";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
@@ -73,6 +76,7 @@ export default function EditPage() {
   const initialSnapshotRef = useRef<string>("");
   const initialAtsFingerprintRef = useRef<string>("");
   const atsReview = pageConfig.ats ?? null;
+  const liveAtsPdfReady = hasApprovedAtsResume(atsReview);
 
   const isDirty = useMemo(() => {
     if (!data || !initialSnapshotRef.current) return false;
@@ -83,6 +87,17 @@ export default function EditPage() {
     if (!data || !initialAtsFingerprintRef.current) return false;
     return buildAtsRelevantFingerprint(data) !== initialAtsFingerprintRef.current;
   }, [data]);
+  const atsStatusMessage = useMemo(() => {
+    if (hasAtsRelevantChanges && atsReview) {
+      return atsReview.status === "ready"
+        ? "ATS PDF will be ready on the live page after you save these changes."
+        : getAtsAvailabilityReason(atsReview);
+    }
+
+    return liveAtsPdfReady
+      ? "ATS PDF ready on the live page."
+      : "ATS PDF needs review before it can appear on the live page.";
+  }, [atsReview, hasAtsRelevantChanges, liveAtsPdfReady]);
 
   useUnsavedChanges(isDirty);
 
@@ -246,7 +261,7 @@ export default function EditPage() {
           throw new Error(failure?.error ?? "ATS review failed.");
         }
 
-        const result = payload as NonNullable<PageConfig["ats"]>;
+        const result = inheritApprovedAtsResume(payload as NonNullable<PageConfig["ats"]>, atsReview);
         if (requestId !== atsReviewRequestIdRef.current) {
           return null;
         }
@@ -257,7 +272,7 @@ export default function EditPage() {
           mode,
           page_id: page?.id,
           issues: result.issues.length,
-          fits_one_page: result.exportCheck.fitsOnOnePage,
+          fits_one_page: result.candidateExportCheck?.fitsOnOnePage ?? result.exportCheck.fitsOnOnePage,
         });
         return result;
       } catch (reviewError) {
@@ -275,7 +290,7 @@ export default function EditPage() {
         }
       }
     },
-    [atsReview?.appliedSuggestionIds, atsTargeting, data, page?.id, page?.raw_resume, router, trackOptimizeEvent],
+    [atsReview, atsTargeting, data, page?.id, page?.raw_resume, router, trackOptimizeEvent],
   );
 
   const persistPage = useCallback(
@@ -321,104 +336,46 @@ export default function EditPage() {
     [clearDraft, page, saving, themeId],
   );
 
-  const applyProposalDecisionToLocalState = useCallback(
-    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
-      if (!data || !atsReview) {
-        return {
-          nextData: data,
-          nextReview: atsReview,
-        };
-      }
+  const handleOptimizeUseGeneratedVersion = useCallback(async () => {
+    if (!atsReview) {
+      return;
+    }
 
-      const decisionWithTimestamp = {
-        ...decision,
-        lastDecisionAt: new Date().toISOString(),
-      };
-      const nextData = applyProposalSelection(data, atsReview.proposals, decision.acceptedProposalIds);
+    setApplyingProposalChanges(true);
+    void trackOptimizeEvent("ats.proposal.accepted", {
+      page_id: page?.id,
+      accepted_count: atsReview.changeSummary.length || 1,
+    });
 
-      if (decision.acceptedProposalIds.length) {
-        const fastReview = await runAtsReview({
-          mode: "fast",
-          overrideData: nextData,
-          overrideTargeting: atsTargeting,
-          appliedSuggestionIds: decision.acceptedProposalIds,
-        });
-        if (fastReview) {
-          const stampedReview = stampProposalDecision(fastReview, decisionWithTimestamp);
-          setData(nextData);
-          setPageConfig((current) => ({ ...current, ats: stampedReview }));
-          return {
-            nextData,
-            nextReview: stampedReview,
-          };
-        }
-      }
+    const nextReview = approveCandidateAtsResume(atsReview);
+    setPageConfig((current) => ({ ...current, ats: nextReview }));
+    setSuccess(
+      hasApprovedAtsResume(nextReview)
+        ? "ATS version ready. Save when you're ready."
+        : getAtsAvailabilityReason(nextReview),
+    );
+    setTimeout(() => setSuccess(""), 3000);
+    setApplyingProposalChanges(false);
+  }, [atsReview, page?.id, trackOptimizeEvent]);
 
-      const stampedReview = stampProposalDecision(atsReview, decisionWithTimestamp);
-      setData(nextData);
-      setPageConfig((current) => ({ ...current, ats: stampedReview }));
-      return {
-        nextData,
-        nextReview: stampedReview,
-      };
-    },
-    [atsReview, atsTargeting, data, runAtsReview],
-  );
+  const handleOptimizeKeepCurrent = useCallback(async () => {
+    if (!atsReview || !data) {
+      return;
+    }
 
-  const handleOptimizeApply = useCallback(
-    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
-      if (!data || !atsReview) {
-        return;
-      }
-
-      setApplyingProposalChanges(true);
-      if (decision.acceptedProposalIds.length) {
-        void trackOptimizeEvent("ats.proposal.accepted", {
-          page_id: page?.id,
-          accepted_count: decision.acceptedProposalIds.length,
-        });
-      }
-      if (decision.declinedProposalIds.length) {
-        void trackOptimizeEvent("ats.proposal.declined", {
-          page_id: page?.id,
-          declined_count: decision.declinedProposalIds.length,
-        });
-      }
-
-      await applyProposalDecisionToLocalState(decision);
-      setSuccess(
-        decision.acceptedProposalIds.length
-          ? "ATS-ready edits applied locally. Save when you're ready."
-          : "You kept your current wording. Save when you're ready.",
-      );
-      setTimeout(() => setSuccess(""), 3000);
-      setApplyingProposalChanges(false);
-    },
-    [applyProposalDecisionToLocalState, atsReview, data, page?.id, trackOptimizeEvent],
-  );
-
-  const handleOptimizeKeepCurrent = useCallback(
-    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
-      if (!atsReview) {
-        return;
-      }
-
-      const decisionWithTimestamp = {
-        ...decision,
-        lastDecisionAt: new Date().toISOString(),
-      };
-      if (decision.declinedProposalIds.length) {
-        void trackOptimizeEvent("ats.proposal.declined", {
-          page_id: page?.id,
-          declined_count: decision.declinedProposalIds.length,
-        });
-      }
-      setPageConfig((current) => ({ ...current, ats: stampProposalDecision(atsReview, decisionWithTimestamp) }));
-      setSuccess("You kept your current wording. Save when you're ready.");
-      setTimeout(() => setSuccess(""), 3000);
-    },
-    [atsReview, page?.id, trackOptimizeEvent],
-  );
+    void trackOptimizeEvent("ats.proposal.declined", {
+      page_id: page?.id,
+      declined_count: atsReview.changeSummary.length || 1,
+    });
+    const nextReview = finalizeApprovedAtsResume(atsReview, data);
+    setPageConfig((current) => ({ ...current, ats: nextReview }));
+    setSuccess(
+      hasApprovedAtsResume(nextReview)
+        ? "You kept the current content. Save when you're ready."
+        : getAtsAvailabilityReason(nextReview),
+    );
+    setTimeout(() => setSuccess(""), 3000);
+  }, [atsReview, data, page?.id, trackOptimizeEvent]);
 
   const handleSaveClick = useCallback(async () => {
     if (!data || !page || saving || openingSaveGate || saveGateBusy) return;
@@ -448,16 +405,13 @@ export default function EditPage() {
       return;
     }
 
-    if (result.proposals.length === 0) {
+    if (result.status === "ready" && result.changeSummary.length === 0) {
+      const finalizedReview = approveCandidateAtsResume(result);
       await persistPage(
         data,
         {
           ...pageConfig,
-          ats: stampProposalDecision(result, {
-            acceptedProposalIds: [],
-            declinedProposalIds: [],
-            lastDecisionAt: new Date().toISOString(),
-          }),
+          ats: finalizedReview,
         },
         themeId,
       );
@@ -466,7 +420,7 @@ export default function EditPage() {
 
     void trackOptimizeEvent("ats.save_gate.opened", {
       page_id: page.id,
-      proposal_count: result.proposals.length,
+      proposal_count: result.changeSummary.length,
     });
     setShowSaveGate(true);
   }, [
@@ -485,71 +439,54 @@ export default function EditPage() {
     trackOptimizeEvent,
   ]);
 
-  const handleSaveWithSelectedAtsChanges = useCallback(
-    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
-      if (!data || !page) {
-        return;
-      }
+  const handleSaveWithGeneratedAtsVersion = useCallback(async () => {
+    if (!data || !atsReview || !page) {
+      return;
+    }
 
-      setSaveGateBusy(true);
-      if (decision.acceptedProposalIds.length) {
-        void trackOptimizeEvent("ats.proposal.accepted", {
-          page_id: page.id,
-          accepted_count: decision.acceptedProposalIds.length,
-        });
-      }
-      if (decision.declinedProposalIds.length) {
-        void trackOptimizeEvent("ats.proposal.declined", {
-          page_id: page.id,
-          declined_count: decision.declinedProposalIds.length,
-        });
-      }
+    setSaveGateBusy(true);
+    void trackOptimizeEvent("ats.proposal.accepted", {
+      page_id: page.id,
+      accepted_count: atsReview.changeSummary.length || 1,
+    });
 
-      const nextState = await applyProposalDecisionToLocalState(decision);
-      const saved = nextState.nextData && nextState.nextReview
-        ? await persistPage(nextState.nextData, { ...pageConfig, ats: nextState.nextReview }, themeId)
-        : false;
+    const saved = await persistPage(
+      data,
+      {
+        ...pageConfig,
+        ats: approveCandidateAtsResume(atsReview),
+      },
+      themeId,
+    );
+    if (saved) {
+      setShowSaveGate(false);
+    }
+    setSaveGateBusy(false);
+  }, [atsReview, data, page, pageConfig, persistPage, themeId, trackOptimizeEvent]);
 
-      if (saved) {
-        setShowSaveGate(false);
-      }
-      setSaveGateBusy(false);
-    },
-    [applyProposalDecisionToLocalState, data, page, pageConfig, persistPage, themeId, trackOptimizeEvent],
-  );
+  const handleSaveWithoutAtsEdits = useCallback(async () => {
+    if (!data || !atsReview) {
+      return;
+    }
 
-  const handleSaveWithoutAtsEdits = useCallback(
-    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
-      if (!data || !atsReview) {
-        return;
-      }
-
-      setSaveGateBusy(true);
-      const decisionWithTimestamp = {
-        ...decision,
-        lastDecisionAt: new Date().toISOString(),
-      };
-      if (decision.declinedProposalIds.length) {
-        void trackOptimizeEvent("ats.proposal.declined", {
-          page_id: page?.id,
-          declined_count: decision.declinedProposalIds.length,
-        });
-      }
-      const saved = await persistPage(
-        data,
-        {
-          ...pageConfig,
-          ats: stampProposalDecision(atsReview, decisionWithTimestamp),
-        },
-        themeId,
-      );
-      if (saved) {
-        setShowSaveGate(false);
-      }
-      setSaveGateBusy(false);
-    },
-    [atsReview, data, page?.id, pageConfig, persistPage, themeId, trackOptimizeEvent],
-  );
+    setSaveGateBusy(true);
+    void trackOptimizeEvent("ats.proposal.declined", {
+      page_id: page?.id,
+      declined_count: atsReview.changeSummary.length || 1,
+    });
+    const saved = await persistPage(
+      data,
+      {
+        ...pageConfig,
+        ats: finalizeApprovedAtsResume(atsReview, data),
+      },
+      themeId,
+    );
+    if (saved) {
+      setShowSaveGate(false);
+    }
+    setSaveGateBusy(false);
+  }, [atsReview, data, page?.id, pageConfig, persistPage, themeId, trackOptimizeEvent]);
 
   if (loading) {
     return (
@@ -606,6 +543,11 @@ export default function EditPage() {
         <DraftBanner savedAt={pendingDraft.savedAt} onRestore={restoreDraft} onDiscard={dismissDraft} />
       ) : null}
 
+      <div className="mb-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">ATS PDF status</p>
+        <p className="mt-2 text-sm text-[#F0F4FF]">{atsStatusMessage}</p>
+      </div>
+
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1">
         {(["content", "optimize", "theme", "preview"] as Tab[]).map((t) => (
@@ -634,14 +576,14 @@ export default function EditPage() {
           actionBusy={applyingProposalChanges}
           onTargetingChange={setAtsTargeting}
           onRunReview={() => void runAtsReview({ mode: "full" })}
-          onPrimaryAction={(decision) => void handleOptimizeApply(decision)}
-          onSecondaryAction={(decision) => void handleOptimizeKeepCurrent(decision)}
-          primaryActionLabel="Apply Selected Changes"
-          secondaryActionLabel="Keep Current Version"
-          runReviewLabel="Run Full ATS Review"
+          onPrimaryAction={() => void handleOptimizeUseGeneratedVersion()}
+          onSecondaryAction={() => void handleOptimizeKeepCurrent()}
+          primaryActionLabel="Use This ATS Version"
+          secondaryActionLabel="Keep Current"
+          runReviewLabel="Run ATS Review"
           stepLabel="Optimize"
-          heading="Review the ATS-ready before and after"
-          body="See the proposed ATS-safe edits section by section, apply the ones you want, and keep the full diagnostics tucked under Details."
+          heading="Review the ATS version for this page"
+          body="We auto-build a stricter one-page ATS version from your current content. Your public page stays richer, and you can decide whether to save the ATS version or keep the current export."
         />
       ) : null}
 
@@ -944,15 +886,15 @@ export default function EditPage() {
               onTargetingChange={setAtsTargeting}
               onRunReview={() => void runAtsReview({ mode: "full" })}
               onBack={() => setShowSaveGate(false)}
-              onPrimaryAction={(decision) => void handleSaveWithSelectedAtsChanges(decision)}
-              onSecondaryAction={(decision) => void handleSaveWithoutAtsEdits(decision)}
-              primaryActionLabel="Save With Selected ATS Edits"
-              secondaryActionLabel="Save Without ATS Edits"
+              onPrimaryAction={() => void handleSaveWithGeneratedAtsVersion()}
+              onSecondaryAction={() => void handleSaveWithoutAtsEdits()}
+              primaryActionLabel="Save With This ATS Version"
+              secondaryActionLabel="Save Without ATS Changes"
               backLabel="Cancel"
-              runReviewLabel="Run Full ATS Review"
+              runReviewLabel="Run ATS Review"
               stepLabel="Save Review"
-              heading="Review ATS-ready edits before saving"
-              body="We found content changes that affect recruiter search or one-page ATS export. Accept or decline the proposed edits before this save goes through."
+              heading="Review the ATS version before saving"
+              body="These edits affect recruiter searchability or the public ATS PDF. We built the strongest ATS version we can from your draft and you can save with it or keep the current export."
             />
           </div>
         </div>

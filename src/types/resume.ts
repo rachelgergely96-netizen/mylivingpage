@@ -72,6 +72,36 @@ export interface AtsSuggestion {
   expectedIssueIds: string[];
   expectedScoreDimensions: AtsScoreDimension[];
   applyData: Partial<ResumeData>;
+  source?: "rules" | "ai";
+}
+
+export type AtsProposalGroup =
+  | "contact"
+  | "headline"
+  | "summary"
+  | "skills"
+  | "experience"
+  | "education"
+  | "projects"
+  | "certifications";
+
+export interface AtsProposalSection {
+  id: string;
+  group: AtsProposalGroup;
+  title: string;
+  reason: string;
+  beforeText: string;
+  afterText: string;
+  applyData: Partial<ResumeData>;
+  expectedIssueIds: string[];
+  expectedScoreDimensions: AtsScoreDimension[];
+  source: "rules" | "ai";
+}
+
+export interface AtsProposalDecision {
+  acceptedProposalIds: string[];
+  declinedProposalIds: string[];
+  lastDecisionAt: string | null;
 }
 
 export interface AtsExportCheck {
@@ -96,7 +126,9 @@ export interface AtsReviewSnapshot {
   score: AtsScoreBreakdown;
   issues: AtsIssue[];
   suggestions: AtsSuggestion[];
+  proposals: AtsProposalSection[];
   appliedSuggestionIds: string[];
+  proposalDecision: AtsProposalDecision;
   exportCheck: AtsExportCheck;
   lastReviewedAt: string;
   contentHash: string;

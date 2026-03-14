@@ -115,9 +115,10 @@ describe("POST /api/generate/ats-review", () => {
     );
 
     expect(response.status).toBe(200);
-    const payload = (await response.json()) as { mode: string };
+    const payload = (await response.json()) as { mode: string; proposals: Array<{ id: string }> };
 
     expect(payload.mode).toBe("fast");
+    expect(Array.isArray(payload.proposals)).toBe(true);
     expect(mocks.anthropicCreate).not.toHaveBeenCalled();
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-1",
@@ -126,5 +127,50 @@ describe("POST /api/generate/ats-review", () => {
         mode: "fast",
       }),
     );
+  });
+
+  it("returns proposals alongside issues and scores during a full review", async () => {
+    mocks.checkExport.mockResolvedValueOnce({
+      pageCount: 2,
+      fitsOnOnePage: false,
+      overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+      recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/generate/ats-review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeData: {
+            ...sampleResume,
+            summary: "A".repeat(420),
+            projects: [
+              { name: "One", description: "Project", tech: ["TypeScript"], url: null },
+              { name: "Two", description: "Project", tech: ["React"], url: null },
+              { name: "Three", description: "Project", tech: ["SQL"], url: null },
+            ],
+          },
+          targeting: {
+            primaryTitle: "Product Manager",
+            titleVariants: [],
+            jobDescription: "",
+          },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      issues: Array<{ id: string }>;
+      proposals: Array<{ group: string; beforeText: string; afterText: string }>;
+    };
+
+    expect(payload.issues.map((issue) => issue.id)).toContain("pdf-overflow");
+    expect(payload.proposals.length).toBeGreaterThan(0);
+    expect(payload.proposals.some((proposal) => proposal.group === "summary")).toBe(true);
+    expect(payload.proposals.every((proposal) => proposal.beforeText !== proposal.afterText)).toBe(true);
   });
 });

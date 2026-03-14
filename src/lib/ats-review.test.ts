@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyProposalSelection,
+  buildAtsRelevantFingerprint,
   createRuleBasedAtsReview,
   evaluateSuggestionOutcome,
   extractJobKeywords,
@@ -100,8 +102,100 @@ describe("ATS review helpers", () => {
     expect(review.issues.map((issue) => issue.id)).toContain("pdf-overflow");
     expect(review.suggestions.map((suggestion) => suggestion.id)).toContain("tighten-summary");
     expect(review.suggestions.map((suggestion) => suggestion.id)).toContain("trim-projects");
+    expect(review.proposals.map((proposal) => proposal.group)).toContain("summary");
+    expect(review.proposals.map((proposal) => proposal.group)).toContain("projects");
     expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedIssueIds).toContain("pdf-overflow");
     expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedScoreDimensions).toContain("onePagePdf");
+  });
+
+  it("builds at most one proposal per section group with normalized before and after text", () => {
+    const data = buildResume({
+      summary: "Product builder Ã¢â‚¬Â¢ founder Ã¢â‚¬â€œ operator with UX instincts and SQL experience.".repeat(4),
+      experience: [
+        {
+          title: "Founder",
+          company: "Northwind",
+          dates: "2020 - Present",
+          highlights: [
+            "Built the platform from scratch Ã¢â‚¬Â¢ launched payments",
+            "Owned growth experiments",
+            "Managed onboarding",
+          ],
+          url: null,
+        },
+      ],
+    });
+
+    const review = createRuleBasedAtsReview({
+      data,
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      },
+      mode: "full",
+    });
+
+    const proposalGroups = review.proposals.map((proposal) => proposal.group);
+    expect(new Set(proposalGroups).size).toBe(proposalGroups.length);
+    expect(proposalGroups).toContain("summary");
+    expect(review.proposals.every((proposal) => proposal.beforeText !== proposal.afterText)).toBe(true);
+  });
+
+  it("applies only the selected proposal sections to the working data", () => {
+    const overflowingReview = createRuleBasedAtsReview({
+      data: buildResume({
+        summary: "A".repeat(420),
+        projects: [
+          { name: "One", description: "Project", tech: ["TypeScript"], url: null },
+          { name: "Two", description: "Project", tech: ["React"], url: null },
+          { name: "Three", description: "Project", tech: ["SQL"], url: null },
+        ],
+      }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      },
+    });
+
+    const summaryProposal = overflowingReview.proposals.find((proposal) => proposal.group === "summary");
+    const projectProposal = overflowingReview.proposals.find((proposal) => proposal.group === "projects");
+    if (!summaryProposal || !projectProposal) {
+      throw new Error("Expected summary and project proposals.");
+    }
+
+    const nextData = applyProposalSelection(buildResume({
+      summary: "A".repeat(420),
+      projects: [
+        { name: "One", description: "Project", tech: ["TypeScript"], url: null },
+        { name: "Two", description: "Project", tech: ["React"], url: null },
+        { name: "Three", description: "Project", tech: ["SQL"], url: null },
+      ],
+    }), overflowingReview.proposals, [summaryProposal.id]);
+
+    expect(nextData.summary.length).toBeLessThan(420);
+    expect(nextData.projects).toHaveLength(3);
+  });
+
+  it("tracks ATS-relevant field fingerprints independently from cosmetic fields", () => {
+    const base = buildResume();
+    const sameFingerprint = buildAtsRelevantFingerprint({
+      ...base,
+      avatar_url: "https://example.com/avatar.png",
+      stats: [{ value: "10+", label: "Years" }],
+    });
+    const changedFingerprint = buildAtsRelevantFingerprint({
+      ...base,
+      summary: `${base.summary} Added more detail.`,
+    });
+
+    expect(sameFingerprint).toBe(buildAtsRelevantFingerprint(base));
+    expect(changedFingerprint).not.toBe(buildAtsRelevantFingerprint(base));
   });
 
   it("marks suggestion outcomes as confirmed when the expected issue clears", () => {

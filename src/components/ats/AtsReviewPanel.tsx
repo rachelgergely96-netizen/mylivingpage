@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   AtsIssue,
+  AtsProposalDecision,
+  AtsProposalSection,
   AtsReviewSnapshot,
-  AtsSuggestion,
-  AtsSuggestionFeedback,
   AtsTargeting,
-  AtsScoreDimension,
   ResumeData,
 } from "@/types/resume";
 
@@ -16,13 +15,14 @@ interface AtsReviewPanelProps {
   review: AtsReviewSnapshot | null;
   targeting: AtsTargeting;
   reviewing: boolean;
-  suggestionFeedback: Record<string, AtsSuggestionFeedback>;
+  actionBusy?: boolean;
   onTargetingChange: (next: AtsTargeting) => void;
   onRunReview: () => void;
-  onApplySuggestion: (suggestion: AtsSuggestion) => void | Promise<void>;
+  onPrimaryAction?: (decision: AtsProposalDecision) => void | Promise<void>;
+  onSecondaryAction?: (decision: AtsProposalDecision) => void | Promise<void>;
   onBack?: () => void;
-  onContinue?: () => void;
-  continueLabel?: string;
+  primaryActionLabel?: string;
+  secondaryActionLabel?: string;
   backLabel?: string;
   runReviewLabel?: string;
   stepLabel?: string;
@@ -54,14 +54,8 @@ function updateVariant(targeting: AtsTargeting, index: number, value: string) {
   };
 }
 
-function formatScoreDimension(dimension: AtsScoreDimension) {
-  if (dimension === "machineReadability") {
-    return "Machine Readability";
-  }
-  if (dimension === "recruiterSearchability") {
-    return "Recruiter Search";
-  }
-  return "One-Page PDF";
+function formatSource(source: AtsProposalSection["source"]) {
+  return source === "ai" ? "AI draft" : "ATS rule";
 }
 
 export default function AtsReviewPanel({
@@ -69,56 +63,32 @@ export default function AtsReviewPanel({
   review,
   targeting,
   reviewing,
-  suggestionFeedback,
+  actionBusy = false,
   onTargetingChange,
   onRunReview,
-  onApplySuggestion,
+  onPrimaryAction,
+  onSecondaryAction,
   onBack,
-  onContinue,
-  continueLabel = "Continue",
+  primaryActionLabel = "Apply selected changes",
+  secondaryActionLabel = "Keep current version",
   backLabel = "Back",
   runReviewLabel = "Run Full ATS Review",
   stepLabel = "ATS Review",
   heading,
   body,
 }: AtsReviewPanelProps) {
-  const applied = new Set(review?.appliedSuggestionIds ?? []);
-  const canContinue = Boolean(review) && !reviewing;
   const previewUrlRef = useRef<string | null>(null);
   const previewAbortRef = useRef<AbortController | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewSnapshotHash, setPreviewSnapshotHash] = useState<string | null>(null);
-  const feedbackEntries = Object.values(suggestionFeedback);
-  const activeFeedbackCount = feedbackEntries.filter((feedback) => feedback.state === "applying").length;
-  const suggestionCards = [...(review?.suggestions ?? [])];
-
-  feedbackEntries.forEach((feedback) => {
-    if (!suggestionCards.some((suggestion) => suggestion.id === feedback.suggestion.id)) {
-      suggestionCards.push(feedback.suggestion);
-    }
-  });
-
-  const previewStatus = !review
-    ? null
-    : !previewSnapshotHash
-      ? "Preview not generated yet"
-      : previewSnapshotHash === review.contentHash
-        ? "Preview up to date"
-        : "Preview is stale";
-  const reviewStatus = reviewing
-    ? "Running full ATS review..."
-    : activeFeedbackCount > 0
-      ? "Applying fix and rechecking one-page fit..."
-      : review
-        ? review.mode === "fast"
-          ? "Fast recheck complete."
-          : "Full review complete."
-        : null;
+  const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
+  const proposals = useMemo(() => review?.proposals ?? [], [review]);
 
   useEffect(() => {
     if (!review) {
+      setSelectedProposalIds([]);
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
@@ -127,8 +97,11 @@ export default function AtsReviewPanel({
       setPreviewLoading(false);
       setPreviewError(null);
       setPreviewSnapshotHash(null);
+      return;
     }
-  }, [review]);
+
+    setSelectedProposalIds(proposals.map((proposal) => proposal.id));
+  }, [proposals, review]);
 
   useEffect(() => {
     return () => {
@@ -138,6 +111,35 @@ export default function AtsReviewPanel({
       }
     };
   }, []);
+
+  const previewStatus = !review
+    ? null
+    : !previewSnapshotHash
+      ? "Preview not generated yet"
+      : previewSnapshotHash === review.contentHash
+        ? "Preview up to date"
+        : "Preview is stale";
+
+  const reviewStatus = reviewing
+    ? "Running full ATS review..."
+    : actionBusy
+      ? "Applying ATS changes..."
+      : review
+        ? review.mode === "fast"
+          ? "Fast recheck complete."
+          : "Full review complete."
+        : null;
+
+  const selectedCount = selectedProposalIds.length;
+  const decision = useMemo<AtsProposalDecision>(() => {
+    const proposalIds = proposals.map((proposal) => proposal.id);
+    const selected = proposalIds.filter((proposalId) => selectedProposalIds.includes(proposalId));
+    return {
+      acceptedProposalIds: selected,
+      declinedProposalIds: proposalIds.filter((proposalId) => !selected.includes(proposalId)),
+      lastDecisionAt: review ? new Date().toISOString() : null,
+    };
+  }, [proposals, review, selectedProposalIds]);
 
   const refreshPreview = async () => {
     if (!review) {
@@ -178,14 +180,23 @@ export default function AtsReviewPanel({
         return;
       }
 
-      setPreviewError(
-        error instanceof Error ? error.message : "Unable to load the ATS PDF preview.",
-      );
+      setPreviewError(error instanceof Error ? error.message : "Unable to load the ATS PDF preview.");
     } finally {
       setPreviewLoading(false);
       previewAbortRef.current = null;
     }
   };
+
+  const toggleProposal = (proposalId: string, nextSelected: boolean) => {
+    setSelectedProposalIds((current) => {
+      if (nextSelected) {
+        return Array.from(new Set([...current, proposalId]));
+      }
+      return current.filter((id) => id !== proposalId);
+    });
+  };
+
+  const canAct = Boolean(review) && !reviewing && !actionBusy;
 
   return (
     <section data-testid="ats-review-panel" className="space-y-5">
@@ -201,10 +212,16 @@ export default function AtsReviewPanel({
         ) : null}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <div className="glass-card rounded-2xl p-4 sm:p-5">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Targeting</p>
-          <div className="mt-4 space-y-4">
+      <div className="glass-card rounded-2xl p-4 sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <div className="space-y-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Targeting</p>
+              <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.56)]">
+                Set the title and keyword context you want the ATS review to optimize around.
+              </p>
+            </div>
+
             <label className="block">
               <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">Primary Target Title</span>
               <input
@@ -241,31 +258,179 @@ export default function AtsReviewPanel({
                 value={targeting.jobDescription}
                 onChange={(event) => onTargetingChange({ ...targeting, jobDescription: event.target.value })}
                 placeholder="Optional: paste a job description to compare exact keywords."
-                rows={8}
-                className={`${inputClass} min-h-[180px] resize-y leading-6`}
+                rows={6}
+                className={`${inputClass} min-h-[150px] resize-y leading-6`}
               />
             </label>
+          </div>
 
-            <div className="flex flex-wrap gap-3">
+          <div className="rounded-2xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Review Summary</p>
+            {review ? (
+              <>
+                <p className="mt-3 font-heading text-3xl text-[#F0F4FF]">
+                  {proposals.length ? `${selectedCount}/${proposals.length}` : "Ready"}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                  {proposals.length
+                    ? `${selectedCount} ATS-ready section changes selected. You can keep any part of your original wording and still continue.`
+                    : "No section edits are being suggested right now. You can keep your current wording or rerun the review with different targeting."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.68)]">
+                    Search {review.score.recruiterSearchability}
+                  </span>
+                  <span className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.68)]">
+                    Readability {review.score.machineReadability}
+                  </span>
+                  <span className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.68)]">
+                    {review.exportCheck.fitsOnOnePage ? "One-page fit" : `${review.exportCheck.pageCount} pages`}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                Run the review to see the before and after for any ATS-safe changes we recommend.
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={onRunReview}
-                disabled={reviewing || !data.name.trim()}
+                disabled={reviewing || actionBusy || !data.name.trim()}
                 className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {reviewing ? "Reviewing..." : runReviewLabel}
               </button>
-              <p className="self-center text-xs text-[rgba(240,244,255,0.42)]">
+              <p className="self-center text-xs text-[rgba(240,244,255,0.48)]">
                 More searchable when exact titles and skills are explicit.
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Current status</p>
-          {review ? (
-            <div className="mt-4 space-y-4">
+      {review ? (
+        <div className="space-y-4">
+          <div className="glass-card rounded-2xl p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Before / After</p>
+                <h3 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+                  {proposals.length ? "Review the ATS-ready edits before you continue" : "No ATS edits are being proposed"}
+                </h3>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+                  {proposals.length
+                    ? "Each card shows one section we can tighten for machine visibility, recruiter search, or one-page fit. Keep anything that still feels like you."
+                    : "This version is already in solid shape for the current targeting. You can keep it as is or rerun the review after changing the target role."}
+                </p>
+              </div>
+              {proposals.length ? (
+                <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
+                  {selectedCount} selected
+                </div>
+              ) : null}
+            </div>
+
+            {proposals.length ? (
+              <div className="mt-5 grid gap-4">
+                {proposals.map((proposal) => {
+                  const selected = selectedProposalIds.includes(proposal.id);
+                  return (
+                    <article
+                      key={proposal.id}
+                      data-testid="ats-proposal-card"
+                      className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-heading text-xl font-semibold text-[#F0F4FF]">{proposal.title}</p>
+                            <span className="rounded-full border border-[rgba(255,255,255,0.12)] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.56)]">
+                              {formatSource(proposal.source)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.6)]">{proposal.reason}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleProposal(proposal.id, true)}
+                            className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                              selected
+                                ? "border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
+                                : "border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.45)] hover:text-[#F0F4FF]"
+                            }`}
+                          >
+                            Use This
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleProposal(proposal.id, false)}
+                            className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                              !selected
+                                ? "border border-[rgba(245,195,107,0.25)] bg-[rgba(245,195,107,0.08)] text-[#F5D7A2]"
+                                : "border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.45)] hover:text-[#F0F4FF]"
+                            }`}
+                          >
+                            Keep Mine
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(5,10,20,0.3)] p-4">
+                          <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">Before</p>
+                          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+                            {proposal.beforeText}
+                          </pre>
+                        </div>
+                        <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+                          <p className="text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">After</p>
+                          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-sm leading-6 text-[#E8F2FF]">
+                            {proposal.afterText}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {proposal.expectedIssueIds.map((issueId) => (
+                          <span
+                            key={issueId}
+                            className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.56)]"
+                          >
+                            {issueId.replaceAll("-", " ")}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] p-4 text-sm leading-6 text-[#CFFFD7]">
+                No before/after edits are being suggested right now. The ATS-safe export and searchability checks can stay behind Details whenever you want to inspect them.
+              </div>
+            )}
+          </div>
+
+          <details className="glass-card rounded-2xl p-4 sm:p-5">
+            <summary className="cursor-pointer list-none">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Details</p>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+                    Review scores, remaining issues, one-page status, and the manual ATS PDF preview.
+                  </p>
+                </div>
+                <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
+                  {review.issues.length} issues
+                </div>
+              </div>
+            </summary>
+
+            <div className="mt-5 space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <article className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Machine Readability</p>
@@ -288,16 +453,6 @@ export default function AtsReviewPanel({
                 </article>
               </div>
 
-              <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Overall</p>
-                <p className="mt-2 font-heading text-4xl text-[#F0F4FF]">{review.score.overall}</p>
-                <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.56)]">
-                  {review.exportCheck.fitsOnOnePage
-                    ? "Your current content is export-safe and fits the ATS PDF."
-                    : "Tighten the flagged sections before the ATS PDF can download."}
-                </p>
-              </div>
-
               <div
                 data-testid="ats-pdf-preview"
                 className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
@@ -308,15 +463,12 @@ export default function AtsReviewPanel({
                       ATS PDF Preview
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                      This is the plain one-column resume recruiters and systems see, separate from
-                      your public page.
+                      This is the plain one-column resume recruiters and systems see, separate from your public page.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
-                      {review.exportCheck.fitsOnOnePage
-                        ? "Fits one page"
-                        : `${review.exportCheck.pageCount} pages right now`}
+                      {review.exportCheck.fitsOnOnePage ? "Fits one page" : `${review.exportCheck.pageCount} pages right now`}
                     </div>
                     <button
                       type="button"
@@ -357,129 +509,50 @@ export default function AtsReviewPanel({
                 </div>
 
                 <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
-                  {previewStatus}. Use this preview to catch overflow and confirm the ATS PDF stays
-                  clean, direct, and easy to scan before you download it.
+                  {previewStatus}. Use this preview to confirm the ATS PDF stays clean, direct, and one-page ready before you download it.
                 </p>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Issues to fix</p>
-                  <div className="mt-3 space-y-3">
-                    {review.issues.length ? (
-                      review.issues.map((issue) => (
-                        <article
-                          key={issue.id}
-                          className={`rounded-xl border p-4 text-sm ${getSeverityTone(issue)}`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-semibold text-[#F0F4FF]">{issue.title}</p>
-                              <p className="mt-2 leading-6 text-[rgba(240,244,255,0.68)]">{issue.description}</p>
-                              {issue.suggestedFix ? (
-                                <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[rgba(240,244,255,0.5)]">
-                                  {issue.suggestedFix}
-                                </p>
-                              ) : null}
-                            </div>
-                            <span className="rounded-full border border-[rgba(255,255,255,0.14)] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.7)]">
-                              {issue.severity}
-                            </span>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Issues to fix</p>
+                <div className="mt-3 space-y-3">
+                  {review.issues.length ? (
+                    review.issues.map((issue) => (
+                      <article
+                        key={issue.id}
+                        className={`rounded-xl border p-4 text-sm ${getSeverityTone(issue)}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-[#F0F4FF]">{issue.title}</p>
+                            <p className="mt-2 leading-6 text-[rgba(240,244,255,0.68)]">{issue.description}</p>
+                            {issue.suggestedFix ? (
+                              <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[rgba(240,244,255,0.5)]">
+                                {issue.suggestedFix}
+                              </p>
+                            ) : null}
                           </div>
-                        </article>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] p-4 text-sm text-[#CFFFD7]">
-                        No blocking issues right now. This version looks visible to systems and ready for one-page export.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Suggested fixes you can apply</p>
-                  <div className="mt-3 space-y-3">
-                    {suggestionCards.length ? (
-                      suggestionCards.map((suggestion) => {
-                        const alreadyApplied = applied.has(suggestion.id);
-                        const feedback = suggestionFeedback[suggestion.id];
-                        const isApplying = feedback?.state === "applying";
-
-                        return (
-                          <article
-                            key={suggestion.id}
-                            className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
-                          >
-                            <p className="font-semibold text-[#F0F4FF]">{suggestion.title}</p>
-                            <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">{suggestion.description}</p>
-                            {suggestion.preview ? (
-                              <div className="mt-3 rounded-lg border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-3 py-2 text-xs leading-5 text-[#BFDBFE]">
-                                {suggestion.preview}
-                              </div>
-                            ) : null}
-                            {feedback?.state === "applying" ? (
-                              <div className="mt-3 rounded-lg border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-3 py-2 text-xs leading-5 text-[#BFDBFE]">
-                                {feedback.expectedIssueLabels.length ? (
-                                  <p>{`Expected to address: ${feedback.expectedIssueLabels.join(", ")}`}</p>
-                                ) : null}
-                                {feedback.suggestion.expectedScoreDimensions.length ? (
-                                  <p>{`Expected to improve: ${feedback.suggestion.expectedScoreDimensions.map(formatScoreDimension).join(", ")}`}</p>
-                                ) : null}
-                              </div>
-                            ) : null}
-                            {feedback?.state === "confirmed" ? (
-                              <div className="mt-3 rounded-lg border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] px-3 py-2 text-xs leading-5 text-[#CFFFD7]">
-                                <p>Confirmed after fast recheck.</p>
-                                {feedback.confirmedIssueLabels.length ? (
-                                  <p>{`Resolved: ${feedback.confirmedIssueLabels.join(", ")}`}</p>
-                                ) : null}
-                                {feedback.improvedScoreDimensions.length ? (
-                                  <p>{`Improved: ${feedback.improvedScoreDimensions.map(formatScoreDimension).join(", ")}`}</p>
-                                ) : null}
-                              </div>
-                            ) : null}
-                            {feedback?.state === "still_needs_work" ? (
-                              <div className="mt-3 rounded-lg border border-[rgba(245,195,107,0.25)] bg-[rgba(245,195,107,0.08)] px-3 py-2 text-xs leading-5 text-[#F5D7A2]">
-                                <p>Applied, still needs work after recheck.</p>
-                                {feedback.remainingIssueLabels.length ? (
-                                  <p>{`Still open: ${feedback.remainingIssueLabels.join(", ")}`}</p>
-                                ) : (
-                                  <p>Run a full review if you want a fresh round of broader suggestions.</p>
-                                )}
-                              </div>
-                            ) : null}
-                            <div className="mt-3 flex items-center gap-3">
-                              <button
-                                type="button"
-                                disabled={alreadyApplied || isApplying}
-                                onClick={() => void onApplySuggestion(suggestion)}
-                                className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-45"
-                              >
-                                {isApplying ? "Applying..." : alreadyApplied ? "Applied" : suggestion.applyLabel}
-                              </button>
-                              <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">
-                                {suggestion.category.replaceAll("_", " ")}
-                              </span>
-                            </div>
-                          </article>
-                        );
-                      })
-                    ) : (
-                      <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 text-sm text-[rgba(240,244,255,0.6)]">
-                        No rewrite suggestions right now. Keep the explicit title and skills coverage you already have.
-                      </div>
-                    )}
-                  </div>
+                          <span className="rounded-full border border-[rgba(255,255,255,0.14)] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.7)]">
+                            {issue.severity}
+                          </span>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] p-4 text-sm text-[#CFFFD7]">
+                      No blocking issues right now. This version looks visible to systems and ready for one-page export.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-              Run the review to see where your page and ATS PDF are already strong, where searchability is thin, and whether the exported resume fits one page.
-            </div>
-          )}
+          </details>
         </div>
-      </div>
+      ) : (
+        <div className="glass-card rounded-2xl p-4 sm:p-5 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+          Run the review to see a simple before and after for any ATS-safe edits we recommend.
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         {onBack ? (
@@ -491,14 +564,24 @@ export default function AtsReviewPanel({
             {backLabel}
           </button>
         ) : null}
-        {onContinue ? (
+        {onSecondaryAction ? (
           <button
             type="button"
-            onClick={onContinue}
-            disabled={!canContinue}
+            onClick={() => void onSecondaryAction(decision)}
+            disabled={!canAct}
+            className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            {secondaryActionLabel}
+          </button>
+        ) : null}
+        {onPrimaryAction ? (
+          <button
+            type="button"
+            onClick={() => void onPrimaryAction(decision)}
+            disabled={!canAct}
             className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-45"
           >
-            {continueLabel}
+            {primaryActionLabel}
           </button>
         ) : null}
       </div>

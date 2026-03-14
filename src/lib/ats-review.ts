@@ -1,6 +1,9 @@
 import type {
   AtsExportCheck,
   AtsIssue,
+  AtsProposalDecision,
+  AtsProposalGroup,
+  AtsProposalSection,
   AtsIssueSeverity,
   AtsReviewMode,
   AtsReviewSnapshot,
@@ -75,6 +78,33 @@ const ABBREVIATION_PAIRS: Array<{ abbreviation: string; full: string }> = [
   { abbreviation: "AI", full: "Artificial Intelligence" },
 ];
 
+export const ATS_RELEVANT_FIELDS: Array<keyof ResumeData> = [
+  "name",
+  "headline",
+  "location",
+  "email",
+  "linkedin",
+  "github",
+  "website",
+  "summary",
+  "experience",
+  "education",
+  "projects",
+  "skills",
+  "certifications",
+];
+
+const ATS_PROPOSAL_PRIORITY: AtsProposalGroup[] = [
+  "contact",
+  "headline",
+  "summary",
+  "skills",
+  "experience",
+  "education",
+  "projects",
+  "certifications",
+];
+
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
@@ -147,6 +177,9 @@ function stringifyContact(value: string | null, kind: "linkedin" | "github" | "w
     if (clean.startsWith("http")) {
       return clean.replace(/^https?:\/\//i, "");
     }
+    if (/^github\.com\//i.test(clean)) {
+      return clean;
+    }
     return `github.com/${clean.replace(/^@/, "")}`;
   }
 
@@ -216,6 +249,268 @@ export function getDefaultAtsTargeting(data: ResumeData): AtsTargeting {
     titleVariants,
     jobDescription: "",
     lastExtractedKeywords: [],
+  };
+}
+
+export function getAtsRelevantResumeData(data: ResumeData) {
+  return {
+    name: data.name,
+    headline: data.headline,
+    location: data.location,
+    email: data.email,
+    linkedin: data.linkedin,
+    github: data.github,
+    website: data.website,
+    summary: data.summary,
+    experience: data.experience,
+    education: data.education,
+    projects: data.projects,
+    skills: data.skills,
+    certifications: data.certifications,
+  };
+}
+
+export function buildAtsRelevantFingerprint(data: ResumeData) {
+  return JSON.stringify(getAtsRelevantResumeData(normalizeResumeDataForAts(data)));
+}
+
+function formatProposalGroupLabel(group: AtsProposalGroup) {
+  switch (group) {
+    case "contact":
+      return "Contact";
+    case "headline":
+      return "Headline";
+    case "summary":
+      return "Summary";
+    case "skills":
+      return "Skills";
+    case "experience":
+      return "Experience";
+    case "education":
+      return "Education";
+    case "projects":
+      return "Projects";
+    case "certifications":
+      return "Certifications";
+  }
+}
+
+function formatEmptyState(group: AtsProposalGroup) {
+  if (group === "contact") {
+    return "No direct contact details listed yet.";
+  }
+  return `No ${formatProposalGroupLabel(group).toLowerCase()} listed yet.`;
+}
+
+function formatContactText(data: ResumeData) {
+  const lines = [
+    data.location,
+    data.email ?? "",
+    data.linkedin ?? "",
+    data.github ?? "",
+    data.website ?? "",
+  ]
+    .map((item) => normalizeAtsText(item ?? ""))
+    .filter(Boolean);
+
+  return lines.join("\n") || formatEmptyState("contact");
+}
+
+function formatHeadlineText(data: ResumeData) {
+  return normalizeAtsText(data.headline) || formatEmptyState("headline");
+}
+
+function formatSummaryText(data: ResumeData) {
+  return normalizeAtsText(data.summary) || formatEmptyState("summary");
+}
+
+function formatSkillsText(data: ResumeData) {
+  const lines = normalizeSkillGroups(data.skills).map((group) => `${group.category}: ${group.items.join(", ")}`);
+  return lines.join("\n") || formatEmptyState("skills");
+}
+
+function formatExperienceText(data: ResumeData) {
+  const lines = data.experience.map((entry) => {
+    const headline = [entry.title, entry.company, entry.dates].map((item) => normalizeAtsText(item)).filter(Boolean).join(" | ");
+    const highlights = entry.highlights.map((highlight) => `- ${normalizeAtsText(highlight)}`);
+    return [headline, ...highlights].filter(Boolean).join("\n");
+  });
+  return lines.join("\n\n") || formatEmptyState("experience");
+}
+
+function formatEducationText(data: ResumeData) {
+  const lines = data.education.map((entry) =>
+    [normalizeAtsText(entry.degree), normalizeAtsText(entry.school), normalizeAtsText(entry.year)]
+      .filter(Boolean)
+      .join(" | "),
+  );
+  return lines.join("\n") || formatEmptyState("education");
+}
+
+function formatProjectsText(data: ResumeData) {
+  const lines = data.projects.map((project) =>
+    [
+      normalizeAtsText(project.name),
+      normalizeAtsText(project.description),
+      project.tech.length ? `Tech: ${project.tech.map((item) => normalizeAtsText(item)).join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+  return lines.join("\n\n") || formatEmptyState("projects");
+}
+
+function formatCertificationsText(data: ResumeData) {
+  const lines = data.certifications.map((certification) =>
+    [normalizeAtsText(certification.name), normalizeAtsText(certification.issuer ?? ""), normalizeAtsText(certification.date ?? "")]
+      .filter(Boolean)
+      .join(" | "),
+  );
+  return lines.join("\n") || formatEmptyState("certifications");
+}
+
+function formatProposalText(data: ResumeData, group: AtsProposalGroup) {
+  switch (group) {
+    case "contact":
+      return formatContactText(data);
+    case "headline":
+      return formatHeadlineText(data);
+    case "summary":
+      return formatSummaryText(data);
+    case "skills":
+      return formatSkillsText(data);
+    case "experience":
+      return formatExperienceText(data);
+    case "education":
+      return formatEducationText(data);
+    case "projects":
+      return formatProjectsText(data);
+    case "certifications":
+      return formatCertificationsText(data);
+  }
+}
+
+function pickProposalPatch(data: ResumeData, group: AtsProposalGroup): Partial<ResumeData> {
+  switch (group) {
+    case "contact":
+      return {
+        location: data.location,
+        email: data.email,
+        linkedin: data.linkedin,
+        github: data.github,
+        website: data.website,
+      };
+    case "headline":
+      return { headline: data.headline };
+    case "summary":
+      return { summary: data.summary };
+    case "skills":
+      return { skills: data.skills };
+    case "experience":
+      return { experience: data.experience };
+    case "education":
+      return { education: data.education };
+    case "projects":
+      return { projects: data.projects };
+    case "certifications":
+      return { certifications: data.certifications };
+  }
+}
+
+function getChangedProposalGroups(base: ResumeData, next: ResumeData) {
+  return ATS_PROPOSAL_PRIORITY.filter((group) => formatProposalText(base, group) !== formatProposalText(next, group));
+}
+
+function buildProposalTitle(group: AtsProposalGroup, suggestion: AtsSuggestion, changedGroupCount: number) {
+  if (changedGroupCount === 1) {
+    return suggestion.title;
+  }
+  return `Update ${formatProposalGroupLabel(group)}`;
+}
+
+function buildProposalSections(baseData: ResumeData, suggestions: AtsSuggestion[]) {
+  const candidates = suggestions.flatMap((suggestion, index) => {
+    const nextData = mergeResumePatch(baseData, suggestion.applyData);
+    const changedGroups = getChangedProposalGroups(baseData, nextData);
+    if (!changedGroups.length) {
+      return [];
+    }
+
+    return changedGroups.map((group) => {
+      const groupedNextData = mergeResumePatch(baseData, pickProposalPatch(nextData, group));
+      return {
+        proposal: {
+          id: changedGroups.length > 1 ? `${suggestion.id}:${group}` : suggestion.id,
+          group,
+          title: buildProposalTitle(group, suggestion, changedGroups.length),
+          reason: suggestion.description,
+          beforeText: formatProposalText(baseData, group),
+          afterText: formatProposalText(groupedNextData, group),
+          applyData: pickProposalPatch(nextData, group),
+          expectedIssueIds: suggestion.expectedIssueIds,
+          expectedScoreDimensions: suggestion.expectedScoreDimensions,
+          source: suggestion.source ?? "rules",
+        } satisfies AtsProposalSection,
+        groupPriority: ATS_PROPOSAL_PRIORITY.indexOf(group),
+        changedGroupCount: changedGroups.length,
+        sourcePriority: suggestion.source === "ai" ? 0 : 1,
+        index,
+      };
+    });
+  });
+
+  const chosenByGroup = new Map<AtsProposalGroup, AtsProposalSection>();
+
+  candidates
+    .sort((left, right) => {
+      if (left.groupPriority !== right.groupPriority) {
+        return left.groupPriority - right.groupPriority;
+      }
+      if (left.changedGroupCount !== right.changedGroupCount) {
+        return left.changedGroupCount - right.changedGroupCount;
+      }
+      if (left.sourcePriority !== right.sourcePriority) {
+        return left.sourcePriority - right.sourcePriority;
+      }
+      return left.index - right.index;
+    })
+    .forEach((candidate) => {
+      if (!chosenByGroup.has(candidate.proposal.group)) {
+        chosenByGroup.set(candidate.proposal.group, candidate.proposal);
+      }
+    });
+
+  return ATS_PROPOSAL_PRIORITY.flatMap((group) => {
+    const proposal = chosenByGroup.get(group);
+    if (!proposal || proposal.beforeText === proposal.afterText) {
+      return [];
+    }
+    return [proposal];
+  });
+}
+
+export function applyProposalSelection(
+  baseData: ResumeData,
+  proposals: AtsProposalSection[],
+  acceptedProposalIds: string[],
+) {
+  const accepted = new Set(acceptedProposalIds);
+  return proposals.reduce((nextData, proposal) => {
+    if (!accepted.has(proposal.id)) {
+      return nextData;
+    }
+    return mergeResumePatch(nextData, proposal.applyData);
+  }, normalizeResumeDataForAts(baseData));
+}
+
+export function stampProposalDecision(
+  review: AtsReviewSnapshot,
+  decision: AtsProposalDecision,
+): AtsReviewSnapshot {
+  return {
+    ...review,
+    appliedSuggestionIds: decision.acceptedProposalIds,
+    proposalDecision: decision,
   };
 }
 
@@ -661,12 +956,19 @@ export function createRuleBasedAtsReview(input: {
   }
 
   const combinedSuggestions = [
-    ...buildRuleSuggestions(normalizedData, targeting, input.exportCheck),
-    ...(input.aiSuggestions ?? []),
+    ...buildRuleSuggestions(normalizedData, targeting, input.exportCheck).map((suggestion) => ({
+      ...suggestion,
+      source: "rules" as const,
+    })),
+    ...(input.aiSuggestions ?? []).map((suggestion) => ({
+      ...suggestion,
+      source: suggestion.source ?? ("ai" as const),
+    })),
   ];
   const suggestions = dedupe(combinedSuggestions.map((suggestion) => suggestion.id)).map((id) => {
     return combinedSuggestions.find((suggestion) => suggestion.id === id) as AtsSuggestion;
   });
+  const proposals = buildProposalSections(normalizedData, suggestions);
 
   const score = buildScores(issues);
 
@@ -675,7 +977,13 @@ export function createRuleBasedAtsReview(input: {
     score,
     issues,
     suggestions,
+    proposals,
     appliedSuggestionIds: input.appliedSuggestionIds ?? [],
+    proposalDecision: {
+      acceptedProposalIds: [],
+      declinedProposalIds: [],
+      lastDecisionAt: null,
+    },
     exportCheck: input.exportCheck,
     lastReviewedAt: new Date().toISOString(),
     contentHash: buildResumeContentHash(normalizedData, targeting),

@@ -10,13 +10,16 @@ import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { evaluateSuggestionOutcome, getDefaultAtsTargeting, mergeResumePatch } from "@/lib/ats-review";
+import {
+  applyProposalSelection,
+  buildAtsRelevantFingerprint,
+  getDefaultAtsTargeting,
+  stampProposalDecision,
+} from "@/lib/ats-review";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type {
   AtsReviewMode,
-  AtsSuggestion,
-  AtsSuggestionFeedback,
   AtsTargeting,
   PageConfig,
   PageRecord,
@@ -31,13 +34,6 @@ interface EditDraft {
 }
 
 type Tab = "content" | "optimize" | "theme" | "preview";
-
-function humanizeIssueId(issueId: string) {
-  return issueId
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 export default function EditPage() {
   const { pageId } = useParams<{ pageId: string }>();
@@ -65,13 +61,17 @@ export default function EditPage() {
     lastExtractedKeywords: [],
   });
   const [reviewingAts, setReviewingAts] = useState(false);
-  const [suggestionFeedback, setSuggestionFeedback] = useState<Record<string, AtsSuggestionFeedback>>({});
+  const [applyingProposalChanges, setApplyingProposalChanges] = useState(false);
+  const [openingSaveGate, setOpeningSaveGate] = useState(false);
+  const [showSaveGate, setShowSaveGate] = useState(false);
+  const [saveGateBusy, setSaveGateBusy] = useState(false);
   const atsReviewAbortRef = useRef<AbortController | null>(null);
   const atsReviewRequestIdRef = useRef(0);
 
   // Draft persistence & dirty tracking
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(`mlp-draft-edit-${pageId}`);
   const initialSnapshotRef = useRef<string>("");
+  const initialAtsFingerprintRef = useRef<string>("");
   const atsReview = pageConfig.ats ?? null;
 
   const isDirty = useMemo(() => {
@@ -79,6 +79,10 @@ export default function EditPage() {
     const current = JSON.stringify({ data, themeId, pageConfig });
     return current !== initialSnapshotRef.current;
   }, [data, themeId, pageConfig]);
+  const hasAtsRelevantChanges = useMemo(() => {
+    if (!data || !initialAtsFingerprintRef.current) return false;
+    return buildAtsRelevantFingerprint(data) !== initialAtsFingerprintRef.current;
+  }, [data]);
 
   useUnsavedChanges(isDirty);
 
@@ -122,6 +126,7 @@ export default function EditPage() {
         setAtsTargeting(row.page_config?.ats?.targeting ?? getDefaultAtsTargeting(rd));
         // Set initial snapshot for dirty tracking
         initialSnapshotRef.current = JSON.stringify({ data: rd, themeId: row.theme_id, pageConfig: row.page_config ?? {} });
+        initialAtsFingerprintRef.current = buildAtsRelevantFingerprint(rd);
         // Fetch user plan
         const profileRes = await fetch("/api/profile");
         if (profileRes.ok) {
@@ -197,9 +202,6 @@ export default function EditPage() {
     } = {}) => {
       const nextData = overrideData ?? data;
       const nextTargeting = overrideTargeting ?? atsTargeting;
-      const currentAppliedSuggestionIds = Array.from(
-        new Set([...(atsReview?.appliedSuggestionIds ?? []), ...Object.keys(suggestionFeedback)]),
-      );
       if (!nextData) {
         return null;
       }
@@ -212,7 +214,6 @@ export default function EditPage() {
 
       if (mode === "full") {
         setReviewingAts(true);
-        setSuggestionFeedback({});
       }
       setError("");
       try {
@@ -224,7 +225,7 @@ export default function EditPage() {
             resumeData: nextData,
             rawResume: page?.raw_resume ?? "",
             targeting: nextTargeting,
-            appliedSuggestionIds: appliedSuggestionIds ?? currentAppliedSuggestionIds,
+            appliedSuggestionIds: appliedSuggestionIds ?? atsReview?.appliedSuggestionIds ?? [],
             mode,
           }),
         });
@@ -274,118 +275,281 @@ export default function EditPage() {
         }
       }
     },
-    [atsReview?.appliedSuggestionIds, atsTargeting, data, page?.id, page?.raw_resume, router, suggestionFeedback, trackOptimizeEvent],
+    [atsReview?.appliedSuggestionIds, atsTargeting, data, page?.id, page?.raw_resume, router, trackOptimizeEvent],
   );
 
-  const applySuggestion = useCallback(
-    async (suggestion: AtsSuggestion) => {
+  const persistPage = useCallback(
+    async (nextData: ResumeData, nextPageConfig: PageConfig, nextThemeId = themeId) => {
+      if (!page || saving) return false;
+
+      setSaving(true);
+      setError("");
+      setSuccess("");
+      try {
+        const payload: Record<string, unknown> = {
+          resume_data: nextData,
+          theme_id: nextThemeId,
+          page_config: nextPageConfig,
+          updated_at: new Date().toISOString(),
+        };
+        const saveRes = await fetch(`/api/pages/${page.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!saveRes.ok) {
+          const body = (await saveRes.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? "Save failed.");
+        }
+
+        setData(nextData);
+        setPageConfig(nextPageConfig);
+        setThemeId(nextThemeId);
+        clearDraft();
+        initialSnapshotRef.current = JSON.stringify({ data: nextData, themeId: nextThemeId, pageConfig: nextPageConfig });
+        initialAtsFingerprintRef.current = buildAtsRelevantFingerprint(nextData);
+        setSuccess("Saved successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+        return true;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unable to save.");
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [clearDraft, page, saving, themeId],
+  );
+
+  const applyProposalDecisionToLocalState = useCallback(
+    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
+      if (!data || !atsReview) {
+        return {
+          nextData: data,
+          nextReview: atsReview,
+        };
+      }
+
+      const decisionWithTimestamp = {
+        ...decision,
+        lastDecisionAt: new Date().toISOString(),
+      };
+      const nextData = applyProposalSelection(data, atsReview.proposals, decision.acceptedProposalIds);
+
+      if (decision.acceptedProposalIds.length) {
+        const fastReview = await runAtsReview({
+          mode: "fast",
+          overrideData: nextData,
+          overrideTargeting: atsTargeting,
+          appliedSuggestionIds: decision.acceptedProposalIds,
+        });
+        if (fastReview) {
+          const stampedReview = stampProposalDecision(fastReview, decisionWithTimestamp);
+          setData(nextData);
+          setPageConfig((current) => ({ ...current, ats: stampedReview }));
+          return {
+            nextData,
+            nextReview: stampedReview,
+          };
+        }
+      }
+
+      const stampedReview = stampProposalDecision(atsReview, decisionWithTimestamp);
+      setData(nextData);
+      setPageConfig((current) => ({ ...current, ats: stampedReview }));
+      return {
+        nextData,
+        nextReview: stampedReview,
+      };
+    },
+    [atsReview, atsTargeting, data, runAtsReview],
+  );
+
+  const handleOptimizeApply = useCallback(
+    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
       if (!data || !atsReview) {
         return;
       }
 
-      const issueLabelMap = new Map(atsReview.issues.map((issue) => [issue.id, issue.title]));
-      const nextData = mergeResumePatch(data, suggestion.applyData);
-      const nextAppliedIds = Array.from(
-        new Set([...(atsReview?.appliedSuggestionIds ?? []), ...Object.keys(suggestionFeedback), suggestion.id]),
-      );
-      setData(nextData);
-      setSuggestionFeedback((current) => ({
-        ...current,
-        [suggestion.id]: {
-          suggestion,
-          state: "applying",
-          expectedIssueLabels: suggestion.expectedIssueIds.map((issueId) => issueLabelMap.get(issueId) ?? humanizeIssueId(issueId)),
-          confirmedIssueLabels: [],
-          remainingIssueLabels: suggestion.expectedIssueIds.map((issueId) => issueLabelMap.get(issueId) ?? humanizeIssueId(issueId)),
-          improvedScoreDimensions: [],
-          baselineScore: atsReview.score,
-        },
-      }));
-      void trackOptimizeEvent("ats.suggestion.applied", {
-        page_id: page?.id,
-        suggestion_id: suggestion.id,
-      });
-      const result = await runAtsReview({
-        mode: "fast",
-        overrideData: nextData,
-        overrideTargeting: atsTargeting,
-        appliedSuggestionIds: nextAppliedIds,
-      });
+      setApplyingProposalChanges(true);
+      if (decision.acceptedProposalIds.length) {
+        void trackOptimizeEvent("ats.proposal.accepted", {
+          page_id: page?.id,
+          accepted_count: decision.acceptedProposalIds.length,
+        });
+      }
+      if (decision.declinedProposalIds.length) {
+        void trackOptimizeEvent("ats.proposal.declined", {
+          page_id: page?.id,
+          declined_count: decision.declinedProposalIds.length,
+        });
+      }
 
-      if (!result) {
+      await applyProposalDecisionToLocalState(decision);
+      setSuccess(
+        decision.acceptedProposalIds.length
+          ? "ATS-ready edits applied locally. Save when you're ready."
+          : "You kept your current wording. Save when you're ready.",
+      );
+      setTimeout(() => setSuccess(""), 3000);
+      setApplyingProposalChanges(false);
+    },
+    [applyProposalDecisionToLocalState, atsReview, data, page?.id, trackOptimizeEvent],
+  );
+
+  const handleOptimizeKeepCurrent = useCallback(
+    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
+      if (!atsReview) {
         return;
       }
 
-      const nextIssueLabelMap = new Map(result.issues.map((issue) => [issue.id, issue.title]));
-      setSuggestionFeedback((current) => {
-        const nextFeedback = { ...current };
-        Object.entries(current).forEach(([id, feedback]) => {
-          if (feedback.state !== "applying") {
-            return;
-          }
-
-          const outcome = evaluateSuggestionOutcome({
-            suggestion: feedback.suggestion,
-            nextIssues: result.issues,
-            previousScore: feedback.baselineScore,
-            nextScore: result.score,
-          });
-
-          nextFeedback[id] = {
-            ...feedback,
-            state: outcome.status,
-            confirmedIssueLabels: outcome.confirmedIssueIds.map(
-              (issueId) =>
-                nextIssueLabelMap.get(issueId) ??
-                feedback.expectedIssueLabels[feedback.suggestion.expectedIssueIds.indexOf(issueId)] ??
-                humanizeIssueId(issueId),
-            ),
-            remainingIssueLabels: outcome.remainingIssueIds.map(
-              (issueId) =>
-                nextIssueLabelMap.get(issueId) ??
-                feedback.expectedIssueLabels[feedback.suggestion.expectedIssueIds.indexOf(issueId)] ??
-                humanizeIssueId(issueId),
-            ),
-            improvedScoreDimensions: outcome.improvedScoreDimensions,
-          };
+      const decisionWithTimestamp = {
+        ...decision,
+        lastDecisionAt: new Date().toISOString(),
+      };
+      if (decision.declinedProposalIds.length) {
+        void trackOptimizeEvent("ats.proposal.declined", {
+          page_id: page?.id,
+          declined_count: decision.declinedProposalIds.length,
         });
-        return nextFeedback;
-      });
+      }
+      setPageConfig((current) => ({ ...current, ats: stampProposalDecision(atsReview, decisionWithTimestamp) }));
+      setSuccess("You kept your current wording. Save when you're ready.");
+      setTimeout(() => setSuccess(""), 3000);
     },
-    [atsReview, atsTargeting, data, page?.id, runAtsReview, suggestionFeedback, trackOptimizeEvent],
+    [atsReview, page?.id, trackOptimizeEvent],
   );
 
-  const save = async () => {
-    if (!data || !page || saving) return;
-    setSaving(true);
+  const handleSaveClick = useCallback(async () => {
+    if (!data || !page || saving || openingSaveGate || saveGateBusy) return;
+
+    if (!hasAtsRelevantChanges) {
+      if (isDirty) {
+        void trackOptimizeEvent("ats.save_gate.skipped_non_ats", {
+          page_id: page.id,
+        });
+      }
+      await persistPage(data, pageConfig, themeId);
+      return;
+    }
+
+    setOpeningSaveGate(true);
     setError("");
     setSuccess("");
-    try {
-      const payload: Record<string, unknown> = {
-        resume_data: data,
-        theme_id: themeId,
-        page_config: pageConfig,
-        updated_at: new Date().toISOString(),
-      };
-      const saveRes = await fetch(`/api/pages/${page.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!saveRes.ok) {
-        const body = (await saveRes.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Save failed.");
-      }
-      clearDraft();
-      initialSnapshotRef.current = JSON.stringify({ data, themeId, pageConfig });
-      setSuccess("Saved successfully!");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to save.");
-    } finally {
-      setSaving(false);
+    const result = await runAtsReview({
+      mode: "full",
+      overrideData: data,
+      overrideTargeting: atsTargeting,
+      appliedSuggestionIds: [],
+    });
+    setOpeningSaveGate(false);
+
+    if (!result) {
+      return;
     }
-  };
+
+    if (result.proposals.length === 0) {
+      await persistPage(
+        data,
+        {
+          ...pageConfig,
+          ats: stampProposalDecision(result, {
+            acceptedProposalIds: [],
+            declinedProposalIds: [],
+            lastDecisionAt: new Date().toISOString(),
+          }),
+        },
+        themeId,
+      );
+      return;
+    }
+
+    void trackOptimizeEvent("ats.save_gate.opened", {
+      page_id: page.id,
+      proposal_count: result.proposals.length,
+    });
+    setShowSaveGate(true);
+  }, [
+    atsTargeting,
+    data,
+    hasAtsRelevantChanges,
+    isDirty,
+    openingSaveGate,
+    page,
+    pageConfig,
+    persistPage,
+    runAtsReview,
+    saveGateBusy,
+    saving,
+    themeId,
+    trackOptimizeEvent,
+  ]);
+
+  const handleSaveWithSelectedAtsChanges = useCallback(
+    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
+      if (!data || !page) {
+        return;
+      }
+
+      setSaveGateBusy(true);
+      if (decision.acceptedProposalIds.length) {
+        void trackOptimizeEvent("ats.proposal.accepted", {
+          page_id: page.id,
+          accepted_count: decision.acceptedProposalIds.length,
+        });
+      }
+      if (decision.declinedProposalIds.length) {
+        void trackOptimizeEvent("ats.proposal.declined", {
+          page_id: page.id,
+          declined_count: decision.declinedProposalIds.length,
+        });
+      }
+
+      const nextState = await applyProposalDecisionToLocalState(decision);
+      const saved = nextState.nextData && nextState.nextReview
+        ? await persistPage(nextState.nextData, { ...pageConfig, ats: nextState.nextReview }, themeId)
+        : false;
+
+      if (saved) {
+        setShowSaveGate(false);
+      }
+      setSaveGateBusy(false);
+    },
+    [applyProposalDecisionToLocalState, data, page, pageConfig, persistPage, themeId, trackOptimizeEvent],
+  );
+
+  const handleSaveWithoutAtsEdits = useCallback(
+    async (decision: NonNullable<PageConfig["ats"]>["proposalDecision"]) => {
+      if (!data || !atsReview) {
+        return;
+      }
+
+      setSaveGateBusy(true);
+      const decisionWithTimestamp = {
+        ...decision,
+        lastDecisionAt: new Date().toISOString(),
+      };
+      if (decision.declinedProposalIds.length) {
+        void trackOptimizeEvent("ats.proposal.declined", {
+          page_id: page?.id,
+          declined_count: decision.declinedProposalIds.length,
+        });
+      }
+      const saved = await persistPage(
+        data,
+        {
+          ...pageConfig,
+          ats: stampProposalDecision(atsReview, decisionWithTimestamp),
+        },
+        themeId,
+      );
+      if (saved) {
+        setShowSaveGate(false);
+      }
+      setSaveGateBusy(false);
+    },
+    [atsReview, data, page?.id, pageConfig, persistPage, themeId, trackOptimizeEvent],
+  );
 
   if (loading) {
     return (
@@ -426,11 +590,11 @@ export default function EditPage() {
           </button>
           <button
             type="button"
-            disabled={saving}
-            onClick={save}
+            disabled={saving || openingSaveGate || saveGateBusy}
+            onClick={() => void handleSaveClick()}
             className="gold-pill px-5 py-2 sm:px-6 sm:py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : openingSaveGate ? "Reviewing ATS..." : "Save Changes"}
           </button>
         </div>
       </div>
@@ -467,14 +631,17 @@ export default function EditPage() {
           review={atsReview}
           targeting={atsTargeting}
           reviewing={reviewingAts}
-          suggestionFeedback={suggestionFeedback}
+          actionBusy={applyingProposalChanges}
           onTargetingChange={setAtsTargeting}
           onRunReview={() => void runAtsReview({ mode: "full" })}
-          onApplySuggestion={applySuggestion}
+          onPrimaryAction={(decision) => void handleOptimizeApply(decision)}
+          onSecondaryAction={(decision) => void handleOptimizeKeepCurrent(decision)}
+          primaryActionLabel="Apply Selected Changes"
+          secondaryActionLabel="Keep Current Version"
           runReviewLabel="Run Full ATS Review"
           stepLabel="Optimize"
-          heading="Make your page and ATS PDF easier to find"
-          body="Use the same source content to improve machine visibility, exact-title coverage, explicit skill naming, and one-page ATS export before you save."
+          heading="Review the ATS-ready before and after"
+          body="See the proposed ATS-safe edits section by section, apply the ones you want, and keep the full diagnostics tucked under Details."
         />
       ) : null}
 
@@ -762,6 +929,32 @@ export default function EditPage() {
               <ResumeLayout data={data} />
             </div>
           </ThemeCanvas>
+        </div>
+      ) : null}
+
+      {showSaveGate && data ? (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4">
+          <div className="mx-auto w-full max-w-6xl rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.96)] p-4 shadow-[0_32px_120px_rgba(0,0,0,0.45)] sm:p-6">
+            <AtsReviewPanel
+              data={data}
+              review={atsReview}
+              targeting={atsTargeting}
+              reviewing={reviewingAts}
+              actionBusy={saveGateBusy}
+              onTargetingChange={setAtsTargeting}
+              onRunReview={() => void runAtsReview({ mode: "full" })}
+              onBack={() => setShowSaveGate(false)}
+              onPrimaryAction={(decision) => void handleSaveWithSelectedAtsChanges(decision)}
+              onSecondaryAction={(decision) => void handleSaveWithoutAtsEdits(decision)}
+              primaryActionLabel="Save With Selected ATS Edits"
+              secondaryActionLabel="Save Without ATS Edits"
+              backLabel="Cancel"
+              runReviewLabel="Run Full ATS Review"
+              stepLabel="Save Review"
+              heading="Review ATS-ready edits before saving"
+              body="We found content changes that affect recruiter search or one-page ATS export. Accept or decline the proposed edits before this save goes through."
+            />
+          </div>
         </div>
       ) : null}
     </main>

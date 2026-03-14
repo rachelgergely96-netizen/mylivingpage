@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getAnthropicClient } from "@/lib/anthropic";
 import {
   createRuleBasedAtsReview,
-  mergeResumePatch,
   normalizeAtsText,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
@@ -146,7 +145,8 @@ function sanitizeAiSuggestions(
         preview: typeof candidate.preview === "string" ? normalizeAtsText(candidate.preview) : "",
         expectedIssueIds: [],
         expectedScoreDimensions: [],
-        applyData: mergeResumePatch(baseline, normalizedPatch),
+        applyData: normalizedPatch,
+        source: "ai",
       } satisfies AtsSuggestion;
     });
 
@@ -223,6 +223,7 @@ export async function POST(request: Request) {
       mode,
       issues: review.issues.length,
       suggestions: review.suggestions.length,
+      proposals: review.proposals.length,
       fits_one_page: review.exportCheck.fitsOnOnePage,
       job_description: Boolean(review.targeting.jobDescription),
     });

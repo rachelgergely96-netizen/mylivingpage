@@ -25,6 +25,8 @@ import {
   uploadAvatarViaApi,
 } from "./support";
 
+const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
+
 test("email signup shows a pending-confirmation message", async ({ page }) => {
   test.skip(
     !canRunSignupConfirmation,
@@ -61,9 +63,8 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: "Load Sample" }).click();
     await page.getByRole("button", { name: "Run Full ATS Review" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByTestId("ats-pdf-preview")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByRole("button", { name: "Generate ATS PDF Preview" })).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Continue to Theme Selection" }).click();
+    await expect(page.getByText("Review the ATS-ready before and after")).toBeVisible({ timeout: 45_000 });
+    await page.getByRole("button", { name: "Apply Selected and Continue" }).click();
     await page.getByRole("button", { name: "Preview My Living Page" }).click();
     await expect(page.getByRole("button", { name: "Publish and Go Live" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish and Go Live" }).click();
@@ -74,6 +75,8 @@ test.describe.serial("authenticated user journeys", () => {
     const headlineInput = page.locator('input[type="text"]').nth(1);
     await headlineInput.fill(`Updated headline ${Date.now()}`);
     await page.getByRole("button", { name: "Save Changes" }).click();
+    await expect(page.getByRole("button", { name: "Save With Selected ATS Edits" })).toBeVisible();
+    await page.getByRole("button", { name: "Save With Selected ATS Edits" }).click();
     await expect(page.getByText("Saved successfully!")).toBeVisible();
 
     await page.goto("/dashboard/settings");
@@ -98,6 +101,88 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
     await expect(page.getByRole("heading", { name: "Start from the ATS-safe resume you already use." })).toBeVisible();
     await expect(page.getByText("Recommended")).toBeVisible();
+  });
+
+  test("legacy global create drafts are ignored for the signed-in user", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    await page.goto("/dashboard");
+
+    await page.evaluate(([legacyKey, payload]) => {
+      window.localStorage.setItem(legacyKey, payload);
+    }, [
+      LEGACY_CREATE_DRAFT_KEY,
+      JSON.stringify({
+        data: {
+          resumeText: "Legacy draft text",
+          guidedData: { name: "Legacy User" },
+          parsedData: null,
+          selectedTheme: "cosmic",
+          inputMode: "paste",
+          step: "input",
+          atsTargeting: {
+            primaryTitle: "",
+            titleVariants: [],
+            jobDescription: "",
+            lastExtractedKeywords: [],
+          },
+          atsReview: null,
+        },
+        savedAt: Date.now(),
+      }),
+    ]);
+
+    await page.goto("/create");
+    await expect(page.getByText("You have an unsaved draft")).toHaveCount(0);
+  });
+
+  test("scoped create drafts are shown only for the matching signed-in user", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    const profile = await fetchCurrentProfile(page);
+    await page.goto("/dashboard");
+
+    await page.evaluate(([scopedKey, payload]) => {
+      window.localStorage.setItem(scopedKey, payload);
+    }, [
+      `mlp-draft-create-${profile.id}`,
+      JSON.stringify({
+        data: {
+          resumeText: "Scoped draft text",
+          guidedData: { name: "Scoped User" },
+          parsedData: null,
+          selectedTheme: "cosmic",
+          inputMode: "paste",
+          step: "input",
+          atsTargeting: {
+            primaryTitle: "",
+            titleVariants: [],
+            jobDescription: "",
+            lastExtractedKeywords: [],
+          },
+          atsReview: null,
+        },
+        savedAt: Date.now(),
+      }),
+    ]);
+
+    await page.goto("/create");
+    await expect(page.getByText("You have an unsaved draft")).toBeVisible();
+  });
+
+  test("create drafts persist only for the same signed-in user after they start typing", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    await page.goto("/create");
+    await page.getByRole("button", { name: "Paste Resume" }).click();
+    await page.getByPlaceholder("Paste your resume text here...").fill("Fresh scoped draft");
+    await page.waitForTimeout(1200);
+
+    await page.reload();
+    await expect(page.getByText("You have an unsaved draft")).toBeVisible();
   });
 
   test("billing checkout, webhook unlock, portal access, and downgrade stay healthy", async ({ page }) => {

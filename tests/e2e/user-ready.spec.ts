@@ -27,6 +27,107 @@ import {
 } from "./support";
 
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
+const CREATE_FLOW_RESUME_TEXT = `RAY
+Attorney & Technology Entrepreneur
+New York, NY | ray@email.com | linkedin.com/in/ray | github.com/ray-dev
+
+SUMMARY
+Licensed attorney in New York building at the intersection of law and technology.
+
+EXPERIENCE
+Founder & CEO - BarPrepPlay
+2024 - Present
+- Built legal education product for bar exam prep.`;
+
+const PARSED_RESUME_FIXTURE = {
+  name: "Ray",
+  headline: "Attorney & Technology Entrepreneur",
+  location: "New York, NY",
+  email: "ray@email.com",
+  linkedin: "linkedin.com/in/ray",
+  github: "github.com/ray-dev",
+  website: null,
+  avatar_url: null,
+  summary: "Licensed attorney in New York building at the intersection of law and technology.",
+  experience: [
+    {
+      title: "Founder & CEO",
+      company: "BarPrepPlay",
+      dates: "2024 - Present",
+      highlights: ["Built legal education product for bar exam prep."],
+      url: null,
+    },
+  ],
+  education: [],
+  projects: [],
+  skills: [{ category: "Core", items: ["Legal Research", "Product Strategy"] }],
+  certifications: [],
+  stats: [],
+};
+
+const ATS_REVIEW_FIXTURE = {
+  targeting: {
+    primaryTitle: "Founder",
+    titleVariants: [],
+    jobDescription: "",
+    lastExtractedKeywords: [],
+  },
+  score: {
+    machineReadability: 94,
+    recruiterSearchability: 91,
+    onePagePdf: 100,
+    overall: 95,
+  },
+  issues: [],
+  suggestions: [],
+  proposals: [],
+  appliedSuggestionIds: [],
+  proposalDecision: {
+    reviewContentHash: "fixture-hash",
+    acceptedProposalIds: [],
+    declinedProposalIds: [],
+    lastDecidedAt: null,
+  },
+  exportCheck: {
+    pageCount: 1,
+    fitsOnOnePage: true,
+    overflowReasons: [],
+    recommendedFixes: [],
+  },
+  candidateResumeData: PARSED_RESUME_FIXTURE,
+  candidateExportCheck: {
+    pageCount: 1,
+    fitsOnOnePage: true,
+    overflowReasons: [],
+    recommendedFixes: [],
+  },
+  changeSummary: [
+    {
+      id: "summary-tighten",
+      title: "Tightened summary",
+      description: "We shortened the summary for ATS readability and one-page fit.",
+      category: "machine_readability",
+    },
+  ],
+  status: "ready",
+  lastReviewedAt: "2026-03-14T12:00:00.000Z",
+  contentHash: "fixture-hash",
+  mode: "full",
+  source: "rules",
+  approvedResumeData: null,
+  approvedExportCheck: null,
+  approvedAt: null,
+  approvedContentHash: null,
+  availabilityReason: null,
+};
+
+function buildParseSseBody() {
+  return [
+    'data: {"type":"progress","progress":25,"stage":"Analyzing resume structure..."}',
+    `data: ${JSON.stringify({ type: "result", data: PARSED_RESUME_FIXTURE })}`,
+    "",
+  ].join("\n\n");
+}
 
 test("email signup shows a pending-confirmation message", async ({ page }) => {
   test.skip(
@@ -49,6 +150,21 @@ test.describe.serial("authenticated user journeys", () => {
   test("existing users can create, publish, edit, and change their public URL", async ({ page }) => {
     test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
 
+    await page.route("**/api/generate/parse", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: buildParseSseBody(),
+      });
+    });
+    await page.route("**/api/generate/ats-review", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(ATS_REVIEW_FIXTURE),
+      });
+    });
+
     await signIn(page);
 
     await page.goto("/dashboard");
@@ -61,7 +177,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.getByRole("link", { name: "Create Your Page" }).click();
     await page.getByRole("button", { name: "Paste Resume" }).click();
-    await page.getByRole("button", { name: "Load Sample" }).click();
+    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
     await page.getByRole("button", { name: "Run ATS Review" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("Review the ATS version before you continue")).toBeVisible({ timeout: 45_000 });
@@ -184,6 +300,54 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.reload();
     await expect(page.getByText("You have an unsaved draft")).toBeVisible();
+  });
+
+  test("paste resume flow removes the sample shortcut and falls back cleanly when parsing fails", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    await page.route("**/api/generate/parse", async (route) => {
+      await route.abort();
+    });
+
+    await page.goto("/create");
+    await page.getByRole("button", { name: "Paste Resume" }).click();
+    await expect(page.getByRole("button", { name: "Load Sample" })).toHaveCount(0);
+
+    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
+    await page.getByRole("button", { name: "Run ATS Review" }).click();
+
+    await expect(page.getByText("We couldn't reach resume parsing right now. Continue manually or try again in a moment.")).toBeVisible();
+    await expect(page.getByText("Failed to fetch")).toHaveCount(0);
+    await page.getByRole("button", { name: "Continue manually" }).click();
+    await expect(page.getByText("Let's start with who you are")).toBeVisible();
+  });
+
+  test("users can continue without ATS review if the ATS request fails", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    await page.route("**/api/generate/parse", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: buildParseSseBody(),
+      });
+    });
+    await page.route("**/api/generate/ats-review", async (route) => {
+      await route.abort();
+    });
+
+    await page.goto("/create");
+    await page.getByRole("button", { name: "Paste Resume" }).click();
+    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
+    await page.getByRole("button", { name: "Run ATS Review" }).click();
+
+    await expect(page.getByText("We couldn't reach ATS review right now. Retry the review or continue without it for now.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retry ATS Review" })).toBeVisible();
+    await page.getByRole("button", { name: "Continue without ATS Review" }).click();
+    await expect(page.getByRole("heading", { name: "Pick your living theme" })).toBeVisible();
+    await expect(page.getByText("ATS review was skipped for now.")).toBeVisible();
   });
 
   test("public ATS download only appears when an approved ATS resume exists", async ({ page, browser }) => {

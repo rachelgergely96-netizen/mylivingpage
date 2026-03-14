@@ -9,6 +9,7 @@ import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
@@ -34,6 +35,10 @@ import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 type Step = "input" | "review" | "theme" | "processing" | "preview";
 type InputMode = "choose" | "paste" | "guided";
 type EntryPreference = "resume-first" | "page-first" | "neutral";
+type CreateFlowFailure = {
+  stage: "parse" | "review";
+  message: string;
+};
 const PROGRESS_STEPS: Array<Exclude<Step, "processing">> = ["input", "review", "theme", "preview"];
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
 
@@ -55,63 +60,6 @@ const STAGES = [
   "Structuring professional profile...",
   "Finalizing JSON output...",
 ];
-
-const SAMPLE_RESUME = `RAY
-Attorney & Technology Entrepreneur
-New York, NY | ray@email.com | linkedin.com/in/ray | github.com/ray-dev
-
-SUMMARY
-Licensed attorney in New York building at the intersection of law and technology. Creator of multiple tech ventures including BarPrepPlay (275+ users), LiveCardStudio, and ReadyToClose.
-
-EXPERIENCE
-Founder & CEO — BarPrepPlay
-2024 – Present
-- Built gamified bar exam preparation platform from scratch
-- Grew to 275+ active users generating passive revenue
-
-Founder — LiveCardStudio
-2025 – Present
-- Created living greeting card platform with procedural Canvas 2D graphics
-- Engineered particle systems, synthesized audio, and animated themes
-
-PROJECTS
-BarPrepPlay — Gamified bar exam prep platform with spaced repetition and adaptive question pools. Built with Next.js, Supabase, and Stripe.
-LiveCardStudio — Living greeting card platform featuring procedural Canvas 2D animations, particle systems, and synthesized audio.
-ReadyToClose — Real estate closing management tool streamlining document preparation and scheduling.
-
-EDUCATION
-Juris Doctor — Law School, 2023
-
-SKILLS
-Languages: TypeScript, Python, SQL
-Frameworks: Next.js, React, Tailwind CSS
-Tools: Supabase, Stripe, Vercel, Figma
-Domains: Legal Tech, SaaS, EdTech, UI/UX Design
-
-CERTIFICATIONS
-New York State Bar — New York State, Licensed 2023
-Florida Bar — The Florida Bar, February 2026`;
-
-function parseSseChunk(chunk: string, onMessage: (payload: { type: string; [key: string]: unknown }) => void) {
-  const events = chunk.split("\n\n");
-  const remainder = events.pop() ?? "";
-  events.forEach((event) => {
-    const dataLine = event
-      .split("\n")
-      .find((line) => line.startsWith("data:"))
-      ?.slice(5)
-      .trim();
-    if (!dataLine) {
-      return;
-    }
-    try {
-      onMessage(JSON.parse(dataLine) as { type: string; [key: string]: unknown });
-    } catch {
-      // Ignore malformed stream fragments.
-    }
-  });
-  return remainder;
-}
 
 function getEntryPreference(referrer: string | null): EntryPreference {
   if (!referrer) {
@@ -184,6 +132,7 @@ export default function CreatePage() {
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState(STAGES[0]);
   const [error, setError] = useState("");
+  const [createFlowFailure, setCreateFlowFailure] = useState<CreateFlowFailure | null>(null);
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
   const [atsTargeting, setAtsTargeting] = useState<AtsTargeting>({
     primaryTitle: "",
@@ -329,12 +278,31 @@ export default function CreatePage() {
   const handleInputModeSelect = (mode: Extract<InputMode, "paste" | "guided">) => {
     setInputMode(mode);
     guidedModeRef.current = mode === "guided";
+    setCreateFlowFailure(null);
     void trackCreateEvent("create.mode_selected", {
       mode,
       source_ref: activeReferrer,
       recommended_mode: createIntro.recommendedMode,
     });
   };
+
+  const handleContinueManually = useCallback(() => {
+    setCreateFlowFailure(null);
+    setError("");
+    setStep("input");
+    setInputMode("guided");
+    guidedModeRef.current = true;
+  }, []);
+
+  const handleContinueWithoutAtsReview = useCallback(() => {
+    setCreateFlowFailure(null);
+    setError("");
+    setAtsReview(null);
+    setAtsReadyNotice(
+      "ATS review was skipped for now. You can rerun it later from edit before turning on ATS PDF download.",
+    );
+    setStep("theme");
+  }, []);
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
@@ -385,6 +353,7 @@ export default function CreatePage() {
         setReviewingAts(true);
       }
       setError("");
+      setCreateFlowFailure(null);
       try {
         const response = await fetch("/api/generate/ats-review", {
           method: "POST",
@@ -433,7 +402,8 @@ export default function CreatePage() {
         if (reviewError instanceof DOMException && reviewError.name === "AbortError") {
           return null;
         }
-        setError(reviewError instanceof Error ? reviewError.message : "Unable to review ATS searchability.");
+        const message = normalizeCreateFlowError("review", reviewError);
+        setCreateFlowFailure({ stage: "review", message });
         return null;
       } finally {
         if (mode === "full" && requestId === atsReviewRequestIdRef.current) {
@@ -453,6 +423,7 @@ export default function CreatePage() {
       setAtsTargeting(nextTargeting);
       setAtsReview(null);
       setAtsReadyNotice("");
+      setCreateFlowFailure(null);
       setStep("review");
 
       const result = await runAtsReview({
@@ -535,6 +506,7 @@ export default function CreatePage() {
 
   const startProcessing = async () => {
     setError("");
+    setCreateFlowFailure(null);
     setProgress(4);
     setStage(STAGES[0]);
     setStep("processing");
@@ -594,7 +566,8 @@ export default function CreatePage() {
         }
       }
     } catch (streamError) {
-      setError(streamError instanceof Error ? streamError.message : "Unable to process resume.");
+      const message = normalizeCreateFlowError("parse", streamError);
+      setCreateFlowFailure({ stage: "parse", message });
       setStep("input");
       setProgress(0);
     }
@@ -678,7 +651,7 @@ export default function CreatePage() {
         </div>
       </div>
 
-      {error ? (
+      {error && !createFlowFailure ? (
         <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
           {error}
         </p>
@@ -760,23 +733,26 @@ export default function CreatePage() {
             <p>
               {resumeText.length.toLocaleString()} characters · {resumeText.split(/\n/).length} lines
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                if (resumeText.trim() && resumeText !== SAMPLE_RESUME) {
-                  if (!window.confirm("This will replace your current text with a sample resume. Continue?")) return;
-                }
-                setResumeText(SAMPLE_RESUME);
-              }}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-            >
-              Load Sample
-            </button>
           </div>
+          {createFlowFailure?.stage === "parse" ? (
+            <div className="mt-4 rounded-xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.08)] p-4">
+              <p className="text-sm text-[#FFD5D5]">{createFlowFailure.message}</p>
+              <button
+                type="button"
+                onClick={handleContinueManually}
+                className="mt-4 rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+              >
+                Continue manually
+              </button>
+            </div>
+          ) : null}
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setInputMode("choose")}
+              onClick={() => {
+                setCreateFlowFailure(null);
+                setInputMode("choose");
+              }}
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
             >
               Back
@@ -794,15 +770,28 @@ export default function CreatePage() {
       ) : null}
 
       {!atPageLimit && step === "input" && inputMode === "guided" ? (
-        <GuidedFlow
-          guidedData={guidedData}
-          onUpdate={setGuidedData}
-          onComplete={(data) => {
-            const nextTargeting = getDefaultAtsTargeting(data);
-            void beginAtsReviewStep(data, nextTargeting);
-          }}
-          onBack={() => setInputMode("choose")}
-        />
+        <section className="space-y-4">
+          {createFlowFailure?.stage === "parse" ? (
+            <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Manual fallback</p>
+              <p className="mt-2 text-sm text-[#F0F4FF]">
+                We kept your pasted resume text intact. You can build manually now and rerun ATS review later when the service is healthy again.
+              </p>
+            </div>
+          ) : null}
+          <GuidedFlow
+            guidedData={guidedData}
+            onUpdate={setGuidedData}
+            onComplete={(data) => {
+              const nextTargeting = getDefaultAtsTargeting(data);
+              void beginAtsReviewStep(data, nextTargeting);
+            }}
+            onBack={() => {
+              setCreateFlowFailure(null);
+              setInputMode("choose");
+            }}
+          />
+        </section>
       ) : null}
 
       {step === "review" && parsedData ? (
@@ -812,8 +801,10 @@ export default function CreatePage() {
           targeting={atsTargeting}
           reviewing={reviewingAts}
           actionBusy={applyingAtsDecision}
+          reviewError={createFlowFailure?.stage === "review" ? createFlowFailure.message : null}
           onTargetingChange={setAtsTargeting}
           onRunReview={() => void runAtsReview({ mode: "full" })}
+          onContinueWithoutReview={handleContinueWithoutAtsReview}
           onBack={() => setStep("input")}
           onPrimaryAction={() => void handleUseGeneratedAtsVersion()}
           onSecondaryAction={() => void handleKeepCurrentAtsCopy()}

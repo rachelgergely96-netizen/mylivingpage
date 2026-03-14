@@ -15,13 +15,16 @@ interface AtsReviewPanelProps {
   targeting: AtsTargeting;
   reviewing: boolean;
   actionBusy?: boolean;
+  reviewError?: string | null;
   onTargetingChange: (next: AtsTargeting) => void;
   onRunReview: () => void;
   onPrimaryAction?: () => void | Promise<void>;
   onSecondaryAction?: () => void | Promise<void>;
+  onContinueWithoutReview?: () => void | Promise<void>;
   onBack?: () => void;
   primaryActionLabel?: string;
   secondaryActionLabel?: string;
+  continueWithoutReviewLabel?: string;
   backLabel?: string;
   runReviewLabel?: string;
   stepLabel?: string;
@@ -50,13 +53,16 @@ export default function AtsReviewPanel({
   targeting,
   reviewing,
   actionBusy = false,
+  reviewError = null,
   onTargetingChange,
   onRunReview,
   onPrimaryAction,
   onSecondaryAction,
+  onContinueWithoutReview,
   onBack,
   primaryActionLabel = "Use This ATS Version",
   secondaryActionLabel = "Keep Current",
+  continueWithoutReviewLabel = "Continue without ATS Review",
   backLabel = "Back",
   runReviewLabel = "Run ATS Review",
   stepLabel = "ATS Review",
@@ -168,6 +174,32 @@ export default function AtsReviewPanel({
           <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.52)]">{reviewStatus}</p>
         ) : null}
       </div>
+
+      {reviewError ? (
+        <div className="rounded-2xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.08)] p-4">
+          <p className="text-sm leading-6 text-[#FFD5D5]">{reviewError}</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onRunReview}
+              disabled={reviewing || actionBusy || !data.name.trim()}
+              className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              Retry ATS Review
+            </button>
+            {onContinueWithoutReview ? (
+              <button
+                type="button"
+                onClick={() => void onContinueWithoutReview()}
+                disabled={reviewing || actionBusy}
+                className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {continueWithoutReviewLabel}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="glass-card rounded-2xl p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">

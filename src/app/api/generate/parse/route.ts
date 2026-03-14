@@ -106,6 +106,27 @@ function sse(payload: Record<string, unknown>) {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+function formatParseFailureMessage(error: unknown) {
+  const message = error instanceof Error ? error.message.trim() : String(error ?? "").trim();
+  const lower = message.toLowerCase();
+
+  if (lower.includes("limit reached")) {
+    return message;
+  }
+
+  if (
+    lower.includes("anthropic_api_key") ||
+    lower.includes("anthropic") ||
+    lower.includes("supabase") ||
+    lower.includes("secret") ||
+    lower.includes("publishable")
+  ) {
+    return "Resume parsing is temporarily unavailable right now. Continue manually or try again later.";
+  }
+
+  return "We couldn't parse that resume right now. Continue manually or try again.";
+}
+
 export async function POST(request: Request) {
   try {
     const authClient = await createServerSupabaseClient();
@@ -124,7 +145,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Resume text is required." }, { status: 400 });
     }
 
-    const supabase = createServiceRoleSupabaseClient();
+    let supabase;
+    try {
+      supabase = createServiceRoleSupabaseClient();
+      getAnthropicClient();
+    } catch (dependencyError) {
+      return NextResponse.json(
+        { error: formatParseFailureMessage(dependencyError) },
+        { status: 503 },
+      );
+    }
+
     const windowStart = getParseRateLimitWindowStart();
     const { count } = await supabase
       .from("events")
@@ -189,13 +220,14 @@ export async function POST(request: Request) {
           push({ type: "result", data: parsed });
           controller.close();
         } catch (error) {
+          const message = formatParseFailureMessage(error);
           await trackEvent(user.id, "resume.parse.failed", {
             characters: resumeText.length,
             error: error instanceof Error ? error.message : "Unable to parse resume",
           });
           push({
             type: "error",
-            message: error instanceof Error ? error.message : "Unable to parse resume",
+            message,
           });
           controller.close();
         }
@@ -210,9 +242,13 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Invalid request payload." },
-      { status: 400 },
+      { error: formatParseFailureMessage(error) },
+      { status: 503 },
     );
   }
 }

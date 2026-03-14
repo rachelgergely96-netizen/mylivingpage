@@ -69,6 +69,8 @@ export interface AtsSuggestion {
   description: string;
   applyLabel: string;
   preview?: string;
+  expectedIssueIds: string[];
+  expectedScoreDimensions: AtsScoreDimension[];
   applyData: Partial<ResumeData>;
 }
 
@@ -86,6 +88,9 @@ export interface AtsScoreBreakdown {
   overall: number;
 }
 
+export type AtsScoreDimension = Exclude<keyof AtsScoreBreakdown, "overall">;
+export type AtsReviewMode = "full" | "fast";
+
 export interface AtsReviewSnapshot {
   targeting: AtsTargeting;
   score: AtsScoreBreakdown;
@@ -95,7 +100,20 @@ export interface AtsReviewSnapshot {
   exportCheck: AtsExportCheck;
   lastReviewedAt: string;
   contentHash: string;
+  mode: AtsReviewMode;
   source: "rules" | "rules+ai";
+}
+
+export type AtsSuggestionFeedbackState = "applying" | "confirmed" | "still_needs_work";
+
+export interface AtsSuggestionFeedback {
+  suggestion: AtsSuggestion;
+  state: AtsSuggestionFeedbackState;
+  expectedIssueLabels: string[];
+  confirmedIssueLabels: string[];
+  remainingIssueLabels: string[];
+  improvedScoreDimensions: AtsScoreDimension[];
+  baselineScore: AtsScoreBreakdown;
 }
 
 export interface PageConfig {

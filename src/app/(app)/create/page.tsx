@@ -11,12 +11,19 @@ import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { getDefaultAtsTargeting, mergeResumePatch } from "@/lib/ats-review";
+import { evaluateSuggestionOutcome, getDefaultAtsTargeting, mergeResumePatch } from "@/lib/ats-review";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
-import type { AtsReviewSnapshot, AtsSuggestion, AtsTargeting, ResumeData } from "@/types/resume";
+import type {
+  AtsReviewMode,
+  AtsReviewSnapshot,
+  AtsSuggestion,
+  AtsSuggestionFeedback,
+  AtsTargeting,
+  ResumeData,
+} from "@/types/resume";
 import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
 
 type Step = "input" | "review" | "theme" | "processing" | "preview";
@@ -154,6 +161,13 @@ function getCreateIntro(referrer: string | null) {
   };
 }
 
+function humanizeIssueId(issueId: string) {
+  return issueId
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -180,11 +194,14 @@ export default function CreatePage() {
   });
   const [atsReview, setAtsReview] = useState<AtsReviewSnapshot | null>(null);
   const [reviewingAts, setReviewingAts] = useState(false);
+  const [suggestionFeedback, setSuggestionFeedback] = useState<Record<string, AtsSuggestionFeedback>>({});
   const [publishing, setPublishing] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const guidedModeRef = useRef(false);
+  const atsReviewAbortRef = useRef<AbortController | null>(null);
+  const atsReviewRequestIdRef = useRef(0);
   const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string>("spark");
   const [pageCount, setPageCount] = useState<number>(0);
@@ -293,6 +310,12 @@ export default function CreatePage() {
     }
   }, [queryReferrer]);
 
+  useEffect(() => {
+    return () => {
+      atsReviewAbortRef.current?.abort();
+    };
+  }, []);
+
   const handleInputModeSelect = (mode: Extract<InputMode, "paste" | "guided">) => {
     setInputMode(mode);
     guidedModeRef.current = mode === "guided";
@@ -325,34 +348,54 @@ export default function CreatePage() {
   };
 
   const runAtsReview = useCallback(
-    async (
-      overrideData?: ResumeData,
-      overrideTargeting?: AtsTargeting,
-      appliedSuggestionIds?: string[],
-    ) => {
+    async ({
+      mode = "full",
+      overrideData,
+      overrideTargeting,
+      appliedSuggestionIds,
+    }: {
+      mode?: AtsReviewMode;
+      overrideData?: ResumeData;
+      overrideTargeting?: AtsTargeting;
+      appliedSuggestionIds?: string[];
+    } = {}) => {
       const data = overrideData ?? parsedData;
       const targeting = overrideTargeting ?? atsTargeting;
+      const currentAppliedSuggestionIds = Array.from(
+        new Set([...(atsReview?.appliedSuggestionIds ?? []), ...Object.keys(suggestionFeedback)]),
+      );
       if (!data) {
-        return;
+        return null;
       }
 
-      setReviewingAts(true);
+      const requestId = atsReviewRequestIdRef.current + 1;
+      atsReviewRequestIdRef.current = requestId;
+      atsReviewAbortRef.current?.abort();
+      const controller = new AbortController();
+      atsReviewAbortRef.current = controller;
+
+      if (mode === "full") {
+        setReviewingAts(true);
+        setSuggestionFeedback({});
+      }
       setError("");
       try {
         const response = await fetch("/api/generate/ats-review", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             resumeData: data,
             rawResume: resumeText,
             targeting,
-            appliedSuggestionIds: appliedSuggestionIds ?? atsReview?.appliedSuggestionIds ?? [],
+            appliedSuggestionIds: appliedSuggestionIds ?? currentAppliedSuggestionIds,
+            mode,
           }),
         });
 
         if (response.status === 401) {
           router.push("/login?next=/create");
-          return;
+          return null;
         }
 
         const payload = (await response.json().catch(() => null)) as unknown;
@@ -367,39 +410,113 @@ export default function CreatePage() {
         }
 
         const result = payload as AtsReviewSnapshot;
+        if (requestId !== atsReviewRequestIdRef.current) {
+          return null;
+        }
 
         setAtsTargeting(result.targeting);
         setAtsReview(result);
         void trackCreateEvent("ats.review.run", {
+          mode,
           issues: result.issues.length,
           source_ref: activeReferrer,
           fits_one_page: result.exportCheck.fitsOnOnePage,
         });
+        return result;
       } catch (reviewError) {
+        if (reviewError instanceof DOMException && reviewError.name === "AbortError") {
+          return null;
+        }
         setError(reviewError instanceof Error ? reviewError.message : "Unable to review ATS searchability.");
+        return null;
       } finally {
-        setReviewingAts(false);
+        if (mode === "full" && requestId === atsReviewRequestIdRef.current) {
+          setReviewingAts(false);
+        }
+        if (requestId === atsReviewRequestIdRef.current) {
+          atsReviewAbortRef.current = null;
+        }
       }
     },
-    [activeReferrer, atsReview?.appliedSuggestionIds, atsTargeting, parsedData, resumeText, router, trackCreateEvent],
+    [activeReferrer, atsReview?.appliedSuggestionIds, atsTargeting, parsedData, resumeText, router, suggestionFeedback, trackCreateEvent],
   );
 
   const applySuggestion = useCallback(
-    (suggestion: AtsSuggestion) => {
-      if (!parsedData) {
+    async (suggestion: AtsSuggestion) => {
+      if (!parsedData || !atsReview) {
         return;
       }
 
+      const issueLabelMap = new Map(atsReview.issues.map((issue) => [issue.id, issue.title]));
       const nextData = mergeResumePatch(parsedData, suggestion.applyData);
-      const nextAppliedIds = Array.from(new Set([...(atsReview?.appliedSuggestionIds ?? []), suggestion.id]));
+      const nextAppliedIds = Array.from(
+        new Set([...(atsReview?.appliedSuggestionIds ?? []), ...Object.keys(suggestionFeedback), suggestion.id]),
+      );
       setParsedData(nextData);
+      setSuggestionFeedback((current) => ({
+        ...current,
+        [suggestion.id]: {
+          suggestion,
+          state: "applying",
+          expectedIssueLabels: suggestion.expectedIssueIds.map((issueId) => issueLabelMap.get(issueId) ?? humanizeIssueId(issueId)),
+          confirmedIssueLabels: [],
+          remainingIssueLabels: suggestion.expectedIssueIds.map((issueId) => issueLabelMap.get(issueId) ?? humanizeIssueId(issueId)),
+          improvedScoreDimensions: [],
+          baselineScore: atsReview.score,
+        },
+      }));
       void trackCreateEvent("ats.suggestion.applied", {
         suggestion_id: suggestion.id,
         source_ref: activeReferrer,
       });
-      void runAtsReview(nextData, atsTargeting, nextAppliedIds);
+      const result = await runAtsReview({
+        mode: "fast",
+        overrideData: nextData,
+        overrideTargeting: atsTargeting,
+        appliedSuggestionIds: nextAppliedIds,
+      });
+
+      if (!result) {
+        return;
+      }
+
+      const nextIssueLabelMap = new Map(result.issues.map((issue) => [issue.id, issue.title]));
+      setSuggestionFeedback((current) => {
+        const nextFeedback = { ...current };
+        Object.entries(current).forEach(([id, feedback]) => {
+          if (feedback.state !== "applying") {
+            return;
+          }
+
+          const outcome = evaluateSuggestionOutcome({
+            suggestion: feedback.suggestion,
+            nextIssues: result.issues,
+            previousScore: feedback.baselineScore,
+            nextScore: result.score,
+          });
+
+          nextFeedback[id] = {
+            ...feedback,
+            state: outcome.status,
+            confirmedIssueLabels: outcome.confirmedIssueIds.map(
+              (issueId) =>
+                nextIssueLabelMap.get(issueId) ??
+                feedback.expectedIssueLabels[feedback.suggestion.expectedIssueIds.indexOf(issueId)] ??
+                humanizeIssueId(issueId),
+            ),
+            remainingIssueLabels: outcome.remainingIssueIds.map(
+              (issueId) =>
+                nextIssueLabelMap.get(issueId) ??
+                feedback.expectedIssueLabels[feedback.suggestion.expectedIssueIds.indexOf(issueId)] ??
+                humanizeIssueId(issueId),
+            ),
+            improvedScoreDimensions: outcome.improvedScoreDimensions,
+          };
+        });
+        return nextFeedback;
+      });
     },
-    [activeReferrer, atsReview?.appliedSuggestionIds, atsTargeting, parsedData, runAtsReview, trackCreateEvent],
+    [activeReferrer, atsReview, atsTargeting, parsedData, runAtsReview, suggestionFeedback, trackCreateEvent],
   );
 
   const startProcessing = async () => {
@@ -458,7 +575,12 @@ export default function CreatePage() {
               setProgress(100);
               setStage("Done!");
               setStep("review");
-              void runAtsReview(nextData, nextTargeting, []);
+              void runAtsReview({
+                mode: "full",
+                overrideData: nextData,
+                overrideTargeting: nextTargeting,
+                appliedSuggestionIds: [],
+              });
             }
             if (payload.type === "error") {
               throw new Error(typeof payload.message === "string" ? payload.message : "AI parsing failed.");
@@ -676,7 +798,12 @@ export default function CreatePage() {
             setAtsTargeting(nextTargeting);
             setAtsReview(null);
             setStep("review");
-            void runAtsReview(data, nextTargeting, []);
+            void runAtsReview({
+              mode: "full",
+              overrideData: data,
+              overrideTargeting: nextTargeting,
+              appliedSuggestionIds: [],
+            });
           }}
           onBack={() => setInputMode("choose")}
         />
@@ -688,13 +815,15 @@ export default function CreatePage() {
           review={atsReview}
           targeting={atsTargeting}
           reviewing={reviewingAts}
+          suggestionFeedback={suggestionFeedback}
           onTargetingChange={setAtsTargeting}
-          onRunReview={() => void runAtsReview()}
+          onRunReview={() => void runAtsReview({ mode: "full" })}
           onApplySuggestion={applySuggestion}
           onBack={() => setStep("input")}
           onContinue={() => setStep("theme")}
           continueLabel="Continue to Theme Selection"
           backLabel="Back"
+          runReviewLabel="Run Full ATS Review"
           stepLabel="Step 2"
           heading="Review ATS visibility and searchability"
           body="We check whether the exported ATS PDF stays machine-readable, whether your exact titles and skills are easy to find, and whether the resume fits one page before download."

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createRuleBasedAtsReview,
+  evaluateSuggestionOutcome,
   extractJobKeywords,
   getDefaultAtsTargeting,
   normalizeAtsText,
@@ -99,5 +100,67 @@ describe("ATS review helpers", () => {
     expect(review.issues.map((issue) => issue.id)).toContain("pdf-overflow");
     expect(review.suggestions.map((suggestion) => suggestion.id)).toContain("tighten-summary");
     expect(review.suggestions.map((suggestion) => suggestion.id)).toContain("trim-projects");
+    expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedIssueIds).toContain("pdf-overflow");
+    expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedScoreDimensions).toContain("onePagePdf");
+  });
+
+  it("marks suggestion outcomes as confirmed when the expected issue clears", () => {
+    const overflowingReview = createRuleBasedAtsReview({
+      data: buildResume({ summary: "A".repeat(420) }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      },
+    });
+    const suggestion = overflowingReview.suggestions.find((item) => item.id === "tighten-summary");
+    if (!suggestion) {
+      throw new Error("Expected tighten-summary suggestion.");
+    }
+
+    const confirmedOutcome = evaluateSuggestionOutcome({
+      suggestion,
+      nextIssues: [],
+      previousScore: overflowingReview.score,
+      nextScore: {
+        machineReadability: overflowingReview.score.machineReadability,
+        recruiterSearchability: overflowingReview.score.recruiterSearchability,
+        onePagePdf: 100,
+        overall: 100,
+      },
+    });
+
+    expect(confirmedOutcome.status).toBe("confirmed");
+    expect(confirmedOutcome.confirmedIssueIds).toContain("pdf-overflow");
+    expect(confirmedOutcome.improvedScoreDimensions).toContain("onePagePdf");
+  });
+
+  it("marks suggestion outcomes as still needing work when the issue remains", () => {
+    const overflowingReview = createRuleBasedAtsReview({
+      data: buildResume({ summary: "A".repeat(420) }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      },
+    });
+    const suggestion = overflowingReview.suggestions.find((item) => item.id === "tighten-summary");
+    if (!suggestion) {
+      throw new Error("Expected tighten-summary suggestion.");
+    }
+
+    const outcome = evaluateSuggestionOutcome({
+      suggestion,
+      nextIssues: overflowingReview.issues,
+      previousScore: overflowingReview.score,
+      nextScore: overflowingReview.score,
+    });
+
+    expect(outcome.status).toBe("still_needs_work");
+    expect(outcome.remainingIssueIds).toContain("pdf-overflow");
   });
 });

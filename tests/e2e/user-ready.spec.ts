@@ -59,9 +59,10 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "Create Your Page" }).click();
     await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByRole("button", { name: "Load Sample" }).click();
-    await page.getByRole("button", { name: "Run ATS Review" }).click();
+    await page.getByRole("button", { name: "Run Full ATS Review" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId("ats-pdf-preview")).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Generate ATS PDF Preview" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Continue to Theme Selection" }).click();
     await page.getByRole("button", { name: "Preview My Living Page" }).click();
     await expect(page.getByRole("button", { name: "Publish and Go Live" })).toBeVisible({ timeout: 45_000 });

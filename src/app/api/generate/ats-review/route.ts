@@ -9,7 +9,7 @@ import {
 import { checkAtsResumeExport } from "@/lib/pdf/ResumePDFDocument";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
-import type { AtsSuggestion, AtsTargeting, ResumeData } from "@/types/resume";
+import type { AtsReviewMode, AtsSuggestion, AtsTargeting, ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
 
@@ -144,6 +144,8 @@ function sanitizeAiSuggestions(
             ? normalizeAtsText(candidate.applyLabel)
             : "Apply suggestion",
         preview: typeof candidate.preview === "string" ? normalizeAtsText(candidate.preview) : "",
+        expectedIssueIds: [],
+        expectedScoreDimensions: [],
         applyData: mergeResumePatch(baseline, normalizedPatch),
       } satisfies AtsSuggestion;
     });
@@ -167,6 +169,7 @@ export async function POST(request: Request) {
       rawResume?: string | null;
       targeting?: Partial<AtsTargeting>;
       appliedSuggestionIds?: string[];
+      mode?: AtsReviewMode;
     };
 
     if (!body.resumeData) {
@@ -175,33 +178,36 @@ export async function POST(request: Request) {
 
     const normalized = normalizeResumeDataForAts(body.resumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
+    const mode: AtsReviewMode = body.mode === "fast" ? "fast" : "full";
     let aiSuggestions: AtsSuggestion[] = [];
 
-    try {
-      const anthropic = getAnthropicClient();
-      const response = await anthropic.messages.create({
-        model: MODEL_NAME,
-        max_tokens: 1800,
-        messages: [
-          {
-            role: "user",
-            content: buildPrompt(normalized, {
-              primaryTitle: normalizeAtsText(body.targeting?.primaryTitle ?? normalized.headline),
-              titleVariants: (body.targeting?.titleVariants ?? []).map((item) => normalizeAtsText(item)).filter(Boolean),
-              jobDescription: body.targeting?.jobDescription ?? "",
-              lastExtractedKeywords: [],
-            }, body.rawResume ?? null),
-          },
-        ],
-      });
+    if (mode === "full") {
+      try {
+        const anthropic = getAnthropicClient();
+        const response = await anthropic.messages.create({
+          model: MODEL_NAME,
+          max_tokens: 1800,
+          messages: [
+            {
+              role: "user",
+              content: buildPrompt(normalized, {
+                primaryTitle: normalizeAtsText(body.targeting?.primaryTitle ?? normalized.headline),
+                titleVariants: (body.targeting?.titleVariants ?? []).map((item) => normalizeAtsText(item)).filter(Boolean),
+                jobDescription: body.targeting?.jobDescription ?? "",
+                lastExtractedKeywords: [],
+              }, body.rawResume ?? null),
+            },
+          ],
+        });
 
-      const text = response.content
-        .map((block) => ("text" in block ? block.text : ""))
-        .join("");
-      const parsed = parseJson<{ suggestions?: unknown }>(text);
-      aiSuggestions = sanitizeAiSuggestions(parsed.suggestions, normalized);
-    } catch {
-      aiSuggestions = [];
+        const text = response.content
+          .map((block) => ("text" in block ? block.text : ""))
+          .join("");
+        const parsed = parseJson<{ suggestions?: unknown }>(text);
+        aiSuggestions = sanitizeAiSuggestions(parsed.suggestions, normalized);
+      } catch {
+        aiSuggestions = [];
+      }
     }
 
     const review = createRuleBasedAtsReview({
@@ -210,9 +216,11 @@ export async function POST(request: Request) {
       exportCheck,
       appliedSuggestionIds: body.appliedSuggestionIds,
       aiSuggestions,
+      mode,
     });
 
     await trackEvent(user.id, "ats.review.run", {
+      mode,
       issues: review.issues.length,
       suggestions: review.suggestions.length,
       fits_one_page: review.exportCheck.fitsOnOnePage,

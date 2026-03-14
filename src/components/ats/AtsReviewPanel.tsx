@@ -5,7 +5,9 @@ import type {
   AtsIssue,
   AtsReviewSnapshot,
   AtsSuggestion,
+  AtsSuggestionFeedback,
   AtsTargeting,
+  AtsScoreDimension,
   ResumeData,
 } from "@/types/resume";
 
@@ -14,13 +16,15 @@ interface AtsReviewPanelProps {
   review: AtsReviewSnapshot | null;
   targeting: AtsTargeting;
   reviewing: boolean;
+  suggestionFeedback: Record<string, AtsSuggestionFeedback>;
   onTargetingChange: (next: AtsTargeting) => void;
   onRunReview: () => void;
-  onApplySuggestion: (suggestion: AtsSuggestion) => void;
+  onApplySuggestion: (suggestion: AtsSuggestion) => void | Promise<void>;
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
   backLabel?: string;
+  runReviewLabel?: string;
   stepLabel?: string;
   heading: string;
   body: string;
@@ -50,11 +54,22 @@ function updateVariant(targeting: AtsTargeting, index: number, value: string) {
   };
 }
 
+function formatScoreDimension(dimension: AtsScoreDimension) {
+  if (dimension === "machineReadability") {
+    return "Machine Readability";
+  }
+  if (dimension === "recruiterSearchability") {
+    return "Recruiter Search";
+  }
+  return "One-Page PDF";
+}
+
 export default function AtsReviewPanel({
   data,
   review,
   targeting,
   reviewing,
+  suggestionFeedback,
   onTargetingChange,
   onRunReview,
   onApplySuggestion,
@@ -62,6 +77,7 @@ export default function AtsReviewPanel({
   onContinue,
   continueLabel = "Continue",
   backLabel = "Back",
+  runReviewLabel = "Run Full ATS Review",
   stepLabel = "ATS Review",
   heading,
   body,
@@ -69,85 +85,107 @@ export default function AtsReviewPanel({
   const applied = new Set(review?.appliedSuggestionIds ?? []);
   const canContinue = Boolean(review) && !reviewing;
   const previewUrlRef = useRef<string | null>(null);
+  const previewAbortRef = useRef<AbortController | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewSnapshotHash, setPreviewSnapshotHash] = useState<string | null>(null);
+  const feedbackEntries = Object.values(suggestionFeedback);
+  const activeFeedbackCount = feedbackEntries.filter((feedback) => feedback.state === "applying").length;
+  const suggestionCards = [...(review?.suggestions ?? [])];
+
+  feedbackEntries.forEach((feedback) => {
+    if (!suggestionCards.some((suggestion) => suggestion.id === feedback.suggestion.id)) {
+      suggestionCards.push(feedback.suggestion);
+    }
+  });
+
+  const previewStatus = !review
+    ? null
+    : !previewSnapshotHash
+      ? "Preview not generated yet"
+      : previewSnapshotHash === review.contentHash
+        ? "Preview up to date"
+        : "Preview is stale";
+  const reviewStatus = reviewing
+    ? "Running full ATS review..."
+    : activeFeedbackCount > 0
+      ? "Applying fix and rechecking one-page fit..."
+      : review
+        ? review.mode === "fast"
+          ? "Fast recheck complete."
+          : "Full review complete."
+        : null;
 
   useEffect(() => {
-    const replacePreviewUrl = (next: string | null) => {
+    if (!review) {
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
-      previewUrlRef.current = next;
-      setPreviewUrl(next);
-    };
-
-    if (!review) {
-      replacePreviewUrl(null);
+      previewUrlRef.current = null;
+      setPreviewUrl(null);
       setPreviewLoading(false);
       setPreviewError(null);
-      return;
+      setPreviewSnapshotHash(null);
     }
-
-    let cancelled = false;
-
-    async function loadPreview() {
-      setPreviewLoading(true);
-      setPreviewError(null);
-
-      try {
-        const response = await fetch("/api/resume/export/preview", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ resumeData: data }),
-        });
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(payload?.error || "Unable to load the ATS PDF preview.");
-        }
-
-        const blob = await response.blob();
-        const nextUrl = URL.createObjectURL(blob);
-
-        if (cancelled) {
-          URL.revokeObjectURL(nextUrl);
-          return;
-        }
-
-        replacePreviewUrl(nextUrl);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        replacePreviewUrl(null);
-        setPreviewError(
-          error instanceof Error ? error.message : "Unable to load the ATS PDF preview.",
-        );
-      } finally {
-        if (!cancelled) {
-          setPreviewLoading(false);
-        }
-      }
-    }
-
-    void loadPreview();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [data, review]);
+  }, [review]);
 
   useEffect(() => {
     return () => {
+      previewAbortRef.current?.abort();
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
     };
   }, []);
+
+  const refreshPreview = async () => {
+    if (!review) {
+      return;
+    }
+
+    previewAbortRef.current?.abort();
+    const controller = new AbortController();
+    previewAbortRef.current = controller;
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    try {
+      const response = await fetch("/api/resume/export/preview", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ resumeData: data }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error || "Unable to load the ATS PDF preview.");
+      }
+
+      const blob = await response.blob();
+      const nextUrl = URL.createObjectURL(blob);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      previewUrlRef.current = nextUrl;
+      setPreviewUrl(nextUrl);
+      setPreviewSnapshotHash(review.contentHash);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      setPreviewError(
+        error instanceof Error ? error.message : "Unable to load the ATS PDF preview.",
+      );
+    } finally {
+      setPreviewLoading(false);
+      previewAbortRef.current = null;
+    }
+  };
 
   return (
     <section data-testid="ats-review-panel" className="space-y-5">
@@ -155,6 +193,12 @@ export default function AtsReviewPanel({
         <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">{stepLabel}</p>
         <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">{heading}</h2>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.62)]">{body}</p>
+        {reviewStatus ? (
+          <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.52)]">
+            {reviewStatus}
+            {previewStatus ? ` · ${previewStatus}` : ""}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -209,7 +253,7 @@ export default function AtsReviewPanel({
                 disabled={reviewing || !data.name.trim()}
                 className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {reviewing ? "Reviewing..." : "Run ATS Review"}
+                {reviewing ? "Reviewing..." : runReviewLabel}
               </button>
               <p className="self-center text-xs text-[rgba(240,244,255,0.42)]">
                 More searchable when exact titles and skills are explicit.
@@ -268,10 +312,24 @@ export default function AtsReviewPanel({
                       your public page.
                     </p>
                   </div>
-                  <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
-                    {review.exportCheck.fitsOnOnePage
-                      ? "Fits one page"
-                      : `${review.exportCheck.pageCount} pages right now`}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
+                      {review.exportCheck.fitsOnOnePage
+                        ? "Fits one page"
+                        : `${review.exportCheck.pageCount} pages right now`}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void refreshPreview()}
+                      disabled={previewLoading}
+                      className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      {previewLoading
+                        ? "Refreshing..."
+                        : previewUrl
+                          ? "Refresh ATS PDF Preview"
+                          : "Generate ATS PDF Preview"}
+                    </button>
                   </div>
                 </div>
 
@@ -293,14 +351,14 @@ export default function AtsReviewPanel({
                     />
                   ) : (
                     <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
-                      Run the ATS review to generate a preview of your export-safe PDF.
+                      Generate the ATS PDF preview when you want to verify the current export layout.
                     </div>
                   )}
                 </div>
 
                 <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
-                  Use this preview to catch overflow and confirm the ATS PDF stays clean, direct,
-                  and easy to scan before you download it.
+                  {previewStatus}. Use this preview to catch overflow and confirm the ATS PDF stays
+                  clean, direct, and easy to scan before you download it.
                 </p>
               </div>
 
@@ -341,9 +399,11 @@ export default function AtsReviewPanel({
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Suggested fixes you can apply</p>
                   <div className="mt-3 space-y-3">
-                    {review.suggestions.length ? (
-                      review.suggestions.map((suggestion) => {
+                    {suggestionCards.length ? (
+                      suggestionCards.map((suggestion) => {
                         const alreadyApplied = applied.has(suggestion.id);
+                        const feedback = suggestionFeedback[suggestion.id];
+                        const isApplying = feedback?.state === "applying";
 
                         return (
                           <article
@@ -357,14 +417,45 @@ export default function AtsReviewPanel({
                                 {suggestion.preview}
                               </div>
                             ) : null}
+                            {feedback?.state === "applying" ? (
+                              <div className="mt-3 rounded-lg border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-3 py-2 text-xs leading-5 text-[#BFDBFE]">
+                                {feedback.expectedIssueLabels.length ? (
+                                  <p>{`Expected to address: ${feedback.expectedIssueLabels.join(", ")}`}</p>
+                                ) : null}
+                                {feedback.suggestion.expectedScoreDimensions.length ? (
+                                  <p>{`Expected to improve: ${feedback.suggestion.expectedScoreDimensions.map(formatScoreDimension).join(", ")}`}</p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {feedback?.state === "confirmed" ? (
+                              <div className="mt-3 rounded-lg border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] px-3 py-2 text-xs leading-5 text-[#CFFFD7]">
+                                <p>Confirmed after fast recheck.</p>
+                                {feedback.confirmedIssueLabels.length ? (
+                                  <p>{`Resolved: ${feedback.confirmedIssueLabels.join(", ")}`}</p>
+                                ) : null}
+                                {feedback.improvedScoreDimensions.length ? (
+                                  <p>{`Improved: ${feedback.improvedScoreDimensions.map(formatScoreDimension).join(", ")}`}</p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {feedback?.state === "still_needs_work" ? (
+                              <div className="mt-3 rounded-lg border border-[rgba(245,195,107,0.25)] bg-[rgba(245,195,107,0.08)] px-3 py-2 text-xs leading-5 text-[#F5D7A2]">
+                                <p>Applied, still needs work after recheck.</p>
+                                {feedback.remainingIssueLabels.length ? (
+                                  <p>{`Still open: ${feedback.remainingIssueLabels.join(", ")}`}</p>
+                                ) : (
+                                  <p>Run a full review if you want a fresh round of broader suggestions.</p>
+                                )}
+                              </div>
+                            ) : null}
                             <div className="mt-3 flex items-center gap-3">
                               <button
                                 type="button"
-                                disabled={alreadyApplied}
-                                onClick={() => onApplySuggestion(suggestion)}
+                                disabled={alreadyApplied || isApplying}
+                                onClick={() => void onApplySuggestion(suggestion)}
                                 className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-45"
                               >
-                                {alreadyApplied ? "Applied" : suggestion.applyLabel}
+                                {isApplying ? "Applying..." : alreadyApplied ? "Applied" : suggestion.applyLabel}
                               </button>
                               <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.4)]">
                                 {suggestion.category.replaceAll("_", " ")}

@@ -2,7 +2,10 @@ import type {
   AtsExportCheck,
   AtsIssue,
   AtsIssueSeverity,
+  AtsReviewMode,
   AtsReviewSnapshot,
+  AtsScoreBreakdown,
+  AtsScoreDimension,
   AtsSuggestion,
   AtsTargeting,
   ResumeData,
@@ -335,6 +338,40 @@ function buildScores(issues: AtsIssue[]) {
   };
 }
 
+function buildSuggestionImpact(
+  expectedIssueIds: string[],
+  expectedScoreDimensions: AtsScoreDimension[],
+) {
+  return {
+    expectedIssueIds,
+    expectedScoreDimensions,
+  };
+}
+
+export function evaluateSuggestionOutcome(input: {
+  suggestion: AtsSuggestion;
+  nextIssues: AtsIssue[];
+  previousScore: AtsScoreBreakdown;
+  nextScore: AtsScoreBreakdown;
+}) {
+  const nextIssueIds = new Set(input.nextIssues.map((issue) => issue.id));
+  const confirmedIssueIds = input.suggestion.expectedIssueIds.filter((issueId) => !nextIssueIds.has(issueId));
+  const remainingIssueIds = input.suggestion.expectedIssueIds.filter((issueId) => nextIssueIds.has(issueId));
+  const improvedScoreDimensions = input.suggestion.expectedScoreDimensions.filter(
+    (dimension) => input.nextScore[dimension] > input.previousScore[dimension],
+  );
+
+  return {
+    confirmedIssueIds,
+    remainingIssueIds,
+    improvedScoreDimensions,
+    status:
+      confirmedIssueIds.length > 0 || improvedScoreDimensions.length > 0
+        ? "confirmed"
+        : "still_needs_work",
+  } as const;
+}
+
 function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportCheck: AtsExportCheck) {
   const suggestions: AtsSuggestion[] = [];
   const normalized = normalizeResumeDataForAts(data);
@@ -348,6 +385,10 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       description: "Recruiter searches are more likely to surface you when the primary title appears exactly and early.",
       applyLabel: "Use exact title",
       preview: targeting.primaryTitle,
+      ...buildSuggestionImpact(
+        ["missing-headline", "primary-title-not-explicit"],
+        ["recruiterSearchability"],
+      ),
       applyData: {
         headline: targeting.primaryTitle,
       },
@@ -367,6 +408,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       description: "A summary that clearly names the role and core skills is easier to find and easier to trust.",
       applyLabel: "Update summary",
       preview: nextSummary,
+      ...buildSuggestionImpact(["primary-title-not-explicit"], ["recruiterSearchability"]),
       applyData: {
         summary: nextSummary,
       },
@@ -382,6 +424,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       description: "Plain ASCII punctuation avoids broken bullets and separator glyphs in generated PDFs.",
       applyLabel: "Normalize text",
       preview: "Replace decorative bullets, quotes, and dashes with plain text.",
+      ...buildSuggestionImpact(["problematic-punctuation"], ["machineReadability"]),
       applyData: normalizeResumeDataForAts(normalized),
     });
   }
@@ -394,6 +437,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       description: "A shorter summary frees space for role bullets and exact skills without making the resume harder to scan.",
       applyLabel: "Shorten summary",
       preview: trimSentence(normalized.summary, 280),
+      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
       applyData: {
         summary: trimSentence(normalized.summary, 280),
       },
@@ -407,6 +451,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       title: "Keep the two strongest projects in the ATS PDF",
       description: "Projects are useful, but they are lower priority than experience and skills when space gets tight.",
       applyLabel: "Keep top 2 projects",
+      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
       applyData: {
         projects: normalized.projects.slice(0, 2),
       },
@@ -420,6 +465,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       title: "Keep only the most relevant certifications",
       description: "Reducing certification count can recover space without weakening core searchability.",
       applyLabel: "Keep top 2 certifications",
+      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
       applyData: {
         certifications: normalized.certifications.slice(0, 2),
       },
@@ -433,6 +479,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       title: "Keep the four strongest roles",
       description: "One-page resumes usually perform better when older roles move off the exported PDF first.",
       applyLabel: "Keep top 4 roles",
+      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
       applyData: {
         experience: normalized.experience.slice(0, 4),
       },
@@ -446,6 +493,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       title: "Limit each role to the strongest two bullets",
       description: "Prioritize exact skills and metrics, and leave supporting detail for the page itself.",
       applyLabel: "Trim bullets",
+      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
       applyData: {
         experience: normalized.experience.map((entry) => ({
           ...entry,
@@ -462,6 +510,7 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
       title: "Review lower-priority sections before exporting",
       description: "Projects, certifications, and long summaries usually need to tighten up first.",
       applyLabel: "Review sections",
+      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
       applyData: {},
     });
   }
@@ -475,6 +524,7 @@ export function createRuleBasedAtsReview(input: {
   exportCheck: AtsExportCheck;
   appliedSuggestionIds?: string[];
   aiSuggestions?: AtsSuggestion[];
+  mode?: AtsReviewMode;
 }) {
   const normalizedData = normalizeResumeDataForAts(input.data);
   const defaultTargeting = getDefaultAtsTargeting(normalizedData);
@@ -610,13 +660,12 @@ export function createRuleBasedAtsReview(input: {
     });
   }
 
-  const suggestions = dedupe([
+  const combinedSuggestions = [
     ...buildRuleSuggestions(normalizedData, targeting, input.exportCheck),
     ...(input.aiSuggestions ?? []),
-  ].map((suggestion) => suggestion.id)).map((id) => {
-    return [...buildRuleSuggestions(normalizedData, targeting, input.exportCheck), ...(input.aiSuggestions ?? [])].find(
-      (suggestion) => suggestion.id === id,
-    ) as AtsSuggestion;
+  ];
+  const suggestions = dedupe(combinedSuggestions.map((suggestion) => suggestion.id)).map((id) => {
+    return combinedSuggestions.find((suggestion) => suggestion.id === id) as AtsSuggestion;
   });
 
   const score = buildScores(issues);
@@ -630,6 +679,7 @@ export function createRuleBasedAtsReview(input: {
     exportCheck: input.exportCheck,
     lastReviewedAt: new Date().toISOString(),
     contentHash: buildResumeContentHash(normalizedData, targeting),
+    mode: input.mode ?? "full",
     source: input.aiSuggestions?.length ? "rules+ai" : "rules",
   } satisfies AtsReviewSnapshot;
 }

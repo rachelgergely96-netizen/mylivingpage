@@ -180,8 +180,9 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
     await page.getByRole("button", { name: "Run ATS Review" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("Review the ATS version before you continue")).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Use This ATS Version" }).click();
+    await expect(page.getByText("We built your ATS version")).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("Machine Readability")).toHaveCount(0);
+    await page.getByRole("button", { name: "Continue" }).click();
     await page.getByRole("button", { name: "Preview My Living Page" }).click();
     await expect(page.getByRole("button", { name: "Publish and Go Live" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish and Go Live" }).click();
@@ -192,8 +193,8 @@ test.describe.serial("authenticated user journeys", () => {
     const headlineInput = page.locator('input[type="text"]').nth(1);
     await headlineInput.fill(`Updated headline ${Date.now()}`);
     await page.getByRole("button", { name: "Save Changes" }).click();
-    await expect(page.getByRole("button", { name: "Save With This ATS Version" })).toBeVisible();
-    await page.getByRole("button", { name: "Save With This ATS Version" }).click();
+    await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+    await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Saved successfully!")).toBeVisible();
 
     await page.goto("/dashboard/settings");

@@ -14,7 +14,6 @@ import {
   approveCandidateAtsResume,
   buildAtsRelevantFingerprint,
   finalizeApprovedAtsResume,
-  getAtsAvailabilityReason,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
@@ -90,13 +89,13 @@ export default function EditPage() {
   const atsStatusMessage = useMemo(() => {
     if (hasAtsRelevantChanges && atsReview) {
       return atsReview.status === "ready"
-        ? "ATS PDF will be ready on the live page after you save these changes."
-        : getAtsAvailabilityReason(atsReview);
+        ? "ATS PDF will be ready after you save."
+        : "ATS PDF not ready yet after these edits.";
     }
 
     return liveAtsPdfReady
       ? "ATS PDF ready on the live page."
-      : "ATS PDF needs review before it can appear on the live page.";
+      : "ATS PDF not ready yet.";
   }, [atsReview, hasAtsRelevantChanges, liveAtsPdfReady]);
 
   useUnsavedChanges(isDirty);
@@ -352,7 +351,7 @@ export default function EditPage() {
     setSuccess(
       hasApprovedAtsResume(nextReview)
         ? "ATS version ready. Save when you're ready."
-        : getAtsAvailabilityReason(nextReview),
+        : "ATS PDF not ready yet.",
     );
     setTimeout(() => setSuccess(""), 3000);
     setApplyingProposalChanges(false);
@@ -371,8 +370,8 @@ export default function EditPage() {
     setPageConfig((current) => ({ ...current, ats: nextReview }));
     setSuccess(
       hasApprovedAtsResume(nextReview)
-        ? "You kept the current content. Save when you're ready."
-        : getAtsAvailabilityReason(nextReview),
+        ? "You kept your wording. Save when you're ready."
+        : "You kept your wording. ATS PDF not ready yet.",
     );
     setTimeout(() => setSuccess(""), 3000);
   }, [atsReview, data, page?.id, trackOptimizeEvent]);
@@ -578,12 +577,12 @@ export default function EditPage() {
           onRunReview={() => void runAtsReview({ mode: "full" })}
           onPrimaryAction={() => void handleOptimizeUseGeneratedVersion()}
           onSecondaryAction={() => void handleOptimizeKeepCurrent()}
-          primaryActionLabel="Use This ATS Version"
-          secondaryActionLabel="Keep Current"
+          primaryActionLabel="Use ATS version"
+          secondaryActionLabel="Keep my current wording"
           runReviewLabel="Run ATS Review"
           stepLabel="Optimize"
-          heading="Review the ATS version for this page"
-          body="We auto-build a stricter one-page ATS version from your current content. Your public page stays richer, and you can decide whether to save the ATS version or keep the current export."
+          heading="We built your ATS version"
+          body="We made the ATS copy as tight as we could. Use it, or keep your current wording."
         />
       ) : null}
 
@@ -888,13 +887,13 @@ export default function EditPage() {
               onBack={() => setShowSaveGate(false)}
               onPrimaryAction={() => void handleSaveWithGeneratedAtsVersion()}
               onSecondaryAction={() => void handleSaveWithoutAtsEdits()}
-              primaryActionLabel="Save With This ATS Version"
-              secondaryActionLabel="Save Without ATS Changes"
+              primaryActionLabel="Save changes"
+              secondaryActionLabel="Keep my current wording"
               backLabel="Cancel"
               runReviewLabel="Run ATS Review"
               stepLabel="Save Review"
-              heading="Review the ATS version before saving"
-              body="These edits affect recruiter searchability or the public ATS PDF. We built the strongest ATS version we can from your draft and you can save with it or keep the current export."
+              heading="We built your ATS version"
+              body="These edits affect your ATS PDF. Save with the new ATS version, or keep your current wording."
             />
           </div>
         </div>

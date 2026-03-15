@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getAtsAvailabilityReason } from "@/lib/ats-review";
 import type {
   AtsIssue,
   AtsReviewSnapshot,
@@ -60,8 +59,8 @@ export default function AtsReviewPanel({
   onSecondaryAction,
   onContinueWithoutReview,
   onBack,
-  primaryActionLabel = "Use This ATS Version",
-  secondaryActionLabel = "Keep Current",
+  primaryActionLabel = "Continue",
+  secondaryActionLabel = "Keep my current wording",
   continueWithoutReviewLabel = "Continue without ATS Review",
   backLabel = "Back",
   runReviewLabel = "Run ATS Review",
@@ -96,23 +95,19 @@ export default function AtsReviewPanel({
   const reviewStatus = reviewing
     ? "Running ATS review..."
     : actionBusy
-      ? "Saving ATS decision..."
-      : review
-        ? review.mode === "fast"
-          ? "ATS recheck complete."
-          : "ATS review complete."
-        : null;
+      ? "Saving changes..."
+      : null;
 
   const statusTitle = review
     ? review.status === "ready"
       ? "ATS PDF ready"
-      : "ATS PDF still needs one fix"
+      : "ATS PDF not ready yet"
     : null;
 
   const statusBody = review
     ? review.status === "ready"
-      ? "We built a cleaner one-page ATS version for you. Your public page can stay richer while the ATS PDF stays strict."
-      : getAtsAvailabilityReason(review)
+      ? "We built a clean one-page ATS version and kept it separate from your public page."
+      : "We tightened the ATS version, but it still does not fit on one page. You can keep going and rerun ATS review later."
     : null;
 
   const previewData = useMemo(
@@ -224,14 +219,16 @@ export default function AtsReviewPanel({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onRunReview}
-            disabled={reviewing || actionBusy || !data.name.trim()}
-            className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {reviewing ? "Reviewing..." : runReviewLabel}
-          </button>
+          {!review ? (
+            <button
+              type="button"
+              onClick={onRunReview}
+              disabled={reviewing || actionBusy || !data.name.trim()}
+              className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {reviewing ? "Reviewing..." : runReviewLabel}
+            </button>
+          ) : null}
         </div>
 
         {review ? (
@@ -255,8 +252,8 @@ export default function AtsReviewPanel({
 
             {review.status === "needs_attention" ? (
               <div className="rounded-2xl border border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] p-4 text-sm leading-6 text-[#FFD5D5]">
-                <p className="font-semibold text-[#FFF0F0]">One thing still needs attention.</p>
-                <p className="mt-2">{getAtsAvailabilityReason(review)}</p>
+                <p className="font-semibold text-[#FFF0F0]">ATS PDF not ready yet.</p>
+                <p className="mt-2">You can continue with your page now and rerun ATS review later from advanced options.</p>
               </div>
             ) : null}
           </div>
@@ -268,65 +265,92 @@ export default function AtsReviewPanel({
           <summary className="cursor-pointer list-none">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Advanced ATS Details</p>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Advanced options</p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-                  Override the target role, paste a job description, inspect remaining issues, or refresh the ATS PDF preview.
+                  Override the target role, rerun ATS review, inspect issues, or refresh the ATS PDF preview.
                 </p>
               </div>
               <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
-                {review.candidateExportCheck?.fitsOnOnePage ? "One-page candidate" : `${review.candidateExportCheck?.pageCount ?? review.exportCheck.pageCount} pages`}
+                {review.candidateExportCheck?.fitsOnOnePage ? "ATS PDF ready" : `${review.candidateExportCheck?.pageCount ?? review.exportCheck.pageCount} pages`}
               </div>
             </div>
           </summary>
 
           <div className="mt-5 space-y-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Targeting Override</p>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.56)]">
-                    Leave this alone unless you want to steer the ATS draft toward a different role or a specific job post.
-                  </p>
-                </div>
-
-                <label className="block">
-                  <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">Target Role</span>
-                  <input
-                    type="text"
-                    value={targeting.primaryTitle}
-                    onChange={(event) => onTargetingChange({ ...targeting, primaryTitle: event.target.value })}
-                    placeholder="Product Manager"
-                    className={inputClass}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">
-                    Job Description
-                  </span>
-                  <textarea
-                    value={targeting.jobDescription}
-                    onChange={(event) => onTargetingChange({ ...targeting, jobDescription: event.target.value })}
-                    placeholder="Optional: paste a job description to compare exact keywords."
-                    rows={6}
-                    className={`${inputClass} min-h-[150px] resize-y leading-6`}
-                  />
-                </label>
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Target role override</p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.56)]">
+                  Only change this if you want the ATS version aimed at a different role or a specific job post.
+                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <article className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Machine Readability</p>
-                  <p className="mt-2 font-heading text-3xl text-[#F0F4FF]">{review.score.machineReadability}</p>
-                </article>
-                <article className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Recruiter Search</p>
-                  <p className="mt-2 font-heading text-3xl text-[#F0F4FF]">{review.score.recruiterSearchability}</p>
-                </article>
-                <article className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">One-Page PDF</p>
-                  <p className="mt-2 font-heading text-3xl text-[#F0F4FF]">{review.score.onePagePdf}</p>
-                </article>
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">Target role</span>
+                <input
+                  type="text"
+                  value={targeting.primaryTitle}
+                  onChange={(event) => onTargetingChange({ ...targeting, primaryTitle: event.target.value })}
+                  placeholder="Product Manager"
+                  className={inputClass}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">
+                  Job description
+                </span>
+                <textarea
+                  value={targeting.jobDescription}
+                  onChange={(event) => onTargetingChange({ ...targeting, jobDescription: event.target.value })}
+                  placeholder="Optional: paste a job description to compare exact keywords."
+                  rows={6}
+                  className={`${inputClass} min-h-[150px] resize-y leading-6`}
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={onRunReview}
+                disabled={reviewing || actionBusy || !data.name.trim()}
+                className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {reviewing ? "Reviewing..." : runReviewLabel}
+              </button>
+            </div>
+
+            <div
+              className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4"
+            >
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Remaining issues</p>
+              <div className="mt-3 space-y-3">
+                {review.issues.length ? (
+                  review.issues.map((issue) => (
+                    <article
+                      key={issue.id}
+                      className={`rounded-xl border p-4 text-sm ${getSeverityTone(issue)}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-[#F0F4FF]">{issue.title}</p>
+                          <p className="mt-2 leading-6 text-[rgba(240,244,255,0.68)]">{issue.description}</p>
+                          {issue.suggestedFix ? (
+                            <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[rgba(240,244,255,0.5)]">
+                              {issue.suggestedFix}
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className="rounded-full border border-[rgba(255,255,255,0.14)] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.7)]">
+                          {issue.severity}
+                        </span>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] p-4 text-sm text-[#CFFFD7]">
+                    No other blocking issues right now.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -337,7 +361,7 @@ export default function AtsReviewPanel({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
-                    ATS PDF Preview
+                    ATS PDF preview
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
                     This previews the strict one-column ATS version, not your public page.
@@ -347,7 +371,7 @@ export default function AtsReviewPanel({
                   <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
                     {review.candidateExportCheck?.fitsOnOnePage
                       ? "Fits one page"
-                      : `${review.candidateExportCheck?.pageCount ?? review.exportCheck.pageCount} pages right now`}
+                      : `${review.candidateExportCheck?.pageCount ?? review.exportCheck.pageCount} pages`}
                   </div>
                   <button
                     type="button"
@@ -358,8 +382,8 @@ export default function AtsReviewPanel({
                     {previewLoading
                       ? "Refreshing..."
                       : previewUrl
-                        ? "Refresh ATS PDF Preview"
-                        : "Generate ATS PDF Preview"}
+                        ? "Refresh preview"
+                        : "Generate preview"}
                   </button>
                 </div>
               </div>
@@ -391,44 +415,11 @@ export default function AtsReviewPanel({
                 {previewStatus}. Preview only refreshes when you ask for it.
               </p>
             </div>
-
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Remaining issues</p>
-              <div className="mt-3 space-y-3">
-                {review.issues.length ? (
-                  review.issues.map((issue) => (
-                    <article
-                      key={issue.id}
-                      className={`rounded-xl border p-4 text-sm ${getSeverityTone(issue)}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-[#F0F4FF]">{issue.title}</p>
-                          <p className="mt-2 leading-6 text-[rgba(240,244,255,0.68)]">{issue.description}</p>
-                          {issue.suggestedFix ? (
-                            <p className="mt-2 text-xs uppercase tracking-[0.12em] text-[rgba(240,244,255,0.5)]">
-                              {issue.suggestedFix}
-                            </p>
-                          ) : null}
-                        </div>
-                        <span className="rounded-full border border-[rgba(255,255,255,0.14)] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.7)]">
-                          {issue.severity}
-                        </span>
-                      </div>
-                    </article>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-[rgba(100,220,100,0.24)] bg-[rgba(100,220,100,0.08)] p-4 text-sm text-[#CFFFD7]">
-                    No blocking issues right now. This ATS version looks ready for one-page export.
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </details>
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {onBack ? (
           <button
             type="button"
@@ -443,7 +434,7 @@ export default function AtsReviewPanel({
             type="button"
             onClick={() => void onSecondaryAction()}
             disabled={!canAct}
-            className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-45"
+            className="bg-transparent px-1 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.52)] underline-offset-4 transition-colors hover:text-[#93C5FD] hover:underline disabled:cursor-not-allowed disabled:opacity-45"
           >
             {secondaryActionLabel}
           </button>

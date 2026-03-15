@@ -15,7 +15,6 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
   approveCandidateAtsResume,
   finalizeApprovedAtsResume,
-  getAtsAvailabilityReason,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
@@ -299,7 +298,7 @@ export default function CreatePage() {
     setError("");
     setAtsReview(null);
     setAtsReadyNotice(
-      "ATS review was skipped for now. You can rerun it later from edit before turning on ATS PDF download.",
+      "ATS PDF not ready yet. You can rerun ATS review later from edit.",
     );
     setStep("theme");
   }, []);
@@ -442,8 +441,8 @@ export default function CreatePage() {
         setAtsReview(finalizedReview);
         setAtsReadyNotice(
           hasApprovedAtsResume(finalizedReview)
-            ? "Your ATS PDF is already ready. We did not need to change anything before you continue."
-            : getAtsAvailabilityReason(finalizedReview),
+            ? "ATS PDF ready. No extra cuts were needed."
+            : "ATS PDF not ready yet. You can keep going and rerun ATS review later.",
         );
         setStep("theme");
         return;
@@ -473,8 +472,8 @@ export default function CreatePage() {
       setAtsReview(nextReview);
       setAtsReadyNotice(
         hasApprovedAtsResume(nextReview)
-          ? "Your ATS PDF is ready to go live with this page."
-          : getAtsAvailabilityReason(nextReview),
+          ? "ATS PDF ready."
+          : "ATS PDF not ready yet. You can keep going and rerun ATS review later.",
       );
       setApplyingAtsDecision(false);
       setStep("theme");
@@ -492,15 +491,15 @@ export default function CreatePage() {
         declined_count: atsReview.changeSummary.length || 1,
         source_ref: activeReferrer,
       });
-      const finalizedReview = finalizeApprovedAtsResume(atsReview, parsedData);
-      setAtsReview(finalizedReview);
-      setAtsReadyNotice(
-        hasApprovedAtsResume(finalizedReview)
-          ? "You kept your original wording. Your ATS PDF is ready once you publish."
-          : getAtsAvailabilityReason(finalizedReview),
-      );
-      setStep("theme");
-    },
+    const finalizedReview = finalizeApprovedAtsResume(atsReview, parsedData);
+    setAtsReview(finalizedReview);
+    setAtsReadyNotice(
+      hasApprovedAtsResume(finalizedReview)
+        ? "You kept your wording. ATS PDF ready."
+        : "You kept your wording. ATS PDF not ready yet.",
+    );
+    setStep("theme");
+  },
     [activeReferrer, atsReview, parsedData, trackCreateEvent],
   );
 
@@ -808,13 +807,13 @@ export default function CreatePage() {
           onBack={() => setStep("input")}
           onPrimaryAction={() => void handleUseGeneratedAtsVersion()}
           onSecondaryAction={() => void handleKeepCurrentAtsCopy()}
-          primaryActionLabel="Use This ATS Version"
-          secondaryActionLabel="Keep Current"
+          primaryActionLabel="Continue"
+          secondaryActionLabel="Keep my current wording"
           backLabel="Back"
           runReviewLabel="Run ATS Review"
           stepLabel="Step 2"
-          heading="Review the ATS version before you continue"
-          body="We auto-build the strongest one-page ATS version we can, keep your public page content separate, and only ask whether you want to use that ATS copy or keep your current one."
+          heading="We built your ATS version"
+          body="We made the ATS copy as tight as we could. Continue with it, or keep your current wording."
         />
       ) : null}
 
@@ -896,8 +895,8 @@ export default function CreatePage() {
               <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">ATS status</p>
               <p className="mt-2 text-sm text-[#F0F4FF]">
                 {atsPdfReady
-                  ? "Visible to systems, easier to find in recruiter search, and ready to publish with a saved one-page ATS PDF."
-                  : getAtsAvailabilityReason(atsReview)}
+                  ? "ATS PDF ready and saved for download."
+                  : "ATS PDF not ready yet. You can rerun ATS review later from edit."}
               </p>
             </div>
           ) : null}

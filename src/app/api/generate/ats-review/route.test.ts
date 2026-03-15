@@ -187,5 +187,6 @@ describe("POST /api/generate/ats-review", () => {
     expect(payload.candidateExportCheck?.fitsOnOnePage).toBe(true);
     expect(payload.candidateResumeData?.summary.length).toBeLessThan(420);
     expect(payload.changeSummary.length).toBeGreaterThan(0);
+    expect(payload.changeSummary.length).toBeLessThanOrEqual(3);
   });
 });

@@ -740,14 +740,17 @@ function trimCertificationsForAts(data: ResumeData, maxCertifications: number) {
 }
 
 function trimExperienceCountForAts(data: ResumeData, maxRoles: number) {
+  const minRoles = Math.min(data.experience.length, 2);
   return {
     ...data,
-    experience: data.experience.slice(0, Math.max(1, maxRoles)),
+    experience: data.experience.slice(0, Math.max(minRoles, maxRoles)),
   } satisfies ResumeData;
 }
 
 function trimSkillsForAts(data: ResumeData, maxItems: number) {
-  let remaining = maxItems;
+  const totalItems = data.skills.reduce((count, group) => count + group.items.length, 0);
+  const minItems = Math.min(totalItems, 6);
+  let remaining = Math.max(minItems, maxItems);
   const nextSkills = data.skills
     .map((group) => {
       if (remaining <= 0) {
@@ -774,71 +777,43 @@ function trimSkillsForAts(data: ResumeData, maxItems: number) {
 
 function summarizeCandidateChanges(baseData: ResumeData, candidateData: ResumeData) {
   const summary: AtsChangeSummaryItem[] = [];
+  const changedHeadline = formatHeadlineText(baseData) !== formatHeadlineText(candidateData);
+  const changedSummary = formatSummaryText(baseData) !== formatSummaryText(candidateData);
+  const changedContact = formatContactText(baseData) !== formatContactText(candidateData);
+  const changedExperience = formatExperienceText(baseData) !== formatExperienceText(candidateData);
+  const changedProjects = formatProjectsText(baseData) !== formatProjectsText(candidateData);
+  const changedCertifications =
+    formatCertificationsText(baseData) !== formatCertificationsText(candidateData);
+  const changedSkills = formatSkillsText(baseData) !== formatSkillsText(candidateData);
 
-  if (formatHeadlineText(baseData) !== formatHeadlineText(candidateData)) {
+  if (changedHeadline || changedSummary || changedContact) {
     summary.push({
-      id: "headline-searchable",
-      title: "Made the headline easier to find",
-      description: "Used a more explicit role title so recruiter search can match faster.",
+      id: "searchability-tightened",
+      title: "Made the title and summary easier to find",
+      description: "We tightened the ATS copy so the role, core skills, and contact details are clearer in recruiter search.",
       category: "recruiter_searchability",
     });
   }
 
-  if (formatSummaryText(baseData) !== formatSummaryText(candidateData)) {
-    summary.push({
-      id: "summary-tightened",
-      title: "Tightened the summary",
-      description: "Shortened the summary and made the role and core skills more explicit.",
-      category: "recruiter_searchability",
-    });
-  }
-
-  if (formatExperienceText(baseData) !== formatExperienceText(candidateData)) {
+  if (changedExperience) {
     summary.push({
       id: "experience-prioritized",
-      title: "Prioritized the strongest experience points",
-      description: "Trimmed role bullets so the ATS PDF can stay one page without losing the core story.",
+      title: "Tightened recent experience",
+      description: "We kept the strongest recent role points and shortened the rest for one-page ATS fit.",
       category: "one_page_pdf",
     });
   }
 
-  if (formatProjectsText(baseData) !== formatProjectsText(candidateData)) {
+  if (changedProjects || changedCertifications || changedSkills) {
     summary.push({
-      id: "projects-trimmed",
-      title: "Reduced lower-priority project detail",
-      description: "Kept projects lighter so experience and skills stay on the first page.",
+      id: "fit-trimmed",
+      title: "Trimmed lower-priority details for fit",
+      description: "We reduced extra projects, certifications, and skill detail so the ATS PDF stays on one page.",
       category: "one_page_pdf",
     });
   }
 
-  if (formatCertificationsText(baseData) !== formatCertificationsText(candidateData)) {
-    summary.push({
-      id: "certifications-trimmed",
-      title: "Trimmed certifications for fit",
-      description: "Reduced certification detail to protect one-page ATS fit.",
-      category: "one_page_pdf",
-    });
-  }
-
-  if (formatSkillsText(baseData) !== formatSkillsText(candidateData)) {
-    summary.push({
-      id: "skills-focused",
-      title: "Focused the skills list",
-      description: "Kept the most searchable skill terms and removed lower-priority extras from the ATS version.",
-      category: "one_page_pdf",
-    });
-  }
-
-  if (formatContactText(baseData) !== formatContactText(candidateData)) {
-    summary.push({
-      id: "contact-normalized",
-      title: "Normalized contact details",
-      description: "Cleaned contact information into ATS-safe text for the export copy.",
-      category: "machine_readability",
-    });
-  }
-
-  return summary;
+  return summary.slice(0, 3);
 }
 
 export async function buildAutoOptimizedAtsCandidate(input: {
@@ -864,13 +839,13 @@ export async function buildAutoOptimizedAtsCandidate(input: {
   await maybeApply({
     ...candidateResumeData,
     headline: buildOptimizedHeadline(candidateResumeData, input.targeting),
-    summary: buildOptimizedSummary(candidateResumeData, input.targeting, 260),
+    summary: buildOptimizedSummary(candidateResumeData, input.targeting, 240),
   });
 
   if (!candidateExportCheck.fitsOnOnePage) {
     await maybeApply({
       ...candidateResumeData,
-      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 220),
+      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 180),
     });
   }
 
@@ -891,11 +866,11 @@ export async function buildAutoOptimizedAtsCandidate(input: {
   }
 
   if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimProjectsForAts(candidateResumeData, 0));
+    await maybeApply(trimProjectsForAts(candidateResumeData, 1));
   }
 
   if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimCertificationsForAts(candidateResumeData, 2));
+    await maybeApply(trimProjectsForAts(candidateResumeData, 0));
   }
 
   if (!candidateExportCheck.fitsOnOnePage) {
@@ -914,12 +889,16 @@ export async function buildAutoOptimizedAtsCandidate(input: {
     await maybeApply(trimExperienceCountForAts(candidateResumeData, 3));
   }
 
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimSkillsForAts(candidateResumeData, 14));
+  if (!candidateExportCheck.fitsOnOnePage && candidateResumeData.experience.length > 2) {
+    await maybeApply(trimExperienceCountForAts(candidateResumeData, 2));
   }
 
   if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimSkillsForAts(candidateResumeData, 10));
+    await maybeApply(trimSkillsForAts(candidateResumeData, 12));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimSkillsForAts(candidateResumeData, 8));
   }
 
   if (!candidateExportCheck.fitsOnOnePage) {
@@ -927,9 +906,13 @@ export async function buildAutoOptimizedAtsCandidate(input: {
   }
 
   if (!candidateExportCheck.fitsOnOnePage) {
+    await maybeApply(trimSkillsForAts(candidateResumeData, 6));
+  }
+
+  if (!candidateExportCheck.fitsOnOnePage) {
     await maybeApply({
       ...candidateResumeData,
-      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 160),
+      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 140),
     });
   }
 

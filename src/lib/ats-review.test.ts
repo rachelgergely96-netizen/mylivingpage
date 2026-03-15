@@ -194,6 +194,80 @@ describe("ATS review helpers", () => {
     expect(candidate.candidateResumeData.summary.length).toBeLessThanOrEqual(220);
     expect(candidate.candidateResumeData.experience.length).toBeLessThanOrEqual(4);
     expect(candidate.changeSummary.length).toBeGreaterThan(0);
+    expect(candidate.changeSummary.length).toBeLessThanOrEqual(3);
+  });
+
+  it("keeps a minimum ATS floor while trimming aggressively toward one-page fit", async () => {
+    const data = buildResume({
+      summary: "A".repeat(420),
+      experience: [
+        {
+          title: "Founder",
+          company: "Northwind",
+          dates: "2022 - Present",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Product Lead",
+          company: "Contoso",
+          dates: "2020 - 2022",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Analyst",
+          company: "Fabrikam",
+          dates: "2019 - 2020",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+        {
+          title: "Coordinator",
+          company: "Tailspin",
+          dates: "2018 - 2019",
+          highlights: ["One", "Two", "Three"],
+          url: null,
+        },
+      ],
+      projects: [
+        { name: "One", description: "Project", tech: ["TypeScript"], url: null },
+      ],
+      certifications: [
+        { name: "One", issuer: "Issuer", date: "2023" },
+      ],
+      skills: [{ category: "Tools", items: Array.from({ length: 20 }, (_, index) => `Skill ${index + 1}`) }],
+    });
+
+    const candidate = await buildAutoOptimizedAtsCandidate({
+      data,
+      targeting: getDefaultAtsTargeting(data),
+      checkExport: async (resume) => {
+        const totalHighlights = resume.experience.reduce((count, entry) => count + entry.highlights.length, 0);
+        const totalSkills = resume.skills.reduce((count, group) => count + group.items.length, 0);
+        const fits =
+          resume.summary.length <= 140 &&
+          resume.experience.length <= 2 &&
+          totalHighlights <= 2 &&
+          resume.projects.length === 0 &&
+          resume.certifications.length === 0 &&
+          totalSkills <= 6;
+
+        return {
+          pageCount: fits ? 1 : 2,
+          fitsOnOnePage: fits,
+          overflowReasons: fits ? [] : ["Still over one page."],
+          recommendedFixes: fits ? [] : ["Trim more content."],
+        };
+      },
+    });
+
+    expect(candidate.status).toBe("ready");
+    expect(candidate.candidateExportCheck.fitsOnOnePage).toBe(true);
+    expect(candidate.candidateResumeData.experience).toHaveLength(2);
+    expect(candidate.candidateResumeData.experience.every((entry) => entry.highlights.length >= 1)).toBe(true);
+    expect(candidate.candidateResumeData.education).toHaveLength(1);
+    expect(candidate.candidateResumeData.skills.reduce((count, group) => count + group.items.length, 0)).toBeLessThanOrEqual(6);
   });
 
   it("builds at most one proposal per section group with normalized before and after text", () => {

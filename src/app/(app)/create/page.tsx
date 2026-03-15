@@ -16,6 +16,7 @@ import {
   approveCandidateAtsResume,
   finalizeApprovedAtsResume,
   getDefaultAtsTargeting,
+  getAtsAvailabilityReason,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
 } from "@/lib/ats-review";
@@ -180,6 +181,7 @@ export default function CreatePage() {
       : [pasteOption, guidedOption];
   }, [createIntro.recommendedMode]);
   const atsPdfReady = hasApprovedAtsResume(atsReview);
+  const atsReviewBlocked = Boolean(atsReview && atsReview.status === "needs_attention");
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
 
@@ -301,6 +303,13 @@ export default function CreatePage() {
       "ATS PDF not ready yet. You can rerun ATS review later from edit.",
     );
     setStep("theme");
+  }, []);
+
+  const handleFixAtsPdf = useCallback(() => {
+    setError("");
+    setAtsReadyNotice("");
+    setCreateFlowFailure(null);
+    setStep("input");
   }, []);
 
   const handleAvatarUpload = async (file: File) => {
@@ -442,7 +451,7 @@ export default function CreatePage() {
         setAtsReadyNotice(
           hasApprovedAtsResume(finalizedReview)
             ? "ATS PDF ready. No extra cuts were needed."
-            : "ATS PDF not ready yet. You can keep going and rerun ATS review later.",
+            : "ATS PDF not ready yet.",
         );
         setStep("theme");
         return;
@@ -470,13 +479,15 @@ export default function CreatePage() {
 
       const nextReview = approveCandidateAtsResume(atsReview);
       setAtsReview(nextReview);
-      setAtsReadyNotice(
-        hasApprovedAtsResume(nextReview)
-          ? "ATS PDF ready."
-          : "ATS PDF not ready yet. You can keep going and rerun ATS review later.",
-      );
+      const nextAtsReady = hasApprovedAtsResume(nextReview);
+      setAtsReadyNotice(nextAtsReady ? "ATS PDF ready." : "ATS PDF not ready yet.");
       setApplyingAtsDecision(false);
-      setStep("theme");
+      if (nextAtsReady) {
+        setStep("theme");
+        return;
+      }
+
+      setError(getAtsAvailabilityReason(nextReview));
     },
     [activeReferrer, atsReview, parsedData, trackCreateEvent],
   );
@@ -493,12 +504,14 @@ export default function CreatePage() {
       });
     const finalizedReview = finalizeApprovedAtsResume(atsReview, parsedData);
     setAtsReview(finalizedReview);
-    setAtsReadyNotice(
-      hasApprovedAtsResume(finalizedReview)
-        ? "You kept your wording. ATS PDF ready."
-        : "You kept your wording. ATS PDF not ready yet.",
-    );
-    setStep("theme");
+    const nextAtsReady = hasApprovedAtsResume(finalizedReview);
+    setAtsReadyNotice(nextAtsReady ? "You kept your wording. ATS PDF ready." : "ATS PDF not ready yet.");
+    if (nextAtsReady) {
+      setStep("theme");
+      return;
+    }
+
+    setError("Your current wording is still too long for a one-page ATS PDF. Use the ATS version or shorten the source content first.");
   },
     [activeReferrer, atsReview, parsedData, trackCreateEvent],
   );
@@ -804,16 +817,20 @@ export default function CreatePage() {
           onTargetingChange={setAtsTargeting}
           onRunReview={() => void runAtsReview({ mode: "full" })}
           onContinueWithoutReview={handleContinueWithoutAtsReview}
-          onBack={() => setStep("input")}
-          onPrimaryAction={() => void handleUseGeneratedAtsVersion()}
-          onSecondaryAction={() => void handleKeepCurrentAtsCopy()}
-          primaryActionLabel="Continue"
+          onBack={atsReviewBlocked ? undefined : () => setStep("input")}
+          onPrimaryAction={atsReviewBlocked ? handleFixAtsPdf : () => void handleUseGeneratedAtsVersion()}
+          onSecondaryAction={atsReviewBlocked ? undefined : () => void handleKeepCurrentAtsCopy()}
+          primaryActionLabel={atsReviewBlocked ? "Fix ATS PDF" : "Continue"}
           secondaryActionLabel="Keep my current wording"
           backLabel="Back"
           runReviewLabel="Run ATS Review"
           stepLabel="Step 2"
           heading="We built your ATS version"
-          body="We made the ATS copy as tight as we could. Continue with it, or keep your current wording."
+          body={
+            atsReviewBlocked
+              ? "We trimmed the ATS copy as far as we safely can. Shorten the source content first so we can produce a real one-page ATS PDF."
+              : "We made the ATS copy as tight as we could. Continue with it, or keep your current wording."
+          }
         />
       ) : null}
 

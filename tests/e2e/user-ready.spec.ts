@@ -121,6 +121,48 @@ const ATS_REVIEW_FIXTURE = {
   availabilityReason: null,
 };
 
+const ATS_REVIEW_BLOCKED_FIXTURE = {
+  ...ATS_REVIEW_FIXTURE,
+  exportCheck: {
+    pageCount: 2,
+    fitsOnOnePage: false,
+    overflowReasons: ["The source resume is still too dense for a one-page ATS export."],
+    recommendedFixes: ["Shorten the source content and keep only the two most recent roles."],
+  },
+  candidateExportCheck: {
+    pageCount: 2,
+    fitsOnOnePage: false,
+    overflowReasons: ["The ATS version is still too dense for one page."],
+    recommendedFixes: ["Shorten the source content and keep only the two most recent roles."],
+  },
+  changeSummary: [
+    {
+      id: "searchability-tightened",
+      title: "Tightened title and summary",
+      description: "We made the role, skills, and contact details easier to find.",
+      category: "recruiter_searchability",
+    },
+    {
+      id: "experience-prioritized",
+      title: "Trimmed recent experience",
+      description: "We reduced bullets to protect one-page fit.",
+      category: "one_page_pdf",
+    },
+    {
+      id: "fit-trimmed",
+      title: "Removed lower-priority detail",
+      description: "We cut extra sections that matter less than recent roles and core skills.",
+      category: "one_page_pdf",
+    },
+  ],
+  status: "needs_attention",
+  approvedResumeData: null,
+  approvedExportCheck: null,
+  approvedAt: null,
+  approvedContentHash: null,
+  availabilityReason: "Shorten the source content and keep only the two most recent roles.",
+};
+
 function buildParseSseBody() {
   return [
     'data: {"type":"progress","progress":25,"stage":"Analyzing resume structure..."}',
@@ -348,7 +390,41 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByRole("button", { name: "Retry ATS Review" })).toBeVisible();
     await page.getByRole("button", { name: "Continue without ATS Review" }).click();
     await expect(page.getByRole("heading", { name: "Pick your living theme" })).toBeVisible();
-    await expect(page.getByText("ATS review was skipped for now.")).toBeVisible();
+    await expect(page.getByText("ATS PDF not ready yet. You can rerun ATS review later from edit.")).toBeVisible();
+  });
+
+  test("create stays blocked on step 2 when the ATS PDF still cannot fit one page", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    await page.route("**/api/generate/parse", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: buildParseSseBody(),
+      });
+    });
+    await page.route("**/api/generate/ats-review", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(ATS_REVIEW_BLOCKED_FIXTURE),
+      });
+    });
+
+    await page.goto("/create");
+    await page.getByRole("button", { name: "Paste Resume" }).click();
+    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
+    await page.getByRole("button", { name: "Run ATS Review" }).click();
+
+    await expect(page.getByText("Still too long for one page")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Fix ATS PDF" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
+    await expect(page.getByText("Pick your living theme")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Fix ATS PDF" }).click();
+    await expect(page.getByRole("heading", { name: "Paste resume text" })).toBeVisible();
+    await expect(page.getByPlaceholder("Paste your resume text here...")).toHaveValue(CREATE_FLOW_RESUME_TEXT);
   });
 
   test("public ATS download only appears when an approved ATS resume exists", async ({ page, browser }) => {

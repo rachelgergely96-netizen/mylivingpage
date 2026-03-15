@@ -46,6 +46,20 @@ function getSeverityTone(issue: AtsIssue) {
   return "border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] text-[#BFDBFE]";
 }
 
+function getBlockingReason(review: AtsReviewSnapshot | null) {
+  if (!review) {
+    return null;
+  }
+
+  return (
+    review.candidateExportCheck?.recommendedFixes?.[0] ??
+    review.candidateExportCheck?.overflowReasons?.[0] ??
+    review.exportCheck.recommendedFixes?.[0] ??
+    review.exportCheck.overflowReasons?.[0] ??
+    "Shorten the source content and rerun ATS review."
+  );
+}
+
 export default function AtsReviewPanel({
   data,
   review,
@@ -98,16 +112,18 @@ export default function AtsReviewPanel({
       ? "Saving changes..."
       : null;
 
+  const blockingReason = getBlockingReason(review);
+
   const statusTitle = review
     ? review.status === "ready"
       ? "ATS PDF ready"
-      : "ATS PDF not ready yet"
+      : "Still too long for one page"
     : null;
 
   const statusBody = review
     ? review.status === "ready"
       ? "We built a clean one-page ATS version and kept it separate from your public page."
-      : "We tightened the ATS version, but it still does not fit on one page. You can keep going and rerun ATS review later."
+      : blockingReason
     : null;
 
   const previewData = useMemo(
@@ -252,8 +268,8 @@ export default function AtsReviewPanel({
 
             {review.status === "needs_attention" ? (
               <div className="rounded-2xl border border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] p-4 text-sm leading-6 text-[#FFD5D5]">
-                <p className="font-semibold text-[#FFF0F0]">ATS PDF not ready yet.</p>
-                <p className="mt-2">You can continue with your page now and rerun ATS review later from advanced options.</p>
+                <p className="font-semibold text-[#FFF0F0]">One fix is still blocking the ATS PDF.</p>
+                <p className="mt-2">{blockingReason}</p>
               </div>
             ) : null}
           </div>

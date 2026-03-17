@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const ALLOWED_TYPES = ["bug", "feature", "general"] as const;
 type FeedbackType = (typeof ALLOWED_TYPES)[number];
+export const routeTrustLevel = "authenticated_user";
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();

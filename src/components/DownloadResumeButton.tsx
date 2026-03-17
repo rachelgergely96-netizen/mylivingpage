@@ -1,31 +1,46 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { ResumeData } from "@/types/resume";
 
 interface DownloadResumeButtonProps {
-  data: ResumeData;
+  data: ResumeData | null;
+  pageId: string | null;
   premium?: boolean;
+  unavailableReason?: string | null;
+  ownerEditHref?: string | null;
 }
 
-export default function DownloadResumeButton({ data, premium }: DownloadResumeButtonProps) {
+export default function DownloadResumeButton({
+  data,
+  pageId,
+  premium,
+  unavailableReason,
+  ownerEditHref,
+}: DownloadResumeButtonProps) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDownload = async () => {
-    if (!premium) return;
+    if (!premium || !data || !pageId) return;
     setGenerating(true);
     setError(null);
     try {
       const response = await fetch("/api/resume/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeData: data }),
+        body: JSON.stringify({ pageId }),
       });
 
       if (response.status === 409) {
-        const payload = (await response.json()) as { recommendedFixes?: string[]; overflowReasons?: string[] };
+        const payload = (await response.json()) as {
+          error?: string;
+          recommendedFixes?: string[];
+          overflowReasons?: string[];
+        };
         throw new Error(
+          payload.error ??
           payload.recommendedFixes?.[0] ??
           payload.overflowReasons?.[0] ??
           "The ATS PDF is still over one page. Tighten the flagged sections first.",
@@ -51,6 +66,27 @@ export default function DownloadResumeButton({ data, premium }: DownloadResumeBu
       setGenerating(false);
     }
   };
+
+  if (!data) {
+    if (!ownerEditHref) {
+      return null;
+    }
+
+    return (
+      <div className="fixed bottom-5 right-5 z-40 max-w-sm rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.88)] px-4 py-4 text-left shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">ATS PDF not ready</p>
+        <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+          {unavailableReason ?? "Rerun ATS review and save to rebuild your ATS PDF."}
+        </p>
+        <Link
+          href={ownerEditHref}
+          className="mt-3 inline-flex rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
+        >
+          Open Edit and Review
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">

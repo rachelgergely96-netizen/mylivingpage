@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
+export const routeTrustLevel = "authenticated_user";
+
 /** POST /api/auth/track-login — record email/password sign-in */
 export async function POST() {
   const authClient = await createServerSupabaseClient();

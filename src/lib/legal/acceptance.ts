@@ -1,9 +1,12 @@
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { getClientIp } from "@/lib/security/request";
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
   type LegalAcceptanceSource,
 } from "@/lib/legal/legal-version";
+
+export { getClientIp };
 
 export interface LegalAcceptanceRecord {
   user_id: string;
@@ -23,17 +26,6 @@ interface RecordLegalAcceptanceInput {
   userAgent?: string | null;
   termsVersion?: string;
   privacyVersion?: string;
-}
-
-export function getClientIp(requestHeaders: Headers): string | null {
-  const forwardedFor = requestHeaders.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) return first;
-  }
-
-  const realIp = requestHeaders.get("x-real-ip")?.trim();
-  return realIp || null;
 }
 
 export async function recordLegalAcceptance({

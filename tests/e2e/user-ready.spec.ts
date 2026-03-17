@@ -26,6 +26,7 @@ import {
   uploadAvatarViaApi,
 } from "./support";
 
+const hasTurnstileConfigured = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
 const CREATE_FLOW_RESUME_TEXT = `RAY
 Attorney & Technology Entrepreneur
@@ -175,6 +176,10 @@ test("email signup shows a pending-confirmation message", async ({ page }) => {
   test.skip(
     !canRunSignupConfirmation,
     "Set PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN and PLAYWRIGHT_EXPECT_SIGNUP_CONFIRMATION=1 to run signup confirmation coverage.",
+  );
+  test.skip(
+    hasTurnstileConfigured,
+    "Turnstile-protected signup requires a dedicated test key or explicit CAPTCHA bypass flow.",
   );
 
   const uniqueEmail = `signup-${Date.now()}@${getSignupEmailDomain()}`;

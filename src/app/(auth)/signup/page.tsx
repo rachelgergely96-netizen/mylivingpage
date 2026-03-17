@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -11,6 +12,8 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
   const router = useRouter();
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const requiresCaptcha = Boolean(turnstileSiteKey);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -18,6 +21,8 @@ export default function SignupPage() {
   const [nextPath, setNextPath] = useState("/create");
   const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetNonce, setTurnstileResetNonce] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,6 +45,11 @@ export default function SignupPage() {
     if (!acceptedLegal) {
       setStatus("error");
       setMessage("You must accept the Terms of Service and Privacy Policy to create an account.");
+      return;
+    }
+    if (requiresCaptcha && !turnstileToken) {
+      setStatus("error");
+      setMessage("Please complete the verification check before creating your account.");
       return;
     }
 
@@ -68,6 +78,7 @@ export default function SignupPage() {
         email,
         password,
         options: {
+          captchaToken: requiresCaptcha ? turnstileToken ?? undefined : undefined,
           emailRedirectTo: redirectTo,
           data: signupMetadata,
         },
@@ -93,6 +104,10 @@ export default function SignupPage() {
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to create account.");
+    } finally {
+      if (requiresCaptcha) {
+        setTurnstileResetNonce((current) => current + 1);
+      }
     }
   };
 
@@ -194,6 +209,13 @@ export default function SignupPage() {
             placeholder="Create password"
             className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
           />
+          {requiresCaptcha ? (
+            <TurnstileWidget
+              siteKey={turnstileSiteKey}
+              resetNonce={turnstileResetNonce}
+              onTokenChange={setTurnstileToken}
+            />
+          ) : null}
           <button
             type="submit"
             disabled={status === "loading"}
@@ -202,6 +224,12 @@ export default function SignupPage() {
             {status === "loading" ? "Starting..." : "Start From My Resume"}
           </button>
         </form>
+
+        {requiresCaptcha && !turnstileToken && status !== "error" ? (
+          <p className="mt-3 text-xs text-[rgba(240,244,255,0.42)]">
+            Complete the human verification step to enable email signup.
+          </p>
+        ) : null}
 
         {message ? (
           <p className={`mt-4 text-sm ${status === "error" ? "text-[#ff8e8e]" : "text-[#3B82F6]"}`}>{message}</p>

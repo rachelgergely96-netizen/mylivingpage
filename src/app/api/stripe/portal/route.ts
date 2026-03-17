@@ -3,6 +3,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getStripe, getOrCreateStripeCustomer } from "@/lib/stripe";
 import { trackEvent } from "@/lib/track-event";
 
+export const routeTrustLevel = "authenticated_user";
+
 export async function POST() {
   const startedAt = Date.now();
   try {

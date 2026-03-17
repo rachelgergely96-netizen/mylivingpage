@@ -6,6 +6,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const AVATAR_PATH_BASENAME = "headshot";
 const ENABLE_E2E_FAILURE_INJECTION = process.env.ENABLE_E2E_FAILURE_INJECTION === "1";
+export const routeTrustLevel = "authenticated_user";
 
 /** POST /api/avatar — upload a headshot */
 export async function POST(request: Request) {

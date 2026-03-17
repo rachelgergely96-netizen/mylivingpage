@@ -45,7 +45,10 @@ export default function ResumeLayout({
   const hasContact = data.email || data.linkedin || data.github || data.website;
 
   return (
-    <div className={`relative z-10 h-full overflow-y-auto scrollbar-hide ${compact ? "px-3 py-4 sm:px-4 sm:py-5" : "px-4 py-5 sm:p-6 md:p-8"}`}>
+    <div
+      data-analytics-scroll-root="true"
+      className={`relative z-10 h-full overflow-y-auto scrollbar-hide ${compact ? "px-3 py-4 sm:px-4 sm:py-5" : "px-4 py-5 sm:p-6 md:p-8"}`}
+    >
       <div className="mx-auto max-w-4xl">
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} flex items-start justify-between gap-3 sm:gap-4`}>
@@ -64,7 +67,12 @@ export default function ResumeLayout({
                       <span className="truncate">{data.email}</span>
                     </span>
                   ) : (
-                    <a href={`mailto:${data.email}`} className="pointer-events-auto flex items-center gap-1.5 py-1 text-[10px] sm:text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]">
+                    <a
+                      href={`mailto:${data.email}`}
+                      data-analytics-target-key="email"
+                      data-analytics-target-label={data.email}
+                      className="pointer-events-auto flex items-center gap-1.5 py-1 text-[10px] sm:text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
+                    >
                       <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                       <span className="truncate">{data.email}</span>
                     </a>
@@ -76,7 +84,16 @@ export default function ResumeLayout({
                       <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                     </span>
                   ) : (
-                    <a href={data.linkedin.startsWith("http") ? data.linkedin : `https://${data.linkedin}`} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn profile" className="pointer-events-auto flex items-center justify-center rounded-md p-1 text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#0A66C2]">
+                    <a
+                      href={data.linkedin.startsWith("http") ? data.linkedin : `https://${data.linkedin}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="LinkedIn"
+                      aria-label="LinkedIn profile"
+                      data-analytics-target-key="linkedin"
+                      data-analytics-target-label="LinkedIn"
+                      className="pointer-events-auto flex items-center justify-center rounded-md p-1 text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#0A66C2]"
+                    >
                       <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                     </a>
                   )
@@ -88,7 +105,14 @@ export default function ResumeLayout({
                       GitHub
                     </span>
                   ) : (
-                    <a href={data.github.startsWith("http") ? data.github : `https://github.com/${data.github}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto flex items-center gap-1.5 py-1 text-[10px] sm:text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]">
+                    <a
+                      href={data.github.startsWith("http") ? data.github : `https://github.com/${data.github}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-analytics-target-key="github"
+                      data-analytics-target-label="GitHub"
+                      className="pointer-events-auto flex items-center gap-1.5 py-1 text-[10px] sm:text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
+                    >
                       <svg className="h-3.5 w-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>
                       GitHub
                     </a>
@@ -101,7 +125,14 @@ export default function ResumeLayout({
                       Website
                     </span>
                   ) : (
-                    <a href={data.website.startsWith("http") ? data.website : `https://${data.website}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto flex items-center gap-1.5 py-1 text-[10px] sm:text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]">
+                    <a
+                      href={data.website.startsWith("http") ? data.website : `https://${data.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-analytics-target-key="website"
+                      data-analytics-target-label="Website"
+                      className="pointer-events-auto flex items-center gap-1.5 py-1 text-[10px] sm:text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
+                    >
                       <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 00-6.364-6.364L4.757 8.243a4.5 4.5 0 003.182 7.685" /></svg>
                       Website
                     </a>
@@ -127,7 +158,13 @@ export default function ResumeLayout({
         </header>
 
         {/* ── Summary ─────────────────────────────────────────────── */}
-        {data.summary ? <p className={`${summarySize} ${compact ? "mb-3 sm:mb-4 line-clamp-2 leading-5" : "mb-5 sm:mb-6 leading-6 sm:leading-7"} text-[rgba(240,244,255,0.6)]`}>{data.summary}</p> : null}
+        {data.summary ? (
+          <section data-analytics-section="summary">
+            <p className={`${summarySize} ${compact ? "mb-3 sm:mb-4 line-clamp-2 leading-5" : "mb-5 sm:mb-6 leading-6 sm:leading-7"} text-[rgba(240,244,255,0.6)]`}>
+              {data.summary}
+            </p>
+          </section>
+        ) : null}
 
         {/* ── Stats Bar ──────────────────────────────────────────── */}
         {data.stats?.length ? (
@@ -146,7 +183,10 @@ export default function ResumeLayout({
 
         {/* ── Experience ──────────────────────────────────────────── */}
         {experience?.length ? (
-          <section className={compact ? "mb-3 sm:mb-4" : "mb-4 sm:mb-5"}>
+          <section
+            data-analytics-section="experience"
+            className={compact ? "mb-3 sm:mb-4" : "mb-4 sm:mb-5"}
+          >
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Experience</h2>
             <div className="space-y-2">
               {experience.map((exp) => (
@@ -160,7 +200,14 @@ export default function ResumeLayout({
                       <span className="text-[rgba(240,244,255,0.45)]">
                         ·{" "}
                         {exp.url && !disableExternalLinks ? (
-                          <a href={exp.url.startsWith("http") ? exp.url : `https://${exp.url}`} target="_blank" rel="noopener noreferrer" className="pointer-events-auto inline-flex items-center gap-0.5 text-[#93C5FD] transition-colors hover:text-[#BFDBFE]">
+                          <a
+                            href={exp.url.startsWith("http") ? exp.url : `https://${exp.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-analytics-target-key="experience_company"
+                            data-analytics-target-label={exp.company}
+                            className="pointer-events-auto inline-flex items-center gap-0.5 text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                          >
                             {exp.company}
                             <svg className="inline h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -191,51 +238,75 @@ export default function ResumeLayout({
 
         {/* ── Projects ───────────────────────────────────────────── */}
         {!compact && data.projects?.length ? (
-          <section className="mb-5">
+          <section data-analytics-section="projects" className="mb-5">
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Projects</h2>
             <div className="space-y-2">
               {data.projects.map((project) => {
                 const projectUrl = !disableExternalLinks && project.url
                   ? (project.url.startsWith("http") ? project.url : `https://${project.url}`)
                   : null;
-                const CardWrapper = projectUrl ? "a" : "div";
-                const cardLinkProps = projectUrl
-                  ? { href: projectUrl, target: "_blank", rel: "noopener noreferrer" }
-                  : {};
+
+                const cardClassName = `block rounded-xl border p-3 sm:p-4 backdrop-blur-md transition-all duration-200 ${
+                  projectUrl
+                    ? "pointer-events-auto border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.04)] hover:border-[rgba(59,130,246,0.4)] hover:bg-[rgba(59,130,246,0.08)]"
+                    : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)]"
+                }`;
+
                 return (
                   <article key={project.name}>
-                    <CardWrapper
-                      {...cardLinkProps}
-                      className={`block rounded-xl border p-3 sm:p-4 backdrop-blur-md transition-all duration-200 ${
-                        projectUrl
-                          ? "pointer-events-auto border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.04)] hover:border-[rgba(59,130,246,0.4)] hover:bg-[rgba(59,130,246,0.08)]"
-                          : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <p className={`text-xs sm:text-sm font-medium ${projectUrl ? "text-[#93C5FD]" : "text-[#F0F4FF]"}`}>
-                          {project.name}
-                        </p>
-                        {projectUrl ? (
+                    {projectUrl ? (
+                      <a
+                        href={projectUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-analytics-target-key="project"
+                        data-analytics-target-label={project.name}
+                        className={cardClassName}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs sm:text-sm font-medium text-[#93C5FD]">
+                            {project.name}
+                          </p>
                           <svg className="h-3 w-3 shrink-0 text-[#3B82F6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                           </svg>
+                        </div>
+                        <p className="mt-1.5 text-xs leading-5 text-[rgba(240,244,255,0.5)]">{project.description}</p>
+                        {project.tech?.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {project.tech.map((t) => (
+                              <span
+                                key={`${project.name}-${t}`}
+                                className="rounded-md border border-[rgba(59,130,246,0.15)] bg-[rgba(59,130,246,0.06)] px-2 py-0.5 text-[10px] text-[#93C5FD]"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </a>
+                    ) : (
+                      <div className={cardClassName}>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs sm:text-sm font-medium text-[#F0F4FF]">
+                            {project.name}
+                          </p>
+                        </div>
+                        <p className="mt-1.5 text-xs leading-5 text-[rgba(240,244,255,0.5)]">{project.description}</p>
+                        {project.tech?.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {project.tech.map((t) => (
+                              <span
+                                key={`${project.name}-${t}`}
+                                className="rounded-md border border-[rgba(59,130,246,0.15)] bg-[rgba(59,130,246,0.06)] px-2 py-0.5 text-[10px] text-[#93C5FD]"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
                         ) : null}
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-[rgba(240,244,255,0.5)]">{project.description}</p>
-                      {project.tech?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {project.tech.map((t) => (
-                            <span
-                              key={`${project.name}-${t}`}
-                              className="rounded-md border border-[rgba(59,130,246,0.15)] bg-[rgba(59,130,246,0.06)] px-2 py-0.5 text-[10px] text-[#93C5FD]"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </CardWrapper>
+                    )}
                   </article>
                 );
               })}
@@ -245,7 +316,7 @@ export default function ResumeLayout({
 
         {/* ── Education ──────────────────────────────────────────── */}
         {!compact && data.education?.length ? (
-          <section className="mb-5">
+          <section data-analytics-section="education" className="mb-5">
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Education</h2>
             <div className="space-y-2">
               {data.education.map((education) => (
@@ -267,7 +338,10 @@ export default function ResumeLayout({
 
         {/* ── Skills (grouped by category) ───────────────────────── */}
         {skills.length ? (
-          <section className={compact ? "mb-3" : "mb-5"}>
+          <section
+            data-analytics-section="skills"
+            className={compact ? "mb-3" : "mb-5"}
+          >
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Skills</h2>
             <div className="space-y-3">
               {skills.map((group) => (
@@ -293,7 +367,7 @@ export default function ResumeLayout({
 
         {/* ── Certifications ─────────────────────────────────────── */}
         {!compact && certs.length ? (
-          <section>
+          <section data-analytics-section="certifications">
             <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Certifications</h2>
             <div className="space-y-2">
               {certs.map((cert) => (

@@ -3,6 +3,8 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import { trackEvent } from "@/lib/track-event";
 import { MAX_FREE_ARCHIVES } from "@/lib/plans";
 
+export const routeTrustLevel = "authenticated_user";
+
 /** Authenticate the caller and return their user id, or null */
 async function getAuthUserId() {
   const authClient = await createServerSupabaseClient();

@@ -5,37 +5,35 @@ import {
   createSupabaseBillingRepository,
   processStripeWebhookEvent,
 } from "@/lib/billing/stripeWebhook";
+import { assertSignedWebhook } from "@/lib/security/route-security";
 import { getStripe } from "@/lib/stripe";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
+export const routeTrustLevel = "signed_webhook";
+
 export async function POST(req: NextRequest) {
   const receivedAt = new Date();
-  const body = await req.text();
-  const signature = req.headers.get("stripe-signature");
+  const webhookResult = await assertSignedWebhook<Stripe.Event>({
+    request: req,
+    secret: process.env.STRIPE_WEBHOOK_SECRET,
+    signatureHeaderName: "stripe-signature",
+    verify(payload, signature, secret) {
+      return getStripe().webhooks.constructEvent(payload, signature, secret);
+    },
+  });
 
-  if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-  }
-
-  let event: Stripe.Event;
-  try {
-    event = getStripe().webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+  if ("response" in webhookResult) {
+    const responseBody = (await webhookResult.response.clone().json().catch(() => null)) as
+      | { error?: string }
+      | null;
     await trackEvent(null, "billing.webhook.failed", {
       event_type: "signature_verification",
-      error: message,
+      error: responseBody?.error ?? "Unknown error",
     });
-    return NextResponse.json(
-      { error: `Webhook signature verification failed: ${message}` },
-      { status: 400 },
-    );
+    return webhookResult.response;
   }
+  const event = webhookResult.value.verified;
 
   const supabase = createServiceRoleSupabaseClient();
   try {

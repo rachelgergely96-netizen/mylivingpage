@@ -1,11 +1,17 @@
-import { ADMIN_EMAIL } from "@/lib/admin";
-import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import AdminUsersTable from "@/components/admin/AdminUsersTable";
+import {
+  buildAdminUserRows,
+  listAllAuthUsers,
+  summarizeAdminUserRisk,
+  type AdminPageStatsRow,
+  type AdminProfileRow,
+} from "@/lib/admin-user-review";
+import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 export default async function AdminUsersPage() {
   const supabase = createServiceRoleSupabaseClient();
 
-  const [{ data: profiles }, { data: allPages }] = await Promise.all([
+  const [{ data: profiles }, { data: allPages }, authUsers] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, username, full_name, email, avatar_url, plan, created_at, auth_provider, last_sign_in_at, sign_in_count, signup_referrer")
@@ -13,51 +19,15 @@ export default async function AdminUsersPage() {
     supabase
       .from("pages")
       .select("owner_id, user_id, views"),
+    listAllAuthUsers(supabase),
   ]);
 
-  // Aggregate page count and views per user
-  const userStats: Record<string, { pageCount: number; totalViews: number }> = {};
-  for (const page of allPages ?? []) {
-    const p = page as { owner_id: string | null; user_id: string | null; views: number };
-    const uid = p.owner_id ?? p.user_id;
-    if (!uid) continue;
-    if (!userStats[uid]) userStats[uid] = { pageCount: 0, totalViews: 0 };
-    userStats[uid].pageCount++;
-    userStats[uid].totalViews += p.views ?? 0;
-  }
-
-  const users = (profiles ?? []).map((profile) => {
-    const p = profile as {
-      id: string;
-      username: string;
-      full_name: string | null;
-      email: string | null;
-      avatar_url: string | null;
-      plan: string;
-      created_at: string;
-      auth_provider: string | null;
-      last_sign_in_at: string | null;
-      sign_in_count: number | null;
-      signup_referrer: string | null;
-    };
-    const stats = userStats[p.id] ?? { pageCount: 0, totalViews: 0 };
-    return {
-      id: p.id,
-      username: p.username,
-      full_name: p.full_name,
-      email: p.email,
-      avatar_url: p.avatar_url,
-      plan: p.plan,
-      created_at: p.created_at,
-      auth_provider: p.auth_provider,
-      last_sign_in_at: p.last_sign_in_at,
-      sign_in_count: p.sign_in_count ?? 0,
-      signup_referrer: p.signup_referrer,
-      pageCount: stats.pageCount,
-      totalViews: stats.totalViews,
-      isAdmin: p.email === ADMIN_EMAIL,
-    };
+  const users = buildAdminUserRows({
+    profiles: ((profiles ?? []) as AdminProfileRow[]),
+    pages: ((allPages ?? []) as AdminPageStatsRow[]),
+    authUsers,
   });
+  const riskSummary = summarizeAdminUserRisk(users);
 
   const signupSourceCounts = users.reduce<Record<string, number>>((acc, user) => {
     if (!user.signup_referrer) {
@@ -82,6 +52,32 @@ export default async function AdminUsersPage() {
           </span>
         </h1>
       </div>
+      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="glass-card rounded-2xl p-5">
+          <p className="font-mono text-2xl text-[#ff8e8e]">{riskSummary.suspiciousTotal}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            Suspicious Users
+          </p>
+        </div>
+        <div className="glass-card rounded-2xl p-5">
+          <p className="font-mono text-2xl text-[#fbbf24]">{riskSummary.watchTotal}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            Watch List
+          </p>
+        </div>
+        <div className="glass-card rounded-2xl p-5">
+          <p className="font-mono text-2xl text-[#93C5FD]">{riskSummary.unconfirmedTotal}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            Unconfirmed
+          </p>
+        </div>
+        <div className="glass-card rounded-2xl p-5">
+          <p className="font-mono text-2xl text-[#fbbf24]">{riskSummary.unconfirmedPastGrace}</p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            Unconfirmed &gt; 24h
+          </p>
+        </div>
+      </section>
       <section className="glass-card mb-6 rounded-2xl p-5">
         <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Signup Sources</p>
         <p className="mt-2 text-sm text-[rgba(240,244,255,0.55)]">

@@ -8,10 +8,11 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
+import { getAtsAvailabilityReason, hasApprovedAtsResume } from "@/lib/ats-review";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { isPremiumPlan } from "@/lib/plans";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
-import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { THEME_IDS, type ThemeId } from "@/themes/types";
 
 const VALID_THEMES: Set<string> = new Set(THEME_IDS);
@@ -63,6 +64,7 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
 export default async function PublicLivingPage({ params }: PublicPageProps) {
   noStore();
   const { username } = await params;
+  const authSupabase = await createServerSupabaseClient();
   const supabase = createServiceRoleSupabaseClient();
   const page = await fetchPublicLivePage(supabase, username);
   if (!page || (page.status !== "live" && page.visibility !== "public")) {
@@ -78,6 +80,13 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
     .eq("id", pageUserId)
     .maybeSingle();
   const premium = isPremiumPlan(ownerProfile?.plan);
+  const {
+    data: { user },
+  } = await authSupabase.auth.getUser();
+  const isOwner = user?.id === pageUserId;
+  const atsReview = page.page_config?.ats ?? null;
+  const approvedResumeData = hasApprovedAtsResume(atsReview) ? atsReview?.approvedResumeData ?? null : null;
+  const atsUnavailableReason = getAtsAvailabilityReason(atsReview);
 
   return (
     <main className="min-h-screen">
@@ -94,7 +103,13 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
           </div>
         </PageOwnerBar>
       </ThemeCanvas>
-      <DownloadResumeButton data={page.resume_data} premium={premium} />
+      <DownloadResumeButton
+        data={approvedResumeData}
+        pageId={page.id}
+        premium={premium}
+        unavailableReason={isOwner && !approvedResumeData ? atsUnavailableReason : null}
+        ownerEditHref={isOwner && !approvedResumeData ? `/dashboard/edit/${page.id}` : null}
+      />
       <ShareCardDownload
         pageUserId={pageUserId}
         slug={page.slug}

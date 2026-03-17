@@ -1,29 +1,23 @@
 import { NextResponse } from "next/server";
-import { ADMIN_EMAIL } from "@/lib/admin";
 import {
   deleteUserAccount,
   getDeletionTargetProfile,
   isAccountDeletionError,
 } from "@/lib/account/deleteUserAccount";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireAdminUser } from "@/lib/security/route-security";
+
+export const routeTrustLevel = "admin_only";
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ userId: string }> },
 ) {
   const { userId } = await params;
-  const authClient = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await authClient.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const adminResult = await requireAdminUser();
+  if ("response" in adminResult) {
+    return adminResult.response;
   }
-
-  if (user.email !== ADMIN_EMAIL) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { user } = adminResult.value;
 
   if (!userId) {
     return NextResponse.json({ error: "Missing user id." }, { status: 400 });
@@ -35,7 +29,7 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    if (profile.email === ADMIN_EMAIL) {
+    if (profile.email === user.email) {
       return NextResponse.json({ error: "The admin account cannot be deleted from this flow." }, { status: 403 });
     }
 

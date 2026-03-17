@@ -1,13 +1,32 @@
 import { NextResponse } from "next/server";
 import { normalizeResumeDataForAts } from "@/lib/ats-review";
 import { checkAtsResumeExport, renderAtsResumePdf } from "@/lib/pdf/ResumePDFDocument";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { requireAuthenticatedUser } from "@/lib/security/route-security";
 import { trackEvent } from "@/lib/track-event";
 import type { ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
+export const routeTrustLevel = "authenticated_user";
 
 export async function POST(request: Request) {
   try {
+    const authResult = await requireAuthenticatedUser();
+    if ("response" in authResult) {
+      return authResult.response;
+    }
+    const { user } = authResult.value;
+
+    const rateLimit = await enforceRateLimit({
+      request,
+      policy: "ats_export_preview",
+      route: "/api/resume/export/preview",
+      userId: user.id,
+    });
+    if (rateLimit.limited) {
+      return rateLimit.response;
+    }
+
     const body = (await request.json()) as { resumeData?: ResumeData };
     if (!body.resumeData) {
       return NextResponse.json({ error: "resumeData is required." }, { status: 400 });
@@ -17,7 +36,7 @@ export async function POST(request: Request) {
     const exportCheck = await checkAtsResumeExport(normalized);
     const buffer = await renderAtsResumePdf(normalized);
 
-    await trackEvent(null, "resume.export.preview", {
+    await trackEvent(user.id, "resume.export.preview", {
       page_count: exportCheck.pageCount,
       fits_on_one_page: exportCheck.fitsOnOnePage,
     });

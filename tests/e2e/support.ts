@@ -2,6 +2,10 @@ import { Buffer } from "node:buffer";
 import { createClient } from "@supabase/supabase-js";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import Stripe from "stripe";
+import type {
+  AnalyticsSectionId,
+  AnalyticsTargetKey,
+} from "../../src/lib/analytics/constants";
 import { DEMO_PAGES } from "../../src/lib/demo-data";
 import { PRIVACY_VERSION, TERMS_VERSION } from "../../src/lib/legal/legal-version";
 
@@ -20,6 +24,36 @@ export interface PageFixture {
   user_id: string | null;
   slug: string;
   views: number | null;
+}
+
+export interface PageEngagementState {
+  pageViewId: string | null;
+  engagedSeconds: number;
+  maxScrollDepthPct: number;
+  primarySection: AnalyticsSectionId | null;
+  hadOutboundClick: boolean;
+  interactions: Array<{
+    target_key: AnalyticsTargetKey;
+    target_label: string | null;
+    click_count: number | null;
+  }>;
+}
+
+export interface PageAnalyticsSeedInput {
+  viewedAt: string;
+  viewerIp: string;
+  referrer?: string | null;
+  userAgent?: string | null;
+  country?: string | null;
+  engagedSeconds?: number | null;
+  maxScrollDepthPct?: number | null;
+  primarySection?: AnalyticsSectionId | null;
+  hadOutboundClick?: boolean;
+  clicks?: Array<{
+    targetKey: AnalyticsTargetKey;
+    targetLabel?: string | null;
+    clickCount?: number;
+  }>;
 }
 
 const samplePage = DEMO_PAGES[0];
@@ -203,6 +237,61 @@ export async function ensureLivePageForProfile(profile: ProfileFixture): Promise
   return data as PageFixture;
 }
 
+export async function setPublicAtsDownloadState(
+  pageId: string,
+  state: "ready" | "needs_review",
+) {
+  const supabase = requireSupabaseAdmin();
+  const { data: page, error: pageError } = await supabase
+    .from("pages")
+    .select("page_config, resume_data")
+    .eq("id", pageId)
+    .single();
+
+  if (pageError || !page) {
+    throw new Error(pageError?.message ?? "Unable to load page for ATS state update.");
+  }
+
+  const nextAts =
+    state === "ready"
+      ? {
+          approvedResumeData: (page.resume_data as Record<string, unknown>) ?? samplePage.data,
+          approvedExportCheck: {
+            pageCount: 1,
+            fitsOnOnePage: true,
+            overflowReasons: [],
+            recommendedFixes: [],
+          },
+          approvedAt: new Date().toISOString(),
+          approvedContentHash: "playwright-approved",
+          availabilityReason: null,
+        }
+      : {
+          approvedResumeData: null,
+          approvedExportCheck: null,
+          approvedAt: null,
+          approvedContentHash: null,
+          availabilityReason: "Rerun ATS review and save to rebuild your ATS PDF.",
+        };
+
+  const nextPageConfig = {
+    ...((page.page_config as Record<string, unknown> | null) ?? {}),
+    ats: {
+      ...((((page.page_config as Record<string, unknown> | null) ?? {}).ats as Record<string, unknown> | undefined) ?? {}),
+      ...nextAts,
+    },
+  };
+
+  const { error: updateError } = await supabase
+    .from("pages")
+    .update({ page_config: nextPageConfig })
+    .eq("id", pageId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+}
+
 export async function clearPageViewState(pageId: string) {
   const supabase = requireSupabaseAdmin();
   const { error: deleteError } = await supabase.from("page_views").delete().eq("page_id", pageId);
@@ -237,6 +326,115 @@ export async function getPageViewState(pageId: string) {
     pageViews: (page as { views?: number | null }).views ?? 0,
     pageViewRows: count ?? 0,
   };
+}
+
+export async function getLatestPageEngagementState(
+  pageId: string,
+): Promise<PageEngagementState> {
+  const supabase = requireSupabaseAdmin();
+  const { data: latestPageView, error: latestViewError } = await supabase
+    .from("page_views")
+    .select(
+      "id, engaged_seconds, max_scroll_depth_pct, primary_section, had_outbound_click, viewed_at",
+    )
+    .eq("page_id", pageId)
+    .order("viewed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestViewError) {
+    throw new Error(latestViewError.message);
+  }
+
+  if (!latestPageView) {
+    return {
+      pageViewId: null,
+      engagedSeconds: 0,
+      maxScrollDepthPct: 0,
+      primarySection: null,
+      hadOutboundClick: false,
+      interactions: [],
+    };
+  }
+
+  const { data: interactions, error: interactionError } = await supabase
+    .from("page_interactions")
+    .select("target_key, target_label, click_count")
+    .eq("page_view_id", latestPageView.id)
+    .order("created_at", { ascending: false });
+
+  if (interactionError) {
+    throw new Error(interactionError.message);
+  }
+
+  return {
+    pageViewId: latestPageView.id,
+    engagedSeconds: latestPageView.engaged_seconds ?? 0,
+    maxScrollDepthPct: latestPageView.max_scroll_depth_pct ?? 0,
+    primarySection: (latestPageView.primary_section as AnalyticsSectionId | null) ?? null,
+    hadOutboundClick: Boolean(latestPageView.had_outbound_click),
+    interactions:
+      (interactions as Array<{
+        target_key: AnalyticsTargetKey;
+        target_label: string | null;
+        click_count: number | null;
+      }>) ?? [],
+  };
+}
+
+export async function seedPageAnalyticsHistory(
+  pageId: string,
+  rows: PageAnalyticsSeedInput[],
+) {
+  const supabase = requireSupabaseAdmin();
+
+  for (const row of rows) {
+    const { data: insertedView, error: insertError } = await supabase
+      .from("page_views")
+      .insert({
+        page_id: pageId,
+        viewer_ip: row.viewerIp,
+        referrer: row.referrer ?? null,
+        user_agent: row.userAgent ?? null,
+        country: row.country ?? null,
+        viewed_at: row.viewedAt,
+        engaged_seconds: row.engagedSeconds ?? null,
+        max_scroll_depth_pct: row.maxScrollDepthPct ?? null,
+        primary_section: row.primarySection ?? null,
+        had_outbound_click: row.hadOutboundClick ?? Boolean(row.clicks?.length),
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !insertedView) {
+      throw new Error(insertError?.message ?? "Unable to seed page view.");
+    }
+
+    if (row.clicks?.length) {
+      const { error: interactionError } = await supabase.from("page_interactions").insert(
+        row.clicks.map((click) => ({
+          page_id: pageId,
+          page_view_id: insertedView.id,
+          target_key: click.targetKey,
+          target_label: click.targetLabel ?? null,
+          click_count: click.clickCount ?? 1,
+        })),
+      );
+
+      if (interactionError) {
+        throw new Error(interactionError.message);
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("pages")
+    .update({ views: rows.length })
+    .eq("id", pageId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 }
 
 export async function uploadAvatarViaApi(

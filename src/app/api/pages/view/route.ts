@@ -1,7 +1,10 @@
-import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { getClientIp, hashSecurityIdentifier } from "@/lib/security/request";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+
+export const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {
@@ -31,37 +34,55 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
+    const rateLimit = await enforceRateLimit({
+      request,
+      policy: "public_page_view",
+      route: "/api/pages/view",
+    });
+    if (rateLimit.limited) {
+      return rateLimit.response;
+    }
+
     const headersList = await headers();
-    const rawIp =
-      headersList.get("x-real-ip") ??
-      headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      "unknown";
-    const hashedIp = createHash("sha256").update(rawIp).digest("hex");
+    const rawIp = getClientIp(headersList) ?? "unknown";
+    const hashedIp = hashSecurityIdentifier(rawIp);
     const country = headersList.get("x-vercel-ip-country") ?? null;
 
     const dedupeCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count: recentViewCount } = await supabase
+    const { data: recentView } = await supabase
       .from("page_views")
-      .select("*", { count: "exact", head: true })
+      .select("id")
       .eq("page_id", body.pageId)
       .eq("viewer_ip", hashedIp)
       .gte("viewed_at", dedupeCutoff);
 
-    if ((recentViewCount ?? 0) > 0) {
-      return NextResponse.json({ ok: true, deduped: true });
+    if (recentView && recentView.length > 0) {
+      return NextResponse.json({
+        ok: true,
+        deduped: true,
+        pageViewId: recentView[0].id,
+      });
     }
 
-    await supabase.from("page_views").insert({
-      page_id: body.pageId,
-      viewer_ip: hashedIp,
-      referrer: headersList.get("referer"),
-      user_agent: headersList.get("user-agent"),
-      country,
-    });
+    const { data: insertedView, error: insertError } = await supabase
+      .from("page_views")
+      .insert({
+        page_id: body.pageId,
+        viewer_ip: hashedIp,
+        referrer: headersList.get("referer"),
+        user_agent: headersList.get("user-agent"),
+        country,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !insertedView) {
+      throw new Error(insertError?.message ?? "Unable to create page view.");
+    }
 
     await supabase.rpc("increment_page_views", { page_id: body.pageId });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, pageViewId: insertedView.id });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to track view." }, { status: 500 });
   }

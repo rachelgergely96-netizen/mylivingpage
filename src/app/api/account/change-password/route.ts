@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
+export const routeTrustLevel = "authenticated_user";
+
 /** POST /api/account/change-password — update the user's password */
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();

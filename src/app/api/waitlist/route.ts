@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = await enforceRateLimit({
+      request,
+      policy: "waitlist_submit",
+      route: "/api/waitlist",
+    });
+    if (rateLimit.limited) {
+      return rateLimit.response;
+    }
+
     const body = (await request.json()) as { email?: string; referralCode?: string };
     const email = body.email?.trim().toLowerCase();
     if (!email || !EMAIL_REGEX.test(email)) {

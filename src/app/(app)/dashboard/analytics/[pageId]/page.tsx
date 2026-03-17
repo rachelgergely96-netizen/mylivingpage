@@ -1,18 +1,28 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import AnalyticsCharts from "@/components/analytics/AnalyticsCharts";
-import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import type { PageRecord } from "@/types/resume";
+import PageAnalyticsDashboard from "@/components/analytics/PageAnalyticsDashboard";
+import {
+  DEFAULT_ANALYTICS_RANGE,
+  isAnalyticsRangeKey,
+} from "@/lib/analytics/constants";
+import { fetchPageAnalyticsDashboard } from "@/lib/analytics/pageAnalytics";
 import { isPremiumPlan } from "@/lib/plans";
+import {
+  createServerSupabaseClient,
+  createServiceRoleSupabaseClient,
+} from "@/lib/supabase/server";
+import type { PageRecord } from "@/types/resume";
 
 interface AnalyticsPageProps {
   params: Promise<{ pageId: string }>;
+  searchParams: Promise<{ range?: string }>;
 }
 
 export default async function AnalyticsPage({
   params,
+  searchParams,
 }: AnalyticsPageProps) {
-  const { pageId } = await params;
+  const [{ pageId }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const authClient = await createServerSupabaseClient();
   const {
     data: { user },
@@ -20,13 +30,14 @@ export default async function AnalyticsPage({
 
   if (!user) notFound();
 
-  // Use service-role client to bypass RLS for data queries
   const supabase = createServiceRoleSupabaseClient();
+  const rangeKey = isAnalyticsRangeKey(resolvedSearchParams.range)
+    ? resolvedSearchParams.range
+    : DEFAULT_ANALYTICS_RANGE;
 
-  // Check plan — analytics is premium only
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan")
+    .select("plan, username")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -34,7 +45,6 @@ export default async function AnalyticsPage({
     redirect("/dashboard/settings");
   }
 
-  // Fetch the page and verify ownership
   const { data: page } = await supabase
     .from("pages")
     .select("*")
@@ -45,88 +55,17 @@ export default async function AnalyticsPage({
   if (!page) notFound();
 
   const typedPage = page as PageRecord;
-
-  // Fetch page_views for the last 90 days
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-  const { data: views } = await supabase
-    .from("page_views")
-    .select("viewed_at, referrer, user_agent, viewer_ip, country")
-    .eq("page_id", pageId)
-    .gte("viewed_at", ninetyDaysAgo.toISOString())
-    .order("viewed_at", { ascending: true });
-
-  const rows = (views ?? []) as {
-    viewed_at: string;
-    referrer: string | null;
-    user_agent: string | null;
-    viewer_ip: string | null;
-    country: string | null;
-  }[];
-
-  // Build last 30 days array with zero-fill
-  const dailyViews: { date: string; count: number }[] = [];
-  const countByDay: Record<string, number> = {};
-  for (const row of rows) {
-    const day = row.viewed_at.slice(0, 10);
-    countByDay[day] = (countByDay[day] ?? 0) + 1;
-  }
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    dailyViews.push({ date: key, count: countByDay[key] ?? 0 });
-  }
-
-  // Aggregate referrers
-  const refCounts: Record<string, number> = {};
-  for (const row of rows) {
-    let domain = "Direct";
-    if (row.referrer) {
-      try {
-        domain = new URL(row.referrer).hostname.replace(/^www\./, "");
-      } catch {
-        domain = "Unknown";
-      }
-    }
-    refCounts[domain] = (refCounts[domain] ?? 0) + 1;
-  }
-  const referrers = Object.entries(refCounts)
-    .map(([domain, count]) => ({ domain, count }))
-    .sort((a, b) => b.count - a.count);
-
-  // Aggregate devices
-  const deviceCounts = { Desktop: 0, Mobile: 0, Tablet: 0 };
-  for (const row of rows) {
-    const ua = row.user_agent ?? "";
-    if (/Tablet|iPad/i.test(ua)) deviceCounts.Tablet++;
-    else if (/Mobile|Android|iPhone/i.test(ua)) deviceCounts.Mobile++;
-    else deviceCounts.Desktop++;
-  }
-  const devices = Object.entries(deviceCounts).map(([type, count]) => ({
-    type,
-    count,
-  }));
-
-  // Unique visitors
-  const uniqueIps = new Set(rows.map((r) => r.viewer_ip).filter(Boolean));
-  const uniqueVisitors = uniqueIps.size;
-
-  // Country breakdown
-  const countryCounts: Record<string, number> = {};
-  for (const row of rows) {
-    const c = row.country ?? "Unknown";
-    countryCounts[c] = (countryCounts[c] ?? 0) + 1;
-  }
-  const countries = Object.entries(countryCounts)
-    .map(([country, count]) => ({ country, count }))
-    .sort((a, b) => b.count - a.count);
-
   const pageName = typedPage.resume_data?.name ?? "Untitled";
+  const publicPath = `/${profile?.username ?? typedPage.slug}`;
+  const analytics = await fetchPageAnalyticsDashboard({
+    supabase,
+    pageId,
+    rangeKey,
+    allTimeViews: typedPage.views ?? 0,
+  });
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-10 md:px-10">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
       <div className="mb-6 sm:mb-8">
         <Link
           href="/dashboard"
@@ -147,27 +86,13 @@ export default async function AnalyticsPage({
           </svg>
           Back to Dashboard
         </Link>
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">
-            Analytics
-          </p>
-          <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">
-            {pageName}
-          </h1>
-          <p className="mt-1 text-sm text-[rgba(240,244,255,0.45)]">
-            /{typedPage.slug}
-          </p>
-        </div>
       </div>
 
-      <AnalyticsCharts
+      <PageAnalyticsDashboard
+        analytics={analytics}
+        pageId={pageId}
         pageName={pageName}
-        totalViews={typedPage.views ?? 0}
-        uniqueVisitors={uniqueVisitors}
-        dailyViews={dailyViews}
-        referrers={referrers}
-        devices={devices}
-        countries={countries}
+        publicPath={publicPath}
       />
     </main>
   );

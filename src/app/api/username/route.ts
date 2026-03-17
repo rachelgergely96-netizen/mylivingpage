@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { requireAuthenticatedUser } from "@/lib/security/route-security";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { validateUsernameSlug } from "@/lib/usernames";
 
@@ -9,8 +11,22 @@ const RESERVED_SLUGS = new Set([
   "security", "delete-account", "legal", "blog", "docs", "support",
 ]);
 
+export const routeTrustLevel = {
+  GET: "public_read",
+  PATCH: "authenticated_user",
+};
+
 /** GET /api/username?slug=desired-slug — check availability */
 export async function GET(request: Request) {
+  const rateLimit = await enforceRateLimit({
+    request,
+    policy: "username_check",
+    route: "/api/username",
+  });
+  if (rateLimit.limited) {
+    return rateLimit.response;
+  }
+
   const { searchParams } = new URL(request.url);
   const raw = searchParams.get("slug") ?? "";
   const { slug, error } = validateUsernameSlug(raw);
@@ -39,11 +55,11 @@ export async function GET(request: Request) {
 
 /** PATCH /api/username — update the user's username + page slugs */
 export async function PATCH(request: Request) {
-  const authSupabase = await createServerSupabaseClient();
-  const { data: { user } } = await authSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authResult = await requireAuthenticatedUser();
+  if ("response" in authResult) {
+    return authResult.response;
   }
+  const { user } = authResult.value;
 
   const body = (await request.json()) as { slug?: string };
   const { slug, error } = validateUsernameSlug(body.slug ?? "");

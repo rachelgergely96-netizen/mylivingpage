@@ -4,9 +4,20 @@ import {
   getStripePriceDriftMessages,
   type StripePriceSnapshot,
 } from "@/lib/billing";
+import {
+  buildAdminUserRows,
+  listAllAuthUsers,
+  summarizeAdminUserRisk,
+  type AdminProfileRow,
+} from "@/lib/admin-user-review";
 import { getLegalConfigIssues } from "@/lib/legal/status";
+import { RATE_LIMIT_POLICIES, type RateLimitPolicyName } from "@/lib/security/rate-limit";
 import { getStripe } from "@/lib/stripe";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import {
+  isTurnstileConfigured,
+  isTurnstileMissingInProduction,
+} from "@/lib/turnstile";
 
 interface EventRow {
   event_name: string;
@@ -167,9 +178,13 @@ export default async function AdminOpsPage() {
     { count: authCallbackFailureCount },
     { count: parseFailureCount },
     { count: parseRateLimitCount },
+    { count: rateLimitBlockedCount },
     { data: processedWebhookRows },
     { data: recentBillingRows },
     { data: recentFailureRows },
+    { data: recentRateLimitRows },
+    { data: profiles },
+    authUsers,
     stripePriceStatus,
   ] = await Promise.all([
     supabase
@@ -204,6 +219,11 @@ export default async function AdminOpsPage() {
       .gte("created_at", sevenDayCutoff),
     supabase
       .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("event_name", "security.rate_limit.blocked")
+      .gte("created_at", sevenDayCutoff),
+    supabase
+      .from("events")
       .select("event_name, metadata, created_at, user_id")
       .eq("event_name", "billing.webhook.processed")
       .gte("created_at", sevenDayCutoff)
@@ -235,13 +255,45 @@ export default async function AdminOpsPage() {
       ])
       .order("created_at", { ascending: false })
       .limit(16),
+    supabase
+      .from("events")
+      .select("event_name, metadata, created_at, user_id")
+      .eq("event_name", "security.rate_limit.blocked")
+      .order("created_at", { ascending: false })
+      .limit(16),
+    supabase
+      .from("profiles")
+      .select("id, username, full_name, email, avatar_url, plan, created_at, auth_provider, last_sign_in_at, sign_in_count, signup_referrer"),
+    listAllAuthUsers(supabase),
     getStripePriceStatus(),
   ]);
 
   const processedWebhooks = (processedWebhookRows ?? []) as EventRow[];
   const recentBillingEvents = (recentBillingRows ?? []) as EventRow[];
   const recentFailureEvents = (recentFailureRows ?? []) as EventRow[];
+  const recentRateLimitEvents = (recentRateLimitRows ?? []) as EventRow[];
   const legalIssues = getLegalConfigIssues();
+  const adminUsers = buildAdminUserRows({
+    profiles: ((profiles ?? []) as AdminProfileRow[]),
+    pages: [],
+    authUsers,
+  });
+  const riskSummary = summarizeAdminUserRisk(adminUsers);
+  const turnstileConfigured = isTurnstileConfigured();
+  const turnstileMissingInProduction = isTurnstileMissingInProduction();
+  const blockedPolicies = recentRateLimitEvents.reduce<Record<string, number>>((acc, event) => {
+    const policy = typeof event.metadata?.policy === "string" ? event.metadata.policy : null;
+    if (!policy) {
+      return acc;
+    }
+    acc[policy] = (acc[policy] ?? 0) + 1;
+    return acc;
+  }, {});
+  const topBlockedPolicy = Object.entries(blockedPolicies)
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0] ?? null;
+  const topBlockedPolicyLabel = topBlockedPolicy
+    ? `${RATE_LIMIT_POLICIES[topBlockedPolicy[0] as RateLimitPolicyName]?.label ?? topBlockedPolicy[0]} x${topBlockedPolicy[1]}`
+    : "Clear";
 
   const latencyValues = processedWebhooks.flatMap((event) =>
     typeof event.metadata?.latency_ms === "number" ? [event.metadata.latency_ms] : [],
@@ -262,11 +314,17 @@ export default async function AdminOpsPage() {
           Operations
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-[rgba(240,244,255,0.55)]">
-          Release health for billing, publishing, auth callbacks, parse abuse protection, and public legal readiness.
+          Release health for billing, publishing, auth callbacks, bot pressure on public endpoints, and public legal readiness.
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6 sm:gap-4">
+      {turnstileMissingInProduction ? (
+        <div className="mb-6 rounded-2xl border border-[rgba(245,158,11,0.25)] bg-[rgba(245,158,11,0.08)] px-5 py-4 text-sm text-[rgba(255,248,220,0.88)]">
+          Production is missing `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Email signup hardening is not active until Turnstile is configured in both the app env and Supabase Auth CAPTCHA settings.
+        </div>
+      ) : null}
+
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-10 sm:gap-4">
         <StatCard
           label="Webhook Failures (7d)"
           value={webhookFailureCount ?? 0}
@@ -296,6 +354,26 @@ export default async function AdminOpsPage() {
           label="Parse Rate Limited (7d)"
           value={parseRateLimitCount ?? 0}
           tone={parseRateLimitCount ? "default" : "success"}
+        />
+        <StatCard
+          label="Suspicious Signups (7d)"
+          value={riskSummary.suspiciousSignupsLast7Days}
+          tone={riskSummary.suspiciousSignupsLast7Days > 0 ? "warning" : "success"}
+        />
+        <StatCard
+          label="Unconfirmed > 24h"
+          value={riskSummary.unconfirmedPastGrace}
+          tone={riskSummary.unconfirmedPastGrace > 0 ? "warning" : "success"}
+        />
+        <StatCard
+          label="Rate Limit Blocks (7d)"
+          value={rateLimitBlockedCount ?? 0}
+          tone={(rateLimitBlockedCount ?? 0) > 0 ? "warning" : "success"}
+        />
+        <StatCard
+          label="Abuse Hotspot"
+          value={topBlockedPolicyLabel}
+          tone={topBlockedPolicy ? "warning" : "success"}
         />
       </div>
 
@@ -403,10 +481,47 @@ export default async function AdminOpsPage() {
               </ul>
             </div>
           )}
+
+          <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                Signup CAPTCHA
+              </p>
+              <span
+                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
+                  turnstileConfigured
+                    ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
+                    : "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
+                }`}
+              >
+                {turnstileConfigured ? "Configured" : "Missing"}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+              Email signup uses Cloudflare Turnstile only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is present.
+            </p>
+            {!turnstileConfigured ? (
+              <p className="mt-2 text-sm text-[#fbbf24]">
+                Add the site key to the app env and enable Cloudflare Turnstile in Supabase Auth CAPTCHA settings.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+              Production Auth Checklist
+            </p>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[rgba(240,244,255,0.56)]">
+              <li>Email confirmation remains enabled in Supabase Auth.</li>
+              <li>Turnstile is configured in app env and Supabase Auth CAPTCHA settings.</li>
+              <li>Supabase Auth provider rate limits stay at default or stricter values.</li>
+              <li>Playwright and integration secrets remain staging-only.</li>
+            </ul>
+          </div>
         </section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <EventFeed
           title="Recent Billing Events"
           emptyLabel="No billing events recorded yet."
@@ -416,6 +531,11 @@ export default async function AdminOpsPage() {
           title="Recent Failures"
           emptyLabel="No tracked failures in the sampled window."
           events={recentFailureEvents}
+        />
+        <EventFeed
+          title="Recent Abuse Controls"
+          emptyLabel="No recent rate-limit blocks."
+          events={recentRateLimitEvents}
         />
       </div>
     </main>

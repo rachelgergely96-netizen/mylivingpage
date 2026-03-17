@@ -4,7 +4,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getClientIp, hashSecurityIdentifier } from "@/lib/security/request";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
-export const routeTrustLevel = "public_write";
+const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {

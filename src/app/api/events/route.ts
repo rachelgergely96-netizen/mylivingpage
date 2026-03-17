@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { trackEvent } from "@/lib/track-event";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -6,7 +6,7 @@ import {
 } from "@/lib/account/deleteUserAccount";
 import { requireAdminUser } from "@/lib/security/route-security";
 
-export const routeTrustLevel = "admin_only";
+const routeTrustLevel = "admin_only";
 
 export async function DELETE(
   _request: Request,

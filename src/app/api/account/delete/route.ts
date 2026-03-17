@@ -5,7 +5,7 @@ import {
 } from "@/lib/account/deleteUserAccount";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 /** POST /api/account/delete — permanently delete user account and all data */
 export async function POST() {

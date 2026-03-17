@@ -7,7 +7,7 @@ import { trackEvent } from "@/lib/track-event";
 import type { ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 export async function POST(request: Request) {
   try {

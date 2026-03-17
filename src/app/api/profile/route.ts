@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 /** GET /api/profile — fetch the authenticated user's profile */
 export async function GET() {

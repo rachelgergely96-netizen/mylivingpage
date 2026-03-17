@@ -12,7 +12,7 @@ import { trackEvent } from "@/lib/track-event";
 import type { AtsReviewMode, AtsSuggestion, AtsTargeting, ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 const MODEL_NAME = "claude-sonnet-4-20250514";
 

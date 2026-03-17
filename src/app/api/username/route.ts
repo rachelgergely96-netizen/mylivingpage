@@ -11,7 +11,7 @@ const RESERVED_SLUGS = new Set([
   "security", "delete-account", "legal", "blog", "docs", "support",
 ]);
 
-export const routeTrustLevel = {
+const routeTrustLevel = {
   GET: "public_read",
   PATCH: "authenticated_user",
 };

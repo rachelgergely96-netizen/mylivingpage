@@ -11,7 +11,7 @@ import { trackEvent } from "@/lib/track-event";
 import type { PageConfig, ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
-export const routeTrustLevel = "public_read";
+const routeTrustLevel = "public_read";
 
 function buildFileName(name: string) {
   return `${(name || "resume").trim().replace(/\s+/g, "-").toLowerCase()}-ats-resume.pdf`;

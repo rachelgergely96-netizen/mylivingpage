@@ -4,7 +4,7 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import { trackEvent } from "@/lib/track-event";
 import { usernameFromEmail } from "@/lib/usernames";
 
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 interface PublishBody {
   title: string;

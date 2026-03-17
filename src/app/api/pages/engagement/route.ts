@@ -22,7 +22,7 @@ async function parseRequestBody(request: Request) {
   }
 }
 
-export const routeTrustLevel = "public_write";
+const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {

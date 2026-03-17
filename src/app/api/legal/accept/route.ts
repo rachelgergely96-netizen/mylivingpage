@@ -12,7 +12,7 @@ interface LegalAcceptBody {
 }
 
 const ALLOWED_SOURCES: LegalAcceptanceSource[] = ["signup", "checkout"];
-export const routeTrustLevel = "authenticated_user";
+const routeTrustLevel = "authenticated_user";
 
 export async function POST(request: NextRequest) {
   const authClient = await createServerSupabaseClient();

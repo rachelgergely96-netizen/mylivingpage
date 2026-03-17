@@ -25,9 +25,9 @@ describe("API route trust declarations", () => {
   it("requires every route to declare a supported trust level", () => {
     const failures: string[] = [];
     const singleTrustLevelRe =
-      /export\s+const\s+routeTrustLevel\s*=\s*"([^"]+)";/;
+      /(?:export\s+)?const\s+routeTrustLevel\s*=\s*"([^"]+)";/;
     const mappedTrustLevelRe =
-      /export\s+const\s+routeTrustLevel\s*=\s*\{([\s\S]*?)\};/;
+      /(?:export\s+)?const\s+routeTrustLevel\s*=\s*\{([\s\S]*?)\};/;
     const mappedValueRe = /:\s*"([^"]+)"/g;
 
     for (const filePath of walkRoutes(apiRoot)) {

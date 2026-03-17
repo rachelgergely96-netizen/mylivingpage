@@ -10,7 +10,7 @@ import { getStripe } from "@/lib/stripe";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
-export const routeTrustLevel = "signed_webhook";
+const routeTrustLevel = "signed_webhook";
 
 export async function POST(req: NextRequest) {
   const receivedAt = new Date();

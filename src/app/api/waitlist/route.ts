@@ -3,7 +3,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const routeTrustLevel = "public_write";
+const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {

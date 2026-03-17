@@ -13,6 +13,18 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      # Placeholder env keeps build analysis runnable on PRs without exposing secrets.
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      SUPABASE_SECRET_KEY: ci-placeholder-service-role-key
+      ANTHROPIC_API_KEY: ci-placeholder-anthropic-key
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      STRIPE_SECRET_KEY: sk_test_ci_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
+      STRIPE_PRICE_ID: price_ci_placeholder
+      CI: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -37,6 +49,9 @@ jobs:
 
       - name: Unit tests
         run: npm run test:unit
+
+      - name: Production build
+        run: npm run build
 
       - name: Production dependency audit
         run: npm audit --omit=dev

@@ -13,7 +13,8 @@ export default function LoginPage() {
   const [nextPath, setNextPath] = useState("/dashboard");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
     const next = params.get("next");
     if (next && next.startsWith("/")) {
       setNextPath(next);
@@ -23,6 +24,9 @@ export default function LoginPage() {
     if (error) {
       setStatus("error");
       setMessage(getAuthErrorMessage(error));
+      params.delete("error");
+      const nextUrl = `${url.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+      window.history.replaceState({}, "", nextUrl);
     }
   }, []);
 
@@ -52,17 +56,11 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("");
     try {
-      const supabase = createBrowserSupabaseClient();
-      const redirectTo = `${window.location.origin}/callback?next=${encodeURIComponent(nextPath)}`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-        },
+      const params = new URLSearchParams({
+        next: nextPath,
+        screen: "login",
       });
-      if (error) {
-        throw error;
-      }
+      window.location.assign(`/api/auth/google?${params.toString()}`);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? getAuthErrorMessage(error.message) : "Google login failed.");

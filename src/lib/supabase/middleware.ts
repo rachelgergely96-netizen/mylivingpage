@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { NextResponse as NextResponseBuilder } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl } from "@/lib/supabase/env";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookies";
+import { getRequestHostname, getSupabaseCookieOptions } from "@/lib/supabase/cookies";
 
 interface SessionUpdateResult {
   response: NextResponse;
@@ -12,7 +12,7 @@ interface SessionUpdateResult {
 
 export async function updateSession(request: NextRequest): Promise<SessionUpdateResult> {
   let response = NextResponseBuilder.next({ request });
-  const cookieOptions = getSupabaseCookieOptions(request.nextUrl.hostname);
+  const cookieOptions = getSupabaseCookieOptions(getRequestHostname(request.headers));
 
   const supabase = createServerClient(
     getSupabaseUrl() ?? "",

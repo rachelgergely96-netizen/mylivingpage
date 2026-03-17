@@ -1,4 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { getCallbackAuthErrorCode } from "@/lib/auth/auth-error";
 import {
@@ -8,10 +7,9 @@ import {
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
 import {
   getRequestHostname,
-  getSupabaseCookieOptions,
 } from "@/lib/supabase/cookies";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
-import { requireSupabasePublishableConfig } from "@/lib/supabase/env";
+import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
@@ -20,29 +18,6 @@ function safeRedirectPath(value: string | null): string {
     return "/dashboard";
   }
   return value;
-}
-
-function createRouteHandlerSupabaseClient(request: NextRequest, response: NextResponse) {
-  const { url, publishableKey } = requireSupabasePublishableConfig();
-  const cookieOptions = getSupabaseCookieOptions(request.nextUrl.hostname);
-
-  return createServerClient(url, publishableKey, {
-    cookieOptions,
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, cookieOptions ? { ...options, ...cookieOptions } : options);
-        });
-      },
-    },
-  });
 }
 
 export async function GET(request: NextRequest) {

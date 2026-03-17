@@ -121,22 +121,16 @@ export default function SignupPage() {
     setStatus("loading");
     setMessage("");
     try {
-      const supabase = createBrowserSupabaseClient();
       const callbackParams = new URLSearchParams({
         next: nextPath,
+        screen: "signup",
         legal_accept: "1",
         legal_source: "signup",
       });
-      const redirectTo = `${window.location.origin}/callback?${callbackParams.toString()}`;
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-        },
-      });
-      if (error) {
-        throw error;
+      if (signupReferrer) {
+        callbackParams.set("ref", signupReferrer);
       }
+      window.location.assign(`/api/auth/google?${callbackParams.toString()}`);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Google signup failed.");

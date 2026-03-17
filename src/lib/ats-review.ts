@@ -518,6 +518,8 @@ export function stampProposalDecision(
 export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | null | undefined) {
   return (
     review?.availabilityReason ??
+    review?.approvedExportCheck?.recommendedFixes?.[0] ??
+    review?.approvedExportCheck?.overflowReasons?.[0] ??
     review?.candidateExportCheck?.recommendedFixes?.[0] ??
     review?.candidateExportCheck?.overflowReasons?.[0] ??
     review?.exportCheck?.recommendedFixes?.[0] ??
@@ -530,6 +532,28 @@ export function hasApprovedAtsResume(review: Partial<AtsReviewSnapshot> | null |
   return Boolean(review?.approvedResumeData && review?.approvedExportCheck?.fitsOnOnePage);
 }
 
+export function resolveEditableAtsResumeData(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  fallbackData: ResumeData,
+) {
+  return normalizeResumeDataForAts(
+    review?.approvedResumeData ??
+      review?.candidateResumeData ??
+      fallbackData,
+  );
+}
+
+export function isAtsOutOfSync(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData: ResumeData,
+) {
+  if (!review?.approvedResumeData || !review.approvedSourceFingerprint) {
+    return false;
+  }
+
+  return review.approvedSourceFingerprint !== buildAtsRelevantFingerprint(sourceData);
+}
+
 export function inheritApprovedAtsResume(
   review: AtsReviewSnapshot,
   existing: Partial<AtsReviewSnapshot> | null | undefined,
@@ -540,40 +564,40 @@ export function inheritApprovedAtsResume(
     approvedExportCheck: review.approvedExportCheck ?? existing?.approvedExportCheck ?? null,
     approvedAt: review.approvedAt ?? existing?.approvedAt ?? null,
     approvedContentHash: review.approvedContentHash ?? existing?.approvedContentHash ?? null,
+    approvedSourceFingerprint:
+      review.approvedSourceFingerprint ?? existing?.approvedSourceFingerprint ?? null,
     availabilityReason: review.availabilityReason ?? existing?.availabilityReason ?? null,
   };
 }
 
-export function finalizeApprovedAtsResume(review: AtsReviewSnapshot, data: ResumeData): AtsReviewSnapshot {
-  if (!review.exportCheck.fitsOnOnePage) {
-    return {
-      ...review,
-      approvedResumeData: null,
-      approvedExportCheck: null,
-      approvedAt: null,
-      approvedContentHash: null,
-      availabilityReason: getAtsAvailabilityReason(review),
-    };
-  }
-
+export function finalizeApprovedAtsResume(
+  review: AtsReviewSnapshot,
+  data: ResumeData,
+  approvedSourceFingerprint?: string | null,
+): AtsReviewSnapshot {
   return {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(data),
     approvedExportCheck: review.exportCheck,
     approvedAt: new Date().toISOString(),
     approvedContentHash: review.contentHash,
-    availabilityReason: null,
+    approvedSourceFingerprint: approvedSourceFingerprint ?? review.approvedSourceFingerprint ?? null,
+    availabilityReason: review.exportCheck.fitsOnOnePage ? null : getAtsAvailabilityReason(review),
   };
 }
 
-export function approveCandidateAtsResume(review: AtsReviewSnapshot): AtsReviewSnapshot {
-  if (!review.candidateResumeData || !review.candidateExportCheck?.fitsOnOnePage) {
+export function approveCandidateAtsResume(
+  review: AtsReviewSnapshot,
+  approvedSourceFingerprint?: string | null,
+): AtsReviewSnapshot {
+  if (!review.candidateResumeData) {
     return {
       ...review,
       approvedResumeData: null,
       approvedExportCheck: null,
       approvedAt: null,
       approvedContentHash: null,
+      approvedSourceFingerprint: review.approvedSourceFingerprint ?? null,
       availabilityReason: getAtsAvailabilityReason({
         ...review,
         exportCheck: review.candidateExportCheck ?? review.exportCheck,
@@ -584,10 +608,17 @@ export function approveCandidateAtsResume(review: AtsReviewSnapshot): AtsReviewS
   return {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(review.candidateResumeData),
-    approvedExportCheck: review.candidateExportCheck,
+    approvedExportCheck: review.candidateExportCheck ?? review.exportCheck,
     approvedAt: new Date().toISOString(),
     approvedContentHash: buildResumeContentHash(review.candidateResumeData, review.targeting),
-    availabilityReason: null,
+    approvedSourceFingerprint: approvedSourceFingerprint ?? review.approvedSourceFingerprint ?? null,
+    availabilityReason:
+      review.candidateExportCheck?.fitsOnOnePage
+        ? null
+        : getAtsAvailabilityReason({
+            ...review,
+            exportCheck: review.candidateExportCheck ?? review.exportCheck,
+          }),
   };
 }
 
@@ -1341,6 +1372,7 @@ export function createRuleBasedAtsReview(input: {
     approvedExportCheck: null,
     approvedAt: null,
     approvedContentHash: null,
+    approvedSourceFingerprint: null,
     availabilityReason: null,
   } satisfies AtsReviewSnapshot;
 }

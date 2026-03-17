@@ -11,8 +11,10 @@ import {
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
+  isAtsOutOfSync,
   normalizeAtsText,
   normalizeResumeDataForAts,
+  resolveEditableAtsResumeData,
 } from "@/lib/ats-review";
 import type { ResumeData } from "@/types/resume";
 
@@ -450,7 +452,8 @@ describe("ATS review helpers", () => {
 
     const unavailableReview = finalizeApprovedAtsResume(overflowingReview, buildResume({ summary: "A".repeat(420) }));
     expect(hasApprovedAtsResume(unavailableReview)).toBe(false);
-    expect(unavailableReview.approvedResumeData).toBeNull();
+    expect(unavailableReview.approvedResumeData?.summary).toHaveLength(420);
+    expect(unavailableReview.approvedExportCheck?.fitsOnOnePage).toBe(false);
     expect(unavailableReview.availabilityReason).toContain("Shorten the summary");
   });
 
@@ -518,5 +521,48 @@ describe("ATS review helpers", () => {
     expect(hasApprovedAtsResume(mergedReview)).toBe(true);
     expect(mergedReview.approvedContentHash).toBe(savedReview.approvedContentHash);
     expect(mergedReview.exportCheck.fitsOnOnePage).toBe(false);
+  });
+
+  it("resolves the editable ATS resume from the saved ATS copy before other fallbacks", () => {
+    const fallback = buildResume({ headline: "Living Page Headline" });
+    const review = createRuleBasedAtsReview({
+      data: fallback,
+      targeting: getDefaultAtsTargeting(fallback),
+      exportCheck: {
+        pageCount: 1,
+        fitsOnOnePage: true,
+        overflowReasons: [],
+        recommendedFixes: [],
+      },
+    });
+
+    const saved = finalizeApprovedAtsResume(
+      review,
+      buildResume({ headline: "ATS Headline" }),
+      buildAtsRelevantFingerprint(fallback),
+    );
+
+    expect(resolveEditableAtsResumeData(saved, fallback).headline).toBe("ATS Headline");
+  });
+
+  it("tracks when the ATS resume falls out of sync with living-page source data", () => {
+    const living = buildResume();
+    const review = finalizeApprovedAtsResume(
+      createRuleBasedAtsReview({
+        data: living,
+        targeting: getDefaultAtsTargeting(living),
+        exportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      }),
+      living,
+      buildAtsRelevantFingerprint(living),
+    );
+
+    expect(isAtsOutOfSync(review, living)).toBe(false);
+    expect(isAtsOutOfSync(review, buildResume({ headline: "Changed Headline" }))).toBe(true);
   });
 });

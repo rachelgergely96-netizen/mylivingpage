@@ -108,7 +108,7 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
         pageId={page.id}
         premium={premium}
         unavailableReason={isOwner && !approvedResumeData ? atsUnavailableReason : null}
-        ownerEditHref={isOwner && !approvedResumeData ? `/dashboard/edit/${page.id}` : null}
+        ownerEditHref={isOwner && !approvedResumeData ? `/dashboard/edit/${page.id}?tab=ats-resume` : null}
       />
       <ShareCardDownload
         pageUserId={pageUserId}

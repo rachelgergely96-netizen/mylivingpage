@@ -26,7 +26,21 @@ async function persistPageRecord(
     .maybeSingle();
 
   const { error } = await supabase.from("pages").upsert(fields, { onConflict: "owner_id" });
-  return { error, existingId: existing?.id ?? null };
+  if (error) {
+    return { error, existingId: existing?.id ?? null, pageId: existing?.id ?? null };
+  }
+
+  const { data: persisted } = await supabase
+    .from("pages")
+    .select("id")
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  return {
+    error: null,
+    existingId: existing?.id ?? null,
+    pageId: persisted?.id ?? existing?.id ?? null,
+  };
 }
 
 export async function POST(request: Request) {
@@ -90,7 +104,7 @@ export async function POST(request: Request) {
       published_at: now,
     };
 
-    const { error, existingId } = await persistPageRecord(supabase, user.id, allFields);
+    const { error, existingId, pageId } = await persistPageRecord(supabase, user.id, allFields);
 
     if (error) {
       await trackEvent(user.id, "page.publish.failed", {
@@ -107,7 +121,7 @@ export async function POST(request: Request) {
       is_update: Boolean(existingId),
     });
 
-    return NextResponse.json({ slug: username });
+    return NextResponse.json({ slug: username, pageId });
   } catch (err) {
     await trackEvent(null, "page.publish.failed", {
       error: err instanceof Error ? err.message : "Publish failed",

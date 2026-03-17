@@ -13,6 +13,8 @@ interface AtsReviewPanelProps {
   review: AtsReviewSnapshot | null;
   targeting: AtsTargeting;
   reviewing: boolean;
+  previewResumeData?: ResumeData;
+  previewContentHash?: string | null;
   actionBusy?: boolean;
   reviewError?: string | null;
   onTargetingChange: (next: AtsTargeting) => void;
@@ -65,6 +67,8 @@ export default function AtsReviewPanel({
   review,
   targeting,
   reviewing,
+  previewResumeData,
+  previewContentHash = null,
   actionBusy = false,
   reviewError = null,
   onTargetingChange,
@@ -102,7 +106,7 @@ export default function AtsReviewPanel({
     ? null
     : !previewSnapshotHash
       ? "Preview not generated yet"
-      : previewSnapshotHash === review.contentHash
+      : previewSnapshotHash === (previewContentHash ?? review.contentHash)
         ? "Preview up to date"
         : "Preview is stale";
 
@@ -127,8 +131,8 @@ export default function AtsReviewPanel({
     : null;
 
   const previewData = useMemo(
-    () => review?.candidateResumeData ?? data,
-    [data, review?.candidateResumeData],
+    () => previewResumeData ?? review?.candidateResumeData ?? data,
+    [data, previewResumeData, review?.candidateResumeData],
   );
 
   const refreshPreview = async () => {
@@ -160,7 +164,7 @@ export default function AtsReviewPanel({
       }
       previewUrlRef.current = nextUrl;
       setPreviewUrl(nextUrl);
-      setPreviewSnapshotHash(review?.contentHash ?? null);
+      setPreviewSnapshotHash(previewContentHash ?? review?.contentHash ?? null);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;

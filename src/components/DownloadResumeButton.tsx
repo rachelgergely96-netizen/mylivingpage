@@ -82,7 +82,7 @@ export default function DownloadResumeButton({
           href={ownerEditHref}
           className="mt-3 inline-flex rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
         >
-          Open Edit and Review
+          Open ATS Resume Editor
         </Link>
       </div>
     );

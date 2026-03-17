@@ -223,17 +223,14 @@ test.describe.serial("authenticated user journeys", () => {
     }
 
     await page.getByRole("link", { name: "Create Your Page" }).click();
-    await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Run ATS Review" }).click();
+    await page.getByRole("button", { name: "Generate both versions" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("We built your ATS version")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("Machine Readability")).toHaveCount(0);
-    await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByRole("button", { name: "Preview My Living Page" }).click();
-    await expect(page.getByRole("button", { name: "Publish and Go Live" })).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Publish and Go Live" }).click();
-    await expect(page).not.toHaveURL(/\/create/);
+    await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible({ timeout: 45_000 });
+    await page.getByRole("button", { name: "Publish Living Page" }).click();
+    await expect(page.getByRole("heading", { name: "Your living page is live" })).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Edit" }).click();
@@ -264,8 +261,7 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
-    await expect(page.getByRole("heading", { name: "Start from the ATS-safe resume you already use." })).toBeVisible();
-    await expect(page.getByText("Recommended")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Paste anything resume-related" })).toBeVisible();
   });
 
   test("legacy global create drafts are ignored for the signed-in user", async ({ page }) => {
@@ -342,7 +338,6 @@ test.describe.serial("authenticated user journeys", () => {
 
     await signIn(page);
     await page.goto("/create");
-    await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByPlaceholder("Paste your resume text here...").fill("Fresh scoped draft");
     await page.waitForTimeout(1200);
 
@@ -359,11 +354,10 @@ test.describe.serial("authenticated user journeys", () => {
     });
 
     await page.goto("/create");
-    await page.getByRole("button", { name: "Paste Resume" }).click();
     await expect(page.getByRole("button", { name: "Load Sample" })).toHaveCount(0);
 
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Run ATS Review" }).click();
+    await page.getByRole("button", { name: "Generate both versions" }).click();
 
     await expect(page.getByText("We couldn't reach resume parsing right now. Continue manually or try again in a moment.")).toBeVisible();
     await expect(page.getByText("Failed to fetch")).toHaveCount(0);
@@ -371,7 +365,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("Let's start with who you are")).toBeVisible();
   });
 
-  test("users can continue without ATS review if the ATS request fails", async ({ page }) => {
+  test("create stays publishable when the ATS review request fails", async ({ page }) => {
     test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
 
     await signIn(page);
@@ -387,18 +381,15 @@ test.describe.serial("authenticated user journeys", () => {
     });
 
     await page.goto("/create");
-    await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Run ATS Review" }).click();
+    await page.getByRole("button", { name: "Generate both versions" }).click();
 
     await expect(page.getByText("We couldn't reach ATS review right now. Retry the review or continue without it for now.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry ATS Review" })).toBeVisible();
-    await page.getByRole("button", { name: "Continue without ATS Review" }).click();
-    await expect(page.getByRole("heading", { name: "Pick your living theme" })).toBeVisible();
-    await expect(page.getByText("ATS PDF not ready yet. You can rerun ATS review later from edit.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible();
   });
 
-  test("create stays blocked on step 2 when the ATS PDF still cannot fit one page", async ({ page }) => {
+  test("create no longer blocks publish when the ATS PDF still needs work", async ({ page }) => {
     test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
 
     await signIn(page);
@@ -418,18 +409,12 @@ test.describe.serial("authenticated user journeys", () => {
     });
 
     await page.goto("/create");
-    await page.getByRole("button", { name: "Paste Resume" }).click();
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Run ATS Review" }).click();
+    await page.getByRole("button", { name: "Generate both versions" }).click();
 
     await expect(page.getByText("Still too long for one page")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Fix ATS PDF" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(0);
-    await expect(page.getByText("Pick your living theme")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Fix ATS PDF" }).click();
-    await expect(page.getByRole("heading", { name: "Paste resume text" })).toBeVisible();
-    await expect(page.getByPlaceholder("Paste your resume text here...")).toHaveValue(CREATE_FLOW_RESUME_TEXT);
+    await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Fix ATS PDF" })).toHaveCount(0);
   });
 
   test("public ATS download only appears when an approved ATS resume exists", async ({ page, browser }) => {

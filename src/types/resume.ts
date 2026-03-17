@@ -150,6 +150,7 @@ export interface AtsReviewSnapshot {
   approvedExportCheck?: AtsExportCheck | null;
   approvedAt?: string | null;
   approvedContentHash?: string | null;
+  approvedSourceFingerprint?: string | null;
   availabilityReason?: string | null;
 }
 

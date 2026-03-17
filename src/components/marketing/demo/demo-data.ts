@@ -71,9 +71,9 @@ export const COMPARISON_FEATURES: ComparisonFeature[] = [
   { feature: "Mobile responsive", free: true, pro: true },
   { feature: "Public page URL", free: true, pro: true },
   { feature: "Core themes", free: true, pro: true },
+  { feature: "Approved ATS PDF download", free: true, pro: true },
   { feature: "Page analytics", free: false, pro: true },
   { feature: "Premium themes", free: false, pro: true },
-  { feature: "PDF export", free: false, pro: true },
   { feature: "PNG share card download", free: false, pro: true },
   { feature: "Remove branding", free: false, pro: true },
 ];

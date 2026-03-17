@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import type { Message } from "@anthropic-ai/sdk/resources/messages/messages";
 import { getAnthropicClient } from "@/lib/anthropic";
+import type { CreateFlowFailureCode } from "@/lib/create-flow";
 import { getParseRateLimitWindowStart, isParseRateLimited } from "@/lib/parse-rate-limit";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
@@ -9,6 +11,7 @@ export const runtime = "nodejs";
 const routeTrustLevel = "authenticated_user";
 
 const MODEL_NAME = "claude-sonnet-4-20250514";
+const MAX_PARSE_TOKENS = 2600;
 
 const STAGES = [
   { progress: 10, label: "Analyzing resume structure..." },
@@ -22,6 +25,31 @@ function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+class ParseFailure extends Error {
+  code: CreateFlowFailureCode;
+  retryable: boolean;
+  stage: "request" | "preflight" | "rate_limit" | "ai_request" | "validation";
+  status: number;
+  metadata: Record<string, unknown>;
+
+  constructor(input: {
+    code: CreateFlowFailureCode;
+    message: string;
+    retryable: boolean;
+    stage: "request" | "preflight" | "rate_limit" | "ai_request" | "validation";
+    status?: number;
+    metadata?: Record<string, unknown>;
+  }) {
+    super(input.message);
+    this.name = "ParseFailure";
+    this.code = input.code;
+    this.retryable = input.retryable;
+    this.stage = input.stage;
+    this.status = input.status ?? 503;
+    this.metadata = input.metadata ?? {};
+  }
 }
 
 function buildPrompt(resumeText: string) {
@@ -90,29 +118,192 @@ RESUME TEXT:
 ${resumeText}`;
 }
 
-function parseAnthropicJson(rawText: string): ResumeData {
-  const clean = rawText.replace(/```json|```/g, "").trim();
-  try {
-    return JSON.parse(clean) as ResumeData;
-  } catch {
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw new Error("Could not parse AI response as JSON");
-    }
-    return JSON.parse(match[0]) as ResumeData;
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function requireString(record: Record<string, unknown>, key: string) {
+  if (typeof record[key] !== "string") {
+    throw new ParseFailure({
+      code: "schema_invalid",
+      message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
+      retryable: true,
+      stage: "validation",
+      metadata: { field: key },
+    });
   }
+
+  return record[key];
+}
+
+function requireNullableString(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+
+  throw new ParseFailure({
+    code: "schema_invalid",
+    message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
+    retryable: true,
+    stage: "validation",
+    metadata: { field: key },
+  });
+}
+
+function requireStringArray(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new ParseFailure({
+      code: "schema_invalid",
+      message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
+      retryable: true,
+      stage: "validation",
+      metadata: { field: key },
+    });
+  }
+
+  return value;
+}
+
+function requireObjectArray(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  if (!Array.isArray(value) || value.some((item) => !isObject(item))) {
+    throw new ParseFailure({
+      code: "schema_invalid",
+      message: `Resume parsing returned an invalid "${key}" section. Try again in a moment.`,
+      retryable: true,
+      stage: "validation",
+      metadata: { field: key },
+    });
+  }
+
+  return value as Array<Record<string, unknown>>;
+}
+
+function validateResumeData(payload: unknown): ResumeData {
+  if (!isObject(payload)) {
+    throw new ParseFailure({
+      code: "schema_invalid",
+      message: "Resume parsing returned an incomplete result. Try again in a moment.",
+      retryable: true,
+      stage: "validation",
+    });
+  }
+
+  return {
+    name: requireString(payload, "name"),
+    headline: requireString(payload, "headline"),
+    location: requireString(payload, "location"),
+    email: requireNullableString(payload, "email"),
+    linkedin: requireNullableString(payload, "linkedin"),
+    github: requireNullableString(payload, "github"),
+    website: requireNullableString(payload, "website"),
+    avatar_url: null,
+    summary: requireString(payload, "summary"),
+    experience: requireObjectArray(payload, "experience").map((entry) => ({
+      title: requireString(entry, "title"),
+      company: requireString(entry, "company"),
+      dates: requireString(entry, "dates"),
+      highlights: requireStringArray(entry, "highlights"),
+      url: requireNullableString(entry, "url"),
+    })),
+    education: requireObjectArray(payload, "education").map((entry) => ({
+      degree: requireString(entry, "degree"),
+      school: requireString(entry, "school"),
+      year: requireString(entry, "year"),
+    })),
+    projects: requireObjectArray(payload, "projects").map((entry) => ({
+      name: requireString(entry, "name"),
+      description: requireString(entry, "description"),
+      tech: requireStringArray(entry, "tech"),
+      url: requireNullableString(entry, "url"),
+    })),
+    skills: requireObjectArray(payload, "skills").map((entry) => ({
+      category: requireString(entry, "category"),
+      items: requireStringArray(entry, "items"),
+    })),
+    certifications: requireObjectArray(payload, "certifications").map((entry) => ({
+      name: requireString(entry, "name"),
+      issuer: requireNullableString(entry, "issuer"),
+      date: requireNullableString(entry, "date"),
+    })),
+    stats: requireObjectArray(payload, "stats").map((entry) => ({
+      value: requireString(entry, "value"),
+      label: requireString(entry, "label"),
+    })),
+  };
+}
+
+function parseAnthropicJson(rawText: string, stopReason: Message["stop_reason"]): ResumeData {
+  const clean = rawText.replace(/```json|```/g, "").trim();
+  const parseJson = (value: string) => {
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = parseJson(clean);
+  if (direct !== null) {
+    return validateResumeData(direct);
+  }
+
+  try {
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      const recovered = parseJson(match[0]);
+      if (recovered !== null) {
+        return validateResumeData(recovered);
+      }
+    }
+  } catch {
+    // Fall through to the structured failure below.
+  }
+
+  if (stopReason === "max_tokens") {
+    throw new ParseFailure({
+      code: "model_truncated",
+      message: "The AI parser returned an incomplete draft. Try again in a moment.",
+      retryable: true,
+      stage: "validation",
+      metadata: { stop_reason: stopReason },
+    });
+  }
+
+  throw new ParseFailure({
+    code: "invalid_json",
+    message: "The AI parser returned malformed output. Try again in a moment.",
+    retryable: true,
+    stage: "validation",
+    metadata: { stop_reason: stopReason },
+  });
 }
 
 function sse(payload: Record<string, unknown>) {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
-function formatParseFailureMessage(error: unknown) {
+function normalizeParseFailure(error: unknown) {
+  if (error instanceof ParseFailure) {
+    return error;
+  }
+
   const message = error instanceof Error ? error.message.trim() : String(error ?? "").trim();
   const lower = message.toLowerCase();
 
   if (lower.includes("limit reached")) {
-    return message;
+    return new ParseFailure({
+      code: "rate_limited",
+      message,
+      retryable: false,
+      stage: "rate_limit",
+      status: 429,
+    });
   }
 
   if (
@@ -122,10 +313,36 @@ function formatParseFailureMessage(error: unknown) {
     lower.includes("secret") ||
     lower.includes("publishable")
   ) {
-    return "Resume parsing is temporarily unavailable right now. Continue manually or try again later.";
+    return new ParseFailure({
+      code: "config_unavailable",
+      message: "Resume parsing is temporarily unavailable right now. Continue manually or try again later.",
+      retryable: false,
+      stage: "preflight",
+    });
   }
 
-  return "We couldn't parse that resume right now. Continue manually or try again.";
+  if (
+    lower.includes("timeout") ||
+    lower.includes("overloaded") ||
+    lower.includes("temporarily unavailable") ||
+    lower.includes("connection") ||
+    lower.includes("socket") ||
+    lower.includes("network")
+  ) {
+    return new ParseFailure({
+      code: "model_upstream",
+      message: "The AI parser timed out before it finished. Try again in a moment.",
+      retryable: true,
+      stage: "ai_request",
+    });
+  }
+
+  return new ParseFailure({
+    code: "unknown",
+    message: "We couldn't parse that resume right now. Continue manually or try again.",
+    retryable: true,
+    stage: "ai_request",
+  });
 }
 
 export async function POST(request: Request) {
@@ -143,7 +360,10 @@ export async function POST(request: Request) {
     const resumeText = body.resumeText?.trim();
 
     if (!resumeText) {
-      return NextResponse.json({ error: "Resume text is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Resume text is required.", code: "request_invalid", retryable: false },
+        { status: 400 },
+      );
     }
 
     let supabase;
@@ -151,9 +371,10 @@ export async function POST(request: Request) {
       supabase = createServiceRoleSupabaseClient();
       getAnthropicClient();
     } catch (dependencyError) {
+      const failure = normalizeParseFailure(dependencyError);
       return NextResponse.json(
-        { error: formatParseFailureMessage(dependencyError) },
-        { status: 503 },
+        { error: failure.message, code: failure.code, retryable: failure.retryable },
+        { status: failure.status },
       );
     }
 
@@ -173,6 +394,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "Resume parsing limit reached. Try again in about an hour.",
+          code: "rate_limited",
+          retryable: false,
           resetAt: new Date(windowStart.getTime() + 60 * 60 * 1000).toISOString(),
         },
         { status: 429 },
@@ -190,6 +413,8 @@ export async function POST(request: Request) {
         const push = (payload: Record<string, unknown>) => {
           controller.enqueue(encoder.encode(sse(payload)));
         };
+        let stopReason: Message["stop_reason"] = null;
+        let rawResponseText = "";
 
         try {
           push({ type: "progress", progress: 5, stage: "Sending to AI..." });
@@ -199,7 +424,7 @@ export async function POST(request: Request) {
           const anthropic = getAnthropicClient();
           const response = await anthropic.messages.create({
             model: MODEL_NAME,
-            max_tokens: 2000,
+            max_tokens: MAX_PARSE_TOKENS,
             messages: [
               {
                 role: "user",
@@ -207,28 +432,46 @@ export async function POST(request: Request) {
               },
             ],
           });
+          stopReason = response.stop_reason ?? null;
 
           STAGES.slice(1).forEach((stage) => {
             push({ type: "progress", progress: stage.progress, stage: stage.label });
           });
 
-          const text = response.content
+          rawResponseText = response.content
             .map((block) => ("text" in block ? block.text : ""))
             .join("");
-          const parsed = parseAnthropicJson(text);
+          const parsed = parseAnthropicJson(rawResponseText, stopReason);
 
           push({ type: "progress", progress: 100, stage: "Done!" });
           push({ type: "result", data: parsed });
           controller.close();
         } catch (error) {
-          const message = formatParseFailureMessage(error);
+          const failure = normalizeParseFailure(error);
           await trackEvent(user.id, "resume.parse.failed", {
             characters: resumeText.length,
             error: error instanceof Error ? error.message : "Unable to parse resume",
+            error_code: failure.code,
+            failure_stage: failure.stage,
+            retryable: failure.retryable,
+            stop_reason: failure.metadata.stop_reason ?? stopReason,
+            output_chars: rawResponseText.length,
+          });
+          console.error("resume.parse.failed", {
+            userId: user.id,
+            code: failure.code,
+            stage: failure.stage,
+            retryable: failure.retryable,
+            stopReason: failure.metadata.stop_reason ?? stopReason,
+            outputChars: rawResponseText.length,
+            error: error instanceof Error ? error.message : String(error),
           });
           push({
             type: "error",
-            message,
+            message: failure.message,
+            code: failure.code,
+            retryable: failure.retryable,
+            stage: failure.stage,
           });
           controller.close();
         }
@@ -244,12 +487,16 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid request payload.", code: "request_invalid", retryable: false },
+        { status: 400 },
+      );
     }
 
+    const failure = normalizeParseFailure(error);
     return NextResponse.json(
-      { error: formatParseFailureMessage(error) },
-      { status: 503 },
+      { error: failure.message, code: failure.code, retryable: failure.retryable },
+      { status: failure.status },
     );
   }
 }

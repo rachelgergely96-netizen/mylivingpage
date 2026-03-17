@@ -98,6 +98,8 @@ describe("POST /api/generate/parse", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
       error: "Resume parsing is temporarily unavailable right now. Continue manually or try again later.",
+      code: "config_unavailable",
+      retryable: false,
     });
   });
 
@@ -120,14 +122,15 @@ describe("POST /api/generate/parse", () => {
     const body = await response.text();
 
     expect(body).toContain('"type":"error"');
-    expect(body).toContain(
-      "We couldn't parse that resume right now. Continue manually or try again.",
-    );
+    expect(body).toContain('"code":"model_upstream"');
+    expect(body).toContain('"retryable":true');
+    expect(body).toContain("The AI parser timed out before it finished. Try again in a moment.");
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-1",
       "resume.parse.failed",
       expect.objectContaining({
         error: "Claude upstream timeout",
+        error_code: "model_upstream",
       }),
     );
   });
@@ -152,6 +155,39 @@ describe("POST /api/generate/parse", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
       error: "Resume parsing is temporarily unavailable right now. Continue manually or try again later.",
+      code: "config_unavailable",
+      retryable: false,
     });
+  });
+
+  it("streams a structured validation failure when Anthropic returns malformed JSON", async () => {
+    mocks.anthropicCreate.mockResolvedValueOnce({
+      stop_reason: "end_turn",
+      content: [
+        {
+          type: "text",
+          text: '{"name":"Taylor Reed","headline":"Product Manager"',
+        },
+      ],
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/generate/parse", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeText: "Taylor Reed\nProduct Manager",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+
+    expect(body).toContain('"code":"invalid_json"');
+    expect(body).toContain('"retryable":true');
+    expect(body).toContain("The AI parser returned malformed output. Try again in a moment.");
   });
 });

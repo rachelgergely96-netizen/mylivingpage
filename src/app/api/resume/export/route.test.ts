@@ -50,6 +50,7 @@ function buildApprovedResumeData(name: string): ResumeData {
 
 function createPageResponse(options: {
   approvedResumeData?: ResumeData | null;
+  approvalStatus?: "pending" | "approved" | "out_of_sync" | null;
   visibility?: "public" | "private";
   status?: "live" | "draft";
 }) {
@@ -68,6 +69,7 @@ function createPageResponse(options: {
               recommendedFixes: [],
             }
           : null,
+        approvalStatus: options.approvalStatus ?? (options.approvedResumeData ? "approved" : "pending"),
         availabilityReason: "Rerun ATS review and save to rebuild your ATS PDF.",
       },
     },
@@ -184,5 +186,37 @@ describe("POST /api/resume/export", () => {
         page_id: "page-1",
       }),
     );
+  });
+
+  it("blocks download when approved artifacts exist but the ATS snapshot is no longer approved", async () => {
+    const approvedResumeData = buildApprovedResumeData("Approved Resume");
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse({ approvedResumeData, approvalStatus: "pending" }),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "Rerun ATS review and save to rebuild your ATS PDF.",
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 });

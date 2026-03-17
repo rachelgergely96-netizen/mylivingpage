@@ -128,6 +128,7 @@ export interface AtsScoreBreakdown {
 export type AtsScoreDimension = Exclude<keyof AtsScoreBreakdown, "overall">;
 export type AtsReviewMode = "full" | "fast";
 export type AtsReviewStatus = "ready" | "needs_attention";
+export type AtsApprovalStatus = "pending" | "approved" | "out_of_sync";
 
 export interface AtsReviewSnapshot {
   targeting: AtsTargeting;
@@ -152,6 +153,7 @@ export interface AtsReviewSnapshot {
   approvedContentHash?: string | null;
   approvedSourceFingerprint?: string | null;
   availabilityReason?: string | null;
+  approvalStatus?: AtsApprovalStatus | null;
 }
 
 export type AtsSuggestionFeedbackState = "applying" | "confirmed" | "still_needs_work";

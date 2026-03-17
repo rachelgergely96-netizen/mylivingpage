@@ -487,7 +487,7 @@ export default function SettingsPage() {
         </div>
         {!isPremiumPlan(profile.plan) && (
           <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
-            Unlock premium themes, PDF export, PNG share cards, analytics, and remove the badge.
+            Unlock premium themes, PNG share cards, analytics, and remove the badge.
           </p>
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">

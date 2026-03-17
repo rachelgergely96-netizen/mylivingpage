@@ -8,12 +8,14 @@ import {
   evaluateSuggestionOutcome,
   extractJobKeywords,
   finalizeApprovedAtsResume,
+  getAtsApprovalStatus,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
   isAtsOutOfSync,
   normalizeAtsText,
   normalizeResumeDataForAts,
+  reconcileAtsApprovalStatus,
   resolveEditableAtsResumeData,
 } from "@/lib/ats-review";
 import type { ResumeData } from "@/types/resume";
@@ -452,8 +454,9 @@ describe("ATS review helpers", () => {
 
     const unavailableReview = finalizeApprovedAtsResume(overflowingReview, buildResume({ summary: "A".repeat(420) }));
     expect(hasApprovedAtsResume(unavailableReview)).toBe(false);
-    expect(unavailableReview.approvedResumeData?.summary).toHaveLength(420);
-    expect(unavailableReview.approvedExportCheck?.fitsOnOnePage).toBe(false);
+    expect(unavailableReview.approvedResumeData).toBeNull();
+    expect(unavailableReview.approvedExportCheck).toBeNull();
+    expect(unavailableReview.approvalStatus).toBe("pending");
     expect(unavailableReview.availabilityReason).toContain("Shorten the summary");
   });
 
@@ -519,30 +522,85 @@ describe("ATS review helpers", () => {
 
     const mergedReview = inheritApprovedAtsResume(transientReview, savedReview);
     expect(hasApprovedAtsResume(mergedReview)).toBe(true);
+    expect(getAtsApprovalStatus(mergedReview)).toBe("approved");
     expect(mergedReview.approvedContentHash).toBe(savedReview.approvedContentHash);
     expect(mergedReview.exportCheck.fitsOnOnePage).toBe(false);
   });
 
-  it("resolves the editable ATS resume from the saved ATS copy before other fallbacks", () => {
+  it("resolves the editable ATS resume from the latest saved ATS draft before falling back to the approved copy", () => {
     const fallback = buildResume({ headline: "Living Page Headline" });
-    const review = createRuleBasedAtsReview({
-      data: fallback,
-      targeting: getDefaultAtsTargeting(fallback),
-      exportCheck: {
-        pageCount: 1,
-        fitsOnOnePage: true,
-        overflowReasons: [],
-        recommendedFixes: [],
-      },
-    });
-
-    const saved = finalizeApprovedAtsResume(
-      review,
-      buildResume({ headline: "ATS Headline" }),
+    const saved = approveCandidateAtsResume(
+      createRuleBasedAtsReview({
+        data: fallback,
+        targeting: getDefaultAtsTargeting(fallback),
+        exportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+        candidateResumeData: buildResume({ headline: "ATS Headline" }),
+        candidateExportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      }),
       buildAtsRelevantFingerprint(fallback),
     );
+    const approvedOnly = { ...saved, candidateResumeData: null };
 
-    expect(resolveEditableAtsResumeData(saved, fallback).headline).toBe("ATS Headline");
+    const withDraft = {
+      ...saved,
+      candidateResumeData: buildResume({ headline: "Draft ATS Headline" }),
+    };
+
+    expect(resolveEditableAtsResumeData(withDraft, fallback).headline).toBe("Draft ATS Headline");
+    expect(resolveEditableAtsResumeData(approvedOnly, fallback).headline).toBe("ATS Headline");
+  });
+
+  it("keeps an approved ATS resume active until the saved draft diverges", () => {
+    const living = buildResume();
+    const approved = finalizeApprovedAtsResume(
+      createRuleBasedAtsReview({
+        data: living,
+        targeting: getDefaultAtsTargeting(living),
+        exportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      }),
+      living,
+      buildAtsRelevantFingerprint(living),
+    );
+
+    const rerun = inheritApprovedAtsResume(
+      createRuleBasedAtsReview({
+        data: buildResume({ summary: "Tightened summary for a new candidate." }),
+        targeting: getDefaultAtsTargeting(living),
+        exportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      }),
+      approved,
+    );
+
+    expect(hasApprovedAtsResume(rerun)).toBe(true);
+
+    const pending = reconcileAtsApprovalStatus({
+      review: rerun,
+      draftData: buildResume({ headline: "Changed ATS Draft" }),
+      sourceData: living,
+    });
+
+    expect(hasApprovedAtsResume(pending)).toBe(false);
+    expect(getAtsApprovalStatus(pending, living)).toBe("pending");
   });
 
   it("tracks when the ATS resume falls out of sync with living-page source data", () => {

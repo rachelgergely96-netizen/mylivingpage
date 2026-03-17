@@ -236,7 +236,7 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
-          No credit card. One free page to start. Upgrade later only if you want exports, premium themes, or analytics.
+          No credit card. One free page to start. Upgrade later only if you want premium themes, share cards, or analytics.
         </p>
 
         <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">

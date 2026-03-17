@@ -32,7 +32,7 @@ export const PRO_PLAN_PRICE: PlanPriceConfig = {
   displayLabel: "$9/month",
   productName: "MyLivingPage Pro",
   productDescription:
-    "$9/month subscription for premium themes, exports, analytics, and badge removal.",
+    "$9/month subscription for premium themes, PNG share cards, analytics, and badge removal.",
 };
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);

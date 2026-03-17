@@ -68,7 +68,7 @@ export default function PageOwnerBar({ pageId, pageUserId, children }: PageOwner
               </Link>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <Link
-                  href={`/dashboard/edit/${pageId}`}
+                  href={`/dashboard/edit/${pageId}/living-page`}
                   className="whitespace-nowrap rounded-full border border-[rgba(59,130,246,0.3)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#3B82F6] transition-colors hover:bg-[rgba(59,130,246,0.08)] hover:text-[#93C5FD]"
                 >
                   Edit

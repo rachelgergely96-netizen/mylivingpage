@@ -72,7 +72,7 @@ export default function PricingPage() {
               Simple, transparent pricing
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-              Start free with the resume you already use, one stable page link, and a page that is easier to scan. Upgrade when you want premium themes, a fresh PDF export, and a QR-ready share card.
+              Start free with the resume you already use, one stable page link, and a page that is easier to scan. Upgrade when you want premium themes, analytics, and a QR-ready share card.
             </p>
           </div>
 

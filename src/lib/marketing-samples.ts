@@ -179,7 +179,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Is it actually free?",
     answer:
-      "Yes. The free tier gives you one public page, core themes, and the main workflow. Upgrade later only if you want premium themes, exports, or analytics.",
+      "Yes. The free tier gives you one public page, core themes, and the main workflow. Upgrade later only if you want premium themes, share cards, or analytics.",
   },
 ];
 
@@ -194,7 +194,7 @@ export const PROCESS_STEPS = [
   },
   {
     title: "Keep one link and export fresh assets",
-    body: "Keep using the same page link everywhere a person can click, and upgrade later if you want a fresh PDF and QR-ready share card from the same source.",
+    body: "Keep using the same page link everywhere a person can click, and upgrade later if you want QR-ready share cards and other premium presentation extras from the same source.",
   },
 ];
 
@@ -231,9 +231,9 @@ export const PRICING_REASSURANCE = {
   ],
   pro: [
     "Unlock premium themes built for creative, technical, and leadership roles",
-    "Download a polished PDF from your page",
     "Download a PNG share card for outreach and follow-ups",
-    "See page analytics and remove the MyLivingPage badge",
+    "See page analytics",
+    "Remove the MyLivingPage badge",
     `Upgrade anytime for ${PRO_PLAN_PRICE.displayLabel}`,
   ],
 };

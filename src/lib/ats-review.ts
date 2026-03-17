@@ -1,4 +1,5 @@
 import type {
+  AtsApprovalStatus,
   AtsChangeSummaryItem,
   AtsExportCheck,
   AtsIssue,
@@ -105,6 +106,10 @@ const ATS_PROPOSAL_PRIORITY: AtsProposalGroup[] = [
   "projects",
   "certifications",
 ];
+
+const ATS_APPROVAL_PENDING_REASON = "Approve the ATS resume to enable PDF download.";
+const ATS_OUT_OF_SYNC_REASON =
+  "Your living page changed after ATS approval. Review and re-approve the ATS resume before download is available again.";
 
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -516,6 +521,17 @@ export function stampProposalDecision(
 }
 
 export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  if (review?.approvalStatus === "out_of_sync") {
+    return ATS_OUT_OF_SYNC_REASON;
+  }
+
+  if (
+    review?.approvalStatus === "pending" &&
+    (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage)
+  ) {
+    return ATS_APPROVAL_PENDING_REASON;
+  }
+
   return (
     review?.availabilityReason ??
     review?.approvedExportCheck?.recommendedFixes?.[0] ??
@@ -528,8 +544,62 @@ export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | nu
   );
 }
 
-export function hasApprovedAtsResume(review: Partial<AtsReviewSnapshot> | null | undefined) {
+function hasApprovedArtifacts(review: Partial<AtsReviewSnapshot> | null | undefined) {
   return Boolean(review?.approvedResumeData && review?.approvedExportCheck?.fitsOnOnePage);
+}
+
+export function getAtsApprovalStatus(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData?: ResumeData | null,
+): AtsApprovalStatus {
+  const explicitStatus = review?.approvalStatus ?? null;
+  const fallbackStatus: AtsApprovalStatus = hasApprovedArtifacts(review) ? "approved" : "pending";
+  const resolvedStatus = explicitStatus ?? fallbackStatus;
+
+  if (resolvedStatus === "approved" && sourceData && isAtsOutOfSync(review, sourceData)) {
+    return "out_of_sync";
+  }
+
+  return resolvedStatus;
+}
+
+export function setAtsApprovalStatus(
+  review: AtsReviewSnapshot,
+  status: AtsApprovalStatus,
+): AtsReviewSnapshot {
+  return {
+    ...review,
+    approvalStatus: status,
+    availabilityReason: status === "approved" ? null : getAtsAvailabilityReason({ ...review, approvalStatus: status }),
+  };
+}
+
+export function reconcileAtsApprovalStatus(input: {
+  review: AtsReviewSnapshot;
+  draftData: ResumeData;
+  sourceData?: ResumeData | null;
+}) {
+  const preservesApprovedDraft = Boolean(
+    input.review.approvedResumeData &&
+      input.review.approvedContentHash &&
+      input.review.approvedContentHash === buildResumeContentHash(input.draftData, input.review.targeting),
+  );
+
+  if (!preservesApprovedDraft) {
+    return setAtsApprovalStatus(input.review, "pending");
+  }
+
+  return setAtsApprovalStatus(
+    input.review,
+    input.sourceData && isAtsOutOfSync(input.review, input.sourceData) ? "out_of_sync" : "approved",
+  );
+}
+
+export function hasApprovedAtsResume(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData?: ResumeData | null,
+) {
+  return hasApprovedArtifacts(review) && getAtsApprovalStatus(review, sourceData) === "approved";
 }
 
 export function resolveEditableAtsResumeData(
@@ -537,8 +607,8 @@ export function resolveEditableAtsResumeData(
   fallbackData: ResumeData,
 ) {
   return normalizeResumeDataForAts(
-    review?.approvedResumeData ??
-      review?.candidateResumeData ??
+    review?.candidateResumeData ??
+      review?.approvedResumeData ??
       fallbackData,
   );
 }
@@ -558,6 +628,8 @@ export function inheritApprovedAtsResume(
   review: AtsReviewSnapshot,
   existing: Partial<AtsReviewSnapshot> | null | undefined,
 ): AtsReviewSnapshot {
+  const hasIncomingApprovedArtifacts = Boolean(review.approvedResumeData && review.approvedExportCheck);
+
   return {
     ...review,
     approvedResumeData: review.approvedResumeData ?? existing?.approvedResumeData ?? null,
@@ -567,6 +639,9 @@ export function inheritApprovedAtsResume(
     approvedSourceFingerprint:
       review.approvedSourceFingerprint ?? existing?.approvedSourceFingerprint ?? null,
     availabilityReason: review.availabilityReason ?? existing?.availabilityReason ?? null,
+    approvalStatus: hasIncomingApprovedArtifacts
+      ? review.approvalStatus ?? existing?.approvalStatus ?? null
+      : existing?.approvalStatus ?? review.approvalStatus ?? null,
   };
 }
 
@@ -575,6 +650,17 @@ export function finalizeApprovedAtsResume(
   data: ResumeData,
   approvedSourceFingerprint?: string | null,
 ): AtsReviewSnapshot {
+  if (!review.exportCheck.fitsOnOnePage) {
+    return {
+      ...review,
+      approvalStatus: "pending",
+      availabilityReason: getAtsAvailabilityReason({
+        ...review,
+        approvalStatus: "pending",
+      }),
+    };
+  }
+
   return {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(data),
@@ -582,7 +668,8 @@ export function finalizeApprovedAtsResume(
     approvedAt: new Date().toISOString(),
     approvedContentHash: review.contentHash,
     approvedSourceFingerprint: approvedSourceFingerprint ?? review.approvedSourceFingerprint ?? null,
-    availabilityReason: review.exportCheck.fitsOnOnePage ? null : getAtsAvailabilityReason(review),
+    availabilityReason: null,
+    approvalStatus: "approved",
   };
 }
 
@@ -590,17 +677,16 @@ export function approveCandidateAtsResume(
   review: AtsReviewSnapshot,
   approvedSourceFingerprint?: string | null,
 ): AtsReviewSnapshot {
-  if (!review.candidateResumeData) {
+  const reviewExportCheck = review.candidateExportCheck ?? review.exportCheck;
+
+  if (!review.candidateResumeData || !reviewExportCheck.fitsOnOnePage) {
     return {
       ...review,
-      approvedResumeData: null,
-      approvedExportCheck: null,
-      approvedAt: null,
-      approvedContentHash: null,
-      approvedSourceFingerprint: review.approvedSourceFingerprint ?? null,
+      approvalStatus: "pending",
       availabilityReason: getAtsAvailabilityReason({
         ...review,
-        exportCheck: review.candidateExportCheck ?? review.exportCheck,
+        approvalStatus: "pending",
+        exportCheck: reviewExportCheck,
       }),
     };
   }
@@ -608,17 +694,12 @@ export function approveCandidateAtsResume(
   return {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(review.candidateResumeData),
-    approvedExportCheck: review.candidateExportCheck ?? review.exportCheck,
+    approvedExportCheck: reviewExportCheck,
     approvedAt: new Date().toISOString(),
     approvedContentHash: buildResumeContentHash(review.candidateResumeData, review.targeting),
     approvedSourceFingerprint: approvedSourceFingerprint ?? review.approvedSourceFingerprint ?? null,
-    availabilityReason:
-      review.candidateExportCheck?.fitsOnOnePage
-        ? null
-        : getAtsAvailabilityReason({
-            ...review,
-            exportCheck: review.candidateExportCheck ?? review.exportCheck,
-          }),
+    availabilityReason: null,
+    approvalStatus: "approved",
   };
 }
 
@@ -1374,5 +1455,6 @@ export function createRuleBasedAtsReview(input: {
     approvedContentHash: null,
     approvedSourceFingerprint: null,
     availabilityReason: null,
+    approvalStatus: "pending",
   } satisfies AtsReviewSnapshot;
 }

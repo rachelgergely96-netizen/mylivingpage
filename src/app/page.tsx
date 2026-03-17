@@ -144,7 +144,7 @@ export default async function LandingPage() {
                     Everything you need to make the click count is free.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Start with one living page while keeping your ATS-safe resume for applications, and upgrade later only if you want premium themes, share-ready exports, and a cleaner branded page.
+                    Start with one living page while keeping your ATS-safe resume for applications, and upgrade later only if you want premium themes, share-card downloads, analytics, and a cleaner branded page.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link

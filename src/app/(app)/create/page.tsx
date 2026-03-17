@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import AtsPdfPreviewCard from "@/components/ats/AtsPdfPreviewCard";
 import AtsReviewPanel from "@/components/ats/AtsReviewPanel";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import DraftBanner from "@/components/DraftBanner";
@@ -15,9 +16,14 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
   approveCandidateAtsResume,
   buildAtsRelevantFingerprint,
+  buildResumeContentHash,
+  finalizeApprovedAtsResume,
+  getAtsApprovalStatus,
+  getAtsAvailabilityReason,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
+  normalizeResumeDataForAts,
 } from "@/lib/ats-review";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { usernameFromEmail } from "@/lib/usernames";
@@ -37,6 +43,8 @@ type ReviewViewport = "living" | "ats";
 type CreateFlowFailure = {
   stage: "parse" | "review";
   message: string;
+  code: string | null;
+  retryable: boolean;
 };
 
 interface CreateDraft {
@@ -105,9 +113,18 @@ function buildAtsStatus(review: AtsReviewSnapshot | null) {
     };
   }
 
+  if (getAtsApprovalStatus(review) === "out_of_sync") {
+    return {
+      title: "ATS resume needs re-approval",
+      body: getAtsAvailabilityReason(review),
+      tone: "border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] text-[#FFD5D5]",
+      recommendedCta: "ats",
+    };
+  }
+
   return {
-    title: "ATS resume needs a quick pass",
-    body: "We saved the ATS draft, but it still needs edits before it becomes a true one-page PDF.",
+    title: "ATS resume pending approval",
+    body: getAtsAvailabilityReason(review),
     tone: "border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] text-[#FFD5D5]",
     recommendedCta: "ats",
   };
@@ -328,28 +345,25 @@ export default function CreatePage() {
           return null;
         }
 
-        const fingerprint = buildAtsRelevantFingerprint(data);
-        const baseReview = inheritApprovedAtsResume(payload as AtsReviewSnapshot, atsReview);
-        const finalizedReview = approveCandidateAtsResume(baseReview, fingerprint);
-        setAtsTargeting(finalizedReview.targeting);
-        setAtsReview(finalizedReview);
+        const nextReview = inheritApprovedAtsResume(payload as AtsReviewSnapshot, atsReview);
+        setAtsTargeting(nextReview.targeting);
+        setAtsReview(nextReview);
         setCreateFlowFailure((current) => (current?.stage === "review" ? null : current));
         void trackCreateEvent("ats.review.run", {
           mode,
-          issues: finalizedReview.issues.length,
+          issues: nextReview.issues.length,
           fits_one_page:
-            finalizedReview.approvedExportCheck?.fitsOnOnePage ??
-            finalizedReview.candidateExportCheck?.fitsOnOnePage ??
-            finalizedReview.exportCheck.fitsOnOnePage,
+            nextReview.candidateExportCheck?.fitsOnOnePage ??
+            nextReview.exportCheck.fitsOnOnePage,
         });
-        return finalizedReview;
+        return nextReview;
       } catch (reviewError) {
         if (reviewError instanceof DOMException && reviewError.name === "AbortError") {
           return null;
         }
 
-        const message = normalizeCreateFlowError("review", reviewError);
-        setCreateFlowFailure({ stage: "review", message });
+        const failure = normalizeCreateFlowError("review", reviewError);
+        setCreateFlowFailure({ stage: "review", ...failure });
         return null;
       } finally {
         if (mode === "full" && requestId === atsReviewRequestIdRef.current) {
@@ -419,8 +433,10 @@ export default function CreatePage() {
       }
 
       if (!response.ok || !response.body) {
-        const fallback = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(fallback?.error ?? "Could not start resume processing.");
+        const fallback = (await response.json().catch(() => null)) as
+          | { error?: string; code?: string; retryable?: boolean }
+          | null;
+        throw fallback ?? new Error("Could not start resume processing.");
       }
 
       const reader = response.body.getReader();
@@ -441,7 +457,7 @@ export default function CreatePage() {
           }
 
           if (payload.type === "error") {
-            throw new Error(String(payload.message ?? "Resume processing failed."));
+            throw payload;
           }
 
           if (payload.type === "result") {
@@ -456,12 +472,46 @@ export default function CreatePage() {
 
       await beginReviewOutputs(nextData, "paste");
     } catch (streamError) {
-      const message = normalizeCreateFlowError("parse", streamError);
-      setCreateFlowFailure({ stage: "parse", message });
+      const failure = normalizeCreateFlowError("parse", streamError);
+      setCreateFlowFailure({ stage: "parse", ...failure });
       setStep("input");
       setProgress(0);
     }
   };
+
+  const handleRetryParse = () => {
+    void startProcessing();
+  };
+
+  const approveAtsResume = useCallback(() => {
+    if (!parsedData || !atsReview) {
+      return;
+    }
+
+    const approvedReview = atsReview.candidateResumeData
+      ? approveCandidateAtsResume(atsReview, buildAtsRelevantFingerprint(parsedData))
+      : finalizeApprovedAtsResume(
+          atsReview,
+          parsedData,
+          buildAtsRelevantFingerprint(parsedData),
+        );
+
+    if (!hasApprovedAtsResume(approvedReview)) {
+      setCreateFlowFailure({
+        stage: "review",
+        message: getAtsAvailabilityReason(approvedReview),
+        code: "approval_pending",
+        retryable: false,
+      });
+      return;
+    }
+
+    setAtsReview(approvedReview);
+    setCreateFlowFailure((current) => (current?.stage === "review" ? null : current));
+    void trackCreateEvent("ats.resume.approved", {
+      fits_one_page: approvedReview.approvedExportCheck?.fitsOnOnePage ?? false,
+    });
+  }, [atsReview, parsedData, trackCreateEvent]);
 
   const publishPage = async () => {
     if (!parsedData || publishing) {
@@ -524,6 +574,14 @@ export default function CreatePage() {
   const progressStep = step === "processing" ? "review" : step;
   const currentProgressIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
   const atsPdfReady = hasApprovedAtsResume(atsReview);
+  const atsCandidateReady =
+    atsReview?.candidateExportCheck?.fitsOnOnePage ?? atsReview?.exportCheck.fitsOnOnePage ?? false;
+  const currentAtsPreviewHash = parsedData
+    ? buildResumeContentHash(
+        normalizeResumeDataForAts(atsReview?.candidateResumeData ?? parsedData),
+        atsReview?.targeting ?? atsTargeting,
+      )
+    : null;
   const predictedSlug = publishedSlug || publicSlug || "your-username";
   const atsStatus = buildAtsStatus(atsReview);
   const livingPageStatus = buildLivingPageStatus(predictedSlug);
@@ -617,13 +675,24 @@ export default function CreatePage() {
           {createFlowFailure?.stage === "parse" ? (
             <div className="mt-4 rounded-xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.08)] p-4">
               <p className="text-sm text-[#FFD5D5]">{createFlowFailure.message}</p>
-              <button
-                type="button"
-                onClick={handleContinueManually}
-                className="mt-4 rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-              >
-                Continue manually
-              </button>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {createFlowFailure.retryable ? (
+                  <button
+                    type="button"
+                    onClick={handleRetryParse}
+                    className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
+                  >
+                    Try again
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleContinueManually}
+                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                >
+                  Continue manually
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -763,25 +832,74 @@ export default function CreatePage() {
             </div>
 
             <div className={reviewViewport === "ats" ? "block" : "hidden md:block"}>
-              <AtsReviewPanel
-                data={parsedData}
-                review={atsReview}
-                targeting={atsTargeting}
-                previewResumeData={atsReview?.approvedResumeData ?? atsReview?.candidateResumeData ?? parsedData}
-                previewContentHash={atsReview?.approvedContentHash ?? atsReview?.contentHash ?? null}
-                reviewing={reviewingAts}
-                reviewError={createFlowFailure?.stage === "review" ? createFlowFailure.message : null}
-                onTargetingChange={setAtsTargeting}
-                onRunReview={() => void runAtsReview({ mode: "full" })}
-                runReviewLabel="Rerun ATS Suggestions"
-                stepLabel="ATS Resume"
-                heading="We built your ATS version"
-                body={
-                  atsPdfReady
-                    ? "Your ATS resume is already separate from the public page. You can preview it now and revise it later if you want to tune the wording."
-                    : "We saved an ATS draft from the same intake. If it still needs work, publish the living page now and tighten the ATS version later in its own editor."
-                }
-              />
+              <div className="space-y-5">
+                <AtsPdfPreviewCard
+                  resumeData={atsReview?.candidateResumeData ?? parsedData}
+                  contentHash={currentAtsPreviewHash}
+                  autoGenerate
+                  title="ATS PDF preview"
+                  body="This is the actual one-column ATS export candidate. Review it beside the living page before you approve it."
+                />
+
+                <div
+                  className={`rounded-2xl border p-4 ${
+                    atsPdfReady
+                      ? "border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] text-[#E8F2FF]"
+                      : "border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] text-[#FFD5D5]"
+                  }`}
+                >
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Step 3</p>
+                  <h3 className="mt-2 font-heading text-xl font-semibold">
+                    {atsPdfReady ? "ATS resume approved" : "Approve the ATS version"}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6">
+                    {atsPdfReady
+                      ? "This ATS version is approved and ready to unlock PDF download as soon as you publish the page."
+                      : atsCandidateReady
+                        ? "This ATS draft fits on one page. Approve it now if you want PDF download available right after publish."
+                        : getAtsAvailabilityReason(atsReview)}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={approveAtsResume}
+                      disabled={atsPdfReady || !atsCandidateReady}
+                      className="gold-pill px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-all disabled:opacity-50"
+                    >
+                      {atsPdfReady ? "ATS Approved" : "Approve ATS Resume"}
+                    </button>
+                    {!atsPdfReady ? (
+                      <button
+                        type="button"
+                        onClick={() => void runAtsReview({ mode: "full" })}
+                        className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                      >
+                        Refresh ATS Draft
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <AtsReviewPanel
+                  data={parsedData}
+                  review={atsReview}
+                  targeting={atsTargeting}
+                  previewResumeData={atsReview?.candidateResumeData ?? parsedData}
+                  previewContentHash={currentAtsPreviewHash}
+                  reviewing={reviewingAts}
+                  reviewError={createFlowFailure?.stage === "review" ? createFlowFailure.message : null}
+                  onTargetingChange={setAtsTargeting}
+                  onRunReview={() => void runAtsReview({ mode: "full" })}
+                  runReviewLabel="Rerun ATS Suggestions"
+                  stepLabel="ATS Resume"
+                  heading="We built your ATS version"
+                  body={
+                    atsPdfReady
+                      ? "Your ATS resume is approved and separate from the public page. You can still rerun suggestions if you want to tune the draft before publish."
+                      : "We saved an ATS draft from the same intake. Review the PDF preview, rerun suggestions if needed, and approve it when it looks right."
+                  }
+                />
+              </div>
             </div>
           </div>
 
@@ -811,7 +929,7 @@ export default function CreatePage() {
       {step === "success" ? (
         <section className="space-y-5">
           <div className="glass-card rounded-2xl p-5 sm:p-8">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 3</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 4</p>
             <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
               Your living page is live
             </h2>
@@ -850,7 +968,7 @@ export default function CreatePage() {
             </Link>
             {publishedPageId ? (
               <Link
-                href={`/dashboard/edit/${publishedPageId}?tab=living-page`}
+                href={`/dashboard/edit/${publishedPageId}/living-page`}
                 className={`rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all ${
                   atsStatus.recommendedCta === "living"
                     ? "gold-pill hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
@@ -862,7 +980,7 @@ export default function CreatePage() {
             ) : null}
             {publishedPageId ? (
               <Link
-                href={`/dashboard/edit/${publishedPageId}?tab=ats-resume`}
+                href={`/dashboard/edit/${publishedPageId}/ats-resume`}
                 className={`rounded-full px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all ${
                   atsStatus.recommendedCta === "ats"
                     ? "gold-pill hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"

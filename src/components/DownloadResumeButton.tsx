@@ -7,7 +7,6 @@ import type { ResumeData } from "@/types/resume";
 interface DownloadResumeButtonProps {
   data: ResumeData | null;
   pageId: string | null;
-  premium?: boolean;
   unavailableReason?: string | null;
   ownerEditHref?: string | null;
 }
@@ -15,7 +14,6 @@ interface DownloadResumeButtonProps {
 export default function DownloadResumeButton({
   data,
   pageId,
-  premium,
   unavailableReason,
   ownerEditHref,
 }: DownloadResumeButtonProps) {
@@ -23,7 +21,7 @@ export default function DownloadResumeButton({
   const [error, setError] = useState<string | null>(null);
 
   const handleDownload = async () => {
-    if (!premium || !data || !pageId) return;
+    if (!data || !pageId) return;
     setGenerating(true);
     setError(null);
     try {
@@ -132,7 +130,6 @@ export default function DownloadResumeButton({
           </svg>
         )}
         <span>{generating ? "Checking..." : "Download ATS PDF"}</span>
-        {!premium ? <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span> : null}
       </button>
       {error ? (
         <p className="rounded-lg bg-[rgba(10,22,40,0.9)] px-3 py-1.5 text-xs text-[#ff8e8e] backdrop-blur-xl">

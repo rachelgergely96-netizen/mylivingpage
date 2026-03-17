@@ -122,27 +122,50 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function requireString(record: Record<string, unknown>, key: string) {
-  if (typeof record[key] !== "string") {
-    throw new ParseFailure({
-      code: "schema_invalid",
-      message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
-      retryable: true,
-      stage: "validation",
-      metadata: { field: key },
-    });
+function coerceStringValue(value: unknown): string | null {
+  if (typeof value === "string") {
+    return value.trim();
   }
 
-  return record[key];
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return null;
+}
+
+function requireString(
+  record: Record<string, unknown>,
+  key: string,
+  options?: { fallback?: string },
+) {
+  const value = coerceStringValue(record[key]);
+  if (value !== null) {
+    return value;
+  }
+
+  if (options && "fallback" in options) {
+    return options.fallback ?? "";
+  }
+
+  throw new ParseFailure({
+    code: "schema_invalid",
+    message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
+    retryable: true,
+    stage: "validation",
+    metadata: { field: key },
+  });
 }
 
 function requireNullableString(record: Record<string, unknown>, key: string) {
   const value = record[key];
-  if (value === null) {
+  if (value === null || value === undefined) {
     return null;
   }
-  if (typeof value === "string") {
-    return value;
+
+  const text = coerceStringValue(value);
+  if (text !== null) {
+    return text;
   }
 
   throw new ParseFailure({
@@ -156,7 +179,16 @@ function requireNullableString(record: Record<string, unknown>, key: string) {
 
 function requireStringArray(record: Record<string, unknown>, key: string) {
   const value = record[key];
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    const text = coerceStringValue(value);
+    return text ? [text] : [];
+  }
+
+  if (!Array.isArray(value)) {
     throw new ParseFailure({
       code: "schema_invalid",
       message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
@@ -166,12 +198,34 @@ function requireStringArray(record: Record<string, unknown>, key: string) {
     });
   }
 
-  return value;
+  const normalized = value
+    .map((item) => coerceStringValue(item))
+    .filter((item): item is string => Boolean(item));
+
+  if (!normalized.length && value.length > 0) {
+    throw new ParseFailure({
+      code: "schema_invalid",
+      message: `Resume parsing returned an invalid "${key}" field. Try again in a moment.`,
+      retryable: true,
+      stage: "validation",
+      metadata: { field: key },
+    });
+  }
+
+  return normalized;
 }
 
 function requireObjectArray(record: Record<string, unknown>, key: string) {
   const value = record[key];
-  if (!Array.isArray(value) || value.some((item) => !isObject(item))) {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (isObject(value)) {
+    return [value];
+  }
+
+  if (!Array.isArray(value)) {
     throw new ParseFailure({
       code: "schema_invalid",
       message: `Resume parsing returned an invalid "${key}" section. Try again in a moment.`,
@@ -181,7 +235,18 @@ function requireObjectArray(record: Record<string, unknown>, key: string) {
     });
   }
 
-  return value as Array<Record<string, unknown>>;
+  const normalized = value.filter((item): item is Record<string, unknown> => isObject(item));
+  if (!normalized.length && value.length > 0) {
+    throw new ParseFailure({
+      code: "schema_invalid",
+      message: `Resume parsing returned an invalid "${key}" section. Try again in a moment.`,
+      retryable: true,
+      stage: "validation",
+      metadata: { field: key },
+    });
+  }
+
+  return normalized;
 }
 
 function validateResumeData(payload: unknown): ResumeData {
@@ -193,6 +258,45 @@ function validateResumeData(payload: unknown): ResumeData {
       stage: "validation",
     });
   }
+
+  const education = requireObjectArray(payload, "education")
+    .map((entry) => ({
+      degree: requireString(entry, "degree", { fallback: "" }),
+      school: requireString(entry, "school", { fallback: "" }),
+      year: requireString(entry, "year", { fallback: "" }),
+    }))
+    .filter((entry) => entry.degree || entry.school || entry.year);
+
+  const projects = requireObjectArray(payload, "projects")
+    .map((entry) => ({
+      name: requireString(entry, "name", { fallback: "" }),
+      description: requireString(entry, "description", { fallback: "" }),
+      tech: requireStringArray(entry, "tech"),
+      url: requireNullableString(entry, "url"),
+    }))
+    .filter((entry) => entry.name || entry.description || entry.tech.length || entry.url);
+
+  const skills = requireObjectArray(payload, "skills")
+    .map((entry) => ({
+      category: requireString(entry, "category", { fallback: "General" }) || "General",
+      items: requireStringArray(entry, "items"),
+    }))
+    .filter((entry) => entry.items.length > 0);
+
+  const certifications = requireObjectArray(payload, "certifications")
+    .map((entry) => ({
+      name: requireString(entry, "name", { fallback: "" }),
+      issuer: requireNullableString(entry, "issuer"),
+      date: requireNullableString(entry, "date"),
+    }))
+    .filter((entry) => entry.name || entry.issuer || entry.date);
+
+  const stats = requireObjectArray(payload, "stats")
+    .map((entry) => ({
+      value: requireString(entry, "value", { fallback: "" }),
+      label: requireString(entry, "label", { fallback: "" }),
+    }))
+    .filter((entry) => entry.value || entry.label);
 
   return {
     name: requireString(payload, "name"),
@@ -211,30 +315,11 @@ function validateResumeData(payload: unknown): ResumeData {
       highlights: requireStringArray(entry, "highlights"),
       url: requireNullableString(entry, "url"),
     })),
-    education: requireObjectArray(payload, "education").map((entry) => ({
-      degree: requireString(entry, "degree"),
-      school: requireString(entry, "school"),
-      year: requireString(entry, "year"),
-    })),
-    projects: requireObjectArray(payload, "projects").map((entry) => ({
-      name: requireString(entry, "name"),
-      description: requireString(entry, "description"),
-      tech: requireStringArray(entry, "tech"),
-      url: requireNullableString(entry, "url"),
-    })),
-    skills: requireObjectArray(payload, "skills").map((entry) => ({
-      category: requireString(entry, "category"),
-      items: requireStringArray(entry, "items"),
-    })),
-    certifications: requireObjectArray(payload, "certifications").map((entry) => ({
-      name: requireString(entry, "name"),
-      issuer: requireNullableString(entry, "issuer"),
-      date: requireNullableString(entry, "date"),
-    })),
-    stats: requireObjectArray(payload, "stats").map((entry) => ({
-      value: requireString(entry, "value"),
-      label: requireString(entry, "label"),
-    })),
+    education,
+    projects,
+    skills,
+    certifications,
+    stats,
   };
 }
 

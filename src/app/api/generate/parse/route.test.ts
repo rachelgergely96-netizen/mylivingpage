@@ -190,4 +190,55 @@ describe("POST /api/generate/parse", () => {
     expect(body).toContain('"retryable":true');
     expect(body).toContain("The AI parser returned malformed output. Try again in a moment.");
   });
+
+  it("normalizes non-string education years instead of failing the whole resume", async () => {
+    mocks.anthropicCreate.mockResolvedValueOnce({
+      stop_reason: "end_turn",
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            name: "Rachel Gergely",
+            headline: "Founder | Attorney | Product Architect",
+            location: "New York City & Orlando, Florida",
+            email: "rachel@example.com",
+            linkedin: "linkedin.com/in/rachel-gergely-75ba86105",
+            github: null,
+            website: null,
+            summary: "Product-focused founder and attorney building systems.",
+            experience: [],
+            education: [
+              { degree: "J.D.", school: "Law School", year: 2026 },
+              { degree: "B.A.", school: "University", year: null },
+            ],
+            projects: [],
+            skills: [{ category: "Core", items: "Product strategy" }],
+            certifications: [],
+            stats: [],
+          }),
+        },
+      ],
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/generate/parse", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeText: "Rachel Gergely\nFounder | Attorney | Product Architect",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.text();
+
+    expect(body).toContain('"type":"result"');
+    expect(body).toContain('"year":"2026"');
+    expect(body).toContain('"year":""');
+    expect(body).toContain('"items":["Product strategy"]');
+    expect(body).not.toContain('"type":"error"');
+  });
 });

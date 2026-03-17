@@ -1,4 +1,4 @@
-const DEFAULT_APP_URL = "https://mylivingpage.com";
+const DEFAULT_APP_URL = "https://www.mylivingpage.com";
 
 export const SITE_NAME = "MyLivingPage";
 export const ORGANIZATION_NAME = SITE_NAME;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { getAuthErrorMessage } from "@/lib/auth/auth-error";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -12,9 +13,16 @@ export default function LoginPage() {
   const [nextPath, setNextPath] = useState("/dashboard");
 
   useEffect(() => {
-    const next = new URLSearchParams(window.location.search).get("next");
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next");
     if (next && next.startsWith("/")) {
       setNextPath(next);
+    }
+
+    const error = params.get("error");
+    if (error) {
+      setStatus("error");
+      setMessage(getAuthErrorMessage(error));
     }
   }, []);
 
@@ -57,7 +65,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Google login failed.");
+      setMessage(error instanceof Error ? getAuthErrorMessage(error.message) : "Google login failed.");
     }
   };
 

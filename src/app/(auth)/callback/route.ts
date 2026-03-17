@@ -1,10 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { getCallbackAuthErrorCode } from "@/lib/auth/auth-error";
 import {
   getClientIp,
   recordLegalAcceptance,
 } from "@/lib/legal/acceptance";
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
+import {
+  getRequestHostname,
+  getSupabaseCookieOptions,
+} from "@/lib/supabase/cookies";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
 import { requireSupabasePublishableConfig } from "@/lib/supabase/env";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -19,8 +24,10 @@ function safeRedirectPath(value: string | null): string {
 
 function createRouteHandlerSupabaseClient(request: NextRequest, response: NextResponse) {
   const { url, publishableKey } = requireSupabasePublishableConfig();
+  const cookieOptions = getSupabaseCookieOptions(request.nextUrl.hostname);
 
   return createServerClient(url, publishableKey, {
+    cookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -31,7 +38,7 @@ function createRouteHandlerSupabaseClient(request: NextRequest, response: NextRe
         });
 
         cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+          response.cookies.set(name, value, cookieOptions ? { ...options, ...cookieOptions } : options);
         });
       },
     },
@@ -56,12 +63,17 @@ export async function GET(request: NextRequest) {
   const supabase = createRouteHandlerSupabaseClient(request, response);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
+    const errorCode = getCallbackAuthErrorCode(error.message);
     await trackEvent(null, "auth.callback.failed", {
       error: error.message,
+      error_code: errorCode,
       next,
+      request_host: getRequestHostname(request.headers),
+      redirect_to: redirectUrl.toString(),
     });
     const errorRedirect = new URL("/login", requestUrl.origin);
-    errorRedirect.searchParams.set("error", error.message);
+    errorRedirect.searchParams.set("error", errorCode);
+    errorRedirect.searchParams.set("next", next);
     return NextResponse.redirect(errorRedirect);
   }
 

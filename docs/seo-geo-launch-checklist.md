@@ -4,8 +4,8 @@ Use this checklist after the new sitemap, robots route, structured data, and gui
 
 ## Google Search Console
 
-1. Verify `https://mylivingpage.com` as a property in Google Search Console.
-2. Submit `https://mylivingpage.com/sitemap.xml`.
+1. Verify `https://www.mylivingpage.com` as a property in Google Search Console.
+2. Submit `https://www.mylivingpage.com/sitemap.xml`.
 3. Use URL Inspection on:
    - `/`
    - `/examples`
@@ -19,8 +19,8 @@ Use this checklist after the new sitemap, robots route, structured data, and gui
 
 ## Bing Webmaster Tools
 
-1. Verify `https://mylivingpage.com` in Bing Webmaster Tools.
-2. Submit `https://mylivingpage.com/sitemap.xml`.
+1. Verify `https://www.mylivingpage.com` in Bing Webmaster Tools.
+2. Submit `https://www.mylivingpage.com/sitemap.xml`.
 3. Inspect the same key URLs used in Search Console.
 4. Review Bing AI Performance after the property is verified and the feature is available in the account.
 5. Track which guide URLs receive citations or grounding impressions inside Bing AI surfaces.

@@ -21,7 +21,11 @@ Next.js 14 App Router implementation for the MyLivingPage MVP.
 
 - Apply SQL migrations from `supabase/migrations`.
 - Enable email + Google auth providers in Supabase Auth settings.
-- Set callback URL to:
+- Production env should set `NEXT_PUBLIC_APP_URL=https://www.mylivingpage.com`.
+- Set Supabase Auth Site URL to:
+  - `https://www.mylivingpage.com` (prod)
+- Allow redirect URLs for:
+  - `https://www.mylivingpage.com/callback` (prod)
   - `http://localhost:3000/callback` (dev)
 
 ## Stripe Legal Setup

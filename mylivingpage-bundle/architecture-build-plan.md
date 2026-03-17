@@ -347,7 +347,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
 
 # App
-NEXT_PUBLIC_APP_URL=https://mylivingpage.com
+NEXT_PUBLIC_APP_URL=https://www.mylivingpage.com
 ```
 
 ---

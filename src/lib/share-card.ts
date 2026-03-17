@@ -80,7 +80,7 @@ const SHARE_CARD_VISUALS: Record<string, ShareCardVisual> = {
 };
 
 export function normalizeAppUrl(url?: string): string {
-  return (url ?? "https://mylivingpage.com").replace(/\/+$/, "");
+  return (url ?? "https://www.mylivingpage.com").replace(/\/+$/, "");
 }
 
 export function truncate(value: string | null | undefined, maxChars: number): string {

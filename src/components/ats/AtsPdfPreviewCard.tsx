@@ -14,8 +14,8 @@ interface AtsPdfPreviewCardProps {
 export default function AtsPdfPreviewCard({
   resumeData,
   contentHash,
-  title = "ATS PDF preview",
-  body = "This previews the strict one-column ATS version, not your public page.",
+  title = "Recommended ATS PDF preview",
+  body = "This previews the current recommended one-column ATS version, not your public page.",
   autoGenerate = false,
 }: AtsPdfPreviewCardProps) {
   const previewUrlRef = useRef<string | null>(null);
@@ -165,7 +165,7 @@ export default function AtsPdfPreviewCard({
       </p>
       {fitsOnOnePage === false ? (
         <p className="mt-2 text-xs leading-6 text-[rgba(245,195,107,0.88)]">
-          This export currently spans {pageCount ?? "multiple"} pages. That is okay for approval now. If you want a one-page ATS PDF download later, trim the draft manually and rerun review.
+          This recommended draft currently spans {pageCount ?? "multiple"} pages. Edit the ATS draft or rebuild the recommendation to reach one page before approval.
         </p>
       ) : null}
     </section>

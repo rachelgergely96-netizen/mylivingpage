@@ -554,6 +554,14 @@ function hasApprovedArtifacts(review: Partial<AtsReviewSnapshot> | null | undefi
   return Boolean(review?.approvedResumeData && review?.approvedExportCheck);
 }
 
+function getCurrentAtsDraftHash(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  if (!review?.candidateResumeData || !review.targeting) {
+    return null;
+  }
+
+  return buildResumeContentHash(review.candidateResumeData, review.targeting);
+}
+
 export function getAtsApprovalStatus(
   review: Partial<AtsReviewSnapshot> | null | undefined,
   sourceData?: ResumeData | null,
@@ -596,13 +604,7 @@ export function reconcileAtsApprovalStatus(input: {
   draftData: ResumeData;
   sourceData?: ResumeData | null;
 }) {
-  const preservesApprovedDraft = Boolean(
-    input.review.approvedResumeData &&
-      input.review.approvedContentHash &&
-      input.review.approvedContentHash === buildResumeContentHash(input.draftData, input.review.targeting),
-  );
-
-  if (!preservesApprovedDraft) {
+  if (!hasApprovedArtifacts(input.review)) {
     return setAtsApprovalStatus(input.review, "pending");
   }
 
@@ -624,6 +626,40 @@ export function hasDownloadableAtsResume(
   sourceData?: ResumeData | null,
 ) {
   return Boolean(review?.approvedExportCheck?.fitsOnOnePage) && hasApprovedAtsResume(review, sourceData);
+}
+
+export function hasNewerUnapprovedAtsDraft(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData?: ResumeData | null,
+) {
+  if (!hasApprovedAtsResume(review, sourceData) || !review?.approvedContentHash) {
+    return false;
+  }
+
+  const currentDraftHash = getCurrentAtsDraftHash(review);
+  if (!currentDraftHash) {
+    return false;
+  }
+
+  return currentDraftHash !== review.approvedContentHash;
+}
+
+export function canApproveCurrentAtsDraft(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  return Boolean(review?.candidateResumeData && (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage));
+}
+
+export function getCurrentAtsDraftApprovalReason(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  if (canApproveCurrentAtsDraft(review)) {
+    return ATS_APPROVAL_PENDING_REASON;
+  }
+
+  return (
+    review?.candidateExportCheck?.recommendedFixes?.[0] ??
+    review?.candidateExportCheck?.overflowReasons?.[0] ??
+    review?.exportCheck?.recommendedFixes?.[0] ??
+    review?.exportCheck?.overflowReasons?.[0] ??
+    "We condensed this into the strongest ATS draft we could. Edit the ATS draft or rerun review to reach one page before approval."
+  );
 }
 
 export function resolveEditableAtsResumeData(
@@ -674,6 +710,21 @@ export function finalizeApprovedAtsResume(
   data: ResumeData,
   approvedSourceFingerprint?: string | null,
 ): AtsReviewSnapshot {
+  if (!review.exportCheck.fitsOnOnePage) {
+    if (hasApprovedArtifacts(review)) {
+      return {
+        ...review,
+        availabilityReason: getCurrentAtsDraftApprovalReason(review),
+      };
+    }
+
+    return {
+      ...review,
+      approvalStatus: "pending",
+      availabilityReason: getCurrentAtsDraftApprovalReason(review),
+    };
+  }
+
   const approvedReview: AtsReviewSnapshot = {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(data),
@@ -698,14 +749,23 @@ export function approveCandidateAtsResume(
 ): AtsReviewSnapshot {
   const reviewExportCheck = review.candidateExportCheck ?? review.exportCheck;
 
-  if (!review.candidateResumeData) {
+  if (!review.candidateResumeData || !reviewExportCheck.fitsOnOnePage) {
+    if (hasApprovedArtifacts(review)) {
+      return {
+        ...review,
+        availabilityReason: getCurrentAtsDraftApprovalReason({
+          ...review,
+          candidateExportCheck: reviewExportCheck,
+        }),
+      };
+    }
+
     return {
       ...review,
       approvalStatus: "pending",
-      availabilityReason: getAtsAvailabilityReason({
+      availabilityReason: getCurrentAtsDraftApprovalReason({
         ...review,
-        approvalStatus: "pending",
-        exportCheck: reviewExportCheck,
+        candidateExportCheck: reviewExportCheck,
       }),
     };
   }
@@ -912,7 +972,7 @@ function trimSkillsForAts(data: ResumeData, maxItems: number) {
   } satisfies ResumeData;
 }
 
-function summarizeCandidateChanges(baseData: ResumeData, candidateData: ResumeData) {
+export function summarizeCandidateChanges(baseData: ResumeData, candidateData: ResumeData) {
   const summary: AtsChangeSummaryItem[] = [];
   const changedHeadline = formatHeadlineText(baseData) !== formatHeadlineText(candidateData);
   const changedSummary = formatSummaryText(baseData) !== formatSummaryText(candidateData);

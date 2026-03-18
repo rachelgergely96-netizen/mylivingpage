@@ -189,4 +189,98 @@ describe("POST /api/generate/ats-review", () => {
     expect(payload.changeSummary.length).toBeGreaterThan(0);
     expect(payload.changeSummary.length).toBeLessThanOrEqual(3);
   });
+
+  it("uses the AI condensation fallback only when the rules draft still does not fit", async () => {
+    mocks.checkExport.mockImplementation(async (resume: typeof sampleResume) => {
+      const fits = resume.summary === "Condensed AI summary.";
+      return {
+        pageCount: fits ? 1 : 2,
+        fitsOnOnePage: fits,
+        overflowReasons: fits ? [] : ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: fits ? [] : ["Shorten the summary to two tight sentences with the exact role and top skills."],
+      };
+    });
+    mocks.anthropicCreate
+      .mockResolvedValueOnce({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              suggestions: [],
+            }),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              candidateResumeData: {
+                headline: "Product Manager",
+                summary: "Condensed AI summary.",
+                experience: [
+                  {
+                    title: "Product Manager",
+                    company: "Northwind",
+                    dates: "2022 - Present",
+                    highlights: ["Owned roadmap and analytics"],
+                    url: null,
+                  },
+                ],
+                education: [{ degree: "B.A. Economics", school: "University", year: "2019" }],
+                projects: [],
+                skills: [{ category: "Tools", items: ["SQL", "Figma", "Amplitude"] }],
+                certifications: [],
+              },
+            }),
+          },
+        ],
+      });
+
+    const response = await POST(
+      new Request("http://localhost/api/generate/ats-review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeData: {
+            ...sampleResume,
+            summary: "A".repeat(420),
+            projects: [
+              { name: "One", description: "Project", tech: ["TypeScript"], url: null },
+              { name: "Two", description: "Project", tech: ["React"], url: null },
+            ],
+          },
+          targeting: {
+            primaryTitle: "Product Manager",
+            titleVariants: [],
+            jobDescription: "",
+          },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      status: string;
+      candidateResumeData: { summary: string } | null;
+      candidateExportCheck: { fitsOnOnePage: boolean } | null;
+      source: string;
+    };
+
+    expect(payload.status).toBe("ready");
+    expect(payload.candidateResumeData?.summary).toBe("Condensed AI summary.");
+    expect(payload.candidateExportCheck?.fitsOnOnePage).toBe(true);
+    expect(mocks.anthropicCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-1",
+      "ats.review.run",
+      expect.objectContaining({
+        recommended_source: "ai",
+        rules_fit_one_page: false,
+      }),
+    );
+  });
 });

@@ -56,6 +56,7 @@ function createPageResponse(options: {
     overflowReasons: string[];
     recommendedFixes: string[];
   } | null;
+  candidateResumeData?: ResumeData | null;
   approvalStatus?: "pending" | "approved" | "out_of_sync" | null;
   visibility?: "public" | "private";
   status?: "live" | "draft";
@@ -66,6 +67,7 @@ function createPageResponse(options: {
     status: options.status ?? "live",
     page_config: {
       ats: {
+        candidateResumeData: options.candidateResumeData ?? null,
         approvedResumeData: options.approvedResumeData ?? null,
         approvedExportCheck: options.approvedResumeData
           ? (options.approvedExportCheck ?? {
@@ -191,6 +193,45 @@ describe("POST /api/resume/export", () => {
       expect.objectContaining({
         page_id: "page-1",
       }),
+    );
+  });
+
+  it("keeps serving the last approved ATS PDF even when a newer working draft exists", async () => {
+    const approvedResumeData = buildApprovedResumeData("Approved Resume");
+    const newerDraft = buildApprovedResumeData("Working Draft");
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse({
+                approvedResumeData,
+                candidateResumeData: newerDraft,
+                approvalStatus: "approved",
+              }),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.checkExport).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Approved Resume" }),
+    );
+    expect(mocks.renderPdf).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Approved Resume" }),
     );
   });
 

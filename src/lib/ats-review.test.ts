@@ -8,11 +8,13 @@ import {
   evaluateSuggestionOutcome,
   extractJobKeywords,
   finalizeApprovedAtsResume,
+  canApproveCurrentAtsDraft,
+  getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
-  getAtsAvailabilityReason,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   hasDownloadableAtsResume,
+  hasNewerUnapprovedAtsDraft,
   inheritApprovedAtsResume,
   isAtsOutOfSync,
   normalizeAtsText,
@@ -426,7 +428,7 @@ describe("ATS review helpers", () => {
     expect(outcome.remainingIssueIds).toContain("pdf-overflow");
   });
 
-  it("stores a separate approved ATS resume even when the export still needs trimming", () => {
+  it("stores a separate approved ATS resume only when the export fits one page", () => {
     const fittingReview = createRuleBasedAtsReview({
       data: buildResume(),
       targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
@@ -456,12 +458,12 @@ describe("ATS review helpers", () => {
     });
 
     const unavailableReview = finalizeApprovedAtsResume(overflowingReview, buildResume({ summary: "A".repeat(420) }));
-    expect(hasApprovedAtsResume(unavailableReview)).toBe(true);
+    expect(hasApprovedAtsResume(unavailableReview)).toBe(false);
     expect(hasDownloadableAtsResume(unavailableReview)).toBe(false);
-    expect(unavailableReview.approvedResumeData).not.toBeNull();
-    expect(unavailableReview.approvedExportCheck?.fitsOnOnePage).toBe(false);
-    expect(unavailableReview.approvalStatus).toBe("approved");
-    expect(unavailableReview.availabilityReason).toContain("still spans more than one page");
+    expect(unavailableReview.approvedResumeData).toBeNull();
+    expect(unavailableReview.approvedExportCheck).toBeNull();
+    expect(unavailableReview.approvalStatus).toBe("pending");
+    expect(unavailableReview.availabilityReason).toContain("Shorten the summary");
   });
 
   it("approves the generated ATS candidate separately from the public page content", () => {
@@ -498,7 +500,7 @@ describe("ATS review helpers", () => {
     expect(approved.approvedResumeData?.headline).not.toBe("Builder");
   });
 
-  it("allows multi-page ATS candidates to be approved without marking them download-ready", () => {
+  it("keeps the current draft ineligible for approval when it still spans multiple pages", () => {
     const review = createRuleBasedAtsReview({
       data: buildResume({ summary: "A".repeat(420) }),
       targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
@@ -519,9 +521,10 @@ describe("ATS review helpers", () => {
     });
 
     const approved = approveCandidateAtsResume(review);
-    expect(hasApprovedAtsResume(approved)).toBe(true);
+    expect(hasApprovedAtsResume(approved)).toBe(false);
     expect(hasDownloadableAtsResume(approved)).toBe(false);
-    expect(getAtsAvailabilityReason(approved)).toContain("still spans more than one page");
+    expect(canApproveCurrentAtsDraft(review)).toBe(false);
+    expect(getCurrentAtsDraftApprovalReason(approved)).toContain("Tighten the summary");
   });
 
   it("preserves the saved approved ATS resume across transient review reruns", () => {
@@ -590,7 +593,7 @@ describe("ATS review helpers", () => {
     expect(resolveEditableAtsResumeData(approvedOnly, fallback).headline).toBe("ATS Headline");
   });
 
-  it("keeps an approved ATS resume active until the saved draft diverges", () => {
+  it("keeps an approved ATS resume live after newer ATS draft edits", () => {
     const living = buildResume();
     const approved = finalizeApprovedAtsResume(
       createRuleBasedAtsReview({
@@ -629,8 +632,54 @@ describe("ATS review helpers", () => {
       sourceData: living,
     });
 
-    expect(hasApprovedAtsResume(pending)).toBe(false);
-    expect(getAtsApprovalStatus(pending, living)).toBe("pending");
+    expect(hasApprovedAtsResume(pending, living)).toBe(true);
+    expect(hasDownloadableAtsResume(pending, living)).toBe(true);
+    expect(hasNewerUnapprovedAtsDraft(pending, living)).toBe(true);
+    expect(getAtsApprovalStatus(pending, living)).toBe("approved");
+  });
+
+  it("preserves the last approved one-page PDF when a replacement draft is still too long", () => {
+    const living = buildResume();
+    const approved = finalizeApprovedAtsResume(
+      createRuleBasedAtsReview({
+        data: living,
+        targeting: getDefaultAtsTargeting(living),
+        exportCheck: {
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      }),
+      living,
+      buildAtsRelevantFingerprint(living),
+    );
+
+    const replacementReview = inheritApprovedAtsResume(
+      createRuleBasedAtsReview({
+        data: buildResume({ summary: "A".repeat(420) }),
+        targeting: getDefaultAtsTargeting(living),
+        exportCheck: {
+          pageCount: 2,
+          fitsOnOnePage: false,
+          overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+          recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
+        },
+      }),
+      approved,
+    );
+
+    const blocked = finalizeApprovedAtsResume(
+      replacementReview,
+      buildResume({ summary: "A".repeat(420) }),
+      buildAtsRelevantFingerprint(living),
+    );
+
+    expect(hasApprovedAtsResume(blocked, living)).toBe(true);
+    expect(hasDownloadableAtsResume(blocked, living)).toBe(true);
+    expect(hasNewerUnapprovedAtsDraft(blocked, living)).toBe(true);
+    expect(blocked.approvedResumeData?.summary).toBe(normalizeResumeDataForAts(living).summary);
+    expect(blocked.availabilityReason).toContain("Shorten the summary");
   });
 
   it("tracks when the ATS resume falls out of sync with living-page source data", () => {

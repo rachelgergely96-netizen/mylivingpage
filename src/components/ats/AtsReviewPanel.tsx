@@ -120,14 +120,14 @@ export default function AtsReviewPanel({
 
   const statusTitle = review
     ? review.status === "ready"
-      ? "ATS PDF ready"
-      : "Needs tightening for one-page download"
+      ? "Recommended ATS draft ready"
+      : "Best condensed ATS draft still needs trimming"
     : null;
 
   const statusBody = review
     ? review.status === "ready"
-      ? "We built a clean one-page ATS version and kept it separate from your public page."
-      : `${blockingReason} You can still approve this ATS draft now and trim it later if you want a one-page PDF download.`
+      ? "We built a recommended one-page ATS version and kept it separate from your public page."
+      : `${blockingReason} This is still the strongest condensed ATS draft we could build from your current information.`
     : null;
 
   const previewData = useMemo(
@@ -229,7 +229,7 @@ export default function AtsReviewPanel({
       <div className="glass-card rounded-2xl p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Auto Optimize</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Recommended ATS Draft</p>
             {review ? (
               <>
                 <h3 data-testid="ats-status-card" className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
@@ -243,7 +243,7 @@ export default function AtsReviewPanel({
                   We can build the ATS version for you
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                  Run the review once and we will generate the best one-page ATS version we can from your current content.
+                  Run the review once and we will generate the best evidence-based one-page ATS draft we can from your current content.
                 </p>
               </>
             )}
@@ -275,14 +275,14 @@ export default function AtsReviewPanel({
                 </ul>
               ) : (
                 <p className="mt-3 text-sm leading-6 text-[#E8F2FF]">
-                  No automatic ATS edits were needed. Your current content already gave us a strong export starting point.
+                  No automatic ATS edits were needed. Your current content already gave us a strong recommended export starting point.
                 </p>
               )}
             </div>
 
             {review.status === "needs_attention" ? (
               <div className="rounded-2xl border border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] p-4 text-sm leading-6 text-[#FFD5D5]">
-                <p className="font-semibold text-[#FFF0F0]">This draft still needs trimming for one-page download.</p>
+                <p className="font-semibold text-[#FFF0F0]">This recommended draft is not ready for approval yet.</p>
                 <p className="mt-2">{blockingReason}</p>
               </div>
             ) : null}
@@ -297,7 +297,7 @@ export default function AtsReviewPanel({
               <div>
                 <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Advanced options</p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-                  Override the target role, rerun ATS review, inspect issues, or refresh the ATS PDF preview.
+                  Override the target role, rebuild the recommendation, inspect issues, or refresh the ATS PDF preview.
                 </p>
               </div>
               <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
@@ -391,10 +391,10 @@ export default function AtsReviewPanel({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
-                    ATS PDF preview
+                    Recommended ATS PDF preview
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                    This previews the strict one-column ATS version, not your public page.
+                    This previews the current recommended one-column ATS version, not your public page.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -446,7 +446,7 @@ export default function AtsReviewPanel({
               </p>
               {review.candidateExportCheck?.fitsOnOnePage === false ? (
                 <p className="mt-2 text-xs leading-6 text-[rgba(245,195,107,0.88)]">
-                  Multi-page is okay for approval now. Trim the draft manually and rerun review later if you want a one-page ATS PDF download.
+                  This recommended draft still runs long. Edit the ATS draft or rebuild the recommendation to reach one page before approval.
                 </p>
               ) : null}
             </div>

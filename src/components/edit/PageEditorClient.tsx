@@ -16,13 +16,15 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
   buildAtsRelevantFingerprint,
   buildResumeContentHash,
+  canApproveCurrentAtsDraft,
   createRuleBasedAtsReview,
   finalizeApprovedAtsResume,
+  getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
-  getAtsAvailabilityReason,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
   hasDownloadableAtsResume,
+  hasNewerUnapprovedAtsDraft,
   inheritApprovedAtsResume,
   isAtsOutOfSync,
   normalizeResumeDataForAts,
@@ -89,15 +91,18 @@ function buildAtsStatusMessage(
   }
 
   if (approvalStatus === "approved" && hasDownloadableAtsResume(atsReview, livingData)) {
+    if (hasNewerUnapprovedAtsDraft(atsReview, livingData)) {
+      return "Your approved one-page ATS PDF is still live. You have newer ATS draft edits that will not replace it until you approve them.";
+    }
     return "ATS PDF ready on the live page.";
   }
 
   if (approvalStatus === "approved" && hasApprovedAtsResume(atsReview, livingData)) {
-    return "ATS draft approved. It still spans more than one page, so public PDF download stays off until you trim it and approve it again.";
+    return "This ATS version is approved, but it is not currently downloadable because it no longer fits one page.";
   }
 
   if (atsReview?.candidateResumeData) {
-    return getAtsAvailabilityReason(atsReview);
+    return getCurrentAtsDraftApprovalReason(atsReview);
   }
 
   return "ATS resume not generated yet. Use the ATS editor to build it.";
@@ -164,9 +169,15 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
   const currentModeDirty = mode === "living-page" ? hasLivingChanges : hasAtsChanges;
   const atsOutOfSync = useMemo(() => (data ? isAtsOutOfSync(atsReview, data) : false), [atsReview, data]);
   const atsStatusMessage = useMemo(() => buildAtsStatusMessage(atsReview, data), [atsReview, data]);
+  const hasReplacementDraft = useMemo(() => hasNewerUnapprovedAtsDraft(atsReview, data), [atsReview, data]);
   const canApproveAts =
     Boolean(atsReview) &&
-    Boolean(atsData);
+    canApproveCurrentAtsDraft(atsReview) &&
+    (
+      !hasApprovedAtsResume(atsReview, data) ||
+      hasReplacementDraft ||
+      getAtsApprovalStatus(atsReview, data) === "out_of_sync"
+    );
 
   useUnsavedChanges(currentModeDirty);
 
@@ -550,8 +561,8 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
       return;
     }
 
-    if (!hasApprovedAtsResume(nextReview, data)) {
-      setError(getAtsAvailabilityReason(nextReview));
+    if (!canApproveCurrentAtsDraft(nextReview)) {
+      setError(getCurrentAtsDraftApprovalReason(nextReview));
       return;
     }
 
@@ -566,15 +577,18 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
     if (saved) {
       setSuccess(
         hasDownloadableAtsResume(nextReview, data)
-          ? "ATS resume approved. PDF download is live on your public page."
-          : "ATS draft approved. It still needs trimming before one-page public PDF download turns back on.",
+          ? hasReplacementDraft
+            ? "Replacement ATS resume approved. Your live PDF now uses the new one-page draft."
+            : "ATS resume approved. PDF download is live on your public page."
+          : "ATS resume approved, but the approved export still needs to fit one page before public download can turn on.",
       );
       void trackOptimizeEvent("ats.resume.approved", {
         page_id: page.id,
         download_ready: hasDownloadableAtsResume(nextReview, data),
+        replacement_approval: hasReplacementDraft,
       });
     }
-  }, [atsData, atsTargeting, buildPersistedAtsReview, data, page, pageConfig, persistPage, saving, themeId, trackOptimizeEvent]);
+  }, [atsData, atsTargeting, buildPersistedAtsReview, data, hasReplacementDraft, page, pageConfig, persistPage, saving, themeId, trackOptimizeEvent]);
 
   const handleUseAutoOptimizedVersion = useCallback(() => {
     if (!atsReview?.candidateResumeData) {
@@ -582,12 +596,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
     }
 
     setAtsData(normalizeResumeDataForAts(atsReview.candidateResumeData));
-    setPageConfig((prev) => (
-      prev.ats
-        ? { ...prev, ats: setAtsApprovalStatus(prev.ats, "pending") }
-        : prev
-    ));
-    setSuccess("Auto-optimized ATS draft loaded. Save when you're ready.");
+    setSuccess("Recommended ATS draft loaded. Save when you're ready.");
     setTimeout(() => setSuccess(""), 3000);
     void trackOptimizeEvent("ats.proposal.accepted", {
       page_id: page?.id,
@@ -856,7 +865,9 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
                 <p className="mt-2 text-sm leading-6">
                   {atsOutOfSync
                     ? "Your living page changed after this ATS version was approved. Review the current ATS draft and approve it again when it is ready."
-                    : "This editor is separate from the living page. Update it as much as you need without changing the public page copy."}
+                    : hasReplacementDraft && hasDownloadableAtsResume(atsReview, data)
+                      ? "This editor is separate from the living page. Your approved one-page ATS PDF is still live, and these newer draft edits will only replace it after you approve them."
+                      : "This editor is separate from the living page. Update it as much as you need without changing the public page copy."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -872,7 +883,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
                   onClick={() => void runAtsReview({ mode: "full" })}
                   className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
                 >
-                  Rerun ATS Suggestions
+                  Rebuild Recommended Draft
                 </button>
                 <button
                   type="button"
@@ -880,7 +891,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
                   disabled={!canApproveAts || saving}
                   className="gold-pill px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-all disabled:opacity-50"
                 >
-                  Approve ATS Resume
+                  {hasReplacementDraft ? "Approve Replacement PDF" : "Approve ATS Resume"}
                 </button>
               </div>
             </div>
@@ -904,11 +915,11 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
             onTargetingChange={setAtsTargeting}
             onRunReview={() => void runAtsReview({ mode: "full" })}
             onPrimaryAction={() => void handleUseAutoOptimizedVersion()}
-            primaryActionLabel="Use Auto-Optimized Version"
-            runReviewLabel="Rerun ATS Suggestions"
+            primaryActionLabel="Use Recommended Draft"
+            runReviewLabel="Rebuild Recommended Draft"
             stepLabel="ATS Resume"
-            heading="Review ATS suggestions"
-            body="Use the ATS suggestions when they help, or keep editing the ATS version manually. Save when the draft looks right, then approve it. Public PDF download turns on automatically once the approved draft fits on one page."
+            heading="Review the recommended ATS draft"
+            body="Start from the recommended one-page ATS draft we generated from your full information. Save your edits when they help, then approve a replacement only when the current draft fits on one page."
           />
         </div>
       ) : null}

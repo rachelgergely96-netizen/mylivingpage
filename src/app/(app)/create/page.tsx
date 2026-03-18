@@ -17,7 +17,9 @@ import {
   approveCandidateAtsResume,
   buildAtsRelevantFingerprint,
   buildResumeContentHash,
+  canApproveCurrentAtsDraft,
   finalizeApprovedAtsResume,
+  getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
   getAtsAvailabilityReason,
   getDefaultAtsTargeting,
@@ -498,6 +500,16 @@ export default function CreatePage() {
       return;
     }
 
+    if (!canApproveCurrentAtsDraft(atsReview)) {
+      setCreateFlowFailure({
+        stage: "review",
+        message: getCurrentAtsDraftApprovalReason(atsReview),
+        code: "approval_not_ready",
+        retryable: false,
+      });
+      return;
+    }
+
     const approvedReview = atsReview.candidateResumeData
       ? approveCandidateAtsResume(atsReview, buildAtsRelevantFingerprint(parsedData))
       : finalizeApprovedAtsResume(
@@ -586,9 +598,8 @@ export default function CreatePage() {
   const currentProgressIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
   const atsApproved = hasApprovedAtsResume(atsReview);
   const atsPdfReady = hasDownloadableAtsResume(atsReview);
-  const canApproveAts = Boolean(atsReview);
-  const atsCandidateReady =
-    atsReview?.candidateExportCheck?.fitsOnOnePage ?? atsReview?.exportCheck.fitsOnOnePage ?? false;
+  const canApproveAts = !atsApproved && canApproveCurrentAtsDraft(atsReview);
+  const atsCandidateReady = canApproveCurrentAtsDraft(atsReview);
   const atsCandidatePageCount = atsReview?.candidateExportCheck?.pageCount ?? atsReview?.exportCheck.pageCount ?? null;
   const currentAtsPreviewHash = parsedData
     ? buildResumeContentHash(
@@ -776,8 +787,7 @@ export default function CreatePage() {
               Review both outputs
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Your living page and ATS resume are now separate. Publish the page once it looks right, and keep
-              refining the ATS version later if it still needs tightening.
+              Your living page and ATS resume are now separate. We also built a recommended ATS draft from the same intake so you can approve the strongest one-page version first, then keep editing later if you want to add more.
             </p>
           </div>
 
@@ -868,8 +878,8 @@ export default function CreatePage() {
                   resumeData={atsReview?.candidateResumeData ?? parsedData}
                   contentHash={currentAtsPreviewHash}
                   autoGenerate
-                  title="ATS PDF preview"
-                  body="This is the actual one-column ATS export candidate. Review it beside the living page. Multi-page is okay for approval now if you want to keep moving."
+                  title="Recommended ATS PDF preview"
+                  body="This is the recommended ATS draft we condensed from your full information. Review it beside the living page, then approve it once it fits on one page."
                 />
 
                 <div
@@ -883,25 +893,25 @@ export default function CreatePage() {
                 >
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Step 3</p>
                   <h3 className="mt-2 font-heading text-xl font-semibold">
-                    {atsPdfReady ? "ATS resume ready for download" : atsApproved ? "ATS draft approved" : "Approve the ATS version"}
+                    {atsPdfReady ? "Recommended ATS resume approved" : atsApproved ? "Recommended ATS resume approved" : "Approve the recommended ATS version"}
                   </h3>
                   <p className="mt-2 text-sm leading-6">
                     {atsPdfReady
-                      ? "This ATS version is approved, fits one page, and will unlock PDF download as soon as you publish the page."
+                      ? "This recommended ATS version is approved, fits one page, and will unlock PDF download as soon as you publish the page."
                       : atsApproved
-                        ? `This ATS draft is approved, but it still spans ${atsCandidatePageCount ?? "multiple"} pages. Keep moving now, then trim it manually and rerun review later if you want a one-page ATS PDF download.`
+                        ? "This recommended ATS version is approved. You can keep refining the ATS draft later, but the approved one-page PDF is the version that will stay live until you explicitly replace it."
                         : atsCandidateReady
-                          ? "This ATS draft fits one page. Approve it now if you want PDF download available right after publish."
-                          : `This ATS draft currently spans ${atsCandidatePageCount ?? "multiple"} pages. You can still approve it now, then manually cut it down and rerun review later if you want a one-page ATS PDF download.`}
+                          ? "This recommended ATS draft already fits one page. Approve it now if you want PDF download available right after publish."
+                          : `We condensed this into the strongest ATS draft we could, but it still spans ${atsCandidatePageCount ?? "multiple"} pages. Edit the ATS draft or rebuild the recommendation to reach one page before approval.`}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
                       onClick={approveAtsResume}
-                      disabled={atsApproved || !canApproveAts}
+                      disabled={!canApproveAts}
                       className="gold-pill px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-all disabled:opacity-50"
                     >
-                      {atsApproved ? "ATS Approved" : "Approve ATS Resume"}
+                      {atsApproved ? "ATS Approved" : "Approve Recommended ATS Resume"}
                     </button>
                     {!atsApproved ? (
                       <button
@@ -909,7 +919,7 @@ export default function CreatePage() {
                         onClick={() => void runAtsReview({ mode: "full" })}
                         className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
                       >
-                        Refresh ATS Draft
+                        Rebuild Recommended Draft
                       </button>
                     ) : null}
                   </div>
@@ -945,15 +955,15 @@ export default function CreatePage() {
             reviewError={createFlowFailure?.stage === "review" ? createFlowFailure.message : null}
             onTargetingChange={setAtsTargeting}
             onRunReview={() => void runAtsReview({ mode: "full" })}
-            runReviewLabel="Rerun ATS Suggestions"
+            runReviewLabel="Rebuild Recommended Draft"
             stepLabel="ATS Resume"
-            heading="Keep tuning the ATS version"
+            heading="Recommended ATS draft"
             body={
               atsPdfReady
-                ? "Your ATS resume is approved, fits one page, and is separate from the public page. You can still rerun suggestions if you want to tune it further."
+                ? "Your recommended ATS resume is approved, fits one page, and is separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
                 : atsApproved
-                  ? "Your ATS draft is approved, but it still runs long for public PDF download. Use the suggestions below if you want to trim it to one page later."
-                  : "We saved an ATS draft from the same intake. Review the PDF preview, rerun suggestions if needed, and approve it when it looks right."
+                  ? "Your approved ATS PDF stays live until you explicitly replace it. Use the tools below if you want to build a stronger or shorter replacement draft."
+                  : "We generated a recommended ATS draft from the same intake. Review the PDF preview, rebuild the recommendation if needed, and approve it when it reaches one page."
             }
           />
         </section>

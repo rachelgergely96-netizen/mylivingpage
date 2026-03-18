@@ -34,7 +34,32 @@ export async function POST(request: Request) {
 
     const normalized = normalizeResumeDataForAts(body.resumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
-    const buffer = await renderAtsResumePdf(normalized);
+    let buffer: Uint8Array;
+
+    try {
+      buffer = await renderAtsResumePdf(normalized);
+    } catch (error) {
+      await trackEvent(user.id, "resume.export.preview_failed", {
+        page_count: exportCheck.pageCount,
+        fits_on_one_page: exportCheck.fitsOnOnePage,
+        overflow_reasons: exportCheck.overflowReasons,
+        error: error instanceof Error ? error.message : "unknown_render_error",
+      });
+
+      return NextResponse.json(
+        {
+          error:
+            exportCheck.recommendedFixes[0] ??
+            exportCheck.overflowReasons[0] ??
+            "Unable to render the ATS PDF preview right now.",
+          pageCount: exportCheck.pageCount,
+          fitsOnOnePage: exportCheck.fitsOnOnePage,
+          overflowReasons: exportCheck.overflowReasons,
+          recommendedFixes: exportCheck.recommendedFixes,
+        },
+        { status: 422 },
+      );
+    }
 
     await trackEvent(user.id, "resume.export.preview", {
       page_count: exportCheck.pageCount,

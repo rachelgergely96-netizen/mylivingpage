@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getAtsAvailabilityReason,
-  hasApprovedAtsResume,
+  hasDownloadableAtsResume,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
 import { checkAtsResumeExport, renderAtsResumePdf } from "@/lib/pdf/ResumePDFDocument";
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     const atsReview = page.page_config?.ats ?? null;
-    const approvedResumeData = hasApprovedAtsResume(atsReview)
+    const approvedResumeData = hasDownloadableAtsResume(atsReview)
       ? (atsReview?.approvedResumeData ?? null)
       : null;
 

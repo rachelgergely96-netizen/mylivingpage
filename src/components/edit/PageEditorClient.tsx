@@ -22,6 +22,7 @@ import {
   getAtsAvailabilityReason,
   getDefaultAtsTargeting,
   hasApprovedAtsResume,
+  hasDownloadableAtsResume,
   inheritApprovedAtsResume,
   isAtsOutOfSync,
   normalizeResumeDataForAts,
@@ -87,8 +88,12 @@ function buildAtsStatusMessage(
     return "Your living page changed after ATS approval. Review and re-approve the ATS resume before download is available again.";
   }
 
-  if (approvalStatus === "approved" && hasApprovedAtsResume(atsReview, livingData)) {
+  if (approvalStatus === "approved" && hasDownloadableAtsResume(atsReview, livingData)) {
     return "ATS PDF ready on the live page.";
+  }
+
+  if (approvalStatus === "approved" && hasApprovedAtsResume(atsReview, livingData)) {
+    return "ATS draft approved. It still spans more than one page, so public PDF download stays off until you trim it and approve it again.";
   }
 
   if (atsReview?.candidateResumeData) {
@@ -161,8 +166,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
   const atsStatusMessage = useMemo(() => buildAtsStatusMessage(atsReview, data), [atsReview, data]);
   const canApproveAts =
     Boolean(atsReview) &&
-    Boolean(atsData) &&
-    (atsReview?.candidateExportCheck?.fitsOnOnePage ?? atsReview?.exportCheck.fitsOnOnePage ?? false);
+    Boolean(atsData);
 
   useUnsavedChanges(currentModeDirty);
 
@@ -560,9 +564,14 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
     );
 
     if (saved) {
-      setSuccess("ATS resume approved. PDF download is live on your public page.");
+      setSuccess(
+        hasDownloadableAtsResume(nextReview, data)
+          ? "ATS resume approved. PDF download is live on your public page."
+          : "ATS draft approved. It still needs trimming before one-page public PDF download turns back on.",
+      );
       void trackOptimizeEvent("ats.resume.approved", {
         page_id: page.id,
+        download_ready: hasDownloadableAtsResume(nextReview, data),
       });
     }
   }, [atsData, atsTargeting, buildPersistedAtsReview, data, page, pageConfig, persistPage, saving, themeId, trackOptimizeEvent]);
@@ -899,7 +908,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
             runReviewLabel="Rerun ATS Suggestions"
             stepLabel="ATS Resume"
             heading="Review ATS suggestions"
-            body="Use the ATS suggestions when they help, or keep editing the ATS version manually. Save when the draft looks right, then approve it to turn public PDF download back on."
+            body="Use the ATS suggestions when they help, or keep editing the ATS version manually. Save when the draft looks right, then approve it. Public PDF download turns on automatically once the approved draft fits on one page."
           />
         </div>
       ) : null}

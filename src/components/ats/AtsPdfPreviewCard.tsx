@@ -53,9 +53,19 @@ export default function AtsPdfPreviewCard({
         body: JSON.stringify({ resumeData }),
       });
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error || "Unable to load the ATS PDF preview.");
+      const contentType = response.headers.get("Content-Type")?.toLowerCase() ?? "";
+      if (!response.ok || !contentType.startsWith("application/pdf")) {
+        const payload = contentType.includes("application/json")
+          ? ((await response.json().catch(() => null)) as
+              | { error?: string; recommendedFixes?: string[]; overflowReasons?: string[] }
+              | null)
+          : null;
+        throw new Error(
+          payload?.error ??
+            payload?.recommendedFixes?.[0] ??
+            payload?.overflowReasons?.[0] ??
+            "Unable to load the ATS PDF preview.",
+        );
       }
 
       const blob = await response.blob();
@@ -153,6 +163,11 @@ export default function AtsPdfPreviewCard({
       <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
         {previewStatus}. {autoGenerate ? "Preview refreshes automatically when the draft changes, and you can refresh it manually anytime." : "Preview only refreshes when you ask for it."}
       </p>
+      {fitsOnOnePage === false ? (
+        <p className="mt-2 text-xs leading-6 text-[rgba(245,195,107,0.88)]">
+          This export currently spans {pageCount ?? "multiple"} pages. That is okay for approval now. If you want a one-page ATS PDF download later, trim the draft manually and rerun review.
+        </p>
+      ) : null}
     </section>
   );
 }

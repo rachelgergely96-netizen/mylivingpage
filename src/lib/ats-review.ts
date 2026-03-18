@@ -110,6 +110,8 @@ const ATS_PROPOSAL_PRIORITY: AtsProposalGroup[] = [
 const ATS_APPROVAL_PENDING_REASON = "Approve the ATS resume to enable PDF download.";
 const ATS_OUT_OF_SYNC_REASON =
   "Your living page changed after ATS approval. Review and re-approve the ATS resume before download is available again.";
+const ATS_APPROVED_MULTI_PAGE_REASON =
+  "This ATS draft is approved, but it still spans more than one page. Trim it manually and rerun review later if you want a one-page ATS PDF download.";
 
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -525,6 +527,10 @@ export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | nu
     return ATS_OUT_OF_SYNC_REASON;
   }
 
+  if (review?.approvalStatus === "approved" && review?.approvedResumeData && review?.approvedExportCheck && !review.approvedExportCheck.fitsOnOnePage) {
+    return ATS_APPROVED_MULTI_PAGE_REASON;
+  }
+
   if (
     review?.approvalStatus === "pending" &&
     (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage)
@@ -545,7 +551,7 @@ export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | nu
 }
 
 function hasApprovedArtifacts(review: Partial<AtsReviewSnapshot> | null | undefined) {
-  return Boolean(review?.approvedResumeData && review?.approvedExportCheck?.fitsOnOnePage);
+  return Boolean(review?.approvedResumeData && review?.approvedExportCheck);
 }
 
 export function getAtsApprovalStatus(
@@ -567,10 +573,21 @@ export function setAtsApprovalStatus(
   review: AtsReviewSnapshot,
   status: AtsApprovalStatus,
 ): AtsReviewSnapshot {
-  return {
+  const nextReview = {
     ...review,
     approvalStatus: status,
-    availabilityReason: status === "approved" ? null : getAtsAvailabilityReason({ ...review, approvalStatus: status }),
+  };
+  const nextAvailabilityReview = {
+    ...nextReview,
+    availabilityReason: null,
+  };
+
+  return {
+    ...nextReview,
+    availabilityReason:
+      status === "approved" && nextReview.approvedExportCheck?.fitsOnOnePage
+        ? null
+        : getAtsAvailabilityReason(nextAvailabilityReview),
   };
 }
 
@@ -600,6 +617,13 @@ export function hasApprovedAtsResume(
   sourceData?: ResumeData | null,
 ) {
   return hasApprovedArtifacts(review) && getAtsApprovalStatus(review, sourceData) === "approved";
+}
+
+export function hasDownloadableAtsResume(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData?: ResumeData | null,
+) {
+  return Boolean(review?.approvedExportCheck?.fitsOnOnePage) && hasApprovedAtsResume(review, sourceData);
 }
 
 export function resolveEditableAtsResumeData(
@@ -650,26 +674,21 @@ export function finalizeApprovedAtsResume(
   data: ResumeData,
   approvedSourceFingerprint?: string | null,
 ): AtsReviewSnapshot {
-  if (!review.exportCheck.fitsOnOnePage) {
-    return {
-      ...review,
-      approvalStatus: "pending",
-      availabilityReason: getAtsAvailabilityReason({
-        ...review,
-        approvalStatus: "pending",
-      }),
-    };
-  }
-
-  return {
+  const approvedReview: AtsReviewSnapshot = {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(data),
     approvedExportCheck: review.exportCheck,
     approvedAt: new Date().toISOString(),
     approvedContentHash: review.contentHash,
     approvedSourceFingerprint: approvedSourceFingerprint ?? review.approvedSourceFingerprint ?? null,
-    availabilityReason: null,
     approvalStatus: "approved",
+  };
+
+  return {
+    ...approvedReview,
+    availabilityReason: approvedReview.approvedExportCheck?.fitsOnOnePage
+      ? null
+      : getAtsAvailabilityReason({ ...approvedReview, availabilityReason: null }),
   };
 }
 
@@ -679,7 +698,7 @@ export function approveCandidateAtsResume(
 ): AtsReviewSnapshot {
   const reviewExportCheck = review.candidateExportCheck ?? review.exportCheck;
 
-  if (!review.candidateResumeData || !reviewExportCheck.fitsOnOnePage) {
+  if (!review.candidateResumeData) {
     return {
       ...review,
       approvalStatus: "pending",
@@ -691,15 +710,21 @@ export function approveCandidateAtsResume(
     };
   }
 
-  return {
+  const approvedReview: AtsReviewSnapshot = {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(review.candidateResumeData),
     approvedExportCheck: reviewExportCheck,
     approvedAt: new Date().toISOString(),
     approvedContentHash: buildResumeContentHash(review.candidateResumeData, review.targeting),
     approvedSourceFingerprint: approvedSourceFingerprint ?? review.approvedSourceFingerprint ?? null,
-    availabilityReason: null,
     approvalStatus: "approved",
+  };
+
+  return {
+    ...approvedReview,
+    availabilityReason: approvedReview.approvedExportCheck?.fitsOnOnePage
+      ? null
+      : getAtsAvailabilityReason({ ...approvedReview, availabilityReason: null }),
   };
 }
 

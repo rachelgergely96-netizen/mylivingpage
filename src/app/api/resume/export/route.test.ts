@@ -50,6 +50,12 @@ function buildApprovedResumeData(name: string): ResumeData {
 
 function createPageResponse(options: {
   approvedResumeData?: ResumeData | null;
+  approvedExportCheck?: {
+    pageCount: number;
+    fitsOnOnePage: boolean;
+    overflowReasons: string[];
+    recommendedFixes: string[];
+  } | null;
   approvalStatus?: "pending" | "approved" | "out_of_sync" | null;
   visibility?: "public" | "private";
   status?: "live" | "draft";
@@ -62,12 +68,12 @@ function createPageResponse(options: {
       ats: {
         approvedResumeData: options.approvedResumeData ?? null,
         approvedExportCheck: options.approvedResumeData
-          ? {
+          ? (options.approvedExportCheck ?? {
               pageCount: 1,
               fitsOnOnePage: true,
               overflowReasons: [],
               recommendedFixes: [],
-            }
+            })
           : null,
         approvalStatus: options.approvalStatus ?? (options.approvedResumeData ? "approved" : "pending"),
         availabilityReason: "Rerun ATS review and save to rebuild your ATS PDF.",
@@ -216,6 +222,47 @@ describe("POST /api/resume/export", () => {
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
       error: "Rerun ATS review and save to rebuild your ATS PDF.",
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+  });
+
+  it("blocks public download when the ATS draft is approved but still spans more than one page", async () => {
+    const approvedResumeData = buildApprovedResumeData("Approved Resume");
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse({
+                approvedResumeData,
+                approvedExportCheck: {
+                  pageCount: 2,
+                  fitsOnOnePage: false,
+                  overflowReasons: ["The approved ATS draft still spans more than one page."],
+                  recommendedFixes: ["Trim the draft and re-approve it for public PDF download."],
+                },
+              }),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "This ATS draft is approved, but it still spans more than one page. Trim it manually and rerun review later if you want a one-page ATS PDF download.",
     });
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });

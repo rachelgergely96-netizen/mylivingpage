@@ -121,13 +121,13 @@ export default function AtsReviewPanel({
   const statusTitle = review
     ? review.status === "ready"
       ? "ATS PDF ready"
-      : "Still too long for one page"
+      : "Needs tightening for one-page download"
     : null;
 
   const statusBody = review
     ? review.status === "ready"
       ? "We built a clean one-page ATS version and kept it separate from your public page."
-      : blockingReason
+      : `${blockingReason} You can still approve this ATS draft now and trim it later if you want a one-page PDF download.`
     : null;
 
   const previewData = useMemo(
@@ -152,9 +152,19 @@ export default function AtsReviewPanel({
         body: JSON.stringify({ resumeData: previewData }),
       });
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error || "Unable to load the ATS PDF preview.");
+      const contentType = response.headers.get("Content-Type")?.toLowerCase() ?? "";
+      if (!response.ok || !contentType.startsWith("application/pdf")) {
+        const payload = contentType.includes("application/json")
+          ? ((await response.json().catch(() => null)) as
+              | { error?: string; recommendedFixes?: string[]; overflowReasons?: string[] }
+              | null)
+          : null;
+        throw new Error(
+          payload?.error ??
+            payload?.recommendedFixes?.[0] ??
+            payload?.overflowReasons?.[0] ??
+            "Unable to load the ATS PDF preview.",
+        );
       }
 
       const blob = await response.blob();
@@ -272,7 +282,7 @@ export default function AtsReviewPanel({
 
             {review.status === "needs_attention" ? (
               <div className="rounded-2xl border border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] p-4 text-sm leading-6 text-[#FFD5D5]">
-                <p className="font-semibold text-[#FFF0F0]">One fix is still blocking the ATS PDF.</p>
+                <p className="font-semibold text-[#FFF0F0]">This draft still needs trimming for one-page download.</p>
                 <p className="mt-2">{blockingReason}</p>
               </div>
             ) : null}
@@ -434,6 +444,11 @@ export default function AtsReviewPanel({
               <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
                 {previewStatus}. Preview only refreshes when you ask for it.
               </p>
+              {review.candidateExportCheck?.fitsOnOnePage === false ? (
+                <p className="mt-2 text-xs leading-6 text-[rgba(245,195,107,0.88)]">
+                  Multi-page is okay for approval now. Trim the draft manually and rerun review later if you want a one-page ATS PDF download.
+                </p>
+              ) : null}
             </div>
           </div>
         </details>

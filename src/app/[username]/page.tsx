@@ -8,7 +8,7 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
-import { getAtsAvailabilityReason, hasApprovedAtsResume } from "@/lib/ats-review";
+import { getAtsAvailabilityReason, hasDownloadableAtsResume } from "@/lib/ats-review";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { isPremiumPlan } from "@/lib/plans";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
@@ -85,7 +85,7 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
   } = await authSupabase.auth.getUser();
   const isOwner = user?.id === pageUserId;
   const atsReview = page.page_config?.ats ?? null;
-  const approvedResumeData = hasApprovedAtsResume(atsReview) ? atsReview?.approvedResumeData ?? null : null;
+  const approvedResumeData = hasDownloadableAtsResume(atsReview) ? atsReview?.approvedResumeData ?? null : null;
   const atsUnavailableReason = getAtsAvailabilityReason(atsReview);
 
   return (

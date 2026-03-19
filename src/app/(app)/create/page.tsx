@@ -23,10 +23,12 @@ import {
   getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
   getAtsAvailabilityReason,
+  getAtsRenderFailureReason,
   getDefaultAtsTargeting,
   getRecommendedOnePageCuts,
   hasApprovedAtsResume,
   inheritApprovedAtsResume,
+  isAtsExportRenderable,
   isApprovedAtsOnePage,
   isCurrentAtsDraftOnePage,
   normalizeResumeDataForAts,
@@ -113,7 +115,7 @@ function buildAtsStatus(review: AtsReviewSnapshot | null) {
   if (canDownloadApprovedAtsResume(review) && isApprovedAtsOnePage(review)) {
     return {
       title: "ATS resume ready",
-      body: "Your ATS version fits one page and will be available for download from the live page.",
+      body: "Your ATS PDF is approved, downloadable from the live page, and already fits on one page.",
       tone: "border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] text-[#E8F2FF]",
       recommendedCta: "living",
     };
@@ -127,6 +129,15 @@ function buildAtsStatus(review: AtsReviewSnapshot | null) {
         ? `Your ATS PDF is approved and downloadable now. We still recommend these cuts for a one-page version: ${cuts.join(" ")}`.trim()
         : "Your ATS PDF is approved and downloadable now. We still recommend trimming it to one page for a tighter version.",
       tone: "border-[rgba(245,195,107,0.24)] bg-[rgba(245,195,107,0.08)] text-[#FDE7BA]",
+      recommendedCta: "ats",
+    };
+  }
+
+  if (review.approvalStatus === "approved" && review.approvedExportCheck && !isAtsExportRenderable(review.approvedExportCheck)) {
+    return {
+      title: "ATS resume needs a render fix",
+      body: getAtsRenderFailureReason(review.approvedExportCheck),
+      tone: "border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] text-[#FFD5D5]",
       recommendedCta: "ats",
     };
   }
@@ -796,7 +807,7 @@ export default function CreatePage() {
               Review both outputs
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Your living page and ATS resume are now separate. We also built a recommended ATS draft from the same intake so you can approve the strongest usable version now, then keep editing later if you want to add more or trim it toward one page.
+              Your living page and ATS resume are now separate. We also built a recommended ATS draft from the same intake so you can approve the strongest usable version now, then keep editing later if you want to add more or trim it into a shorter one-page version.
             </p>
           </div>
 
@@ -899,17 +910,21 @@ export default function CreatePage() {
                   <p className="mt-2 text-sm leading-6">
                     {atsPdfReady
                       ? isApprovedAtsOnePage(atsReview)
-                        ? "This recommended ATS version is approved, fits one page, and will unlock PDF download as soon as you publish the page."
+                        ? "This recommended ATS version is approved, already fits on one page, and will unlock PDF download as soon as you publish the page."
                         : "This recommended ATS version is approved and usable now. It will stay downloadable after publish, and the preview shows the cuts we recommend if you want a tighter one-page version."
+                      : atsApproved && atsReview?.approvedExportCheck && !isAtsExportRenderable(atsReview.approvedExportCheck)
+                        ? getAtsRenderFailureReason(atsReview.approvedExportCheck)
                       : atsApproved
                         ? "This recommended ATS version is approved. You can keep refining the ATS draft later, but the approved PDF is the version that will stay live until you explicitly replace it."
-                        : atsCandidateAvailable
-                          ? atsCurrentOnePage
-                            ? "This recommended ATS draft already fits one page. Approve it now if you want PDF download available right after publish."
+                      : atsCandidateAvailable
+                        ? atsCurrentExportCheck && !isAtsExportRenderable(atsCurrentExportCheck)
+                          ? getAtsRenderFailureReason(atsCurrentExportCheck)
+                          : atsCurrentOnePage
+                            ? "This recommended ATS draft is ready to approve now, and the PDF download will be available right after publish."
                             : `You can approve and use this ATS draft now, even though it spans ${atsCandidatePageCount ?? "multiple"} pages. We recommend the cuts in the preview if you want a one-page version.`
-                          : "Rebuild the recommended draft to generate an ATS resume you can review and approve."}
+                        : "Rebuild the recommended draft to generate an ATS resume you can review and approve."}
                   </p>
-                  {!atsCurrentOnePage && !atsApproved && atsSuggestedCuts.length ? (
+                  {!atsApproved && atsCurrentExportCheck && isAtsExportRenderable(atsCurrentExportCheck) && !atsCurrentOnePage && atsSuggestedCuts.length ? (
                     <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
                         Recommended one-page cuts
@@ -954,8 +969,10 @@ export default function CreatePage() {
                   body={
                     atsPdfReady
                       ? isApprovedAtsOnePage(atsReview)
-                        ? "Your recommended ATS resume is approved, fits one page, and is separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
+                        ? "Your recommended ATS resume is approved, downloadable, and separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
                         : "Your recommended ATS resume is approved and usable now, even though it spans multiple pages. Use the preview suggestions below if you want to trim it into a one-page version later."
+                      : atsApproved && atsReview?.approvedExportCheck && !isAtsExportRenderable(atsReview.approvedExportCheck)
+                        ? "Your approved ATS draft needs a clean PDF render before download can work again. Use the tools below to save your latest edits or rebuild the recommendation."
                       : atsApproved
                         ? "Your approved ATS PDF stays live until you explicitly replace it. Use the tools below if you want to build a stronger or shorter replacement draft."
                         : "We generated a recommended ATS draft from the same intake. Review the PDF preview, rebuild the recommendation if needed, and approve it when it feels right."

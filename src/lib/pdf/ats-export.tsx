@@ -167,9 +167,14 @@ export function countPdfPages(buffer: Uint8Array) {
 
 export function getFriendlyAtsPdfError(
   exportCheck: Partial<AtsExportCheck> | null | undefined,
-  fallback = "Unable to generate the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+  fallback = "Unable to generate the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
 ) {
-  return exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback;
+  return (
+    exportCheck?.renderFailureReason ??
+    exportCheck?.recommendedFixes?.[0] ??
+    exportCheck?.overflowReasons?.[0] ??
+    fallback
+  );
 }
 
 export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportCheck> {
@@ -181,6 +186,8 @@ export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportC
     const pageCount = countPdfPages(buffer);
 
     return {
+      renderable: true,
+      renderFailureReason: null,
       pageCount,
       fitsOnOnePage: pageCount === 1,
       overflowReasons:
@@ -198,14 +205,13 @@ export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportC
     };
   } catch {
     return {
-      pageCount: 2,
-      fitsOnOnePage: false,
-      overflowReasons: [
-        "The ATS PDF could not be validated with the current content shape.",
-      ],
-      recommendedFixes: [
-        "Shorten long sections or rerun the ATS review so the export can rebuild cleanly.",
-      ],
+      renderable: false,
+      renderFailureReason:
+        "The ATS PDF could not render cleanly from the current content. Save your latest edits or rerun ATS review to rebuild it.",
+      pageCount: null,
+      fitsOnOnePage: null,
+      overflowReasons: [],
+      recommendedFixes: [],
     };
   }
 }

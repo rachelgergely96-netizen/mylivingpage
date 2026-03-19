@@ -114,6 +114,8 @@ const ATS_OUT_OF_SYNC_REASON =
   "Your living page changed after ATS approval. Review and re-approve the ATS resume before download is available again.";
 const ATS_APPROVED_MULTI_PAGE_REASON =
   "This ATS resume is approved and downloadable. We still recommend trimming it to one page for a tighter PDF.";
+const ATS_RENDER_FAILURE_REASON =
+  "The ATS PDF could not render cleanly from the current content. Save your latest edits or rerun ATS review to rebuild it.";
 
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -121,6 +123,53 @@ function clampScore(value: number) {
 
 function dedupe(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
+}
+
+export function normalizeAtsExportCheck(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+): AtsExportCheck {
+  const pageCount = typeof exportCheck?.pageCount === "number" ? exportCheck.pageCount : null;
+  const fitsOnOnePage =
+    typeof exportCheck?.fitsOnOnePage === "boolean"
+      ? exportCheck.fitsOnOnePage
+      : pageCount === null
+        ? null
+        : pageCount === 1;
+
+  return {
+    renderable: typeof exportCheck?.renderable === "boolean" ? exportCheck.renderable : true,
+    renderFailureReason:
+      typeof exportCheck?.renderFailureReason === "string" ? exportCheck.renderFailureReason : null,
+    pageCount,
+    fitsOnOnePage,
+    overflowReasons: exportCheck?.overflowReasons ?? [],
+    recommendedFixes: exportCheck?.recommendedFixes ?? [],
+  };
+}
+
+export function isAtsExportRenderable(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+) {
+  return normalizeAtsExportCheck(exportCheck).renderable;
+}
+
+export function getAtsRenderFailureReason(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+  fallback = ATS_RENDER_FAILURE_REASON,
+) {
+  return normalizeAtsExportCheck(exportCheck).renderFailureReason ?? fallback;
+}
+
+export function getAtsExportPageCount(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+) {
+  return normalizeAtsExportCheck(exportCheck).pageCount;
+}
+
+export function doesAtsExportFitOnOnePage(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+) {
+  return normalizeAtsExportCheck(exportCheck).fitsOnOnePage === true;
 }
 
 function escapeRegExp(value: string) {
@@ -529,18 +578,38 @@ export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | nu
     return ATS_OUT_OF_SYNC_REASON;
   }
 
-  if (review?.approvalStatus === "approved" && review?.approvedResumeData && review?.approvedExportCheck && !review.approvedExportCheck.fitsOnOnePage) {
+  if (
+    review?.approvalStatus === "approved" &&
+    review?.approvedResumeData &&
+    review?.approvedExportCheck &&
+    !isAtsExportRenderable(review.approvedExportCheck)
+  ) {
+    return getAtsRenderFailureReason(review.approvedExportCheck);
+  }
+
+  if (
+    review?.approvalStatus === "approved" &&
+    review?.approvedResumeData &&
+    review?.approvedExportCheck &&
+    !doesAtsExportFitOnOnePage(review.approvedExportCheck)
+  ) {
     return ATS_APPROVED_MULTI_PAGE_REASON;
   }
 
   if (review?.approvalStatus === "pending" && review?.candidateResumeData) {
-    return (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage)
-      ? ATS_APPROVAL_PENDING_REASON
-      : ATS_PENDING_MULTI_PAGE_REASON;
+    const currentExportCheck = review?.candidateExportCheck ?? review?.exportCheck;
+    return isAtsExportRenderable(currentExportCheck)
+      ? doesAtsExportFitOnOnePage(currentExportCheck)
+        ? ATS_APPROVAL_PENDING_REASON
+        : ATS_PENDING_MULTI_PAGE_REASON
+      : getAtsRenderFailureReason(currentExportCheck);
   }
 
   return (
     review?.availabilityReason ??
+    normalizeAtsExportCheck(review?.approvedExportCheck).renderFailureReason ??
+    normalizeAtsExportCheck(review?.candidateExportCheck).renderFailureReason ??
+    normalizeAtsExportCheck(review?.exportCheck).renderFailureReason ??
     review?.approvedExportCheck?.recommendedFixes?.[0] ??
     review?.approvedExportCheck?.overflowReasons?.[0] ??
     review?.candidateExportCheck?.recommendedFixes?.[0] ??
@@ -594,7 +663,7 @@ export function setAtsApprovalStatus(
   return {
     ...nextReview,
     availabilityReason:
-      status === "approved" && nextReview.approvedExportCheck?.fitsOnOnePage
+      status === "approved" && isAtsExportRenderable(nextReview.approvedExportCheck)
         ? null
         : getAtsAvailabilityReason(nextAvailabilityReview),
   };
@@ -626,7 +695,7 @@ export function canDownloadApprovedAtsResume(
   review: Partial<AtsReviewSnapshot> | null | undefined,
   sourceData?: ResumeData | null,
 ) {
-  return hasApprovedAtsResume(review, sourceData);
+  return hasApprovedAtsResume(review, sourceData) && isAtsExportRenderable(review?.approvedExportCheck);
 }
 
 export function hasDownloadableAtsResume(
@@ -640,17 +709,21 @@ export function isApprovedAtsOnePage(
   review: Partial<AtsReviewSnapshot> | null | undefined,
   sourceData?: ResumeData | null,
 ) {
-  return Boolean(review?.approvedExportCheck?.fitsOnOnePage) && canDownloadApprovedAtsResume(review, sourceData);
+  return doesAtsExportFitOnOnePage(review?.approvedExportCheck) && canDownloadApprovedAtsResume(review, sourceData);
 }
 
 export function isCurrentAtsDraftOnePage(review: Partial<AtsReviewSnapshot> | null | undefined) {
-  return Boolean(review?.candidateResumeData) && Boolean(review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage);
+  return Boolean(review?.candidateResumeData) && doesAtsExportFitOnOnePage(review?.candidateExportCheck ?? review?.exportCheck);
 }
 
 export function getRecommendedOnePageCuts(
   exportCheck: Partial<AtsExportCheck> | null | undefined,
   limit = 3,
 ) {
+  if (!isAtsExportRenderable(exportCheck)) {
+    return [];
+  }
+
   const fixes = dedupe([
     ...(exportCheck?.recommendedFixes ?? []),
     ...(exportCheck?.overflowReasons ?? []),
@@ -676,12 +749,17 @@ export function hasNewerUnapprovedAtsDraft(
 }
 
 export function canApproveCurrentAtsDraft(review: Partial<AtsReviewSnapshot> | null | undefined) {
-  return Boolean(review?.candidateResumeData);
+  return Boolean(review?.candidateResumeData) && isAtsExportRenderable(review?.candidateExportCheck ?? review?.exportCheck);
 }
 
 export function getCurrentAtsDraftApprovalReason(review: Partial<AtsReviewSnapshot> | null | undefined) {
   if (!review?.candidateResumeData) {
     return "Rerun ATS review and save to rebuild your ATS PDF.";
+  }
+
+  const currentExportCheck = review?.candidateExportCheck ?? review?.exportCheck;
+  if (!isAtsExportRenderable(currentExportCheck)) {
+    return getAtsRenderFailureReason(currentExportCheck);
   }
 
   return isCurrentAtsDraftOnePage(review) ? ATS_APPROVAL_PENDING_REASON : ATS_PENDING_MULTI_PAGE_REASON;
@@ -747,7 +825,7 @@ export function finalizeApprovedAtsResume(
 
   return {
     ...approvedReview,
-    availabilityReason: approvedReview.approvedExportCheck?.fitsOnOnePage
+    availabilityReason: isAtsExportRenderable(approvedReview.approvedExportCheck)
       ? null
       : getAtsAvailabilityReason({ ...approvedReview, availabilityReason: null }),
   };
@@ -786,7 +864,7 @@ export function approveCandidateAtsResume(
 
   return {
     ...approvedReview,
-    availabilityReason: approvedReview.approvedExportCheck?.fitsOnOnePage
+    availabilityReason: isAtsExportRenderable(approvedReview.approvedExportCheck)
       ? null
       : getAtsAvailabilityReason({ ...approvedReview, availabilityReason: null }),
   };
@@ -1000,7 +1078,7 @@ export function summarizeCandidateChanges(baseData: ResumeData, candidateData: R
     summary.push({
       id: "experience-prioritized",
       title: "Tightened recent experience",
-      description: "We kept the strongest recent role points and shortened the rest for one-page ATS fit.",
+      description: "We kept the strongest recent role points and tightened the rest for a cleaner ATS draft.",
       category: "one_page_pdf",
     });
   }
@@ -1009,7 +1087,7 @@ export function summarizeCandidateChanges(baseData: ResumeData, candidateData: R
     summary.push({
       id: "fit-trimmed",
       title: "Trimmed lower-priority details for fit",
-      description: "We reduced extra projects, certifications, and skill detail so the ATS PDF stays on one page.",
+      description: "We reduced extra projects, certifications, and skill detail to keep the ATS draft tighter and easier to scan.",
       category: "one_page_pdf",
     });
   }
@@ -1043,85 +1121,11 @@ export async function buildAutoOptimizedAtsCandidate(input: {
     summary: buildOptimizedSummary(candidateResumeData, input.targeting, 240),
   });
 
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply({
-      ...candidateResumeData,
-      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 180),
-    });
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimExperienceHighlights(candidateResumeData, () => 2));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimExperienceHighlights(candidateResumeData, (index) => (index < 2 ? 2 : 1)));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimProjectsForAts(candidateResumeData, 2));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimProjectsForAts(candidateResumeData, 1));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimProjectsForAts(candidateResumeData, 1));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimProjectsForAts(candidateResumeData, 0));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimCertificationsForAts(candidateResumeData, 1));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimCertificationsForAts(candidateResumeData, 0));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage && candidateResumeData.experience.length > 4) {
-    await maybeApply(trimExperienceCountForAts(candidateResumeData, 4));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage && candidateResumeData.experience.length > 3) {
-    await maybeApply(trimExperienceCountForAts(candidateResumeData, 3));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage && candidateResumeData.experience.length > 2) {
-    await maybeApply(trimExperienceCountForAts(candidateResumeData, 2));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimSkillsForAts(candidateResumeData, 12));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimSkillsForAts(candidateResumeData, 8));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimExperienceHighlights(candidateResumeData, () => 1));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply(trimSkillsForAts(candidateResumeData, 6));
-  }
-
-  if (!candidateExportCheck.fitsOnOnePage) {
-    await maybeApply({
-      ...candidateResumeData,
-      summary: buildOptimizedSummary(candidateResumeData, input.targeting, 140),
-    });
-  }
-
   return {
     candidateResumeData,
     candidateExportCheck,
     changeSummary: summarizeCandidateChanges(originalData, candidateResumeData),
-    status: candidateExportCheck.fitsOnOnePage ? ("ready" as const) : ("needs_attention" as const),
+    status: isAtsExportRenderable(candidateExportCheck) ? ("ready" as const) : ("needs_attention" as const),
   };
 }
 
@@ -1222,6 +1226,8 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
   const suggestions: AtsSuggestion[] = [];
   const normalized = normalizeResumeDataForAts(data);
   const allSkillItems = normalized.skills.flatMap((group) => group.items);
+  const renderable = isAtsExportRenderable(exportCheck);
+  const fitsOnOnePage = doesAtsExportFitOnOnePage(exportCheck);
 
   if (targeting.primaryTitle && !includesExactPhrase(normalized.headline.toLowerCase(), targeting.primaryTitle.toLowerCase())) {
     suggestions.push({
@@ -1275,90 +1281,92 @@ function buildRuleSuggestions(data: ResumeData, targeting: AtsTargeting, exportC
     });
   }
 
-  if (normalized.summary.length > 320) {
-    suggestions.push({
-      id: "tighten-summary",
-      category: "one_page_pdf",
-      title: "Tighten the summary for one-page fit",
-      description: "A shorter summary frees space for role bullets and exact skills without making the resume harder to scan.",
-      applyLabel: "Shorten summary",
-      preview: trimSentence(normalized.summary, 280),
-      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
-      applyData: {
-        summary: trimSentence(normalized.summary, 280),
-      },
-    });
-  }
+  if (renderable && !fitsOnOnePage) {
+    if (normalized.summary.length > 320) {
+      suggestions.push({
+        id: "tighten-summary",
+        category: "one_page_pdf",
+        title: "Tighten the summary for one-page fit",
+        description: "A shorter summary frees space for role bullets and exact skills without making the resume harder to scan.",
+        applyLabel: "Shorten summary",
+        preview: trimSentence(normalized.summary, 280),
+        ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
+        applyData: {
+          summary: trimSentence(normalized.summary, 280),
+        },
+      });
+    }
 
-  if (normalized.projects.length > 2) {
-    suggestions.push({
-      id: "trim-projects",
-      category: "one_page_pdf",
-      title: "Keep the two strongest projects in the ATS PDF",
-      description: "Projects are useful, but they are lower priority than experience and skills when space gets tight.",
-      applyLabel: "Keep top 2 projects",
-      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
-      applyData: {
-        projects: normalized.projects.slice(0, 2),
-      },
-    });
-  }
+    if (normalized.projects.length > 2) {
+      suggestions.push({
+        id: "trim-projects",
+        category: "one_page_pdf",
+        title: "Keep the two strongest projects in the ATS PDF",
+        description: "Projects are useful, but they are lower priority than experience and skills when space gets tight.",
+        applyLabel: "Keep top 2 projects",
+        ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
+        applyData: {
+          projects: normalized.projects.slice(0, 2),
+        },
+      });
+    }
 
-  if (normalized.certifications.length > 2) {
-    suggestions.push({
-      id: "trim-certifications",
-      category: "one_page_pdf",
-      title: "Keep only the most relevant certifications",
-      description: "Reducing certification count can recover space without weakening core searchability.",
-      applyLabel: "Keep top 2 certifications",
-      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
-      applyData: {
-        certifications: normalized.certifications.slice(0, 2),
-      },
-    });
-  }
+    if (normalized.certifications.length > 2) {
+      suggestions.push({
+        id: "trim-certifications",
+        category: "one_page_pdf",
+        title: "Keep only the most relevant certifications",
+        description: "Reducing certification count can recover space without weakening core searchability.",
+        applyLabel: "Keep top 2 certifications",
+        ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
+        applyData: {
+          certifications: normalized.certifications.slice(0, 2),
+        },
+      });
+    }
 
-  if (normalized.experience.length > 4) {
-    suggestions.push({
-      id: "trim-experience-count",
-      category: "one_page_pdf",
-      title: "Keep the four strongest roles",
-      description: "One-page resumes usually perform better when older roles move off the exported PDF first.",
-      applyLabel: "Keep top 4 roles",
-      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
-      applyData: {
-        experience: normalized.experience.slice(0, 4),
-      },
-    });
-  }
+    if (normalized.experience.length > 4) {
+      suggestions.push({
+        id: "trim-experience-count",
+        category: "one_page_pdf",
+        title: "Keep the four strongest roles",
+        description: "One-page resumes usually perform better when older roles move off the exported PDF first.",
+        applyLabel: "Keep top 4 roles",
+        ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
+        applyData: {
+          experience: normalized.experience.slice(0, 4),
+        },
+      });
+    }
 
-  if (normalized.experience.some((entry) => entry.highlights.length > 2)) {
-    suggestions.push({
-      id: "trim-bullet-count",
-      category: "one_page_pdf",
-      title: "Limit each role to the strongest two bullets",
-      description: "Prioritize exact skills and metrics, and leave supporting detail for the page itself.",
-      applyLabel: "Trim bullets",
-      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
-      applyData: {
-        experience: normalized.experience.map((entry) => ({
-          ...entry,
-          highlights: entry.highlights.slice(0, 2),
-        })),
-      },
-    });
-  }
+    if (normalized.experience.some((entry) => entry.highlights.length > 2)) {
+      suggestions.push({
+        id: "trim-bullet-count",
+        category: "one_page_pdf",
+        title: "Limit each role to the strongest two bullets",
+        description: "Prioritize exact skills and metrics, and leave supporting detail for the page itself.",
+        applyLabel: "Trim bullets",
+        ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
+        applyData: {
+          experience: normalized.experience.map((entry) => ({
+            ...entry,
+            highlights: entry.highlights.slice(0, 2),
+          })),
+        },
+      });
+    }
 
-  if (!exportCheck.fitsOnOnePage && !suggestions.some((suggestion) => suggestion.category === "one_page_pdf")) {
-    suggestions.push({
-      id: "one-page-review",
-      category: "one_page_pdf",
-      title: "Review lower-priority sections before exporting",
-      description: "Projects, certifications, and long summaries usually need to tighten up first.",
-      applyLabel: "Review sections",
-      ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
-      applyData: {},
-    });
+    if (!suggestions.some((suggestion) => suggestion.category === "one_page_pdf")) {
+      suggestions.push({
+        id: "one-page-review",
+        category: "one_page_pdf",
+        title: "Review lower-priority sections before exporting",
+        description: "Projects, certifications, and long summaries usually need to tighten up first.",
+        applyLabel: "Review sections",
+        ...buildSuggestionImpact(["pdf-overflow"], ["onePagePdf"]),
+        applyData: {},
+      });
+    }
   }
 
   return suggestions;
@@ -1391,6 +1399,9 @@ export function createRuleBasedAtsReview(input: {
   const searchableText = collectSearchableText(reviewData);
   const issues: AtsIssue[] = [];
   const problematicPunctuation = collectProblematicPunctuation(reviewData);
+  const renderable = isAtsExportRenderable(reviewExportCheck);
+  const renderFailureReason = getAtsRenderFailureReason(reviewExportCheck);
+  const fitsOnOnePage = doesAtsExportFitOnOnePage(reviewExportCheck);
 
   if (!reviewData.headline) {
     issues.push({
@@ -1486,15 +1497,25 @@ export function createRuleBasedAtsReview(input: {
     issues.push(keywordCoverageIssue);
   }
 
-  if (!reviewExportCheck.fitsOnOnePage) {
+  if (!renderable) {
+    issues.push({
+      id: "pdf-render-failed",
+      category: "machine_readability",
+      severity: "critical",
+      title: "The ATS PDF could not render cleanly",
+      description: renderFailureReason,
+      field: "summary",
+      suggestedFix: "Save your latest edits or rerun ATS review so the PDF can rebuild cleanly.",
+    });
+  } else if (!fitsOnOnePage) {
     issues.push({
       id: "pdf-overflow",
       category: "one_page_pdf",
-      severity: "critical",
-      title: "The ATS PDF is still over one page",
+      severity: "info",
+      title: "The ATS PDF spans multiple pages",
       description:
         reviewExportCheck.overflowReasons[0] ??
-        "The exported resume still needs trimming before it can become a one-page ATS-safe PDF.",
+        "The exported resume still spans more than one page, but it is usable as-is.",
       field: "summary",
       suggestedFix: reviewExportCheck.recommendedFixes[0] ?? "Trim lower-priority sections and shorten long bullets.",
     });
@@ -1533,7 +1554,7 @@ export function createRuleBasedAtsReview(input: {
     candidateResumeData: reviewData,
     candidateExportCheck: reviewExportCheck,
     changeSummary: input.changeSummary ?? [],
-    status: input.status ?? (reviewExportCheck.fitsOnOnePage ? "ready" : "needs_attention"),
+    status: input.status ?? (renderable ? "ready" : "needs_attention"),
     lastReviewedAt: new Date().toISOString(),
     contentHash: buildResumeContentHash(normalizedData, targeting),
     mode: input.mode ?? "full",

@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     await trackEvent(user.id, "resume.export.check", {
       page_count: exportCheck.pageCount,
       fits_on_one_page: exportCheck.fitsOnOnePage,
+      renderable: exportCheck.renderable,
     });
 
     return NextResponse.json(exportCheck);

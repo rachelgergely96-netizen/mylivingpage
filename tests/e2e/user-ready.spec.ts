@@ -90,6 +90,8 @@ const ATS_REVIEW_FIXTURE = {
     lastDecidedAt: null,
   },
   exportCheck: {
+    renderable: true,
+    renderFailureReason: null,
     pageCount: 1,
     fitsOnOnePage: true,
     overflowReasons: [],
@@ -97,6 +99,8 @@ const ATS_REVIEW_FIXTURE = {
   },
   candidateResumeData: PARSED_RESUME_FIXTURE,
   candidateExportCheck: {
+    renderable: true,
+    renderFailureReason: null,
     pageCount: 1,
     fitsOnOnePage: true,
     overflowReasons: [],
@@ -125,12 +129,16 @@ const ATS_REVIEW_FIXTURE = {
 const ATS_REVIEW_BLOCKED_FIXTURE = {
   ...ATS_REVIEW_FIXTURE,
   exportCheck: {
+    renderable: true,
+    renderFailureReason: null,
     pageCount: 2,
     fitsOnOnePage: false,
     overflowReasons: ["The source resume is still too dense for a one-page ATS export."],
     recommendedFixes: ["Shorten the source content and keep only the two most recent roles."],
   },
   candidateExportCheck: {
+    renderable: true,
+    renderFailureReason: null,
     pageCount: 2,
     fitsOnOnePage: false,
     overflowReasons: ["The ATS version is still too dense for one page."],
@@ -156,7 +164,7 @@ const ATS_REVIEW_BLOCKED_FIXTURE = {
       category: "one_page_pdf",
     },
   ],
-  status: "needs_attention",
+  status: "ready",
   approvedResumeData: null,
   approvedExportCheck: null,
   approvedAt: null,
@@ -227,7 +235,7 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: "Generate both versions" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId("ats-preview-card")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("We built your ATS version")).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("Review the recommended ATS draft")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("Machine Readability")).toHaveCount(0);
     const atsPanelBox = await page.getByTestId("ats-review-panel").boundingBox();
     const themeSectionBox = await page.getByTestId("create-theme-section").boundingBox();
@@ -416,7 +424,7 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
     await page.getByRole("button", { name: "Generate both versions" }).click();
 
-    await expect(page.getByText("Still too long for one page")).toBeVisible();
+    await expect(page.getByText("You can approve and use this ATS draft now")).toBeVisible();
     await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Fix ATS PDF" })).toHaveCount(0);
   });

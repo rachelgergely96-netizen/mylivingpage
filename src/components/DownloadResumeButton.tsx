@@ -18,7 +18,7 @@ function sanitizeDownloadErrorMessage(message: string) {
     normalized.includes("invariant violation") ||
     normalized.includes("objects are not valid as a react child")
   ) {
-    return "Unable to export the ATS PDF right now. Try rerunning ATS review or shortening long sections.";
+    return "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.";
   }
 
   return message;
@@ -54,7 +54,7 @@ export default function DownloadResumeButton({
           payload.error ??
           payload.recommendedFixes?.[0] ??
           payload.overflowReasons?.[0] ??
-          "The ATS PDF is still over one page. Tighten the flagged sections first.",
+          "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
         );
       }
 

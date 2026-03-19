@@ -5,7 +5,6 @@ import {
   createRuleBasedAtsReview,
   normalizeAtsText,
   normalizeResumeDataForAts,
-  summarizeCandidateChanges,
 } from "@/lib/ats-review";
 import { checkAtsResumeExport } from "@/lib/pdf/ResumePDFDocument";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -68,86 +67,6 @@ ${JSON.stringify(targeting, null, 2)}
 
 STRUCTURED RESUME:
 ${JSON.stringify(data, null, 2)}
-
-RAW RESUME TEXT:
-${rawResume?.trim() || "N/A"}`;
-}
-
-function buildCondensePrompt(
-  originalData: ResumeData,
-  workingDraft: ResumeData,
-  targeting: AtsTargeting,
-  rawResume: string | null,
-) {
-  return `You are creating the strongest possible one-page ATS resume draft from existing user information.
-
-Return ONLY valid JSON. Do not include markdown, comments, or extra text.
-
-Rules:
-- Never invent qualifications, titles, metrics, tools, or experience.
-- Only use facts supported by the structured resume or raw resume text.
-- Keep the draft ATS-safe, plain-language, and credible.
-- Preserve contact fields exactly as provided; do not rewrite or remove them.
-- Keep the headline and summary if evidence exists.
-- Keep education when present.
-- Keep at least the two most recent experience entries when available, with at least one bullet each.
-- Keep a focused core skills section with no more than 6 total skills.
-- Drop or tighten lower-priority details before removing core evidence.
-- Aim for a one-page resume, but do not force a result by inventing or distorting facts.
-
-Return this JSON shape:
-{
-  "candidateResumeData": {
-    "headline": "string",
-    "summary": "string",
-    "experience": [
-      {
-        "title": "string",
-        "company": "string",
-        "dates": "string",
-        "highlights": ["string"],
-        "url": "string or null"
-      }
-    ],
-    "education": [
-      {
-        "degree": "string",
-        "school": "string",
-        "year": "string"
-      }
-    ],
-    "projects": [
-      {
-        "name": "string",
-        "description": "string",
-        "tech": ["string"],
-        "url": "string or null"
-      }
-    ],
-    "skills": [
-      {
-        "category": "string",
-        "items": ["string"]
-      }
-    ],
-    "certifications": [
-      {
-        "name": "string",
-        "issuer": "string or null",
-        "date": "string or null"
-      }
-    ]
-  }
-}
-
-TARGETING:
-${JSON.stringify(targeting, null, 2)}
-
-ORIGINAL STRUCTURED RESUME:
-${JSON.stringify(originalData, null, 2)}
-
-CURRENT BEST ATS DRAFT:
-${JSON.stringify(workingDraft, null, 2)}
 
 RAW RESUME TEXT:
 ${rawResume?.trim() || "N/A"}`;
@@ -236,80 +155,6 @@ function sanitizeAiSuggestions(
   return sanitized.filter((suggestion): suggestion is AtsSuggestion => suggestion !== null);
 }
 
-function countSkillItems(data: ResumeData) {
-  return data.skills.reduce((count, group) => count + group.items.length, 0);
-}
-
-function preservesAtsFloor(candidate: ResumeData, original: ResumeData) {
-  if (original.headline.trim() && !candidate.headline.trim()) {
-    return false;
-  }
-
-  if (original.summary.trim() && !candidate.summary.trim()) {
-    return false;
-  }
-
-  const minimumRoles = Math.min(original.experience.length, 2);
-  if (candidate.experience.length < minimumRoles) {
-    return false;
-  }
-
-  if (candidate.experience.some((entry) => entry.highlights.length < 1)) {
-    return false;
-  }
-
-  if (original.education.length > 0 && candidate.education.length < 1) {
-    return false;
-  }
-
-  const originalSkillCount = countSkillItems(original);
-  const candidateSkillCount = countSkillItems(candidate);
-  if (originalSkillCount > 0 && candidateSkillCount < Math.min(originalSkillCount, 3)) {
-    return false;
-  }
-
-  if (candidateSkillCount > 6) {
-    return false;
-  }
-
-  return true;
-}
-
-function sanitizeAiCondensedCandidate(
-  value: unknown,
-  baseline: ResumeData,
-  original: ResumeData,
-) {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const candidate = value as Partial<ResumeData>;
-  const normalized = normalizeResumeDataForAts({
-    ...baseline,
-    headline: typeof candidate.headline === "string" ? candidate.headline : baseline.headline,
-    summary: typeof candidate.summary === "string" ? candidate.summary : baseline.summary,
-    experience: Array.isArray(candidate.experience) ? candidate.experience : baseline.experience,
-    education: Array.isArray(candidate.education) ? candidate.education : baseline.education,
-    projects: Array.isArray(candidate.projects) ? candidate.projects : baseline.projects,
-    skills: Array.isArray(candidate.skills) ? candidate.skills : baseline.skills,
-    certifications: Array.isArray(candidate.certifications) ? candidate.certifications : baseline.certifications,
-  });
-
-  return preservesAtsFloor(normalized, original) ? normalized : null;
-}
-
-function improvesAtsFit(
-  nextExportCheck: { fitsOnOnePage: boolean; pageCount: number },
-  currentExportCheck: { fitsOnOnePage: boolean; pageCount: number },
-) {
-  if (nextExportCheck.fitsOnOnePage && !currentExportCheck.fitsOnOnePage) {
-    return true;
-  }
-
-  return nextExportCheck.pageCount < currentExportCheck.pageCount;
-}
-
 export async function POST(request: Request) {
   const authClient = await createServerSupabaseClient();
   const {
@@ -374,53 +219,7 @@ export async function POST(request: Request) {
       targeting: resolvedTargeting,
       checkExport: checkAtsResumeExport,
     });
-    let finalCandidate = candidate;
-
-    if (mode === "full" && !candidate.candidateExportCheck.fitsOnOnePage) {
-      try {
-        const anthropic = getAnthropicClient();
-        const response = await anthropic.messages.create({
-          model: MODEL_NAME,
-          max_tokens: 2200,
-          messages: [
-            {
-              role: "user",
-              content: buildCondensePrompt(
-                normalized,
-                candidate.candidateResumeData,
-                resolvedTargeting,
-                body.rawResume ?? null,
-              ),
-            },
-          ],
-        });
-
-        const text = response.content
-          .map((block) => ("text" in block ? block.text : ""))
-          .join("");
-        const parsed = parseJson<{ candidateResumeData?: unknown; resumeData?: unknown }>(text);
-        const aiCandidateResumeData = sanitizeAiCondensedCandidate(
-          parsed.candidateResumeData ?? parsed.resumeData,
-          candidate.candidateResumeData,
-          normalized,
-        );
-
-        if (aiCandidateResumeData) {
-          const aiCandidateExportCheck = await checkAtsResumeExport(aiCandidateResumeData);
-          if (improvesAtsFit(aiCandidateExportCheck, candidate.candidateExportCheck)) {
-            finalCandidate = {
-              candidateResumeData: aiCandidateResumeData,
-              candidateExportCheck: aiCandidateExportCheck,
-              changeSummary: summarizeCandidateChanges(normalized, aiCandidateResumeData),
-              status: aiCandidateExportCheck.fitsOnOnePage ? ("ready" as const) : ("needs_attention" as const),
-            };
-            recommendedSource = "ai";
-          }
-        }
-      } catch {
-        recommendedSource = "rules";
-      }
-    }
+    const finalCandidate = candidate;
 
     const review = createRuleBasedAtsReview({
       data: normalized,

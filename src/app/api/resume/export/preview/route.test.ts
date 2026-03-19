@@ -11,9 +11,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/pdf/ResumePDFDocument", () => ({
   checkAtsResumeExport: mocks.checkExport,
   getFriendlyAtsPdfError: (
-    exportCheck: { recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
+    exportCheck: { renderFailureReason?: string | null; recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
     fallback?: string,
-  ) => exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
+  ) => exportCheck?.renderFailureReason ?? exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
   renderAtsResumePdf: mocks.renderPdf,
 }));
 
@@ -92,6 +92,8 @@ describe("POST /api/resume/export/preview", () => {
 
   it("returns a PDF preview and page headers even when the export spans multiple pages", async () => {
     mocks.checkExport.mockResolvedValue({
+      renderable: true,
+      renderFailureReason: null,
       pageCount: 2,
       fitsOnOnePage: false,
       overflowReasons: ["The export still spans more than one page."],
@@ -113,6 +115,7 @@ describe("POST /api/resume/export/preview", () => {
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("x-ats-page-count")).toBe("2");
     expect(response.headers.get("x-ats-fits-one-page")).toBe("false");
+    expect(response.headers.get("x-ats-renderable")).toBe("true");
     await expect(response.arrayBuffer()).resolves.toEqual(Uint8Array.from([1, 2, 3]).buffer);
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-1",
@@ -120,16 +123,19 @@ describe("POST /api/resume/export/preview", () => {
       expect.objectContaining({
         page_count: 2,
         fits_on_one_page: false,
+        renderable: true,
       }),
     );
   });
 
   it("returns a clean JSON error when the PDF renderer fails", async () => {
     mocks.checkExport.mockResolvedValue({
-      pageCount: 2,
-      fitsOnOnePage: false,
-      overflowReasons: ["The export still spans more than one page."],
-      recommendedFixes: ["Trim the summary and lower-priority bullets."],
+      renderable: false,
+      renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
+      pageCount: null,
+      fitsOnOnePage: null,
+      overflowReasons: [],
+      recommendedFixes: [],
     });
     mocks.renderPdf.mockRejectedValue(new Error("Minified React error #31"));
 
@@ -145,19 +151,23 @@ describe("POST /api/resume/export/preview", () => {
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({
-      error: "Trim the summary and lower-priority bullets.",
-      pageCount: 2,
-      fitsOnOnePage: false,
-      overflowReasons: ["The export still spans more than one page."],
-      recommendedFixes: ["Trim the summary and lower-priority bullets."],
+      error: "The ATS PDF could not render cleanly from the current content.",
+      renderable: false,
+      renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
+      pageCount: null,
+      fitsOnOnePage: null,
+      overflowReasons: [],
+      recommendedFixes: [],
     });
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-1",
       "resume.export.preview_failed",
       expect.objectContaining({
-        page_count: 2,
-        fits_on_one_page: false,
-        error: "Minified React error #31",
+        page_count: null,
+        fits_on_one_page: null,
+        renderable: false,
+        render_failure_reason: "The ATS PDF could not render cleanly from the current content.",
+        error: "The ATS PDF could not render cleanly from the current content.",
       }),
     );
   });

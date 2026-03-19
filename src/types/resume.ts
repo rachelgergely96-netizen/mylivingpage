@@ -112,8 +112,10 @@ export interface AtsChangeSummaryItem {
 }
 
 export interface AtsExportCheck {
-  pageCount: number;
-  fitsOnOnePage: boolean;
+  renderable?: boolean;
+  renderFailureReason?: string | null;
+  pageCount: number | null;
+  fitsOnOnePage: boolean | null;
   overflowReasons: string[];
   recommendedFixes: string[];
 }

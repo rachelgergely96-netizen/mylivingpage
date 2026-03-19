@@ -86,6 +86,8 @@ describe("ATS PDF export", () => {
   it("renders a compliant resume as a single ATS-safe page", async () => {
     const exportCheck = await checkAtsResumeExport(buildResume());
 
+    expect(exportCheck.renderable).toBe(true);
+    expect(exportCheck.renderFailureReason).toBeNull();
     expect(exportCheck.pageCount).toBe(1);
     expect(exportCheck.fitsOnOnePage).toBe(true);
     expect(exportCheck.overflowReasons).toEqual([]);
@@ -94,6 +96,8 @@ describe("ATS PDF export", () => {
   it("renders oversized ATS resumes as a valid multi-page PDF instead of falling back to validation failure", async () => {
     const exportCheck = await checkAtsResumeExport(buildLongResume());
 
+    expect(exportCheck.renderable).toBe(true);
+    expect(exportCheck.renderFailureReason).toBeNull();
     expect(exportCheck.pageCount).toBeGreaterThan(1);
     expect(exportCheck.fitsOnOnePage).toBe(false);
     expect(exportCheck.overflowReasons).not.toContain("The ATS PDF could not be validated with the current content shape.");

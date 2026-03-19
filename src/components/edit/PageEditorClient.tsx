@@ -22,11 +22,13 @@ import {
   finalizeApprovedAtsResume,
   getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
+  getAtsRenderFailureReason,
   getDefaultAtsTargeting,
   getRecommendedOnePageCuts,
   hasApprovedAtsResume,
   hasNewerUnapprovedAtsDraft,
   inheritApprovedAtsResume,
+  isAtsExportRenderable,
   isApprovedAtsOnePage,
   isCurrentAtsDraftOnePage,
   isAtsOutOfSync,
@@ -106,6 +108,10 @@ function buildAtsStatusMessage(
     return cuts.length
       ? `ATS PDF is live on the public page. Recommended one-page cuts: ${cuts.join(" ")}`
       : "ATS PDF is live on the public page. We still recommend tightening it to one page for a cleaner version.";
+  }
+
+  if (approvalStatus === "approved" && atsReview?.approvedExportCheck && !isAtsExportRenderable(atsReview.approvedExportCheck)) {
+    return getAtsRenderFailureReason(atsReview.approvedExportCheck);
   }
 
   if (atsReview?.candidateResumeData) {
@@ -338,6 +344,14 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
       const inherited = inheritApprovedAtsResume(baseReview, atsReview);
 
       if (approvalAction === "approve") {
+        if (!canApproveCurrentAtsDraft(inherited)) {
+          return reconcileAtsApprovalStatus({
+            review: inherited,
+            draftData: nextAtsData,
+            sourceData: data,
+          });
+        }
+
         return finalizeApprovedAtsResume(
           inherited,
           nextAtsData,
@@ -585,16 +599,16 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
     );
 
     if (saved) {
-      setSuccess(
-        canDownloadApprovedAtsResume(nextReview, data)
-          ? hasReplacementDraft
-            ? isApprovedAtsOnePage(nextReview, data)
-              ? "Replacement ATS resume approved. Your live PDF now uses the new one-page draft."
-              : "Replacement ATS resume approved. Your live PDF now uses the new ATS draft, and the preview shows suggested cuts for a one-page version."
-            : isApprovedAtsOnePage(nextReview, data)
-              ? "ATS resume approved. PDF download is live on your public page."
-              : "ATS resume approved. PDF download is live on your public page, and the preview shows suggested cuts for a one-page version."
-          : "ATS resume approved, but the current ATS snapshot still needs attention before it can go live.",
+        setSuccess(
+          canDownloadApprovedAtsResume(nextReview, data)
+            ? hasReplacementDraft
+              ? isApprovedAtsOnePage(nextReview, data)
+                ? "Replacement ATS resume approved. Your live PDF now uses the new one-page draft."
+                : "Replacement ATS resume approved. Your live PDF now uses the new ATS draft, and the preview shows suggested cuts for a one-page version."
+              : isApprovedAtsOnePage(nextReview, data)
+                ? "ATS resume approved. PDF download is live on your public page."
+                : "ATS resume approved. PDF download is live on your public page, and the preview shows suggested cuts for a one-page version."
+          : "ATS resume approved, but the current ATS snapshot still needs a clean PDF render before download can go live.",
       );
       void trackOptimizeEvent("ats.resume.approved", {
         page_id: page.id,
@@ -923,7 +937,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
               runReviewLabel="Rebuild Recommended Draft"
               stepLabel="ATS Resume"
               heading="Review the recommended ATS draft"
-              body="Start from the recommended ATS draft we generated from your full information. Save your edits when they help, approve replacements when you want them live, and use the preview suggestions if you want to tighten the PDF to one page."
+              body="Start from the recommended ATS draft we generated from your full information. Save your edits when they help, approve replacements when you want them live, and use the preview suggestions if you want a shorter one-page version."
             />
 
             <AtsPdfPreviewCard

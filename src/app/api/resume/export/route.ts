@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import {
   canDownloadApprovedAtsResume,
+  getAtsRenderFailureReason,
   getAtsAvailabilityReason,
+  isAtsExportRenderable,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
 import {
@@ -77,28 +79,56 @@ export async function POST(request: Request) {
 
     const normalized = normalizeResumeDataForAts(approvedResumeData as ResumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
-    let buffer: Uint8Array;
-
-    try {
-      buffer = await renderAtsResumePdf(normalized);
-    } catch (error) {
+    if (!isAtsExportRenderable(exportCheck)) {
       await trackEvent(null, "resume.export.download_failed", {
         page_id: body.pageId,
         page_count: exportCheck.pageCount,
         fits_on_one_page: exportCheck.fitsOnOnePage,
-        error: error instanceof Error ? error.message : "unknown_render_error",
+        renderable: exportCheck.renderable,
+        render_failure_reason: exportCheck.renderFailureReason,
+        error: exportCheck.renderFailureReason ?? "ats_pdf_render_check_failed",
       });
 
       return NextResponse.json(
         {
           error: getFriendlyAtsPdfError(
             exportCheck,
-            "Unable to export the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+            "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
           ),
-          pageCount: exportCheck.pageCount,
-          fitsOnOnePage: exportCheck.fitsOnOnePage,
-          overflowReasons: exportCheck.overflowReasons,
-          recommendedFixes: exportCheck.recommendedFixes,
+          ...exportCheck,
+        },
+        { status: 422 },
+      );
+    }
+
+    let buffer: Uint8Array;
+
+    try {
+      buffer = await renderAtsResumePdf(normalized);
+    } catch (error) {
+      const renderFailureReason = getAtsRenderFailureReason(
+        { renderable: false, renderFailureReason: null },
+        "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
+      );
+
+      await trackEvent(null, "resume.export.download_failed", {
+        page_id: body.pageId,
+        page_count: exportCheck.pageCount,
+        fits_on_one_page: exportCheck.fitsOnOnePage,
+        renderable: false,
+        render_failure_reason: renderFailureReason,
+        error: error instanceof Error ? error.message : "unknown_render_error",
+      });
+
+      return NextResponse.json(
+        {
+          error: renderFailureReason,
+          renderable: false,
+          renderFailureReason,
+          pageCount: null,
+          fitsOnOnePage: null,
+          overflowReasons: [],
+          recommendedFixes: [],
         },
         { status: 422 },
       );
@@ -108,6 +138,7 @@ export async function POST(request: Request) {
       page_id: body.pageId,
       page_count: exportCheck.pageCount,
       fits_on_one_page: exportCheck.fitsOnOnePage,
+      renderable: exportCheck.renderable,
     });
 
     return new Response(new Uint8Array(buffer), {
@@ -121,7 +152,7 @@ export async function POST(request: Request) {
       {
         error: getFriendlyAtsPdfError(
           null,
-          "Unable to export the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+          "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
         ),
       },
       { status: 400 },

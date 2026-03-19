@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { normalizeResumeDataForAts } from "@/lib/ats-review";
+import {
+  getAtsRenderFailureReason,
+  isAtsExportRenderable,
+  normalizeResumeDataForAts,
+} from "@/lib/ats-review";
 import {
   checkAtsResumeExport,
   getFriendlyAtsPdfError,
@@ -38,28 +42,56 @@ export async function POST(request: Request) {
 
     const normalized = normalizeResumeDataForAts(body.resumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
-    let buffer: Uint8Array;
-
-    try {
-      buffer = await renderAtsResumePdf(normalized);
-    } catch (error) {
+    if (!isAtsExportRenderable(exportCheck)) {
       await trackEvent(user.id, "resume.export.preview_failed", {
         page_count: exportCheck.pageCount,
         fits_on_one_page: exportCheck.fitsOnOnePage,
+        renderable: exportCheck.renderable,
+        render_failure_reason: exportCheck.renderFailureReason,
         overflow_reasons: exportCheck.overflowReasons,
-        error: error instanceof Error ? error.message : "unknown_render_error",
+        error: exportCheck.renderFailureReason ?? "ats_pdf_render_check_failed",
       });
 
       return NextResponse.json(
         {
           error: getFriendlyAtsPdfError(
             exportCheck,
-            "Unable to render the ATS PDF preview right now. Try rerunning ATS review or shortening long sections.",
+            "Unable to render the ATS PDF preview right now. Save your latest edits or rerun ATS review and try again.",
           ),
-          pageCount: exportCheck.pageCount,
-          fitsOnOnePage: exportCheck.fitsOnOnePage,
-          overflowReasons: exportCheck.overflowReasons,
-          recommendedFixes: exportCheck.recommendedFixes,
+          ...exportCheck,
+        },
+        { status: 422 },
+      );
+    }
+
+    let buffer: Uint8Array;
+
+    try {
+      buffer = await renderAtsResumePdf(normalized);
+    } catch (error) {
+      const renderFailureReason = getAtsRenderFailureReason(
+        { renderable: false, renderFailureReason: null },
+        "Unable to render the ATS PDF preview right now. Save your latest edits or rerun ATS review and try again.",
+      );
+
+      await trackEvent(user.id, "resume.export.preview_failed", {
+        page_count: exportCheck.pageCount,
+        fits_on_one_page: exportCheck.fitsOnOnePage,
+        renderable: false,
+        render_failure_reason: renderFailureReason,
+        overflow_reasons: exportCheck.overflowReasons,
+        error: error instanceof Error ? error.message : "unknown_render_error",
+      });
+
+      return NextResponse.json(
+        {
+          error: renderFailureReason,
+          renderable: false,
+          renderFailureReason,
+          pageCount: null,
+          fitsOnOnePage: null,
+          overflowReasons: [],
+          recommendedFixes: [],
         },
         { status: 422 },
       );
@@ -68,6 +100,7 @@ export async function POST(request: Request) {
     await trackEvent(user.id, "resume.export.preview", {
       page_count: exportCheck.pageCount,
       fits_on_one_page: exportCheck.fitsOnOnePage,
+      renderable: exportCheck.renderable,
     });
 
     return new Response(new Uint8Array(buffer), {
@@ -75,6 +108,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/pdf",
         "x-ats-page-count": String(exportCheck.pageCount),
         "x-ats-fits-one-page": String(exportCheck.fitsOnOnePage),
+        "x-ats-renderable": String(exportCheck.renderable),
       },
     });
   } catch {
@@ -82,7 +116,7 @@ export async function POST(request: Request) {
       {
         error: getFriendlyAtsPdfError(
           null,
-          "Unable to preview the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+          "Unable to preview the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
         ),
       },
       { status: 400 },

@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getRecommendedOnePageCuts } from "@/lib/ats-review";
+import {
+  getRecommendedOnePageCuts,
+  normalizeAtsExportCheck,
+} from "@/lib/ats-review";
 import type { AtsExportCheck, ResumeData } from "@/types/resume";
 
 interface AtsPdfPreviewCardProps {
@@ -29,6 +32,8 @@ export default function AtsPdfPreviewCard({
   const [previewSnapshotHash, setPreviewSnapshotHash] = useState<string | null>(null);
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [fitsOnOnePage, setFitsOnOnePage] = useState<boolean | null>(null);
+  const [renderable, setRenderable] = useState<boolean | null>(null);
+  const [renderFailureReason, setRenderFailureReason] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -45,6 +50,7 @@ export default function AtsPdfPreviewCard({
     previewAbortRef.current = controller;
     setPreviewLoading(true);
     setPreviewError(null);
+    setRenderFailureReason(null);
 
     try {
       const response = await fetch("/api/resume/export/preview", {
@@ -60,9 +66,27 @@ export default function AtsPdfPreviewCard({
       if (!response.ok || !contentType.startsWith("application/pdf")) {
         const payload = contentType.includes("application/json")
           ? ((await response.json().catch(() => null)) as
-              | { error?: string; recommendedFixes?: string[]; overflowReasons?: string[] }
+              | {
+                  error?: string;
+                  renderable?: boolean;
+                  renderFailureReason?: string | null;
+                  pageCount?: number | null;
+                  fitsOnOnePage?: boolean | null;
+                  recommendedFixes?: string[];
+                  overflowReasons?: string[];
+                }
               | null)
           : null;
+
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current);
+          previewUrlRef.current = null;
+        }
+        setPreviewUrl(null);
+        setRenderable(payload?.renderable ?? false);
+        setRenderFailureReason(payload?.renderFailureReason ?? payload?.error ?? null);
+        setPageCount(typeof payload?.pageCount === "number" ? payload.pageCount : null);
+        setFitsOnOnePage(typeof payload?.fitsOnOnePage === "boolean" ? payload.fitsOnOnePage : null);
         throw new Error(
           payload?.error ??
             payload?.recommendedFixes?.[0] ??
@@ -79,6 +103,8 @@ export default function AtsPdfPreviewCard({
       previewUrlRef.current = nextUrl;
       setPreviewUrl(nextUrl);
       setPreviewSnapshotHash(contentHash);
+      setRenderable(true);
+      setRenderFailureReason(null);
       const nextPageCount = Number(response.headers.get("x-ats-page-count"));
       setPageCount(Number.isFinite(nextPageCount) ? nextPageCount : null);
       const headerFits = response.headers.get("x-ats-fits-one-page");
@@ -88,6 +114,15 @@ export default function AtsPdfPreviewCard({
         return;
       }
 
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+      setPreviewUrl(null);
+      setRenderable(false);
+      setPageCount(null);
+      setFitsOnOnePage(null);
+      setRenderFailureReason(error instanceof Error ? error.message : "Unable to load the ATS PDF preview.");
       setPreviewError(error instanceof Error ? error.message : "Unable to load the ATS PDF preview.");
     } finally {
       setPreviewLoading(false);
@@ -107,14 +142,28 @@ export default function AtsPdfPreviewCard({
     void refreshPreview();
   }, [autoGenerate, contentHash, previewSnapshotHash, previewUrl, refreshPreview]);
 
-  const displayPageCount = pageCount ?? exportCheck?.pageCount ?? null;
-  const displayFitsOnOnePage = fitsOnOnePage ?? exportCheck?.fitsOnOnePage ?? null;
-  const recommendedCuts = getRecommendedOnePageCuts(exportCheck);
-  const previewStatus = !previewSnapshotHash
-    ? "Preview not generated yet"
-    : previewSnapshotHash === contentHash
-      ? "Preview up to date"
-      : "Preview is stale";
+  const normalizedExportCheck = normalizeAtsExportCheck(exportCheck);
+  const displayPageCount = pageCount ?? normalizedExportCheck.pageCount;
+  const displayFitsOnOnePage = fitsOnOnePage ?? normalizedExportCheck.fitsOnOnePage;
+  const displayRenderable = renderable ?? normalizedExportCheck.renderable;
+  const displayRenderFailureReason = renderFailureReason ?? normalizedExportCheck.renderFailureReason;
+  const displayExportCheck: AtsExportCheck = {
+    renderable: displayRenderable,
+    renderFailureReason: displayRenderFailureReason,
+    pageCount: displayPageCount,
+    fitsOnOnePage: displayFitsOnOnePage,
+    overflowReasons: normalizedExportCheck.overflowReasons,
+    recommendedFixes: normalizedExportCheck.recommendedFixes,
+  };
+  const recommendedCuts = getRecommendedOnePageCuts(displayExportCheck);
+  const previewStatus =
+    previewError || (displayRenderable === false && displayRenderFailureReason)
+      ? "Preview unavailable"
+      : !previewSnapshotHash
+        ? "Preview not generated yet"
+        : previewSnapshotHash === contentHash
+          ? "Preview up to date"
+          : "Preview is stale";
 
   return (
     <section data-testid="ats-preview-card" className="glass-card rounded-2xl p-4 sm:p-5">
@@ -124,7 +173,11 @@ export default function AtsPdfPreviewCard({
           <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">{body}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {displayFitsOnOnePage !== null || displayPageCount !== null ? (
+          {displayRenderable === false && displayRenderFailureReason ? (
+            <div className="rounded-full border border-[rgba(255,120,120,0.18)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[#FCA5A5]">
+              Preview unavailable
+            </div>
+          ) : displayFitsOnOnePage !== null || displayPageCount !== null ? (
             <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
               {displayFitsOnOnePage ? "Fits one page" : `${displayPageCount ?? "?"} pages`}
             </div>
@@ -149,9 +202,9 @@ export default function AtsPdfPreviewCard({
           <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
             Generating the ATS PDF preview...
           </div>
-        ) : previewError ? (
+        ) : previewError || (displayRenderable === false && displayRenderFailureReason) ? (
           <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-slate-500">
-            {previewError}
+            {previewError ?? displayRenderFailureReason}
           </div>
         ) : previewUrl ? (
           <iframe
@@ -170,7 +223,7 @@ export default function AtsPdfPreviewCard({
       <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
         {previewStatus}. {autoGenerate ? "Preview refreshes automatically when the draft changes, and you can refresh it manually anytime." : "Preview only refreshes when you ask for it."}
       </p>
-      {displayFitsOnOnePage === false ? (
+      {displayRenderable === true && displayFitsOnOnePage === false ? (
         <div className="mt-2 rounded-xl border border-[rgba(245,195,107,0.2)] bg-[rgba(245,195,107,0.08)] p-4">
           <p className="text-xs leading-6 text-[rgba(245,195,107,0.92)]">
             This ATS preview is usable now, even though it currently spans {displayPageCount ?? "multiple"} pages. We recommend these cuts if you want a one-page version.

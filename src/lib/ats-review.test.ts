@@ -116,6 +116,8 @@ describe("ATS review helpers", () => {
     });
 
     expect(review.issues.map((issue) => issue.id)).toContain("pdf-overflow");
+    expect(review.issues.find((issue) => issue.id === "pdf-overflow")?.severity).toBe("info");
+    expect(review.status).toBe("ready");
     expect(review.suggestions.map((suggestion) => suggestion.id)).toContain("tighten-summary");
     expect(review.suggestions.map((suggestion) => suggestion.id)).toContain("trim-projects");
     expect(review.proposals.map((proposal) => proposal.group)).toContain("summary");
@@ -124,7 +126,7 @@ describe("ATS review helpers", () => {
     expect(review.suggestions.find((suggestion) => suggestion.id === "tighten-summary")?.expectedScoreDimensions).toContain("onePagePdf");
   });
 
-  it("builds an auto-optimized ATS candidate that reaches one page for common overflow cases", async () => {
+  it("builds an auto-optimized ATS candidate without aggressively forcing one-page fit", async () => {
     const data = buildResume({
       summary: "A".repeat(420),
       experience: [
@@ -180,35 +182,26 @@ describe("ATS review helpers", () => {
     const candidate = await buildAutoOptimizedAtsCandidate({
       data,
       targeting: getDefaultAtsTargeting(data),
-      checkExport: async (resume) => {
-        const totalHighlights = resume.experience.reduce((count, entry) => count + entry.highlights.length, 0);
-        const totalSkills = resume.skills.reduce((count, group) => count + group.items.length, 0);
-        const fits =
-          resume.summary.length <= 220 &&
-          resume.experience.length <= 4 &&
-          totalHighlights <= 6 &&
-          resume.projects.length <= 1 &&
-          resume.certifications.length <= 1 &&
-          totalSkills <= 10;
-
+      checkExport: async () => {
         return {
-          pageCount: fits ? 1 : 2,
-          fitsOnOnePage: fits,
-          overflowReasons: fits ? [] : ["Still over one page."],
-          recommendedFixes: fits ? [] : ["Trim more content."],
+          pageCount: 2,
+          fitsOnOnePage: false,
+          overflowReasons: ["Still over one page."],
+          recommendedFixes: ["Trim more content."],
         };
       },
     });
 
     expect(candidate.status).toBe("ready");
-    expect(candidate.candidateExportCheck.fitsOnOnePage).toBe(true);
-    expect(candidate.candidateResumeData.summary.length).toBeLessThanOrEqual(220);
-    expect(candidate.candidateResumeData.experience.length).toBeLessThanOrEqual(4);
+    expect(candidate.candidateExportCheck.fitsOnOnePage).toBe(false);
+    expect(candidate.candidateResumeData.summary.length).toBeLessThanOrEqual(240);
+    expect(candidate.candidateResumeData.experience.length).toBe(5);
+    expect(candidate.candidateResumeData.projects).toHaveLength(3);
     expect(candidate.changeSummary.length).toBeGreaterThan(0);
     expect(candidate.changeSummary.length).toBeLessThanOrEqual(3);
   });
 
-  it("keeps a minimum ATS floor while trimming aggressively toward one-page fit", async () => {
+  it("keeps the draft render-ready without trimming content solely for one-page fit", async () => {
     const data = buildResume({
       summary: "A".repeat(420),
       experience: [
@@ -253,32 +246,22 @@ describe("ATS review helpers", () => {
     const candidate = await buildAutoOptimizedAtsCandidate({
       data,
       targeting: getDefaultAtsTargeting(data),
-      checkExport: async (resume) => {
-        const totalHighlights = resume.experience.reduce((count, entry) => count + entry.highlights.length, 0);
-        const totalSkills = resume.skills.reduce((count, group) => count + group.items.length, 0);
-        const fits =
-          resume.summary.length <= 140 &&
-          resume.experience.length <= 2 &&
-          totalHighlights <= 2 &&
-          resume.projects.length === 0 &&
-          resume.certifications.length === 0 &&
-          totalSkills <= 6;
-
+      checkExport: async () => {
         return {
-          pageCount: fits ? 1 : 2,
-          fitsOnOnePage: fits,
-          overflowReasons: fits ? [] : ["Still over one page."],
-          recommendedFixes: fits ? [] : ["Trim more content."],
+          pageCount: 2,
+          fitsOnOnePage: false,
+          overflowReasons: ["Still over one page."],
+          recommendedFixes: ["Trim more content."],
         };
       },
     });
 
     expect(candidate.status).toBe("ready");
-    expect(candidate.candidateExportCheck.fitsOnOnePage).toBe(true);
-    expect(candidate.candidateResumeData.experience).toHaveLength(2);
+    expect(candidate.candidateExportCheck.fitsOnOnePage).toBe(false);
+    expect(candidate.candidateResumeData.experience).toHaveLength(4);
     expect(candidate.candidateResumeData.experience.every((entry) => entry.highlights.length >= 1)).toBe(true);
     expect(candidate.candidateResumeData.education).toHaveLength(1);
-    expect(candidate.candidateResumeData.skills.reduce((count, group) => count + group.items.length, 0)).toBeLessThanOrEqual(6);
+    expect(candidate.candidateResumeData.skills.reduce((count, group) => count + group.items.length, 0)).toBe(20);
   });
 
   it("builds at most one proposal per section group with normalized before and after text", () => {
@@ -468,7 +451,7 @@ describe("ATS review helpers", () => {
     expect(unavailableReview.approvedResumeData).not.toBeNull();
     expect(unavailableReview.approvedExportCheck?.pageCount).toBe(2);
     expect(unavailableReview.approvalStatus).toBe("approved");
-    expect(unavailableReview.availabilityReason).toContain("downloadable");
+    expect(unavailableReview.availabilityReason).toBeNull();
   });
 
   it("approves the generated ATS candidate separately from the public page content", () => {
@@ -522,7 +505,7 @@ describe("ATS review helpers", () => {
         overflowReasons: ["The current version is too long."],
         recommendedFixes: ["Tighten the summary."],
       },
-      status: "needs_attention",
+      status: "ready",
     });
 
     const approved = approveCandidateAtsResume(review);
@@ -532,6 +515,26 @@ describe("ATS review helpers", () => {
     expect(canApproveCurrentAtsDraft(review)).toBe(true);
     expect(isCurrentAtsDraftOnePage(review)).toBe(false);
     expect(getCurrentAtsDraftApprovalReason(review)).toContain("use this ATS resume now");
+  });
+
+  it("treats render failures as the real blocker for ATS approval and preview", () => {
+    const review = createRuleBasedAtsReview({
+      data: buildResume({ summary: "A".repeat(420) }),
+      targeting: { primaryTitle: "Product Manager", titleVariants: [], jobDescription: "", lastExtractedKeywords: [] },
+      exportCheck: {
+        renderable: false,
+        renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
+        pageCount: null,
+        fitsOnOnePage: null,
+        overflowReasons: [],
+        recommendedFixes: [],
+      },
+    });
+
+    expect(review.status).toBe("needs_attention");
+    expect(review.issues.map((issue) => issue.id)).toContain("pdf-render-failed");
+    expect(canApproveCurrentAtsDraft(review)).toBe(false);
+    expect(getCurrentAtsDraftApprovalReason(review)).toContain("could not render cleanly");
   });
 
   it("preserves the saved approved ATS resume across transient review reruns", () => {
@@ -687,7 +690,7 @@ describe("ATS review helpers", () => {
     expect(hasNewerUnapprovedAtsDraft(blocked, living)).toBe(false);
     expect(isApprovedAtsOnePage(blocked, living)).toBe(false);
     expect(blocked.approvedResumeData?.summary).toBe(normalizeResumeDataForAts(buildResume({ summary: "A".repeat(420) })).summary);
-    expect(blocked.availabilityReason).toContain("downloadable");
+    expect(blocked.availabilityReason).toBeNull();
   });
 
   it("returns the strongest recommended one-page cuts from export feedback", () => {

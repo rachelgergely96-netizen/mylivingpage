@@ -11,9 +11,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/pdf/ResumePDFDocument", () => ({
   checkAtsResumeExport: mocks.checkExport,
   getFriendlyAtsPdfError: (
-    exportCheck: { recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
+    exportCheck: { renderFailureReason?: string | null; recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
     fallback?: string,
-  ) => exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
+  ) => exportCheck?.renderFailureReason ?? exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
   renderAtsResumePdf: mocks.renderPdf,
 }));
 
@@ -55,6 +55,8 @@ function buildApprovedResumeData(name: string): ResumeData {
 function createPageResponse(options: {
   approvedResumeData?: ResumeData | null;
   approvedExportCheck?: {
+    renderable?: boolean;
+    renderFailureReason?: string | null;
     pageCount: number;
     fitsOnOnePage: boolean;
     overflowReasons: string[];
@@ -75,6 +77,8 @@ function createPageResponse(options: {
         approvedResumeData: options.approvedResumeData ?? null,
         approvedExportCheck: options.approvedResumeData
           ? (options.approvedExportCheck ?? {
+              renderable: true,
+              renderFailureReason: null,
               pageCount: 1,
               fitsOnOnePage: true,
               overflowReasons: [],
@@ -98,6 +102,8 @@ describe("POST /api/resume/export", () => {
       resetAt: new Date("2026-03-17T16:00:00.000Z").toISOString(),
     });
     mocks.checkExport.mockResolvedValue({
+      renderable: true,
+      renderFailureReason: null,
       pageCount: 1,
       fitsOnOnePage: true,
       overflowReasons: [],
@@ -274,6 +280,8 @@ describe("POST /api/resume/export", () => {
   it("downloads the approved ATS resume even when it spans more than one page", async () => {
     const approvedResumeData = buildApprovedResumeData("Approved Resume");
     mocks.checkExport.mockResolvedValue({
+      renderable: true,
+      renderFailureReason: null,
       pageCount: 2,
       fitsOnOnePage: false,
       overflowReasons: ["The approved ATS draft still spans more than one page."],
@@ -287,6 +295,8 @@ describe("POST /api/resume/export", () => {
               data: createPageResponse({
                 approvedResumeData,
                 approvedExportCheck: {
+                  renderable: true,
+                  renderFailureReason: null,
                   pageCount: 2,
                   fitsOnOnePage: false,
                   overflowReasons: ["The approved ATS draft still spans more than one page."],
@@ -322,6 +332,7 @@ describe("POST /api/resume/export", () => {
         page_id: "page-1",
         page_count: 2,
         fits_on_one_page: false,
+        renderable: true,
       }),
     );
   });
@@ -329,10 +340,12 @@ describe("POST /api/resume/export", () => {
   it("returns a friendly error when the ATS PDF renderer fails", async () => {
     const approvedResumeData = buildApprovedResumeData("Approved Resume");
     mocks.checkExport.mockResolvedValue({
-      pageCount: 2,
-      fitsOnOnePage: false,
-      overflowReasons: ["The approved ATS draft still spans more than one page."],
-      recommendedFixes: ["Trim the draft if you want a one-page version."],
+      renderable: false,
+      renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
+      pageCount: null,
+      fitsOnOnePage: null,
+      overflowReasons: [],
+      recommendedFixes: [],
     });
     mocks.renderPdf.mockRejectedValue(new Error("Minified React error #31"));
     mocks.serviceRoleFactory.mockReturnValue({
@@ -343,6 +356,8 @@ describe("POST /api/resume/export", () => {
               data: createPageResponse({
                 approvedResumeData,
                 approvedExportCheck: {
+                  renderable: true,
+                  renderFailureReason: null,
                   pageCount: 2,
                   fitsOnOnePage: false,
                   overflowReasons: ["The approved ATS draft still spans more than one page."],
@@ -368,20 +383,24 @@ describe("POST /api/resume/export", () => {
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({
-      error: "Trim the draft if you want a one-page version.",
-      pageCount: 2,
-      fitsOnOnePage: false,
-      overflowReasons: ["The approved ATS draft still spans more than one page."],
-      recommendedFixes: ["Trim the draft if you want a one-page version."],
+      error: "The ATS PDF could not render cleanly from the current content.",
+      renderable: false,
+      renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
+      pageCount: null,
+      fitsOnOnePage: null,
+      overflowReasons: [],
+      recommendedFixes: [],
     });
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       null,
       "resume.export.download_failed",
       expect.objectContaining({
         page_id: "page-1",
-        page_count: 2,
-        fits_on_one_page: false,
-        error: "Minified React error #31",
+        page_count: null,
+        fits_on_one_page: null,
+        renderable: false,
+        render_failure_reason: "The ATS PDF could not render cleanly from the current content.",
+        error: "The ATS PDF could not render cleanly from the current content.",
       }),
     );
   });

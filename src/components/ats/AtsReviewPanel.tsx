@@ -1,6 +1,12 @@
 "use client";
 
-import { getRecommendedOnePageCuts } from "@/lib/ats-review";
+import {
+  doesAtsExportFitOnOnePage,
+  getAtsExportPageCount,
+  getAtsRenderFailureReason,
+  getRecommendedOnePageCuts,
+  isAtsExportRenderable,
+} from "@/lib/ats-review";
 import type {
   AtsIssue,
   AtsReviewSnapshot,
@@ -60,6 +66,11 @@ function getBlockingReason(review: AtsReviewSnapshot | null) {
     return null;
   }
 
+  const currentExportCheck = review.candidateExportCheck ?? review.exportCheck;
+  if (!isAtsExportRenderable(currentExportCheck)) {
+    return getAtsRenderFailureReason(currentExportCheck);
+  }
+
   return (
     review.candidateExportCheck?.recommendedFixes?.[0] ??
     review.candidateExportCheck?.overflowReasons?.[0] ??
@@ -75,8 +86,8 @@ function getStatusTitle(review: AtsReviewSnapshot | null) {
   }
 
   return review.status === "ready"
-    ? "Recommended ATS draft ready"
-    : "Recommended ATS draft ready to use";
+    ? "Recommended ATS draft ready to use"
+    : "Recommended ATS draft needs attention";
 }
 
 function getStatusBody(review: AtsReviewSnapshot | null) {
@@ -84,9 +95,12 @@ function getStatusBody(review: AtsReviewSnapshot | null) {
     return null;
   }
 
+  const currentExportCheck = review.candidateExportCheck ?? review.exportCheck;
   return review.status === "ready"
-    ? "We built a recommended one-page ATS version and kept it separate from your public page."
-    : "This ATS draft is still usable now. We also surfaced the strongest cuts we recommend if you want to tighten it into one page.";
+    ? doesAtsExportFitOnOnePage(currentExportCheck)
+      ? "We built a recommended ATS draft and kept it separate from your public page."
+      : "This ATS draft is usable now. We also surfaced optional cuts if you want to tighten it into a one-page version."
+    : "This ATS draft still needs a clean PDF render before preview and download can work.";
 }
 
 export function AtsReviewAdvancedPanel({
@@ -104,6 +118,9 @@ export function AtsReviewAdvancedPanel({
   }
 
   const currentExportCheck = review.candidateExportCheck ?? review.exportCheck;
+  const currentPageCount = getAtsExportPageCount(currentExportCheck);
+  const currentRenderable = isAtsExportRenderable(currentExportCheck);
+  const currentOnePage = doesAtsExportFitOnOnePage(currentExportCheck);
 
   return (
     <details className="glass-card rounded-2xl p-4 sm:p-5">
@@ -116,7 +133,7 @@ export function AtsReviewAdvancedPanel({
             </p>
           </div>
           <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
-            {currentExportCheck.fitsOnOnePage ? "ATS PDF ready" : `${currentExportCheck.pageCount} pages`}
+            {!currentRenderable ? "Preview unavailable" : currentOnePage ? "ATS PDF ready" : `${currentPageCount ?? "?"} pages`}
           </div>
         </div>
       </summary>
@@ -287,7 +304,7 @@ export default function AtsReviewPanel({
                   We can build the ATS version for you
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                  Run the review once and we will generate the best evidence-based one-page ATS draft we can from your current content.
+                  Run the review once and we will generate the strongest ATS draft we can from your current content.
                 </p>
               </>
             )}
@@ -325,10 +342,17 @@ export default function AtsReviewPanel({
             </div>
 
             {review.status === "needs_attention" ? (
+              <div className="rounded-2xl border border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] p-4 text-sm leading-6 text-[#FFD5D5]">
+                <p className="font-semibold text-[#FFF1F1]">This draft needs a render fix before preview and download can work.</p>
+                <p className="mt-2">{blockingReason}</p>
+              </div>
+            ) : null}
+
+            {review.status === "ready" && !doesAtsExportFitOnOnePage(review.candidateExportCheck ?? review.exportCheck) ? (
               <div className="rounded-2xl border border-[rgba(245,195,107,0.24)] bg-[rgba(245,195,107,0.08)] p-4 text-sm leading-6 text-[#FDE7BA]">
                 <p className="font-semibold text-[#FFF7E5]">This recommended draft is usable now.</p>
                 <p className="mt-2">
-                  {blockingReason} Use the cut suggestions below if you want to bring it down to one page.
+                  Use the cut suggestions below if you want to bring it down to one page.
                 </p>
                 {recommendedCuts.length ? (
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-[#FFF7E5]">

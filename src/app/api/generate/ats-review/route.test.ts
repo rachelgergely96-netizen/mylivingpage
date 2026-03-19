@@ -70,6 +70,8 @@ describe("POST /api/generate/ats-review", () => {
       },
     });
     mocks.checkExport.mockResolvedValue({
+      renderable: true,
+      renderFailureReason: null,
       pageCount: 1,
       fitsOnOnePage: true,
       overflowReasons: [],
@@ -137,12 +139,16 @@ describe("POST /api/generate/ats-review", () => {
 
   it("returns an auto-optimized ATS candidate and concise review summary during a full review", async () => {
     mocks.checkExport.mockResolvedValueOnce({
+      renderable: true,
+      renderFailureReason: null,
       pageCount: 2,
       fitsOnOnePage: false,
       overflowReasons: ["The summary is still too long for a one-page ATS resume."],
       recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
     });
     mocks.checkExport.mockResolvedValueOnce({
+      renderable: true,
+      renderFailureReason: null,
       pageCount: 1,
       fitsOnOnePage: true,
       overflowReasons: [],
@@ -190,53 +196,27 @@ describe("POST /api/generate/ats-review", () => {
     expect(payload.changeSummary.length).toBeLessThanOrEqual(3);
   });
 
-  it("uses the AI condensation fallback only when the rules draft still does not fit", async () => {
+  it("keeps a multi-page ATS draft ready when it still renders cleanly", async () => {
     mocks.checkExport.mockImplementation(async (resume: typeof sampleResume) => {
-      const fits = resume.summary === "Condensed AI summary.";
       return {
-        pageCount: fits ? 1 : 2,
-        fitsOnOnePage: fits,
-        overflowReasons: fits ? [] : ["The summary is still too long for a one-page ATS resume."],
-        recommendedFixes: fits ? [] : ["Shorten the summary to two tight sentences with the exact role and top skills."],
+        renderable: true,
+        renderFailureReason: null,
+        pageCount: 2,
+        fitsOnOnePage: false,
+        overflowReasons: ["The summary is still too long for a one-page ATS resume."],
+        recommendedFixes: ["Shorten the summary to two tight sentences with the exact role and top skills."],
       };
     });
-    mocks.anthropicCreate
-      .mockResolvedValueOnce({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              suggestions: [],
-            }),
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              candidateResumeData: {
-                headline: "Product Manager",
-                summary: "Condensed AI summary.",
-                experience: [
-                  {
-                    title: "Product Manager",
-                    company: "Northwind",
-                    dates: "2022 - Present",
-                    highlights: ["Owned roadmap and analytics"],
-                    url: null,
-                  },
-                ],
-                education: [{ degree: "B.A. Economics", school: "University", year: "2019" }],
-                projects: [],
-                skills: [{ category: "Tools", items: ["SQL", "Figma", "Amplitude"] }],
-                certifications: [],
-              },
-            }),
-          },
-        ],
-      });
+    mocks.anthropicCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            suggestions: [],
+          }),
+        },
+      ],
+    });
 
     const response = await POST(
       new Request("http://localhost/api/generate/ats-review", {
@@ -271,14 +251,14 @@ describe("POST /api/generate/ats-review", () => {
     };
 
     expect(payload.status).toBe("ready");
-    expect(payload.candidateResumeData?.summary).toBe("Condensed AI summary.");
-    expect(payload.candidateExportCheck?.fitsOnOnePage).toBe(true);
-    expect(mocks.anthropicCreate).toHaveBeenCalledTimes(2);
+    expect(payload.candidateResumeData?.summary.length).toBeLessThan(420);
+    expect(payload.candidateExportCheck?.fitsOnOnePage).toBe(false);
+    expect(mocks.anthropicCreate).toHaveBeenCalledTimes(1);
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-1",
       "ats.review.run",
       expect.objectContaining({
-        recommended_source: "ai",
+        recommended_source: "rules",
         rules_fit_one_page: false,
       }),
     );

@@ -117,7 +117,7 @@ export default function AtsPdfPreviewCard({
       : "Preview is stale";
 
   return (
-    <section className="glass-card rounded-2xl p-4 sm:p-5">
+    <section data-testid="ats-preview-card" className="glass-card rounded-2xl p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">{title}</p>
@@ -155,6 +155,7 @@ export default function AtsPdfPreviewCard({
           </div>
         ) : previewUrl ? (
           <iframe
+            data-testid="ats-pdf-preview-frame"
             title="ATS PDF Preview"
             src={previewUrl}
             className="min-h-[420px] w-full bg-white md:min-h-[540px]"

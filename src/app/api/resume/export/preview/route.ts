@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { normalizeResumeDataForAts } from "@/lib/ats-review";
-import { checkAtsResumeExport, renderAtsResumePdf } from "@/lib/pdf/ResumePDFDocument";
+import {
+  checkAtsResumeExport,
+  getFriendlyAtsPdfError,
+  renderAtsResumePdf,
+} from "@/lib/pdf/ResumePDFDocument";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { requireAuthenticatedUser } from "@/lib/security/route-security";
 import { trackEvent } from "@/lib/track-event";
@@ -48,10 +52,10 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         {
-          error:
-            exportCheck.recommendedFixes[0] ??
-            exportCheck.overflowReasons[0] ??
-            "Unable to render the ATS PDF preview right now.",
+          error: getFriendlyAtsPdfError(
+            exportCheck,
+            "Unable to render the ATS PDF preview right now. Try rerunning ATS review or shortening long sections.",
+          ),
           pageCount: exportCheck.pageCount,
           fitsOnOnePage: exportCheck.fitsOnOnePage,
           overflowReasons: exportCheck.overflowReasons,
@@ -73,9 +77,14 @@ export async function POST(request: Request) {
         "x-ats-fits-one-page": String(exportCheck.fitsOnOnePage),
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to preview the ATS PDF." },
+      {
+        error: getFriendlyAtsPdfError(
+          null,
+          "Unable to preview the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+        ),
+      },
       { status: 400 },
     );
   }

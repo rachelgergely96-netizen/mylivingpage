@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AtsPdfPreviewCard from "@/components/ats/AtsPdfPreviewCard";
-import AtsReviewPanel from "@/components/ats/AtsReviewPanel";
+import AtsReviewPanel, { AtsReviewAdvancedPanel } from "@/components/ats/AtsReviewPanel";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
@@ -883,15 +883,6 @@ export default function CreatePage() {
 
             <div className={reviewViewport === "ats" ? "block" : "hidden md:block"}>
               <div className="space-y-5">
-                <AtsPdfPreviewCard
-                  resumeData={atsReview?.candidateResumeData ?? parsedData}
-                  contentHash={currentAtsPreviewHash}
-                  exportCheck={atsCurrentExportCheck}
-                  autoGenerate
-                  title="Recommended ATS PDF preview"
-                  body="This is the recommended ATS draft we condensed from your full information. Review it beside the living page, approve it when it feels right, and use the suggested cuts if you want a one-page version."
-                />
-
                 <div
                   className={`rounded-2xl border p-4 ${
                     atsPdfReady
@@ -950,11 +941,40 @@ export default function CreatePage() {
                     ) : null}
                   </div>
                 </div>
+
+                <AtsReviewPanel
+                  data={parsedData}
+                  review={atsReview}
+                  reviewing={reviewingAts}
+                  reviewError={createFlowFailure?.stage === "review" ? createFlowFailure.message : null}
+                  onRunReview={() => void runAtsReview({ mode: "full" })}
+                  runReviewLabel="Rebuild Recommended Draft"
+                  stepLabel="ATS Resume"
+                  heading="Recommended ATS draft"
+                  body={
+                    atsPdfReady
+                      ? isApprovedAtsOnePage(atsReview)
+                        ? "Your recommended ATS resume is approved, fits one page, and is separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
+                        : "Your recommended ATS resume is approved and usable now, even though it spans multiple pages. Use the preview suggestions below if you want to trim it into a one-page version later."
+                      : atsApproved
+                        ? "Your approved ATS PDF stays live until you explicitly replace it. Use the tools below if you want to build a stronger or shorter replacement draft."
+                        : "We generated a recommended ATS draft from the same intake. Review the PDF preview, rebuild the recommendation if needed, and approve it when it feels right."
+                  }
+                />
+
+                <AtsPdfPreviewCard
+                  resumeData={atsReview?.candidateResumeData ?? parsedData}
+                  contentHash={currentAtsPreviewHash}
+                  exportCheck={atsCurrentExportCheck}
+                  autoGenerate
+                  title="Recommended ATS PDF preview"
+                  body="This is the recommended ATS draft we condensed from your full information. Review it beside the living page, approve it when it feels right, and use the suggested cuts if you want a one-page version."
+                />
               </div>
             </div>
           </div>
 
-          <section className="space-y-4">
+          <section data-testid="create-theme-section" className="space-y-4">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Living page themes</p>
               <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Choose the visual direction</h3>
@@ -971,28 +991,14 @@ export default function CreatePage() {
             />
           </section>
 
-          <AtsReviewPanel
+          <AtsReviewAdvancedPanel
             data={parsedData}
             review={atsReview}
             targeting={atsTargeting}
-            previewResumeData={atsReview?.candidateResumeData ?? parsedData}
-            previewContentHash={currentAtsPreviewHash}
             reviewing={reviewingAts}
-            reviewError={createFlowFailure?.stage === "review" ? createFlowFailure.message : null}
             onTargetingChange={setAtsTargeting}
             onRunReview={() => void runAtsReview({ mode: "full" })}
             runReviewLabel="Rebuild Recommended Draft"
-            stepLabel="ATS Resume"
-            heading="Recommended ATS draft"
-            body={
-              atsPdfReady
-                ? isApprovedAtsOnePage(atsReview)
-                  ? "Your recommended ATS resume is approved, fits one page, and is separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
-                  : "Your recommended ATS resume is approved and usable now, even though it spans multiple pages. Use the preview suggestions below if you want to trim it into a one-page version later."
-                : atsApproved
-                  ? "Your approved ATS PDF stays live until you explicitly replace it. Use the tools below if you want to build a stronger or shorter replacement draft."
-                  : "We generated a recommended ATS draft from the same intake. Review the PDF preview, rebuild the recommendation if needed, and approve it when it feels right."
-            }
           />
         </section>
       ) : null}

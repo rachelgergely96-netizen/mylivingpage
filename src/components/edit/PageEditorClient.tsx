@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AtsPdfPreviewCard from "@/components/ats/AtsPdfPreviewCard";
-import AtsReviewPanel from "@/components/ats/AtsReviewPanel";
+import AtsReviewPanel, { AtsReviewAdvancedPanel } from "@/components/ats/AtsReviewPanel";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
@@ -911,30 +911,49 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
             </div>
           </div>
 
-          <AtsPdfPreviewCard
-            resumeData={atsData}
-            contentHash={currentAtsPreviewHash}
-            exportCheck={atsReview?.candidateExportCheck ?? atsReview?.exportCheck ?? null}
-            autoGenerate
-          />
+          <div data-testid="ats-editor-workspace" className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <AtsReviewPanel
+              data={atsData}
+              review={atsReview}
+              reviewing={reviewingAts}
+              actionBusy={saving}
+              onRunReview={() => void runAtsReview({ mode: "full" })}
+              onPrimaryAction={() => void handleUseAutoOptimizedVersion()}
+              primaryActionLabel="Use Recommended Draft"
+              runReviewLabel="Rebuild Recommended Draft"
+              stepLabel="ATS Resume"
+              heading="Review the recommended ATS draft"
+              body="Start from the recommended ATS draft we generated from your full information. Save your edits when they help, approve replacements when you want them live, and use the preview suggestions if you want to tighten the PDF to one page."
+            />
 
-          <ResumeEditorFields data={atsData} onChange={setAtsData} mode="ats" />
+            <AtsPdfPreviewCard
+              resumeData={atsData}
+              contentHash={currentAtsPreviewHash}
+              exportCheck={atsReview?.candidateExportCheck ?? atsReview?.exportCheck ?? null}
+              autoGenerate
+            />
+          </div>
 
-          <AtsReviewPanel
+          <section data-testid="ats-editor-form-section" className="space-y-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Edit ATS draft</p>
+              <h2 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Refine the recruiter-facing version</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
+                Tighten copy, adjust ordering, and save when the ATS version says exactly what you want recruiters to see.
+              </p>
+            </div>
+            <ResumeEditorFields data={atsData} onChange={setAtsData} mode="ats" />
+          </section>
+
+          <AtsReviewAdvancedPanel
             data={atsData}
             review={atsReview}
             targeting={atsTargeting}
-            previewResumeData={atsData}
-            previewContentHash={currentAtsPreviewHash}
             reviewing={reviewingAts}
+            actionBusy={saving}
             onTargetingChange={setAtsTargeting}
             onRunReview={() => void runAtsReview({ mode: "full" })}
-            onPrimaryAction={() => void handleUseAutoOptimizedVersion()}
-            primaryActionLabel="Use Recommended Draft"
             runReviewLabel="Rebuild Recommended Draft"
-            stepLabel="ATS Resume"
-            heading="Review the recommended ATS draft"
-            body="Start from the recommended ATS draft we generated from your full information. Save your edits when they help, approve replacements when you want them live, and use the preview suggestions if you want to tighten the PDF to one page."
           />
         </div>
       ) : null}

@@ -4,7 +4,11 @@ import {
   getAtsAvailabilityReason,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
-import { checkAtsResumeExport, renderAtsResumePdf } from "@/lib/pdf/ResumePDFDocument";
+import {
+  checkAtsResumeExport,
+  getFriendlyAtsPdfError,
+  renderAtsResumePdf,
+} from "@/lib/pdf/ResumePDFDocument";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
@@ -73,8 +77,32 @@ export async function POST(request: Request) {
 
     const normalized = normalizeResumeDataForAts(approvedResumeData as ResumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
+    let buffer: Uint8Array;
 
-    const buffer = await renderAtsResumePdf(normalized);
+    try {
+      buffer = await renderAtsResumePdf(normalized);
+    } catch (error) {
+      await trackEvent(null, "resume.export.download_failed", {
+        page_id: body.pageId,
+        page_count: exportCheck.pageCount,
+        fits_on_one_page: exportCheck.fitsOnOnePage,
+        error: error instanceof Error ? error.message : "unknown_render_error",
+      });
+
+      return NextResponse.json(
+        {
+          error: getFriendlyAtsPdfError(
+            exportCheck,
+            "Unable to export the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+          ),
+          pageCount: exportCheck.pageCount,
+          fitsOnOnePage: exportCheck.fitsOnOnePage,
+          overflowReasons: exportCheck.overflowReasons,
+          recommendedFixes: exportCheck.recommendedFixes,
+        },
+        { status: 422 },
+      );
+    }
 
     await trackEvent(null, "resume.export.downloaded", {
       page_id: body.pageId,
@@ -88,9 +116,14 @@ export async function POST(request: Request) {
         "Content-Disposition": `attachment; filename="${buildFileName(normalized.name)}"`,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to export ATS PDF." },
+      {
+        error: getFriendlyAtsPdfError(
+          null,
+          "Unable to export the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+        ),
+      },
       { status: 400 },
     );
   }

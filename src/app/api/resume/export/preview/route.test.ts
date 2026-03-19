@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/pdf/ResumePDFDocument", () => ({
   checkAtsResumeExport: mocks.checkExport,
+  getFriendlyAtsPdfError: (
+    exportCheck: { recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
+    fallback?: string,
+  ) => exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
   renderAtsResumePdf: mocks.renderPdf,
 }));
 

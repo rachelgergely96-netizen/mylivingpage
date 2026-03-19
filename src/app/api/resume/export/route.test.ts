@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/pdf/ResumePDFDocument", () => ({
   checkAtsResumeExport: mocks.checkExport,
+  getFriendlyAtsPdfError: (
+    exportCheck: { recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
+    fallback?: string,
+  ) => exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
   renderAtsResumePdf: mocks.renderPdf,
 }));
 
@@ -318,6 +322,66 @@ describe("POST /api/resume/export", () => {
         page_id: "page-1",
         page_count: 2,
         fits_on_one_page: false,
+      }),
+    );
+  });
+
+  it("returns a friendly error when the ATS PDF renderer fails", async () => {
+    const approvedResumeData = buildApprovedResumeData("Approved Resume");
+    mocks.checkExport.mockResolvedValue({
+      pageCount: 2,
+      fitsOnOnePage: false,
+      overflowReasons: ["The approved ATS draft still spans more than one page."],
+      recommendedFixes: ["Trim the draft if you want a one-page version."],
+    });
+    mocks.renderPdf.mockRejectedValue(new Error("Minified React error #31"));
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse({
+                approvedResumeData,
+                approvedExportCheck: {
+                  pageCount: 2,
+                  fitsOnOnePage: false,
+                  overflowReasons: ["The approved ATS draft still spans more than one page."],
+                  recommendedFixes: ["Trim the draft if you want a one-page version."],
+                },
+              }),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual({
+      error: "Trim the draft if you want a one-page version.",
+      pageCount: 2,
+      fitsOnOnePage: false,
+      overflowReasons: ["The approved ATS draft still spans more than one page."],
+      recommendedFixes: ["Trim the draft if you want a one-page version."],
+    });
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "resume.export.download_failed",
+      expect.objectContaining({
+        page_id: "page-1",
+        page_count: 2,
+        fits_on_one_page: false,
+        error: "Minified React error #31",
       }),
     );
   });

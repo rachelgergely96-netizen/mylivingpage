@@ -226,8 +226,12 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
     await page.getByRole("button", { name: "Generate both versions" }).click();
     await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByTestId("ats-preview-card")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("We built your ATS version")).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("Machine Readability")).toHaveCount(0);
+    const atsPanelBox = await page.getByTestId("ats-review-panel").boundingBox();
+    const themeSectionBox = await page.getByTestId("create-theme-section").boundingBox();
+    expect(atsPanelBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(themeSectionBox?.y ?? Number.NEGATIVE_INFINITY);
     await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish Living Page" }).click();
     await expect(page.getByRole("heading", { name: "Your living page is live" })).toBeVisible({ timeout: 45_000 });

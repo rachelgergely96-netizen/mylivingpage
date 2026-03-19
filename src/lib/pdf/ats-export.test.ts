@@ -31,6 +31,48 @@ function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
   };
 }
 
+function buildLongResume(): ResumeData {
+  const longBullet =
+    "Led a cross-functional initiative that consolidated fragmented workflows, improved ATS keyword coverage, and documented measurable delivery outcomes across teams.";
+
+  return buildResume({
+    summary:
+      "Product leader building recruiter-friendly resume systems, aligning content strategy to exact role language, and shipping structured operating improvements across product, design, and operations.",
+    experience: Array.from({ length: 6 }, (_, index) => ({
+      title: `Senior Product Manager ${index + 1}`,
+      company: `Company ${index + 1}`,
+      dates: `20${18 + index} - 20${19 + index}`,
+      highlights: Array.from({ length: 4 }, (_, bulletIndex) => `${longBullet} Focus area ${bulletIndex + 1}.`),
+      url: `company-${index + 1}.example.com`,
+    })),
+    projects: [
+      {
+        name: "Launch Hub",
+        description: `${longBullet} Built launch tooling and reporting dashboards for multi-team planning.`,
+        tech: ["React", "SQL", "TypeScript", "Analytics"],
+        url: null,
+      },
+      {
+        name: "Hiring Workflow",
+        description: `${longBullet} Created a reusable hiring-ops system for candidate review and search signals.`,
+        tech: ["Automation", "Docs", "Airtable", "Notion"],
+        url: null,
+      },
+      {
+        name: "Portfolio Analytics",
+        description: `${longBullet} Modeled portfolio health, reporting, and keyword performance over time.`,
+        tech: ["Python", "SQL", "Looker", "ETL"],
+        url: null,
+      },
+    ],
+    certifications: [
+      { name: "CSPO", issuer: "Scrum Alliance", date: "2023" },
+      { name: "PMC", issuer: "Product School", date: "2022" },
+      { name: "Analytics", issuer: "General Assembly", date: "2021" },
+    ],
+  });
+}
+
 describe("ATS PDF export", () => {
   it("normalizes ATS export data and removes public-page-only stats", () => {
     const exportData = buildAtsPdfData(buildResume());
@@ -47,5 +89,13 @@ describe("ATS PDF export", () => {
     expect(exportCheck.pageCount).toBe(1);
     expect(exportCheck.fitsOnOnePage).toBe(true);
     expect(exportCheck.overflowReasons).toEqual([]);
+  });
+
+  it("renders oversized ATS resumes as a valid multi-page PDF instead of falling back to validation failure", async () => {
+    const exportCheck = await checkAtsResumeExport(buildLongResume());
+
+    expect(exportCheck.pageCount).toBeGreaterThan(1);
+    expect(exportCheck.fitsOnOnePage).toBe(false);
+    expect(exportCheck.overflowReasons).not.toContain("The ATS PDF could not be validated with the current content shape.");
   });
 });

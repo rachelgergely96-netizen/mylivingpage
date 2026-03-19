@@ -165,6 +165,13 @@ export function countPdfPages(buffer: Uint8Array) {
   return Math.max(1, (body.match(/\/Type\s*\/Page\b/g) ?? []).length);
 }
 
+export function getFriendlyAtsPdfError(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+  fallback = "Unable to generate the ATS PDF right now. Try rerunning ATS review or shortening long sections.",
+) {
+  return exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback;
+}
+
 export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportCheck> {
   const exportData = buildAtsPdfData(data);
   const heuristics = countOverflowReasons(exportData);
@@ -236,7 +243,7 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
           <View>
             <Text style={styles.sectionTitle}>Experience</Text>
             {normalized.experience.map((entry, index) => (
-              <View key={`experience-${index}`} style={styles.entryBlock} wrap={false}>
+              <View key={`experience-${index}`} style={styles.entryBlock}>
                 <View style={styles.entryRow}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.entryTitle}>{entry.title}</Text>
@@ -271,7 +278,7 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
           <View>
             <Text style={styles.sectionTitle}>Education</Text>
             {normalized.education.map((entry, index) => (
-              <View key={`education-${index}`} style={styles.entryBlock} wrap={false}>
+              <View key={`education-${index}`} style={styles.entryBlock}>
                 <View style={styles.entryRow}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.entryTitle}>{entry.degree}</Text>
@@ -288,7 +295,7 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
           <View>
             <Text style={styles.sectionTitle}>Projects</Text>
             {normalized.projects.map((project, index) => (
-              <View key={`project-${index}`} style={styles.entryBlock} wrap={false}>
+              <View key={`project-${index}`} style={styles.entryBlock}>
                 <Text style={styles.entryTitle}>{project.name}</Text>
                 <Text style={styles.projectLine}>{project.description}</Text>
                 {project.tech.length ? (
@@ -303,7 +310,7 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
           <View>
             <Text style={styles.sectionTitle}>Certifications</Text>
             {normalized.certifications.map((certification, index) => (
-              <View key={`certification-${index}`} style={styles.entryBlock} wrap={false}>
+              <View key={`certification-${index}`} style={styles.entryBlock}>
                 <View style={styles.entryRow}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.entryTitle}>{certification.name}</Text>

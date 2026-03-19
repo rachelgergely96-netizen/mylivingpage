@@ -11,6 +11,19 @@ interface DownloadResumeButtonProps {
   ownerEditHref?: string | null;
 }
 
+function sanitizeDownloadErrorMessage(message: string) {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("minified react error") ||
+    normalized.includes("invariant violation") ||
+    normalized.includes("objects are not valid as a react child")
+  ) {
+    return "Unable to export the ATS PDF right now. Try rerunning ATS review or shortening long sections.";
+  }
+
+  return message;
+}
+
 export default function DownloadResumeButton({
   data,
   pageId,
@@ -58,7 +71,11 @@ export default function DownloadResumeButton({
       a.click();
       URL.revokeObjectURL(url);
     } catch (downloadError) {
-      setError(downloadError instanceof Error ? downloadError.message : "PDF generation failed. Try again.");
+      setError(
+        downloadError instanceof Error
+          ? sanitizeDownloadErrorMessage(downloadError.message)
+          : "PDF generation failed. Try again.",
+      );
       setTimeout(() => setError(null), 4000);
     } finally {
       setGenerating(false);

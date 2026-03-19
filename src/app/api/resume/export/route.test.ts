@@ -267,8 +267,14 @@ describe("POST /api/resume/export", () => {
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 
-  it("blocks public download when the ATS draft is approved but still spans more than one page", async () => {
+  it("downloads the approved ATS resume even when it spans more than one page", async () => {
     const approvedResumeData = buildApprovedResumeData("Approved Resume");
+    mocks.checkExport.mockResolvedValue({
+      pageCount: 2,
+      fitsOnOnePage: false,
+      overflowReasons: ["The approved ATS draft still spans more than one page."],
+      recommendedFixes: ["Trim the draft if you want a one-page version."],
+    });
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
@@ -300,11 +306,19 @@ describe("POST /api/resume/export", () => {
       }),
     );
 
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({
-      error:
-        "This ATS draft is approved, but it still spans more than one page. Trim it manually and rerun review later if you want a one-page ATS PDF download.",
-    });
-    expect(mocks.renderPdf).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(mocks.renderPdf).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Approved Resume" }),
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "resume.export.downloaded",
+      expect.objectContaining({
+        page_id: "page-1",
+        page_count: 2,
+        fits_on_one_page: false,
+      }),
+    );
   });
 });

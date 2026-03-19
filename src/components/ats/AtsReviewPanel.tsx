@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getRecommendedOnePageCuts } from "@/lib/ats-review";
 import type {
   AtsIssue,
   AtsReviewSnapshot,
@@ -117,17 +118,18 @@ export default function AtsReviewPanel({
       : null;
 
   const blockingReason = getBlockingReason(review);
+  const recommendedCuts = getRecommendedOnePageCuts(review?.candidateExportCheck ?? review?.exportCheck);
 
   const statusTitle = review
     ? review.status === "ready"
       ? "Recommended ATS draft ready"
-      : "Best condensed ATS draft still needs trimming"
+      : "Recommended ATS draft ready to use"
     : null;
 
   const statusBody = review
     ? review.status === "ready"
       ? "We built a recommended one-page ATS version and kept it separate from your public page."
-      : `${blockingReason} This is still the strongest condensed ATS draft we could build from your current information.`
+      : "This ATS draft is still usable now. We also surfaced the strongest cuts we recommend if you want to tighten it into one page."
     : null;
 
   const previewData = useMemo(
@@ -281,9 +283,18 @@ export default function AtsReviewPanel({
             </div>
 
             {review.status === "needs_attention" ? (
-              <div className="rounded-2xl border border-[rgba(255,120,120,0.24)] bg-[rgba(255,120,120,0.08)] p-4 text-sm leading-6 text-[#FFD5D5]">
-                <p className="font-semibold text-[#FFF0F0]">This recommended draft is not ready for approval yet.</p>
-                <p className="mt-2">{blockingReason}</p>
+              <div className="rounded-2xl border border-[rgba(245,195,107,0.24)] bg-[rgba(245,195,107,0.08)] p-4 text-sm leading-6 text-[#FDE7BA]">
+                <p className="font-semibold text-[#FFF7E5]">This recommended draft is usable now.</p>
+                <p className="mt-2">
+                  {blockingReason} Use the cut suggestions below if you want to bring it down to one page.
+                </p>
+                {recommendedCuts.length ? (
+                  <ul className="mt-3 space-y-2 text-sm leading-6 text-[#FFF7E5]">
+                    {recommendedCuts.map((cut) => (
+                      <li key={cut}>{cut}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -445,9 +456,18 @@ export default function AtsReviewPanel({
                 {previewStatus}. Preview only refreshes when you ask for it.
               </p>
               {review.candidateExportCheck?.fitsOnOnePage === false ? (
-                <p className="mt-2 text-xs leading-6 text-[rgba(245,195,107,0.88)]">
-                  This recommended draft still runs long. Edit the ATS draft or rebuild the recommendation to reach one page before approval.
-                </p>
+                <div className="mt-2 rounded-xl border border-[rgba(245,195,107,0.2)] bg-[rgba(245,195,107,0.08)] p-4">
+                  <p className="text-xs leading-6 text-[rgba(245,195,107,0.92)]">
+                    This ATS preview is usable now, even though it still runs longer than one page. We recommend these cuts if you want a tighter one-page version.
+                  </p>
+                  {recommendedCuts.length ? (
+                    <ul className="mt-3 space-y-2 text-xs leading-6 text-[rgba(255,245,220,0.9)]">
+                      {recommendedCuts.map((cut) => (
+                        <li key={cut}>{cut}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           </div>

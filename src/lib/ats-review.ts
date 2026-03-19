@@ -107,11 +107,13 @@ const ATS_PROPOSAL_PRIORITY: AtsProposalGroup[] = [
   "certifications",
 ];
 
-const ATS_APPROVAL_PENDING_REASON = "Approve the ATS resume to enable PDF download.";
+const ATS_APPROVAL_PENDING_REASON = "Approve the ATS resume to make this version available for download.";
+const ATS_PENDING_MULTI_PAGE_REASON =
+  "You can use this ATS resume now. We recommend these cuts if you want a one-page version.";
 const ATS_OUT_OF_SYNC_REASON =
   "Your living page changed after ATS approval. Review and re-approve the ATS resume before download is available again.";
 const ATS_APPROVED_MULTI_PAGE_REASON =
-  "This ATS draft is approved, but it still spans more than one page. Trim it manually and rerun review later if you want a one-page ATS PDF download.";
+  "This ATS resume is approved and downloadable. We still recommend trimming it to one page for a tighter PDF.";
 
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -531,11 +533,10 @@ export function getAtsAvailabilityReason(review: Partial<AtsReviewSnapshot> | nu
     return ATS_APPROVED_MULTI_PAGE_REASON;
   }
 
-  if (
-    review?.approvalStatus === "pending" &&
-    (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage)
-  ) {
-    return ATS_APPROVAL_PENDING_REASON;
+  if (review?.approvalStatus === "pending" && review?.candidateResumeData) {
+    return (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage)
+      ? ATS_APPROVAL_PENDING_REASON
+      : ATS_PENDING_MULTI_PAGE_REASON;
   }
 
   return (
@@ -621,11 +622,41 @@ export function hasApprovedAtsResume(
   return hasApprovedArtifacts(review) && getAtsApprovalStatus(review, sourceData) === "approved";
 }
 
+export function canDownloadApprovedAtsResume(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData?: ResumeData | null,
+) {
+  return hasApprovedAtsResume(review, sourceData);
+}
+
 export function hasDownloadableAtsResume(
   review: Partial<AtsReviewSnapshot> | null | undefined,
   sourceData?: ResumeData | null,
 ) {
-  return Boolean(review?.approvedExportCheck?.fitsOnOnePage) && hasApprovedAtsResume(review, sourceData);
+  return canDownloadApprovedAtsResume(review, sourceData);
+}
+
+export function isApprovedAtsOnePage(
+  review: Partial<AtsReviewSnapshot> | null | undefined,
+  sourceData?: ResumeData | null,
+) {
+  return Boolean(review?.approvedExportCheck?.fitsOnOnePage) && canDownloadApprovedAtsResume(review, sourceData);
+}
+
+export function isCurrentAtsDraftOnePage(review: Partial<AtsReviewSnapshot> | null | undefined) {
+  return Boolean(review?.candidateResumeData) && Boolean(review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage);
+}
+
+export function getRecommendedOnePageCuts(
+  exportCheck: Partial<AtsExportCheck> | null | undefined,
+  limit = 3,
+) {
+  const fixes = dedupe([
+    ...(exportCheck?.recommendedFixes ?? []),
+    ...(exportCheck?.overflowReasons ?? []),
+  ]);
+
+  return fixes.slice(0, limit);
 }
 
 export function hasNewerUnapprovedAtsDraft(
@@ -645,21 +676,15 @@ export function hasNewerUnapprovedAtsDraft(
 }
 
 export function canApproveCurrentAtsDraft(review: Partial<AtsReviewSnapshot> | null | undefined) {
-  return Boolean(review?.candidateResumeData && (review?.candidateExportCheck?.fitsOnOnePage ?? review?.exportCheck?.fitsOnOnePage));
+  return Boolean(review?.candidateResumeData);
 }
 
 export function getCurrentAtsDraftApprovalReason(review: Partial<AtsReviewSnapshot> | null | undefined) {
-  if (canApproveCurrentAtsDraft(review)) {
-    return ATS_APPROVAL_PENDING_REASON;
+  if (!review?.candidateResumeData) {
+    return "Rerun ATS review and save to rebuild your ATS PDF.";
   }
 
-  return (
-    review?.candidateExportCheck?.recommendedFixes?.[0] ??
-    review?.candidateExportCheck?.overflowReasons?.[0] ??
-    review?.exportCheck?.recommendedFixes?.[0] ??
-    review?.exportCheck?.overflowReasons?.[0] ??
-    "We condensed this into the strongest ATS draft we could. Edit the ATS draft or rerun review to reach one page before approval."
-  );
+  return isCurrentAtsDraftOnePage(review) ? ATS_APPROVAL_PENDING_REASON : ATS_PENDING_MULTI_PAGE_REASON;
 }
 
 export function resolveEditableAtsResumeData(
@@ -710,21 +735,6 @@ export function finalizeApprovedAtsResume(
   data: ResumeData,
   approvedSourceFingerprint?: string | null,
 ): AtsReviewSnapshot {
-  if (!review.exportCheck.fitsOnOnePage) {
-    if (hasApprovedArtifacts(review)) {
-      return {
-        ...review,
-        availabilityReason: getCurrentAtsDraftApprovalReason(review),
-      };
-    }
-
-    return {
-      ...review,
-      approvalStatus: "pending",
-      availabilityReason: getCurrentAtsDraftApprovalReason(review),
-    };
-  }
-
   const approvedReview: AtsReviewSnapshot = {
     ...review,
     approvedResumeData: normalizeResumeDataForAts(data),
@@ -749,24 +759,18 @@ export function approveCandidateAtsResume(
 ): AtsReviewSnapshot {
   const reviewExportCheck = review.candidateExportCheck ?? review.exportCheck;
 
-  if (!review.candidateResumeData || !reviewExportCheck.fitsOnOnePage) {
+  if (!review.candidateResumeData) {
     if (hasApprovedArtifacts(review)) {
       return {
         ...review,
-        availabilityReason: getCurrentAtsDraftApprovalReason({
-          ...review,
-          candidateExportCheck: reviewExportCheck,
-        }),
+        availabilityReason: getCurrentAtsDraftApprovalReason(review),
       };
     }
 
     return {
       ...review,
       approvalStatus: "pending",
-      availabilityReason: getCurrentAtsDraftApprovalReason({
-        ...review,
-        candidateExportCheck: reviewExportCheck,
-      }),
+      availabilityReason: getCurrentAtsDraftApprovalReason(review),
     };
   }
 

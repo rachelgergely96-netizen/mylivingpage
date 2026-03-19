@@ -17,15 +17,18 @@ import {
   approveCandidateAtsResume,
   buildAtsRelevantFingerprint,
   buildResumeContentHash,
+  canDownloadApprovedAtsResume,
   canApproveCurrentAtsDraft,
   finalizeApprovedAtsResume,
   getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
   getAtsAvailabilityReason,
   getDefaultAtsTargeting,
+  getRecommendedOnePageCuts,
   hasApprovedAtsResume,
-  hasDownloadableAtsResume,
   inheritApprovedAtsResume,
+  isApprovedAtsOnePage,
+  isCurrentAtsDraftOnePage,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -107,7 +110,7 @@ function buildAtsStatus(review: AtsReviewSnapshot | null) {
     };
   }
 
-  if (hasDownloadableAtsResume(review)) {
+  if (canDownloadApprovedAtsResume(review) && isApprovedAtsOnePage(review)) {
     return {
       title: "ATS resume ready",
       body: "Your ATS version fits one page and will be available for download from the live page.",
@@ -116,10 +119,13 @@ function buildAtsStatus(review: AtsReviewSnapshot | null) {
     };
   }
 
-  if (getAtsApprovalStatus(review) === "approved") {
+  if (canDownloadApprovedAtsResume(review)) {
+    const cuts = getRecommendedOnePageCuts(review.approvedExportCheck);
     return {
       title: "ATS draft approved",
-      body: "Your ATS version is approved, but it still spans more than one page. Trim it manually in the ATS editor and re-approve later if you want public PDF download.",
+      body: cuts.length
+        ? `Your ATS PDF is approved and downloadable now. We still recommend these cuts for a one-page version: ${cuts.join(" ")}`.trim()
+        : "Your ATS PDF is approved and downloadable now. We still recommend trimming it to one page for a tighter version.",
       tone: "border-[rgba(245,195,107,0.24)] bg-[rgba(245,195,107,0.08)] text-[#FDE7BA]",
       recommendedCta: "ats",
     };
@@ -532,7 +538,7 @@ export default function CreatePage() {
     setCreateFlowFailure((current) => (current?.stage === "review" ? null : current));
     void trackCreateEvent("ats.resume.approved", {
       fits_one_page: approvedReview.approvedExportCheck?.fitsOnOnePage ?? false,
-      download_ready: hasDownloadableAtsResume(approvedReview),
+      download_ready: canDownloadApprovedAtsResume(approvedReview),
     });
   }, [atsReview, parsedData, trackCreateEvent]);
 
@@ -585,7 +591,7 @@ export default function CreatePage() {
       void trackCreateEvent("create.completed", {
         input_mode: inputMode,
         theme_id: selectedTheme,
-        ats_ready: hasDownloadableAtsResume(atsReview),
+        ats_ready: canDownloadApprovedAtsResume(atsReview),
       });
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
@@ -597,10 +603,13 @@ export default function CreatePage() {
   const progressStep = step === "processing" ? "review" : step;
   const currentProgressIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
   const atsApproved = hasApprovedAtsResume(atsReview);
-  const atsPdfReady = hasDownloadableAtsResume(atsReview);
+  const atsPdfReady = canDownloadApprovedAtsResume(atsReview);
   const canApproveAts = !atsApproved && canApproveCurrentAtsDraft(atsReview);
-  const atsCandidateReady = canApproveCurrentAtsDraft(atsReview);
-  const atsCandidatePageCount = atsReview?.candidateExportCheck?.pageCount ?? atsReview?.exportCheck.pageCount ?? null;
+  const atsCandidateAvailable = canApproveCurrentAtsDraft(atsReview);
+  const atsCurrentOnePage = isCurrentAtsDraftOnePage(atsReview);
+  const atsCurrentExportCheck = atsReview?.candidateExportCheck ?? atsReview?.exportCheck ?? null;
+  const atsCandidatePageCount = atsCurrentExportCheck?.pageCount ?? null;
+  const atsSuggestedCuts = getRecommendedOnePageCuts(atsCurrentExportCheck);
   const currentAtsPreviewHash = parsedData
     ? buildResumeContentHash(
         normalizeResumeDataForAts(atsReview?.candidateResumeData ?? parsedData),
@@ -787,7 +796,7 @@ export default function CreatePage() {
               Review both outputs
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Your living page and ATS resume are now separate. We also built a recommended ATS draft from the same intake so you can approve the strongest one-page version first, then keep editing later if you want to add more.
+              Your living page and ATS resume are now separate. We also built a recommended ATS draft from the same intake so you can approve the strongest usable version now, then keep editing later if you want to add more or trim it toward one page.
             </p>
           </div>
 
@@ -877,9 +886,10 @@ export default function CreatePage() {
                 <AtsPdfPreviewCard
                   resumeData={atsReview?.candidateResumeData ?? parsedData}
                   contentHash={currentAtsPreviewHash}
+                  exportCheck={atsCurrentExportCheck}
                   autoGenerate
                   title="Recommended ATS PDF preview"
-                  body="This is the recommended ATS draft we condensed from your full information. Review it beside the living page, then approve it once it fits on one page."
+                  body="This is the recommended ATS draft we condensed from your full information. Review it beside the living page, approve it when it feels right, and use the suggested cuts if you want a one-page version."
                 />
 
                 <div
@@ -897,13 +907,29 @@ export default function CreatePage() {
                   </h3>
                   <p className="mt-2 text-sm leading-6">
                     {atsPdfReady
-                      ? "This recommended ATS version is approved, fits one page, and will unlock PDF download as soon as you publish the page."
+                      ? isApprovedAtsOnePage(atsReview)
+                        ? "This recommended ATS version is approved, fits one page, and will unlock PDF download as soon as you publish the page."
+                        : "This recommended ATS version is approved and usable now. It will stay downloadable after publish, and the preview shows the cuts we recommend if you want a tighter one-page version."
                       : atsApproved
-                        ? "This recommended ATS version is approved. You can keep refining the ATS draft later, but the approved one-page PDF is the version that will stay live until you explicitly replace it."
-                        : atsCandidateReady
-                          ? "This recommended ATS draft already fits one page. Approve it now if you want PDF download available right after publish."
-                          : `We condensed this into the strongest ATS draft we could, but it still spans ${atsCandidatePageCount ?? "multiple"} pages. Edit the ATS draft or rebuild the recommendation to reach one page before approval.`}
+                        ? "This recommended ATS version is approved. You can keep refining the ATS draft later, but the approved PDF is the version that will stay live until you explicitly replace it."
+                        : atsCandidateAvailable
+                          ? atsCurrentOnePage
+                            ? "This recommended ATS draft already fits one page. Approve it now if you want PDF download available right after publish."
+                            : `You can approve and use this ATS draft now, even though it spans ${atsCandidatePageCount ?? "multiple"} pages. We recommend the cuts in the preview if you want a one-page version.`
+                          : "Rebuild the recommended draft to generate an ATS resume you can review and approve."}
                   </p>
+                  {!atsCurrentOnePage && !atsApproved && atsSuggestedCuts.length ? (
+                    <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+                        Recommended one-page cuts
+                      </p>
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-[rgba(240,244,255,0.86)]">
+                        {atsSuggestedCuts.map((cut) => (
+                          <li key={cut}>{cut}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
@@ -960,10 +986,12 @@ export default function CreatePage() {
             heading="Recommended ATS draft"
             body={
               atsPdfReady
-                ? "Your recommended ATS resume is approved, fits one page, and is separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
+                ? isApprovedAtsOnePage(atsReview)
+                  ? "Your recommended ATS resume is approved, fits one page, and is separate from the public page. You can still rebuild the recommendation later if you want a tighter version."
+                  : "Your recommended ATS resume is approved and usable now, even though it spans multiple pages. Use the preview suggestions below if you want to trim it into a one-page version later."
                 : atsApproved
                   ? "Your approved ATS PDF stays live until you explicitly replace it. Use the tools below if you want to build a stronger or shorter replacement draft."
-                  : "We generated a recommended ATS draft from the same intake. Review the PDF preview, rebuild the recommendation if needed, and approve it when it reaches one page."
+                  : "We generated a recommended ATS draft from the same intake. Review the PDF preview, rebuild the recommendation if needed, and approve it when it feels right."
             }
           />
         </section>

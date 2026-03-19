@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ResumeData } from "@/types/resume";
+import { getRecommendedOnePageCuts } from "@/lib/ats-review";
+import type { AtsExportCheck, ResumeData } from "@/types/resume";
 
 interface AtsPdfPreviewCardProps {
   resumeData: ResumeData;
   contentHash: string | null;
+  exportCheck?: AtsExportCheck | null;
   title?: string;
   body?: string;
   autoGenerate?: boolean;
@@ -14,6 +16,7 @@ interface AtsPdfPreviewCardProps {
 export default function AtsPdfPreviewCard({
   resumeData,
   contentHash,
+  exportCheck = null,
   title = "Recommended ATS PDF preview",
   body = "This previews the current recommended one-column ATS version, not your public page.",
   autoGenerate = false,
@@ -104,6 +107,9 @@ export default function AtsPdfPreviewCard({
     void refreshPreview();
   }, [autoGenerate, contentHash, previewSnapshotHash, previewUrl, refreshPreview]);
 
+  const displayPageCount = pageCount ?? exportCheck?.pageCount ?? null;
+  const displayFitsOnOnePage = fitsOnOnePage ?? exportCheck?.fitsOnOnePage ?? null;
+  const recommendedCuts = getRecommendedOnePageCuts(exportCheck);
   const previewStatus = !previewSnapshotHash
     ? "Preview not generated yet"
     : previewSnapshotHash === contentHash
@@ -118,9 +124,9 @@ export default function AtsPdfPreviewCard({
           <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">{body}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {fitsOnOnePage !== null || pageCount !== null ? (
+          {displayFitsOnOnePage !== null || displayPageCount !== null ? (
             <div className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.62)]">
-              {fitsOnOnePage ? "Fits one page" : `${pageCount ?? "?"} pages`}
+              {displayFitsOnOnePage ? "Fits one page" : `${displayPageCount ?? "?"} pages`}
             </div>
           ) : null}
           <button
@@ -163,10 +169,19 @@ export default function AtsPdfPreviewCard({
       <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.48)]">
         {previewStatus}. {autoGenerate ? "Preview refreshes automatically when the draft changes, and you can refresh it manually anytime." : "Preview only refreshes when you ask for it."}
       </p>
-      {fitsOnOnePage === false ? (
-        <p className="mt-2 text-xs leading-6 text-[rgba(245,195,107,0.88)]">
-          This recommended draft currently spans {pageCount ?? "multiple"} pages. Edit the ATS draft or rebuild the recommendation to reach one page before approval.
-        </p>
+      {displayFitsOnOnePage === false ? (
+        <div className="mt-2 rounded-xl border border-[rgba(245,195,107,0.2)] bg-[rgba(245,195,107,0.08)] p-4">
+          <p className="text-xs leading-6 text-[rgba(245,195,107,0.92)]">
+            This ATS preview is usable now, even though it currently spans {displayPageCount ?? "multiple"} pages. We recommend these cuts if you want a one-page version.
+          </p>
+          {recommendedCuts.length ? (
+            <ul className="mt-3 space-y-2 text-xs leading-6 text-[rgba(255,245,220,0.9)]">
+              {recommendedCuts.map((cut) => (
+                <li key={cut}>{cut}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

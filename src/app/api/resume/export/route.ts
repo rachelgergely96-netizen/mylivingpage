@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
+  canDownloadApprovedAtsResume,
   getAtsAvailabilityReason,
-  hasDownloadableAtsResume,
   normalizeResumeDataForAts,
 } from "@/lib/ats-review";
 import { checkAtsResumeExport, renderAtsResumePdf } from "@/lib/pdf/ResumePDFDocument";
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     const atsReview = page.page_config?.ats ?? null;
-    const approvedResumeData = hasDownloadableAtsResume(atsReview)
+    const approvedResumeData = canDownloadApprovedAtsResume(atsReview)
       ? (atsReview?.approvedResumeData ?? null)
       : null;
 
@@ -74,20 +74,12 @@ export async function POST(request: Request) {
     const normalized = normalizeResumeDataForAts(approvedResumeData as ResumeData);
     const exportCheck = await checkAtsResumeExport(normalized);
 
-    if (!exportCheck.fitsOnOnePage) {
-      await trackEvent(null, "resume.export.blocked", {
-        page_id: body.pageId,
-        page_count: exportCheck.pageCount,
-        overflow_reasons: exportCheck.overflowReasons,
-      });
-      return NextResponse.json(exportCheck, { status: 409 });
-    }
-
     const buffer = await renderAtsResumePdf(normalized);
 
     await trackEvent(null, "resume.export.downloaded", {
       page_id: body.pageId,
       page_count: exportCheck.pageCount,
+      fits_on_one_page: exportCheck.fitsOnOnePage,
     });
 
     return new Response(new Uint8Array(buffer), {

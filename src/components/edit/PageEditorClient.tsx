@@ -16,16 +16,19 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import {
   buildAtsRelevantFingerprint,
   buildResumeContentHash,
+  canDownloadApprovedAtsResume,
   canApproveCurrentAtsDraft,
   createRuleBasedAtsReview,
   finalizeApprovedAtsResume,
   getCurrentAtsDraftApprovalReason,
   getAtsApprovalStatus,
   getDefaultAtsTargeting,
+  getRecommendedOnePageCuts,
   hasApprovedAtsResume,
-  hasDownloadableAtsResume,
   hasNewerUnapprovedAtsDraft,
   inheritApprovedAtsResume,
+  isApprovedAtsOnePage,
+  isCurrentAtsDraftOnePage,
   isAtsOutOfSync,
   normalizeResumeDataForAts,
   reconcileAtsApprovalStatus,
@@ -90,19 +93,26 @@ function buildAtsStatusMessage(
     return "Your living page changed after ATS approval. Review and re-approve the ATS resume before download is available again.";
   }
 
-  if (approvalStatus === "approved" && hasDownloadableAtsResume(atsReview, livingData)) {
+  if (approvalStatus === "approved" && canDownloadApprovedAtsResume(atsReview, livingData)) {
     if (hasNewerUnapprovedAtsDraft(atsReview, livingData)) {
-      return "Your approved one-page ATS PDF is still live. You have newer ATS draft edits that will not replace it until you approve them.";
+      return "Your approved ATS PDF is still live. You have newer ATS draft edits that will not replace it until you approve them.";
     }
-    return "ATS PDF ready on the live page.";
-  }
 
-  if (approvalStatus === "approved" && hasApprovedAtsResume(atsReview, livingData)) {
-    return "This ATS version is approved, but it is not currently downloadable because it no longer fits one page.";
+    if (isApprovedAtsOnePage(atsReview, livingData)) {
+      return "ATS PDF ready on the live page.";
+    }
+
+    const cuts = getRecommendedOnePageCuts(atsReview?.approvedExportCheck);
+    return cuts.length
+      ? `ATS PDF is live on the public page. Recommended one-page cuts: ${cuts.join(" ")}`
+      : "ATS PDF is live on the public page. We still recommend tightening it to one page for a cleaner version.";
   }
 
   if (atsReview?.candidateResumeData) {
-    return getCurrentAtsDraftApprovalReason(atsReview);
+    const cuts = getRecommendedOnePageCuts(atsReview?.candidateExportCheck ?? atsReview?.exportCheck);
+    return !isCurrentAtsDraftOnePage(atsReview) && cuts.length
+      ? `This ATS draft is usable now. Recommended one-page cuts: ${cuts.join(" ")}`
+      : getCurrentAtsDraftApprovalReason(atsReview);
   }
 
   return "ATS resume not generated yet. Use the ATS editor to build it.";
@@ -576,15 +586,19 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
 
     if (saved) {
       setSuccess(
-        hasDownloadableAtsResume(nextReview, data)
+        canDownloadApprovedAtsResume(nextReview, data)
           ? hasReplacementDraft
-            ? "Replacement ATS resume approved. Your live PDF now uses the new one-page draft."
-            : "ATS resume approved. PDF download is live on your public page."
-          : "ATS resume approved, but the approved export still needs to fit one page before public download can turn on.",
+            ? isApprovedAtsOnePage(nextReview, data)
+              ? "Replacement ATS resume approved. Your live PDF now uses the new one-page draft."
+              : "Replacement ATS resume approved. Your live PDF now uses the new ATS draft, and the preview shows suggested cuts for a one-page version."
+            : isApprovedAtsOnePage(nextReview, data)
+              ? "ATS resume approved. PDF download is live on your public page."
+              : "ATS resume approved. PDF download is live on your public page, and the preview shows suggested cuts for a one-page version."
+          : "ATS resume approved, but the current ATS snapshot still needs attention before it can go live.",
       );
       void trackOptimizeEvent("ats.resume.approved", {
         page_id: page.id,
-        download_ready: hasDownloadableAtsResume(nextReview, data),
+        download_ready: canDownloadApprovedAtsResume(nextReview, data),
         replacement_approval: hasReplacementDraft,
       });
     }
@@ -865,8 +879,8 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
                 <p className="mt-2 text-sm leading-6">
                   {atsOutOfSync
                     ? "Your living page changed after this ATS version was approved. Review the current ATS draft and approve it again when it is ready."
-                    : hasReplacementDraft && hasDownloadableAtsResume(atsReview, data)
-                      ? "This editor is separate from the living page. Your approved one-page ATS PDF is still live, and these newer draft edits will only replace it after you approve them."
+                    : hasReplacementDraft && canDownloadApprovedAtsResume(atsReview, data)
+                      ? "This editor is separate from the living page. Your approved ATS PDF is still live, and these newer draft edits will only replace it after you approve them."
                       : "This editor is separate from the living page. Update it as much as you need without changing the public page copy."}
                 </p>
               </div>
@@ -900,6 +914,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
           <AtsPdfPreviewCard
             resumeData={atsData}
             contentHash={currentAtsPreviewHash}
+            exportCheck={atsReview?.candidateExportCheck ?? atsReview?.exportCheck ?? null}
             autoGenerate
           />
 
@@ -919,7 +934,7 @@ export default function PageEditorClient({ pageId, mode }: PageEditorClientProps
             runReviewLabel="Rebuild Recommended Draft"
             stepLabel="ATS Resume"
             heading="Review the recommended ATS draft"
-            body="Start from the recommended one-page ATS draft we generated from your full information. Save your edits when they help, then approve a replacement only when the current draft fits on one page."
+            body="Start from the recommended ATS draft we generated from your full information. Save your edits when they help, approve replacements when you want them live, and use the preview suggestions if you want to tighten the PDF to one page."
           />
         </div>
       ) : null}

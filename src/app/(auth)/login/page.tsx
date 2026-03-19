@@ -2,8 +2,34 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { getAuthErrorMessage } from "@/lib/auth/auth-error";
+import { getAuthErrorMessage, getPasswordAuthErrorMessage } from "@/lib/auth/auth-error";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+const SESSION_CHECK_DELAYS_MS = [0, 150, 350, 700];
+
+async function waitForServerSession() {
+  for (const delayMs of SESSION_CHECK_DELAYS_MS) {
+    if (delayMs > 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+    }
+
+    try {
+      const response = await fetch("/api/profile", {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+      });
+
+      if (response.status !== 401) {
+        return true;
+      }
+    } catch {
+      // Retry until we exhaust the short session-finalization window.
+    }
+  }
+
+  return false;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -30,6 +56,15 @@ export default function LoginPage() {
     }
   }, []);
 
+  const clearErrorState = () => {
+    if (status !== "error" && !message) {
+      return;
+    }
+
+    setStatus("idle");
+    setMessage("");
+  };
+
   const onLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus("loading");
@@ -43,12 +78,20 @@ export default function LoginPage() {
       if (!data.session) {
         throw new Error("Sign-in succeeded but no session was created.");
       }
+      const serverSessionReady = await waitForServerSession();
+      if (!serverSessionReady) {
+        throw new Error("Sign-in succeeded, but the session could not be finalized. Please try again.");
+      }
       // Track login (fire-and-forget)
       fetch("/api/auth/track-login", { method: "POST" }).catch(() => {});
       window.location.replace(nextPath);
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to sign in.");
+      setMessage(
+        error instanceof Error
+          ? getPasswordAuthErrorMessage(error.message)
+          : "Unable to sign in.",
+      );
     }
   };
 
@@ -92,7 +135,10 @@ export default function LoginPage() {
           <input
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              clearErrorState();
+              setEmail(event.target.value);
+            }}
             required
             placeholder="Email address"
             className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
@@ -100,7 +146,10 @@ export default function LoginPage() {
           <input
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              clearErrorState();
+              setPassword(event.target.value);
+            }}
             required
             placeholder="Password"
             className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"

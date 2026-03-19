@@ -7,9 +7,18 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/supabase/route-handler", () => ({
-  createRouteHandlerSupabaseClient: vi.fn(() => ({
+  createRouteHandlerSupabaseClient: vi.fn((_: NextRequest, response: Response) => ({
     auth: {
-      signInWithOAuth: mocks.signInWithOAuth,
+      signInWithOAuth: async (...args: Parameters<typeof mocks.signInWithOAuth>) => {
+        if ("cookies" in response) {
+          (response as Response & { cookies: { set: (name: string, value: string, options?: { path?: string }) => void } }).cookies.set(
+            "sb-pkce-code-verifier",
+            "test-verifier",
+            { path: "/" },
+          );
+        }
+        return mocks.signInWithOAuth(...args);
+      },
     },
   })),
 }));
@@ -46,6 +55,7 @@ describe("GET /api/auth/google", () => {
     expect(response.headers.get("location")).toBe(
       "https://accounts.google.com/o/oauth2/v2/auth?client_id=test",
     );
+    expect(response.headers.get("set-cookie")).toContain("sb-pkce-code-verifier=test-verifier");
   });
 
   it("preserves signup callback metadata for legal acceptance", async () => {

@@ -46,3 +46,16 @@ export function getAuthErrorMessage(errorParam: string | null | undefined): stri
 
   return normalized;
 }
+
+export function getPasswordAuthErrorMessage(errorMessage: string | null | undefined): string {
+  const normalized = errorMessage?.trim();
+  if (!normalized) {
+    return "Unable to sign in.";
+  }
+
+  if (normalized.toLowerCase().includes("invalid login credentials")) {
+    return "We couldn't match that email and password. If you usually use Google, continue with Google instead.";
+  }
+
+  return normalized;
+}

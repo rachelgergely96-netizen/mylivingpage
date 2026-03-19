@@ -8,12 +8,21 @@ describe("supabase cookie options", () => {
   it("shares auth cookies across the production apex and www hosts", () => {
     expect(getSupabaseCookieOptions("mylivingpage.com")).toEqual({
       domain: ".mylivingpage.com",
+      path: "/",
+      sameSite: "lax",
+      secure: true,
     });
     expect(getSupabaseCookieOptions("www.mylivingpage.com")).toEqual({
       domain: ".mylivingpage.com",
+      path: "/",
+      sameSite: "lax",
+      secure: true,
     });
     expect(getSupabaseCookieOptions("https://www.mylivingpage.com/login")).toEqual({
       domain: ".mylivingpage.com",
+      path: "/",
+      sameSite: "lax",
+      secure: true,
     });
   });
 

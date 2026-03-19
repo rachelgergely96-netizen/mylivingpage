@@ -49,5 +49,8 @@ export function getSupabaseCookieOptions(hostOrUrl: string | null | undefined): 
 
   return {
     domain: SHARED_PRODUCTION_AUTH_COOKIE_DOMAIN,
+    path: "/",
+    sameSite: "lax",
+    secure: true,
   };
 }

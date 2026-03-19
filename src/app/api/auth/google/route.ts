@@ -17,6 +17,12 @@ function safeAuthScreen(value: string | null) {
   return value === "signup" ? "signup" : "login";
 }
 
+function copyCookies(source: NextResponse, target: NextResponse) {
+  source.cookies.getAll().forEach((cookie) => {
+    target.cookies.set(cookie);
+  });
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const next = safeRedirectPath(requestUrl.searchParams.get("next"));
@@ -38,8 +44,8 @@ export async function GET(request: NextRequest) {
     fallbackRedirect.searchParams.set("ref", ref);
   }
 
-  const response = NextResponse.redirect(fallbackRedirect);
-  const supabase = createRouteHandlerSupabaseClient(request, response);
+  const cookieResponse = NextResponse.next();
+  const supabase = createRouteHandlerSupabaseClient(request, cookieResponse);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -60,6 +66,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(fallbackRedirect);
   }
 
-  response.headers.set("location", data.url);
-  return response;
+  const oauthRedirect = NextResponse.redirect(data.url);
+  copyCookies(cookieResponse, oauthRedirect);
+  return oauthRedirect;
 }

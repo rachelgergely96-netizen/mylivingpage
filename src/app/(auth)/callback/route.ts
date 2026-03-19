@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCallbackAuthErrorCode } from "@/lib/auth/auth-error";
+import { getAppOrigin } from "@/lib/site";
 import {
   getClientIp,
   recordLegalAcceptance,
@@ -22,13 +23,14 @@ function safeRedirectPath(value: string | null): string {
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const appOrigin = getAppOrigin();
   const code = requestUrl.searchParams.get("code");
   const next = safeRedirectPath(requestUrl.searchParams.get("next"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSourceParam = requestUrl.searchParams.get("legal_source");
   const legalSource: LegalAcceptanceSource =
     legalSourceParam === "checkout" ? "checkout" : "signup";
-  const redirectUrl = new URL(next, requestUrl.origin);
+  const redirectUrl = new URL(next, appOrigin);
 
   if (!code) {
     return NextResponse.redirect(redirectUrl);
@@ -44,9 +46,10 @@ export async function GET(request: NextRequest) {
       error_code: errorCode,
       next,
       request_host: getRequestHostname(request.headers),
+      auth_origin: appOrigin.origin,
       redirect_to: redirectUrl.toString(),
     });
-    const errorRedirect = new URL("/login", requestUrl.origin);
+    const errorRedirect = new URL("/login", appOrigin);
     errorRedirect.searchParams.set("error", errorCode);
     errorRedirect.searchParams.set("next", next);
     return NextResponse.redirect(errorRedirect);

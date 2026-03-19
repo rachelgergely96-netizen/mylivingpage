@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
+import { getAppOrigin } from "@/lib/site";
 import { getRequestHostname } from "@/lib/supabase/cookies";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { trackEvent } from "@/lib/track-event";
@@ -25,20 +27,20 @@ function copyCookies(source: NextResponse, target: NextResponse) {
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const appOrigin = getAppOrigin();
   const next = safeRedirectPath(requestUrl.searchParams.get("next"));
   const screen = safeAuthScreen(requestUrl.searchParams.get("screen"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSource = requestUrl.searchParams.get("legal_source") === "checkout" ? "checkout" : "signup";
   const ref = requestUrl.searchParams.get("ref");
-
-  const callbackParams = new URLSearchParams({ next });
-  if (legalAcceptRequested) {
-    callbackParams.set("legal_accept", "1");
-    callbackParams.set("legal_source", legalSource);
-  }
-
-  const callbackUrl = new URL(`/callback?${callbackParams.toString()}`, requestUrl.origin);
-  const fallbackRedirect = new URL(`/${screen}`, requestUrl.origin);
+  const callbackUrl = new URL(
+    buildAuthCallbackUrl({
+      next,
+      legalAcceptRequested,
+      legalSource,
+    }),
+  );
+  const fallbackRedirect = new URL(`/${screen}`, appOrigin);
   fallbackRedirect.searchParams.set("next", next);
   if (ref) {
     fallbackRedirect.searchParams.set("ref", ref);
@@ -59,6 +61,7 @@ export async function GET(request: NextRequest) {
       next,
       screen,
       request_host: getRequestHostname(request.headers),
+      auth_origin: appOrigin.origin,
       redirect_to: callbackUrl.toString(),
     });
 

@@ -58,6 +58,22 @@ describe("GET /api/auth/google", () => {
     expect(response.headers.get("set-cookie")).toContain("sb-pkce-code-verifier=test-verifier");
   });
 
+  it("canonicalizes apex-host OAuth starts onto the www callback origin", async () => {
+    const response = await GET(
+      new NextRequest("https://mylivingpage.com/api/auth/google?next=%2Fdashboard&screen=login"),
+    );
+
+    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+      },
+    });
+    expect(response.headers.get("location")).toBe(
+      "https://accounts.google.com/o/oauth2/v2/auth?client_id=test",
+    );
+  });
+
   it("preserves signup callback metadata for legal acceptance", async () => {
     await GET(
       new NextRequest(

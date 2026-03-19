@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
+import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -58,12 +59,11 @@ export default function SignupPage() {
 
     try {
       const supabase = createBrowserSupabaseClient();
-      const callbackParams = new URLSearchParams({
+      const redirectTo = buildAuthCallbackUrl({
         next: nextPath,
-        legal_accept: "1",
-        legal_source: "signup",
+        legalAcceptRequested: true,
+        legalSource: "signup",
       });
-      const redirectTo = `${window.location.origin}/callback?${callbackParams.toString()}`;
       const signupMetadata: Record<string, string | boolean> = {
         legal_accepted: true,
         legal_accepted_at: new Date().toISOString(),

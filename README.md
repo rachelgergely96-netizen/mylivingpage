@@ -40,7 +40,9 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 - Set Supabase Auth Site URL to `https://www.mylivingpage.com`.
 - Allow redirect URLs for:
   - `https://www.mylivingpage.com/callback`
+  - `https://mylivingpage.com/callback` (temporary defense-in-depth while canonical auth stays on `www`)
   - `http://localhost:3000/callback`
+- Treat `https://www.mylivingpage.com` as the canonical production auth origin. OAuth starts from apex should still complete, but the callback should resolve on `www`.
 
 ## Stripe Setup
 

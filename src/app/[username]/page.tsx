@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
-import DownloadResumeButton from "@/components/DownloadResumeButton";
 import MadeWithBadge from "@/components/MadeWithBadge";
 import PageOwnerBar from "@/components/PageOwnerBar";
+import PublicPageActionDock from "@/components/PublicPageActionDock";
 import ResumeLayout from "@/components/ResumeLayout";
-import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
@@ -97,13 +96,14 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
           </div>
         </PageOwnerBar>
       </ThemeCanvas>
-      <DownloadResumeButton data={page.resume_data} pageId={page.id} />
-      <ShareCardDownload
+      <PublicPageActionDock
+        pageId={page.id}
         pageUserId={pageUserId}
         slug={page.slug}
         themeId={themeId}
         resumeData={page.resume_data}
         premium={premium}
+        avoidBadge={!premium}
       />
       <MadeWithBadge pageUserId={pageUserId} premium={premium} />
     </main>

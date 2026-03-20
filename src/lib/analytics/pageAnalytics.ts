@@ -6,6 +6,8 @@ import {
   type AnalyticsRangeKey,
   type AnalyticsSectionId,
   type AnalyticsTargetKey,
+  isAnalyticsSectionId,
+  isAnalyticsTargetKey,
 } from "@/lib/analytics/constants";
 import {
   formatAnalyticsSectionLabel,
@@ -13,6 +15,7 @@ import {
 } from "@/lib/analytics/publicTracking";
 
 export type AnalyticsComparisonStatus = "up" | "down" | "flat" | "new";
+export type PageAnalyticsAvailability = "full" | "basic" | "unavailable";
 
 export interface PageAnalyticsViewRow {
   id: string;
@@ -42,16 +45,20 @@ export interface AnalyticsMetric {
   lowData: boolean;
 }
 
+export interface PageAnalyticsDashboardState {
+  availability: PageAnalyticsAvailability;
+  notice: string | null;
+  hasTraffic: boolean;
+  hasEngagement: boolean;
+  lowData: boolean;
+}
+
 export interface PageAnalyticsDashboardData {
   rangeKey: AnalyticsRangeKey;
   rangeDays: number;
   rangeLabel: string;
   allTimeViews: number;
-  state: {
-    hasTraffic: boolean;
-    hasEngagement: boolean;
-    lowData: boolean;
-  };
+  state: PageAnalyticsDashboardState;
   overview: {
     views: AnalyticsMetric;
     uniqueVisitors: AnalyticsMetric;
@@ -124,6 +131,7 @@ interface BuildPageAnalyticsDashboardInput {
   allTimeViews: number;
   views: PageAnalyticsViewRow[];
   interactions: PageAnalyticsInteractionRow[];
+  includeEngagementInsights?: boolean;
   now?: Date;
 }
 
@@ -141,12 +149,34 @@ interface InteractionAggregate {
   count: number;
 }
 
+interface AnalyticsQueryErrorLike {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+}
+
+interface CreateFallbackDashboardInput {
+  rangeKey: AnalyticsRangeKey;
+  allTimeViews: number;
+  notice?: string | null;
+  now?: Date;
+}
+
 const SCROLL_DEPTH_BUCKETS = [
   { label: "0-24%", min: 0, max: 24 },
   { label: "25-49%", min: 25, max: 49 },
   { label: "50-74%", min: 50, max: 74 },
   { label: "75-100%", min: 75, max: 100 },
 ] as const;
+
+const FULL_VIEW_SELECT =
+  "id, viewed_at, referrer, user_agent, viewer_ip, country, engaged_seconds, max_scroll_depth_pct, primary_section, had_outbound_click";
+const BASIC_VIEW_SELECT = "id, viewed_at, referrer, user_agent, viewer_ip, country";
+const BASIC_ANALYTICS_NOTICE =
+  "Detailed engagement analytics are temporarily unavailable. Basic traffic analytics are still showing below, and richer insights will return automatically once the engagement backend is available.";
+const UNAVAILABLE_ANALYTICS_NOTICE =
+  "Analytics are temporarily unavailable right now. Please try again soon.";
 
 function startOfUtcDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -187,6 +217,171 @@ function formatDuration(seconds: number) {
 
 function roundPct(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function coerceText(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function coerceNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function coerceBoolean(value: unknown) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value === "true") {
+      return true;
+    }
+
+    if (value === "false") {
+      return false;
+    }
+  }
+
+  return null;
+}
+
+function sanitizeViewRows(rows: unknown, mode: "full" | "basic"): PageAnalyticsViewRow[] {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows.flatMap((row) => {
+    if (!isRecord(row)) {
+      return [];
+    }
+
+    const id = coerceText(row.id);
+    const viewedAt = coerceText(row.viewed_at);
+
+    if (!id || !viewedAt) {
+      return [];
+    }
+
+    const primarySection = coerceText(row.primary_section);
+
+    return [
+      {
+        id,
+        viewed_at: viewedAt,
+        referrer: coerceText(row.referrer),
+        user_agent: coerceText(row.user_agent),
+        viewer_ip: coerceText(row.viewer_ip),
+        country: coerceText(row.country),
+        engaged_seconds: mode === "full" ? coerceNumber(row.engaged_seconds) : null,
+        max_scroll_depth_pct: mode === "full" ? coerceNumber(row.max_scroll_depth_pct) : null,
+        primary_section:
+          mode === "full" && isAnalyticsSectionId(primarySection) ? primarySection : null,
+        had_outbound_click: mode === "full" ? coerceBoolean(row.had_outbound_click) : false,
+      },
+    ];
+  });
+}
+
+function sanitizeInteractionRows(rows: unknown): PageAnalyticsInteractionRow[] {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows.flatMap((row) => {
+    if (!isRecord(row)) {
+      return [];
+    }
+
+    const pageViewId = coerceText(row.page_view_id);
+    const targetKey = coerceText(row.target_key);
+
+    if (!pageViewId || !isAnalyticsTargetKey(targetKey)) {
+      return [];
+    }
+
+    return [
+      {
+        page_view_id: pageViewId,
+        target_key: targetKey,
+        target_label: coerceText(row.target_label),
+        click_count: coerceNumber(row.click_count),
+      },
+    ];
+  });
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (isRecord(error) && typeof error.message === "string") {
+    return error.message;
+  }
+
+  return "Unknown analytics error";
+}
+
+function isRecoverableSchemaError(error: unknown) {
+  if (!isRecord(error)) {
+    return false;
+  }
+
+  const queryError = error as AnalyticsQueryErrorLike;
+  const code = queryError.code?.toUpperCase();
+
+  if (code === "42703" || code === "42P01" || code === "PGRST204" || code === "PGRST205") {
+    return true;
+  }
+
+  const haystack = [queryError.message, queryError.details, queryError.hint]
+    .filter((value): value is string => typeof value === "string" && value.length > 0)
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    haystack.includes("undefined column") ||
+    haystack.includes("undefined table") ||
+    haystack.includes("schema cache") ||
+    haystack.includes("relation \"page_interactions\" does not exist") ||
+    haystack.includes("column \"engaged_seconds\" does not exist") ||
+    haystack.includes("column engaged_seconds does not exist") ||
+    haystack.includes("could not find the 'engaged_seconds' column") ||
+    haystack.includes("could not find the table 'public.page_interactions'")
+  );
+}
+
+function withAvailabilityState(
+  dashboard: PageAnalyticsDashboardData,
+  availability: PageAnalyticsAvailability,
+  notice: string | null,
+): PageAnalyticsDashboardData {
+  return {
+    ...dashboard,
+    state: {
+      ...dashboard.state,
+      availability,
+      notice,
+    },
+  };
 }
 
 function buildMetric(
@@ -350,6 +545,7 @@ function buildInsights({
   topSection,
   outboundCtr,
   avgEngagedTime,
+  includeEngagementInsights,
 }: {
   currentRows: PageAnalyticsViewRow[];
   topReferrers: Array<{ label: string; count: number; sharePct: number }>;
@@ -358,6 +554,7 @@ function buildInsights({
   topSection: { label: string; sharePct: number } | null;
   outboundCtr: number;
   avgEngagedTime: number;
+  includeEngagementInsights: boolean;
 }) {
   if (!currentRows.length) {
     return [
@@ -378,24 +575,26 @@ function buildInsights({
     );
   }
 
-  if (topActions[0] && outboundCtr > 0) {
-    insights.push(
-      `${Math.round(outboundCtr)}% of tracked visitors clicked a link, with ${topActions[0].label} getting the most action.`,
-    );
-  } else if (currentRows.length >= 3) {
-    insights.push(
-      "Visitors are arriving, but no outbound clicks were recorded yet. Tightening the top of the page or highlighting one next step may help.",
-    );
-  }
+  if (includeEngagementInsights) {
+    if (topActions[0] && outboundCtr > 0) {
+      insights.push(
+        `${Math.round(outboundCtr)}% of tracked visitors clicked a link, with ${topActions[0].label} getting the most action.`,
+      );
+    } else if (currentRows.length >= 3) {
+      insights.push(
+        "Visitors are arriving, but no outbound clicks were recorded yet. Tightening the top of the page or highlighting one next step may help.",
+      );
+    }
 
-  if (topSection) {
-    insights.push(
-      `${topSection.label} is holding attention best so far (${Math.round(topSection.sharePct)}% of engaged views).`,
-    );
-  } else if (avgEngagedTime > 0) {
-    insights.push(
-      `Visitors are spending about ${formatDuration(avgEngagedTime)} on the page on average.`,
-    );
+    if (topSection) {
+      insights.push(
+        `${topSection.label} is holding attention best so far (${Math.round(topSection.sharePct)}% of engaged views).`,
+      );
+    } else if (avgEngagedTime > 0) {
+      insights.push(
+        `Visitors are spending about ${formatDuration(avgEngagedTime)} on the page on average.`,
+      );
+    }
   }
 
   return insights.slice(0, 3);
@@ -406,6 +605,7 @@ export function buildPageAnalyticsDashboard({
   allTimeViews,
   views,
   interactions,
+  includeEngagementInsights = true,
   now = new Date(),
 }: BuildPageAnalyticsDashboardInput): PageAnalyticsDashboardData {
   const rangeDays = ANALYTICS_RANGE_DAYS[rangeKey];
@@ -552,6 +752,7 @@ export function buildPageAnalyticsDashboard({
     topSection,
     outboundCtr: currentOutboundCtr,
     avgEngagedTime: currentAvgEngagedTime,
+    includeEngagementInsights,
   });
 
   return {
@@ -560,6 +761,8 @@ export function buildPageAnalyticsDashboard({
     rangeLabel,
     allTimeViews,
     state: {
+      availability: "full",
+      notice: null,
       hasTraffic: currentRows.length > 0,
       hasEngagement,
       lowData: currentRows.length < LOW_DATA_MIN_SAMPLE,
@@ -629,13 +832,80 @@ async function fetchInteractionRows(
       .in("page_view_id", chunk);
 
     if (error) {
-      throw new Error(error.message);
+      throw error;
     }
 
-    rows.push(...((data ?? []) as PageAnalyticsInteractionRow[]));
+    rows.push(...sanitizeInteractionRows(data ?? []));
   }
 
   return rows;
+}
+
+export function createUnavailablePageAnalyticsDashboard({
+  rangeKey,
+  allTimeViews,
+  notice = UNAVAILABLE_ANALYTICS_NOTICE,
+  now = new Date(),
+}: CreateFallbackDashboardInput): PageAnalyticsDashboardData {
+  return withAvailabilityState(
+    buildPageAnalyticsDashboard({
+      rangeKey,
+      allTimeViews,
+      views: [],
+      interactions: [],
+      includeEngagementInsights: false,
+      now,
+    }),
+    "unavailable",
+    notice,
+  );
+}
+
+async function fetchBasicPageAnalyticsDashboard({
+  supabase,
+  pageId,
+  rangeKey,
+  allTimeViews,
+  now = new Date(),
+}: FetchPageAnalyticsDashboardInput) {
+  const rangeDays = ANALYTICS_RANGE_DAYS[rangeKey];
+  const fetchStart = startOfUtcDay(addUtcDays(now, -(rangeDays * 2 - 1)));
+
+  const { data, error } = await supabase
+    .from("page_views")
+    .select(BASIC_VIEW_SELECT)
+    .eq("page_id", pageId)
+    .gte("viewed_at", fetchStart.toISOString())
+    .order("viewed_at", { ascending: true });
+
+  if (error) {
+    console.error("analytics.dashboard.query_failed", {
+      pageId,
+      rangeKey,
+      stage: "page_views_basic",
+      error: errorMessage(error),
+    });
+
+    return createUnavailablePageAnalyticsDashboard({
+      rangeKey,
+      allTimeViews,
+      now,
+      notice: UNAVAILABLE_ANALYTICS_NOTICE,
+    });
+  }
+
+  return withAvailabilityState(
+    buildPageAnalyticsDashboard({
+      rangeKey,
+      allTimeViews,
+      views: sanitizeViewRows(data ?? [], "basic"),
+      interactions: [],
+      includeEngagementInsights: false,
+      now,
+    }),
+    "basic",
+    BASIC_ANALYTICS_NOTICE,
+  );
 }
 
 export async function fetchPageAnalyticsDashboard({
@@ -650,28 +920,93 @@ export async function fetchPageAnalyticsDashboard({
 
   const { data: views, error } = await supabase
     .from("page_views")
-    .select(
-      "id, viewed_at, referrer, user_agent, viewer_ip, country, engaged_seconds, max_scroll_depth_pct, primary_section, had_outbound_click",
-    )
+    .select(FULL_VIEW_SELECT)
     .eq("page_id", pageId)
     .gte("viewed_at", fetchStart.toISOString())
     .order("viewed_at", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    if (isRecoverableSchemaError(error)) {
+      console.error("analytics.dashboard.schema_fallback", {
+        pageId,
+        rangeKey,
+        stage: "page_views_full",
+        error: errorMessage(error),
+      });
+
+      return fetchBasicPageAnalyticsDashboard({
+        supabase,
+        pageId,
+        rangeKey,
+        allTimeViews,
+        now,
+      });
+    }
+
+    console.error("analytics.dashboard.query_failed", {
+      pageId,
+      rangeKey,
+      stage: "page_views_full",
+      error: errorMessage(error),
+    });
+
+    return createUnavailablePageAnalyticsDashboard({
+      rangeKey,
+      allTimeViews,
+      now,
+      notice: UNAVAILABLE_ANALYTICS_NOTICE,
+    });
   }
 
-  const viewRows = (views ?? []) as PageAnalyticsViewRow[];
-  const interactionRows = await fetchInteractionRows(
-    supabase,
-    viewRows.map((row) => row.id),
-  );
+  const viewRows = sanitizeViewRows(views ?? [], "full");
 
-  return buildPageAnalyticsDashboard({
-    rangeKey,
-    allTimeViews,
-    views: viewRows,
-    interactions: interactionRows,
-    now,
-  });
+  try {
+    const interactionRows = await fetchInteractionRows(
+      supabase,
+      viewRows.map((row) => row.id),
+    );
+
+    return withAvailabilityState(
+      buildPageAnalyticsDashboard({
+        rangeKey,
+        allTimeViews,
+        views: viewRows,
+        interactions: interactionRows,
+        now,
+      }),
+      "full",
+      null,
+    );
+  } catch (error) {
+    if (isRecoverableSchemaError(error)) {
+      console.error("analytics.dashboard.schema_fallback", {
+        pageId,
+        rangeKey,
+        stage: "page_interactions",
+        error: errorMessage(error),
+      });
+
+      return fetchBasicPageAnalyticsDashboard({
+        supabase,
+        pageId,
+        rangeKey,
+        allTimeViews,
+        now,
+      });
+    }
+
+    console.error("analytics.dashboard.query_failed", {
+      pageId,
+      rangeKey,
+      stage: "page_interactions",
+      error: errorMessage(error),
+    });
+
+    return createUnavailablePageAnalyticsDashboard({
+      rangeKey,
+      allTimeViews,
+      now,
+      notice: UNAVAILABLE_ANALYTICS_NOTICE,
+    });
+  }
 }

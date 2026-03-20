@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "check:single-page-schema": "node ./scripts/check-single-page-schema.mjs"
+    "check:single-page-schema": "node ./scripts/check-single-page-schema.mjs",
+    "check:analytics-schema": "node ./scripts/check-analytics-schema.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

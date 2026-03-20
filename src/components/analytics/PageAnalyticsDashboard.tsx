@@ -197,7 +197,7 @@ function ShareBars({
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="truncate text-[rgba(240,244,255,0.76)]">{row.label}</span>
                 <span className="shrink-0 font-mono text-xs text-[rgba(240,244,255,0.48)]">
-                  {row.count.toLocaleString()} · {Math.round(row.sharePct)}%
+                  {row.count.toLocaleString()} | {Math.round(row.sharePct)}%
                 </span>
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-[rgba(255,255,255,0.06)]">
@@ -267,6 +267,10 @@ function TopBar({
 }
 
 function InsightsStrip({ insights }: { insights: string[] }) {
+  if (!insights.length) {
+    return null;
+  }
+
   return (
     <section className="grid gap-3 md:grid-cols-3">
       {insights.map((insight) => (
@@ -284,17 +288,57 @@ function InsightsStrip({ insights }: { insights: string[] }) {
 function GuidanceCard({
   title,
   description,
+  testId,
 }: {
   title: string;
   description: string;
+  testId?: string;
 }) {
   return (
-    <section className="glass-card rounded-3xl p-6 text-center sm:p-8">
+    <section
+      data-testid={testId}
+      className="glass-card rounded-3xl p-6 text-center sm:p-8"
+    >
       <p className="font-heading text-xl text-[#F0F4FF] sm:text-2xl">{title}</p>
       <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.56)]">
         {description}
       </p>
     </section>
+  );
+}
+
+function NoticeBanner({
+  title,
+  description,
+  testId,
+}: {
+  title: string;
+  description: string;
+  testId?: string;
+}) {
+  return (
+    <section
+      data-testid={testId}
+      className="rounded-3xl border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6"
+    >
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
+        Limited analytics mode
+      </p>
+      <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">{title}</h2>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+        {description}
+      </p>
+    </section>
+  );
+}
+
+function DetailedAnalyticsPendingCard({ description }: { description: string }) {
+  return (
+    <GuidanceCard
+      title="Detailed engagement analytics will return automatically"
+      description={description}
+      testId="analytics-availability-notice"
+    />
   );
 }
 
@@ -304,6 +348,30 @@ export default function PageAnalyticsDashboard({
   pageName,
   publicPath,
 }: PageAnalyticsDashboardProps) {
+  const isBasic = analytics.state.availability === "basic";
+  const isUnavailable = analytics.state.availability === "unavailable";
+
+  if (isUnavailable) {
+    return (
+      <div className="space-y-6">
+        <TopBar
+          analytics={analytics}
+          pageId={pageId}
+          pageName={pageName}
+          publicPath={publicPath}
+        />
+        <GuidanceCard
+          testId="analytics-unavailable"
+          title="Analytics are temporarily unavailable"
+          description={
+            analytics.state.notice ??
+            "Traffic data could not be loaded right now. Please try again soon."
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <TopBar
@@ -313,9 +381,24 @@ export default function PageAnalyticsDashboard({
         publicPath={publicPath}
       />
 
-      <InsightsStrip insights={analytics.insights} />
+      {isBasic ? (
+        <NoticeBanner
+          testId="analytics-availability-notice"
+          title="Detailed engagement analytics are temporarily unavailable"
+          description={
+            analytics.state.notice ??
+            "Basic traffic analytics are still showing below. Richer engagement insights will return automatically once the analytics backend is available."
+          }
+        />
+      ) : (
+        <InsightsStrip insights={analytics.insights} />
+      )}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section
+        className={`grid gap-4 ${
+          isBasic ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-4"
+        }`}
+      >
         <StatCard
           label="Views"
           value={analytics.overview.views.value}
@@ -333,22 +416,26 @@ export default function PageAnalyticsDashboard({
           helpText="Distinct hashed visitor records in the selected range."
           testId="analytics-stat-unique-visitors"
         />
-        <StatCard
-          label="Outbound CTR"
-          value={analytics.overview.outboundCtr.value}
-          formatter={formatPercent}
-          metric={analytics.overview.outboundCtr}
-          helpText="The share of tracked views that clicked at least one contact or portfolio link."
-          testId="analytics-stat-outbound-ctr"
-        />
-        <StatCard
-          label="Avg Engaged Time"
-          value={analytics.overview.avgEngagedTime.value}
-          formatter={formatDuration}
-          metric={analytics.overview.avgEngagedTime}
-          helpText="Average engaged time from views that scrolled or interacted enough to report engagement."
-          testId="analytics-stat-avg-engaged-time"
-        />
+        {!isBasic ? (
+          <StatCard
+            label="Outbound CTR"
+            value={analytics.overview.outboundCtr.value}
+            formatter={formatPercent}
+            metric={analytics.overview.outboundCtr}
+            helpText="The share of tracked views that clicked at least one contact or portfolio link."
+            testId="analytics-stat-outbound-ctr"
+          />
+        ) : null}
+        {!isBasic ? (
+          <StatCard
+            label="Avg Engaged Time"
+            value={analytics.overview.avgEngagedTime.value}
+            formatter={formatDuration}
+            metric={analytics.overview.avgEngagedTime}
+            helpText="Average engaged time from views that scrolled or interacted enough to report engagement."
+            testId="analytics-stat-avg-engaged-time"
+          />
+        ) : null}
       </section>
 
       {analytics.state.hasTraffic ? (
@@ -406,136 +493,142 @@ export default function PageAnalyticsDashboard({
             </div>
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
-            <div className="glass-card rounded-3xl p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-                    Conversion
-                  </p>
-                  <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
-                    Clicks that lead somewhere
-                  </h2>
-                </div>
-                <div className="rounded-full border border-[rgba(59,130,246,0.24)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">
-                  {analytics.conversion.totalClicks.toLocaleString()} total clicks
-                </div>
-              </div>
-              {analytics.conversion.topActions.length === 0 ? (
-                <div className="mt-5">
-                  <GuidanceCard
-                    title="Traffic is showing up. Engagement is next."
-                    description="Visitors are landing on the page, but richer analytics need clicks or scrolling to build content and conversion insights. As more people explore the page, this view will fill in automatically."
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
-                        Clicked views
-                      </p>
-                      <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
-                        {analytics.conversion.clickedViews.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
-                        Outbound CTR
-                      </p>
-                      <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
-                        {formatPercent(analytics.overview.outboundCtr.value)}
-                      </p>
-                    </div>
+          {isBasic ? (
+            <DetailedAnalyticsPendingCard
+              description="We can still show views, traffic trends, referrers, devices, and countries right now. Click, engagement, and content insights will reappear automatically once the detailed analytics tables are available."
+            />
+          ) : (
+            <section className="grid gap-4 xl:grid-cols-2">
+              <div className="glass-card rounded-3xl p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
+                      Conversion
+                    </p>
+                    <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+                      Clicks that lead somewhere
+                    </h2>
                   </div>
+                  <div className="rounded-full border border-[rgba(59,130,246,0.24)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">
+                    {analytics.conversion.totalClicks.toLocaleString()} total clicks
+                  </div>
+                </div>
+                {analytics.conversion.topActions.length === 0 ? (
                   <div className="mt-5">
-                    <ShareBars
-                      title="Top clicked actions"
-                      emptyText="No outbound clicks recorded yet."
-                      rows={analytics.conversion.topActions.map((row) => ({
-                        label: row.label,
-                        count: row.count,
-                        sharePct:
-                          analytics.conversion.totalClicks > 0
-                            ? (row.count / analytics.conversion.totalClicks) * 100
-                            : 0,
-                      }))}
+                    <GuidanceCard
+                      title="Traffic is showing up. Engagement is next."
+                      description="Visitors are landing on the page, but richer analytics need clicks or scrolling to build content and conversion insights. As more people explore the page, this view will fill in automatically."
                     />
                   </div>
-                </>
-              )}
-            </div>
-
-            <div className="glass-card rounded-3xl p-5 sm:p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-                Content Performance
-              </p>
-              <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
-                What people stay with
-              </h2>
-              {analytics.state.hasEngagement ? (
-                <div className="mt-5 grid gap-5 md:grid-cols-2">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.36)]">
-                      Top section
-                    </p>
-                    {analytics.contentPerformance.topSection ? (
-                      <div className="mt-3 rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-4">
-                        <p className="font-heading text-lg text-[#F0F4FF]">
-                          {analytics.contentPerformance.topSection.label}
+                ) : (
+                  <>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
+                          Clicked views
                         </p>
-                        <p className="mt-2 text-sm text-[rgba(240,244,255,0.56)]">
-                          {Math.round(analytics.contentPerformance.topSection.sharePct)}% of engaged
-                          views spent the most visible time here.
+                        <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
+                          {analytics.conversion.clickedViews.toLocaleString()}
                         </p>
                       </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-[rgba(240,244,255,0.38)]">
-                        No top section yet.
-                      </p>
-                    )}
+                      <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
+                          Outbound CTR
+                        </p>
+                        <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
+                          {formatPercent(analytics.overview.outboundCtr.value)}
+                        </p>
+                      </div>
+                    </div>
                     <div className="mt-5">
                       <ShareBars
-                        title="Section mix"
-                        emptyText="No section engagement yet."
-                        rows={analytics.contentPerformance.sections.map((row) => ({
+                        title="Top clicked actions"
+                        emptyText="No outbound clicks recorded yet."
+                        rows={analytics.conversion.topActions.map((row) => ({
                           label: row.label,
                           count: row.count,
-                          sharePct: row.sharePct,
+                          sharePct:
+                            analytics.conversion.totalClicks > 0
+                              ? (row.count / analytics.conversion.totalClicks) * 100
+                              : 0,
                         }))}
                       />
                     </div>
-                  </div>
-                  <div>
-                    <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
-                        Avg scroll depth
+                  </>
+                )}
+              </div>
+
+              <div className="glass-card rounded-3xl p-5 sm:p-6">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
+                  Content Performance
+                </p>
+                <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+                  What people stay with
+                </h2>
+                {analytics.state.hasEngagement ? (
+                  <div className="mt-5 grid gap-5 md:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.36)]">
+                        Top section
                       </p>
-                      <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
-                        {analytics.contentPerformance.avgScrollDepthPct === null
-                          ? "—"
-                          : formatPercent(analytics.contentPerformance.avgScrollDepthPct)}
-                      </p>
+                      {analytics.contentPerformance.topSection ? (
+                        <div className="mt-3 rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-4">
+                          <p className="font-heading text-lg text-[#F0F4FF]">
+                            {analytics.contentPerformance.topSection.label}
+                          </p>
+                          <p className="mt-2 text-sm text-[rgba(240,244,255,0.56)]">
+                            {Math.round(analytics.contentPerformance.topSection.sharePct)}% of
+                            engaged views spent the most visible time here.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-sm text-[rgba(240,244,255,0.38)]">
+                          No top section yet.
+                        </p>
+                      )}
+                      <div className="mt-5">
+                        <ShareBars
+                          title="Section mix"
+                          emptyText="No section engagement yet."
+                          rows={analytics.contentPerformance.sections.map((row) => ({
+                            label: row.label,
+                            count: row.count,
+                            sharePct: row.sharePct,
+                          }))}
+                        />
+                      </div>
                     </div>
-                    <div className="mt-5">
-                      <ShareBars
-                        title="Scroll depth distribution"
-                        emptyText="No scroll depth recorded yet."
-                        rows={analytics.contentPerformance.scrollDepth}
-                      />
+                    <div>
+                      <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
+                          Avg scroll depth
+                        </p>
+                        <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
+                          {analytics.contentPerformance.avgScrollDepthPct === null
+                            ? "--"
+                            : formatPercent(analytics.contentPerformance.avgScrollDepthPct)}
+                        </p>
+                      </div>
+                      <div className="mt-5">
+                        <ShareBars
+                          title="Scroll depth distribution"
+                          emptyText="No scroll depth recorded yet."
+                          rows={analytics.contentPerformance.scrollDepth}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="mt-5">
-                  <GuidanceCard
-                    title="Traffic is showing up. Engagement is next."
-                    description="Visitors are landing on the page, but richer analytics need clicks or scrolling to build content and conversion insights. As more people explore the page, this view will fill in automatically."
-                  />
-                </div>
-              )}
-            </div>
-          </section>
+                ) : (
+                  <div className="mt-5">
+                    <GuidanceCard
+                      title="Traffic is showing up. Engagement is next."
+                      description="Visitors are landing on the page, but richer analytics need clicks or scrolling to build content and conversion insights. As more people explore the page, this view will fill in automatically."
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </>
       ) : null}
     </div>

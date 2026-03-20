@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildResumePdfData, checkResumeExport } from "@/lib/pdf/ats-export";
+import {
+  buildResumePdfData,
+  checkResumeExport,
+  countPdfPages,
+  renderFallbackResumePdf,
+  renderResumePdf,
+} from "@/lib/pdf/ats-export";
 import type { ResumeData } from "@/types/resume";
 
 function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
@@ -101,5 +107,59 @@ describe("Resume PDF export", () => {
     expect(exportCheck.pageCount).toBeGreaterThan(1);
     expect(exportCheck.fitsOnOnePage).toBe(false);
     expect(exportCheck.overflowReasons).not.toContain("The Resume PDF could not be validated with the current content shape.");
+  });
+
+  it("coerces malformed saved data into a safe export shape", () => {
+    const exportData = buildResumePdfData({
+      name: 42,
+      summary: ["Legacy summary"],
+      experience: null,
+      education: [{ degree: "B.A.", school: 2024, year: true }],
+      projects: [{ name: "Launch", description: false, tech: "React", url: null }],
+      skills: [{ category: "Core", items: "Strategy" }],
+      certifications: [{ name: "Cert", issuer: 11, date: false }],
+      stats: [{ value: 5, label: "Years" }],
+    } as unknown);
+
+    expect(exportData).toMatchObject({
+      name: "42",
+      summary: "Legacy summary",
+      experience: [],
+      education: [{ degree: "B.A.", school: "2024", year: "" }],
+      projects: [{ name: "Launch", description: "", tech: ["React"], url: null }],
+      skills: [{ category: "Core", items: ["Strategy"] }],
+      certifications: [{ name: "Cert", issuer: "11", date: null }],
+      stats: [],
+    });
+  });
+
+  it("renders a fallback PDF from malformed saved data", async () => {
+    const buffer = await renderFallbackResumePdf({
+      name: true,
+      summary: "Simple fallback summary",
+      experience: [{ title: "Founder", company: 11, dates: null, highlights: "Built the first version." }],
+      skills: [{ category: "Core", items: ["Product", 5] }],
+    } as unknown);
+
+    expect(countPdfPages(buffer)).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders a Resume PDF from unicode-heavy saved content after sanitization", async () => {
+    const buffer = await renderResumePdf({
+      name: "Jos\u00e9 \ud83d\ude80",
+      headline: "Product Lead \u2014 Platforms",
+      summary: "Led growth \u2022 shipped tools \ud83c\udf1f",
+      experience: [
+        {
+          title: "Founder",
+          company: "Cr\u00e8me Labs",
+          dates: "2022 \u2014 2024",
+          highlights: ["Built the platform \ud83d\udca1"],
+        },
+      ],
+      skills: [{ category: "", items: ["Strategy", "\ud83d\ude80"] }],
+    } as unknown);
+
+    expect(countPdfPages(buffer)).toBeGreaterThanOrEqual(1);
   });
 });

@@ -5,17 +5,29 @@ import {
   DEFAULT_ANALYTICS_RANGE,
   isAnalyticsRangeKey,
 } from "@/lib/analytics/constants";
-import { fetchPageAnalyticsDashboard } from "@/lib/analytics/pageAnalytics";
+import {
+  createUnavailablePageAnalyticsDashboard,
+  fetchPageAnalyticsDashboard,
+} from "@/lib/analytics/pageAnalytics";
 import { isPremiumPlan } from "@/lib/plans";
 import {
   createServerSupabaseClient,
   createServiceRoleSupabaseClient,
 } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 import type { PageRecord } from "@/types/resume";
 
 interface AnalyticsPageProps {
   params: Promise<{ pageId: string }>;
   searchParams: Promise<{ range?: string }>;
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unknown analytics dashboard error";
 }
 
 export default async function AnalyticsPage({
@@ -57,12 +69,45 @@ export default async function AnalyticsPage({
   const typedPage = page as PageRecord;
   const pageName = typedPage.resume_data?.name ?? "Untitled";
   const publicPath = `/${profile?.username ?? typedPage.slug}`;
-  const analytics = await fetchPageAnalyticsDashboard({
-    supabase,
-    pageId,
+  let analyticsLoadError: string | null = null;
+  let analytics = createUnavailablePageAnalyticsDashboard({
     rangeKey,
     allTimeViews: typedPage.views ?? 0,
   });
+
+  try {
+    analytics = await fetchPageAnalyticsDashboard({
+      supabase,
+      pageId,
+      rangeKey,
+      allTimeViews: typedPage.views ?? 0,
+    });
+  } catch (error) {
+    analyticsLoadError = errorMessage(error);
+  }
+
+  if (analytics.state.availability !== "full") {
+    const eventName =
+      analytics.state.availability === "basic"
+        ? "analytics.dashboard.degraded"
+        : "analytics.dashboard.load_failed";
+    const message = analyticsLoadError ?? analytics.state.notice ?? "Analytics unavailable";
+
+    console.error(eventName, {
+      pageId,
+      userId: user.id,
+      rangeKey,
+      availability: analytics.state.availability,
+      message,
+    });
+
+    await trackEvent(user.id, eventName, {
+      page_id: pageId,
+      range_key: rangeKey,
+      availability: analytics.state.availability,
+      message,
+    }).catch(() => undefined);
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">

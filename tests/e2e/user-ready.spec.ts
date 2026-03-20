@@ -255,12 +255,109 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.goto(`/${profile.username}`);
     await expect(page.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+    const ownerDownloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download Resume PDF" }).click();
+    const ownerDownload = await ownerDownloadPromise;
+    expect(ownerDownload.suggestedFilename()).toContain("resume.pdf");
 
     const viewerContext = await browser.newContext();
     const viewerPage = await viewerContext.newPage();
     await viewerPage.goto(`/${profile.username}`);
     await expect(viewerPage.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+    const viewerDownloadPromise = viewerPage.waitForEvent("download");
+    await viewerPage.getByRole("button", { name: "Download Resume PDF" }).click();
+    const viewerDownload = await viewerDownloadPromise;
+    expect(viewerDownload.suggestedFilename()).toContain("resume.pdf");
     await viewerContext.close();
+  });
+
+  test("public page keeps Resume PDF and share actions stacked without overlap for owners", async ({ page }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run public mobile action-dock coverage.",
+    );
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    await setPlanForProfile(profile.id, "pro");
+    await ensureLivePageForProfile(profile);
+
+    const assertStackedDock = async () => {
+      const downloadButton = page.getByRole("button", { name: "Download Resume PDF" });
+      const shareButton = page.getByRole("button", { name: /Share / });
+
+      await expect(downloadButton).toBeVisible();
+      await expect(shareButton).toBeVisible();
+
+      const [downloadBox, shareBox] = await Promise.all([
+        downloadButton.boundingBox(),
+        shareButton.boundingBox(),
+      ]);
+
+      expect(downloadBox).toBeTruthy();
+      expect(shareBox).toBeTruthy();
+
+      const overlaps =
+        (downloadBox?.x ?? 0) < (shareBox?.x ?? 0) + (shareBox?.width ?? 0) &&
+        (shareBox?.x ?? 0) < (downloadBox?.x ?? 0) + (downloadBox?.width ?? 0) &&
+        (downloadBox?.y ?? 0) < (shareBox?.y ?? 0) + (shareBox?.height ?? 0) &&
+        (shareBox?.y ?? 0) < (downloadBox?.y ?? 0) + (downloadBox?.height ?? 0);
+
+      expect(overlaps).toBe(false);
+      expect((shareBox?.y ?? 0) >= (downloadBox?.y ?? 0) + (downloadBox?.height ?? 0)).toBe(true);
+    };
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/${profile.username}`);
+    await assertStackedDock();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await assertStackedDock();
+  });
+
+  test("public action dock shows the Resume PDF error above the stacked controls", async ({ page }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run public mobile action-dock coverage.",
+    );
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    await setPlanForProfile(profile.id, "pro");
+    await ensureLivePageForProfile(profile);
+
+    await page.route("**/api/resume/export", async (route) => {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "Unable to export the Resume PDF right now. Please try again.",
+        }),
+      });
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/${profile.username}`);
+
+    const downloadButton = page.getByRole("button", { name: "Download Resume PDF" });
+    const shareButton = page.getByRole("button", { name: /Share / });
+
+    await expect(downloadButton).toBeVisible();
+    await expect(shareButton).toBeVisible();
+
+    await downloadButton.click();
+
+    const errorCallout = page.getByTestId("public-action-dock-error");
+    await expect(errorCallout).toBeVisible();
+
+    const [errorBox, shareBox] = await Promise.all([
+      errorCallout.boundingBox(),
+      shareButton.boundingBox(),
+    ]);
+
+    expect(errorBox).toBeTruthy();
+    expect(shareBox).toBeTruthy();
+    expect((errorBox?.y ?? 0) + (errorBox?.height ?? 0) <= (shareBox?.y ?? 0)).toBe(true);
   });
 
   test("billing checkout, webhook unlock, portal access, and downgrade stay healthy", async ({ page }) => {

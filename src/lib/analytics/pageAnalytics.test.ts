@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { buildPageAnalyticsDashboard } from "@/lib/analytics/pageAnalytics";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import {
+  buildPageAnalyticsDashboard,
+  fetchPageAnalyticsDashboard,
+} from "@/lib/analytics/pageAnalytics";
 import type {
   AnalyticsSectionId,
   AnalyticsTargetKey,
@@ -63,7 +67,73 @@ function makeInteraction({
   };
 }
 
+interface MockQueryRequest {
+  table: string;
+  select: string;
+  eqFilters: Record<string, unknown>;
+  gteFilters: Record<string, unknown>;
+  inFilters: Record<string, unknown[]>;
+  order: { column: string; ascending?: boolean } | null;
+}
+
+type MockQueryResponse = {
+  data: unknown;
+  error: unknown;
+};
+
+function createMockSupabase(
+  resolve: (request: MockQueryRequest) => MockQueryResponse | Promise<MockQueryResponse>,
+) {
+  return {
+    from(table: string) {
+      return {
+        select(select: string) {
+          const request: MockQueryRequest = {
+            table,
+            select,
+            eqFilters: {},
+            gteFilters: {},
+            inFilters: {},
+            order: null,
+          };
+
+          const builder = {
+            eq(column: string, value: unknown) {
+              request.eqFilters[column] = value;
+              return builder;
+            },
+            gte(column: string, value: unknown) {
+              request.gteFilters[column] = value;
+              return builder;
+            },
+            order(column: string, options?: { ascending?: boolean }) {
+              request.order = { column, ascending: options?.ascending };
+              return Promise.resolve(resolve(request));
+            },
+            in(column: string, values: unknown[]) {
+              request.inFilters[column] = values;
+              return Promise.resolve(resolve(request));
+            },
+          };
+
+          return builder;
+        },
+      };
+    },
+  } as unknown as SupabaseClient;
+}
+
 describe("page analytics aggregation", () => {
+  const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  afterEach(() => {
+    consoleErrorSpy.mockClear();
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   it("builds range totals and previous-period comparisons", () => {
     const analytics = buildPageAnalyticsDashboard({
       rangeKey: "7d",
@@ -225,5 +295,288 @@ describe("page analytics aggregation", () => {
 
     expect(last30Days.overview.views.value).toBe(2);
     expect(last90Days.overview.views.value).toBe(3);
+  });
+
+  it("returns full analytics when the engagement schema is available", async () => {
+    const requests: MockQueryRequest[] = [];
+    const supabase = createMockSupabase((request) => {
+      requests.push(request);
+
+      if (request.table === "page_views") {
+        return {
+          data: [
+            makeView({
+              id: "view-current-1",
+              viewedAt: "2026-03-12T16:10:00.000Z",
+              viewerIp: "hash-a",
+              referrer: "https://www.linkedin.com/feed/",
+              userAgent: "Mozilla/5.0",
+              country: "US",
+              engagedSeconds: 120,
+              maxScrollDepthPct: 80,
+              primarySection: "projects",
+              hadOutboundClick: true,
+            }),
+          ],
+          error: null,
+        };
+      }
+
+      if (request.table === "page_interactions") {
+        return {
+          data: [
+            makeInteraction({
+              pageViewId: "view-current-1",
+              targetKey: "project",
+              targetLabel: "TraceBoard",
+            }),
+          ],
+          error: null,
+        };
+      }
+
+      return {
+        data: [],
+        error: null,
+      };
+    });
+
+    const analytics = await fetchPageAnalyticsDashboard({
+      supabase,
+      pageId: "page-1",
+      rangeKey: "7d",
+      allTimeViews: 12,
+      now: NOW,
+    });
+
+    expect(analytics.state.availability).toBe("full");
+    expect(analytics.state.notice).toBeNull();
+    expect(analytics.overview.views.value).toBe(1);
+    expect(analytics.conversion.topActions[0]).toMatchObject({
+      label: "Project: TraceBoard",
+      count: 1,
+    });
+    expect(requests.map((request) => request.table)).toEqual([
+      "page_views",
+      "page_interactions",
+    ]);
+  });
+
+  it("falls back to basic traffic analytics when engagement columns are missing", async () => {
+    const requests: MockQueryRequest[] = [];
+    const supabase = createMockSupabase((request) => {
+      requests.push(request);
+
+      if (request.table !== "page_views") {
+        return {
+          data: [],
+          error: null,
+        };
+      }
+
+      if (request.select.includes("engaged_seconds")) {
+        return {
+          data: null,
+          error: {
+            code: "42703",
+            message: 'column "engaged_seconds" does not exist',
+          },
+        };
+      }
+
+      return {
+        data: [
+          {
+            id: "legacy-view-1",
+            viewed_at: "2026-03-12T16:10:00.000Z",
+            viewer_ip: "hash-a",
+            referrer: "https://www.linkedin.com/feed/",
+            user_agent: "Mozilla/5.0",
+            country: "US",
+          },
+        ],
+        error: null,
+      };
+    });
+
+    const analytics = await fetchPageAnalyticsDashboard({
+      supabase,
+      pageId: "page-1",
+      rangeKey: "7d",
+      allTimeViews: 12,
+      now: NOW,
+    });
+
+    expect(analytics.state.availability).toBe("basic");
+    expect(analytics.state.notice).toContain("Detailed engagement analytics");
+    expect(analytics.overview.views.value).toBe(1);
+    expect(analytics.state.hasEngagement).toBe(false);
+    expect(requests.map((request) => `${request.table}:${request.select.includes("engaged_seconds")}`)).toEqual([
+      "page_views:true",
+      "page_views:false",
+    ]);
+  });
+
+  it("falls back to basic traffic analytics when the page_interactions table is missing", async () => {
+    const requests: MockQueryRequest[] = [];
+    const supabase = createMockSupabase((request) => {
+      requests.push(request);
+
+      if (request.table === "page_views" && request.select.includes("engaged_seconds")) {
+        return {
+          data: [
+            makeView({
+              id: "view-current-1",
+              viewedAt: "2026-03-12T16:10:00.000Z",
+              viewerIp: "hash-a",
+              userAgent: "Mozilla/5.0",
+              country: "US",
+              engagedSeconds: 90,
+              maxScrollDepthPct: 72,
+              primarySection: "projects",
+            }),
+          ],
+          error: null,
+        };
+      }
+
+      if (request.table === "page_interactions") {
+        return {
+          data: null,
+          error: {
+            code: "42P01",
+            message: 'relation "page_interactions" does not exist',
+          },
+        };
+      }
+
+      if (request.table === "page_views") {
+        return {
+          data: [
+            {
+              id: "view-current-1",
+              viewed_at: "2026-03-12T16:10:00.000Z",
+              viewer_ip: "hash-a",
+              user_agent: "Mozilla/5.0",
+              country: "US",
+            },
+          ],
+          error: null,
+        };
+      }
+
+      return {
+        data: [],
+        error: null,
+      };
+    });
+
+    const analytics = await fetchPageAnalyticsDashboard({
+      supabase,
+      pageId: "page-1",
+      rangeKey: "7d",
+      allTimeViews: 12,
+      now: NOW,
+    });
+
+    expect(analytics.state.availability).toBe("basic");
+    expect(analytics.state.hasEngagement).toBe(false);
+    expect(requests.map((request) => request.table)).toEqual([
+      "page_views",
+      "page_interactions",
+      "page_views",
+    ]);
+  });
+
+  it("returns unavailable when the legacy-safe traffic query also fails", async () => {
+    const supabase = createMockSupabase((request) => {
+      if (request.table !== "page_views") {
+        return {
+          data: [],
+          error: null,
+        };
+      }
+
+      if (request.select.includes("engaged_seconds")) {
+        return {
+          data: null,
+          error: {
+            code: "PGRST204",
+            message: "Could not find the 'engaged_seconds' column of 'page_views' in the schema cache",
+          },
+        };
+      }
+
+      return {
+        data: null,
+        error: {
+          code: "42501",
+          message: "permission denied for table page_views",
+        },
+      };
+    });
+
+    const analytics = await fetchPageAnalyticsDashboard({
+      supabase,
+      pageId: "page-1",
+      rangeKey: "7d",
+      allTimeViews: 12,
+      now: NOW,
+    });
+
+    expect(analytics.state.availability).toBe("unavailable");
+    expect(analytics.state.notice).toContain("Analytics are temporarily unavailable");
+  });
+
+  it("drops malformed legacy rows instead of crashing the basic fallback", async () => {
+    const supabase = createMockSupabase((request) => {
+      if (request.table !== "page_views") {
+        return {
+          data: [],
+          error: null,
+        };
+      }
+
+      if (request.select.includes("engaged_seconds")) {
+        return {
+          data: null,
+          error: {
+            code: "42703",
+            message: 'column "engaged_seconds" does not exist',
+          },
+        };
+      }
+
+      return {
+        data: [
+          {
+            id: "legacy-view-1",
+            viewed_at: "2026-03-12T16:10:00.000Z",
+            viewer_ip: "hash-a",
+            referrer: ["invalid"],
+            user_agent: "Mozilla/5.0",
+            country: "US",
+          },
+          {
+            id: null,
+            viewed_at: "2026-03-11T16:10:00.000Z",
+            viewer_ip: "hash-b",
+          },
+        ],
+        error: null,
+      };
+    });
+
+    const analytics = await fetchPageAnalyticsDashboard({
+      supabase,
+      pageId: "page-1",
+      rangeKey: "7d",
+      allTimeViews: 12,
+      now: NOW,
+    });
+
+    expect(analytics.state.availability).toBe("basic");
+    expect(analytics.overview.views.value).toBe(1);
+    expect(analytics.acquisition.topReferrers[0]?.label).toBe("Direct");
   });
 });

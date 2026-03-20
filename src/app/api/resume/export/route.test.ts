@@ -1,19 +1,33 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  checkExport: vi.fn(),
   enforceRateLimit: vi.fn(),
+  fallbackRenderPdf: vi.fn(),
   renderPdf: vi.fn(),
   serviceRoleFactory: vi.fn(),
   trackEvent: vi.fn(),
 }));
 
 vi.mock("@/lib/pdf/ResumePDFDocument", () => ({
-  checkResumeExport: mocks.checkExport,
+  countPdfPages: (buffer: Uint8Array | ArrayBuffer) =>
+    new Uint8Array(buffer).length > 3 ? 2 : 1,
   getFriendlyResumePdfError: (
-    exportCheck: { renderFailureReason?: string | null; recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
+    exportCheck:
+      | {
+          renderFailureReason?: string | null;
+          recommendedFixes?: string[];
+          overflowReasons?: string[];
+        }
+      | null
+      | undefined,
     fallback?: string,
-  ) => exportCheck?.renderFailureReason ?? exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly Resume PDF error.",
+  ) =>
+    exportCheck?.renderFailureReason ??
+    exportCheck?.recommendedFixes?.[0] ??
+    exportCheck?.overflowReasons?.[0] ??
+    fallback ??
+    "Friendly Resume PDF error.",
+  renderFallbackResumePdf: mocks.fallbackRenderPdf,
   renderResumePdf: mocks.renderPdf,
 }));
 
@@ -31,6 +45,8 @@ vi.mock("@/lib/track-event", () => ({
 
 import { POST } from "@/app/api/resume/export/route";
 import type { ResumeData } from "@/types/resume";
+
+const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
 function buildResumeData(name: string): ResumeData {
   return {
@@ -55,7 +71,7 @@ function buildResumeData(name: string): ResumeData {
 function createPageResponse(options?: {
   visibility?: "public" | "private";
   status?: "live" | "draft";
-  resumeData?: ResumeData;
+  resumeData?: unknown;
 }) {
   return {
     id: "page-1",
@@ -68,22 +84,20 @@ function createPageResponse(options?: {
 describe("POST /api/resume/export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    consoleErrorSpy.mockClear();
     mocks.enforceRateLimit.mockResolvedValue({
       limited: false,
       identifierHash: "hash",
       remaining: 11,
       resetAt: new Date("2026-03-17T16:00:00.000Z").toISOString(),
     });
-    mocks.checkExport.mockResolvedValue({
-      renderable: true,
-      renderFailureReason: null,
-      pageCount: 1,
-      fitsOnOnePage: true,
-      overflowReasons: [],
-      recommendedFixes: [],
-    });
     mocks.renderPdf.mockResolvedValue(Uint8Array.from([1, 2, 3]).buffer);
+    mocks.fallbackRenderPdf.mockResolvedValue(Uint8Array.from([4, 5, 6, 7]).buffer);
     mocks.trackEvent.mockResolvedValue(undefined);
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   it("requires a page-bound request", async () => {
@@ -165,34 +179,30 @@ describe("POST /api/resume/export", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toContain("saved-resume-resume.pdf");
-    expect(mocks.checkExport).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Saved Resume" }),
-    );
     expect(mocks.renderPdf).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Saved Resume" }),
     );
   });
 
-  it("allows multi-page Resume PDFs when they still render cleanly", async () => {
+  it("coerces malformed stored data before rendering the Resume PDF", async () => {
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse(),
+              data: createPageResponse({
+                resumeData: {
+                  name: 123,
+                  summary: ["Legacy summary"],
+                  experience: null,
+                  skills: [{ category: "Core", items: "Strategy" }],
+                },
+              }),
               error: null,
             }),
           })),
         })),
       })),
-    });
-    mocks.checkExport.mockResolvedValue({
-      renderable: true,
-      renderFailureReason: null,
-      pageCount: 2,
-      fitsOnOnePage: false,
-      overflowReasons: ["The exported resume still spans more than one page."],
-      recommendedFixes: ["Trim lower-priority sections and shorten long bullets before exporting again."],
     });
 
     const response = await POST(
@@ -206,18 +216,17 @@ describe("POST /api/resume/export", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.renderPdf).toHaveBeenCalled();
-    expect(mocks.trackEvent).toHaveBeenCalledWith(
-      null,
-      "resume.export.downloaded",
+    expect(mocks.renderPdf).toHaveBeenCalledWith(
       expect.objectContaining({
-        page_count: 2,
-        fits_on_one_page: false,
+        name: "123",
+        summary: "Legacy summary",
+        experience: [],
+        skills: [{ category: "Core", items: ["Strategy"] }],
       }),
     );
   });
 
-  it("returns a friendly error when the Resume PDF cannot render cleanly", async () => {
+  it("allows multi-page content to download without a blocking pre-check", async () => {
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
@@ -230,14 +239,216 @@ describe("POST /api/resume/export", () => {
         })),
       })),
     });
-    mocks.checkExport.mockResolvedValue({
-      renderable: false,
-      renderFailureReason: "The Resume PDF could not render cleanly from the current content.",
-      pageCount: null,
-      fitsOnOnePage: null,
-      overflowReasons: [],
-      recommendedFixes: [],
+    mocks.renderPdf.mockResolvedValue(Uint8Array.from([1, 2, 3, 4, 5]).buffer);
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "resume.export.downloaded",
+      expect.objectContaining({
+        page_count: 2,
+        fits_on_one_page: false,
+      }),
+    );
+  });
+
+  it("returns a real 429 when the download rate limit is actually exceeded", async () => {
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse(),
+              error: null,
+            }),
+          })),
+        })),
+      })),
     });
+    mocks.enforceRateLimit.mockResolvedValueOnce({
+      limited: true,
+      identifierHash: "hash",
+      resetAt: new Date("2026-03-17T16:00:00.000Z").toISOString(),
+      response: Response.json(
+        {
+          error: "Too many public resume download requests. Please try again later.",
+          resetAt: new Date("2026-03-17T16:00:00.000Z").toISOString(),
+        },
+        { status: 429 },
+      ),
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({
+      error: "Too many public resume download requests. Please try again later.",
+      resetAt: new Date("2026-03-17T16:00:00.000Z").toISOString(),
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+  });
+
+  it("fails open when rate-limit persistence is unavailable and still downloads the PDF", async () => {
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse(),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+    mocks.enforceRateLimit.mockRejectedValueOnce(new Error("events table unavailable"));
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.renderPdf).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "resume.export.rate_limit_unavailable",
+      expect.objectContaining({
+        page_id: "page-1",
+        error: "events table unavailable",
+      }),
+    );
+  });
+
+  it("falls back to a simpler PDF when the primary render fails", async () => {
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse(),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+    mocks.renderPdf.mockRejectedValueOnce(new Error("Primary render failed."));
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.fallbackRenderPdf).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Saved Resume" }),
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "resume.export.downloaded",
+      expect.objectContaining({
+        fallback_used: true,
+      }),
+    );
+  });
+
+  it("sanitizes unicode-heavy saved content before attempting the fallback PDF", async () => {
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse({
+                resumeData: {
+                  name: "Jos\u00e9 \ud83d\ude80",
+                  summary: "Led growth \u2022 shipped tools \ud83c\udf1f",
+                  experience: [
+                    {
+                      title: "Founder",
+                      company: "Cr\u00e8me",
+                      dates: "2022 \u2014 2024",
+                      highlights: ["Built the platform \ud83d\udca1"],
+                    },
+                  ],
+                },
+              }),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+    mocks.renderPdf.mockRejectedValueOnce(new Error("Primary render failed."));
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.fallbackRenderPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Jose",
+        summary: "Led growth - shipped tools",
+        experience: [
+          expect.objectContaining({
+            company: "Creme",
+            dates: "2022 - 2024",
+            highlights: ["Built the platform"],
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("returns a friendly error only when both primary and fallback PDF renders fail", async () => {
+    mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: createPageResponse(),
+              error: null,
+            }),
+          })),
+        })),
+      })),
+    });
+    mocks.renderPdf.mockRejectedValueOnce(new Error("Primary render failed."));
+    mocks.fallbackRenderPdf.mockRejectedValueOnce(new Error("Fallback render failed."));
 
     const response = await POST(
       new Request("http://localhost/api/resume/export", {
@@ -251,14 +462,8 @@ describe("POST /api/resume/export", () => {
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({
-      error: "The Resume PDF could not render cleanly from the current content.",
-      renderable: false,
-      renderFailureReason: "The Resume PDF could not render cleanly from the current content.",
-      pageCount: null,
-      fitsOnOnePage: null,
-      overflowReasons: [],
-      recommendedFixes: [],
+      error: "Unable to export the Resume PDF right now. Please try again.",
     });
-    expect(mocks.renderPdf).not.toHaveBeenCalled();
+    expect(mocks.fallbackRenderPdf).toHaveBeenCalled();
   });
 });

@@ -92,6 +92,42 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 2,
   },
+  fallbackPage: {
+    paddingTop: 42,
+    paddingBottom: 38,
+    paddingHorizontal: 40,
+    fontFamily: "Helvetica",
+    fontSize: 9.5,
+    color: "#111827",
+    lineHeight: 1.45,
+  },
+  fallbackName: {
+    fontSize: 20,
+    fontFamily: "Helvetica-Bold",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  fallbackMeta: {
+    fontSize: 9,
+    color: "#4B5563",
+    marginBottom: 2,
+  },
+  fallbackSection: {
+    marginTop: 10,
+  },
+  fallbackSectionTitle: {
+    fontSize: 9.5,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+    color: "#111827",
+    marginBottom: 4,
+  },
+  fallbackLine: {
+    fontSize: 9.2,
+    color: "#1F2937",
+    marginBottom: 2,
+  },
 });
 
 function displayLink(value: string | null) {
@@ -107,6 +143,75 @@ function buildContactLine(data: ResumeData) {
   return [data.email, displayLink(data.linkedin), displayLink(data.github), displayLink(data.website)]
     .filter(Boolean)
     .join(" | ");
+}
+
+function buildFallbackSectionLines(data: ResumeData) {
+  const sections: Array<{ title: string; lines: string[] }> = [];
+
+  if (data.summary) {
+    sections.push({
+      title: "Summary",
+      lines: [data.summary],
+    });
+  }
+
+  if (data.experience.length) {
+    sections.push({
+      title: "Experience",
+      lines: data.experience.flatMap((entry) => {
+        const heading = [entry.title, entry.company, entry.dates].filter(Boolean).join(" | ");
+        const highlights = entry.highlights.map((highlight) => `- ${highlight}`);
+        return [heading, ...highlights].filter(Boolean);
+      }),
+    });
+  }
+
+  if (data.skills.length) {
+    sections.push({
+      title: "Skills",
+      lines: data.skills
+        .map((group) => {
+          const items = group.items.filter(Boolean).join(", ");
+          return items ? `${group.category}: ${items}` : group.category;
+        })
+        .filter(Boolean),
+    });
+  }
+
+  if (data.education.length) {
+    sections.push({
+      title: "Education",
+      lines: data.education
+        .map((entry) => [entry.degree, entry.school, entry.year].filter(Boolean).join(" | "))
+        .filter(Boolean),
+    });
+  }
+
+  if (data.projects.length) {
+    sections.push({
+      title: "Projects",
+      lines: data.projects.flatMap((project) => {
+        const lines = [project.name, project.description].filter(Boolean);
+        if (project.tech.length) {
+          lines.push(project.tech.join(", "));
+        }
+        return lines;
+      }),
+    });
+  }
+
+  if (data.certifications.length) {
+    sections.push({
+      title: "Certifications",
+      lines: data.certifications
+        .map((certification) =>
+          [certification.name, certification.issuer, certification.date].filter(Boolean).join(" | "),
+        )
+        .filter(Boolean),
+    });
+  }
+
+  return sections;
 }
 
 function countOverflowReasons(data: ResumeData) {
@@ -150,7 +255,7 @@ function countOverflowReasons(data: ResumeData) {
   };
 }
 
-export function buildResumePdfData(data: ResumeData) {
+export function buildResumePdfData(data: unknown) {
   const normalized = normalizeResumeDataForExport(data);
 
   return {
@@ -181,7 +286,7 @@ export function getFriendlyResumePdfError(
 
 export const getFriendlyAtsPdfError = getFriendlyResumePdfError;
 
-export async function checkResumeExport(data: ResumeData): Promise<AtsExportCheck> {
+export async function checkResumeExport(data: unknown): Promise<AtsExportCheck> {
   const exportData = buildResumePdfData(data);
   const heuristics = countOverflowReasons(exportData);
 
@@ -222,12 +327,17 @@ export async function checkResumeExport(data: ResumeData): Promise<AtsExportChec
 
 export const checkAtsResumeExport = checkResumeExport;
 
-export async function renderResumePdf(data: ResumeData) {
+export async function renderResumePdf(data: unknown) {
   const exportData = buildResumePdfData(data);
   return renderToBuffer(<ResumePDFDocument data={exportData} />);
 }
 
 export const renderAtsResumePdf = renderResumePdf;
+
+export async function renderFallbackResumePdf(data: unknown) {
+  const exportData = buildResumePdfData(data);
+  return renderToBuffer(<FallbackResumePDFDocument data={exportData} />);
+}
 
 export function ResumePDFDocument({ data }: { data: ResumeData }) {
   const normalized = buildResumePdfData(data);
@@ -335,6 +445,34 @@ export function ResumePDFDocument({ data }: { data: ResumeData }) {
             ))}
           </View>
         ) : null}
+      </Page>
+    </Document>
+  );
+}
+
+export function FallbackResumePDFDocument({ data }: { data: ResumeData }) {
+  const normalized = buildResumePdfData(data);
+  const contactLine = buildContactLine(normalized);
+  const sections = buildFallbackSectionLines(normalized);
+
+  return (
+    <Document>
+      <Page size="LETTER" style={styles.fallbackPage}>
+        <Text style={styles.fallbackName}>{normalized.name || "Resume"}</Text>
+        {normalized.headline ? <Text style={styles.fallbackMeta}>{normalized.headline}</Text> : null}
+        {normalized.location ? <Text style={styles.fallbackMeta}>{normalized.location}</Text> : null}
+        {contactLine ? <Text style={styles.fallbackMeta}>{contactLine}</Text> : null}
+
+        {sections.map((section) => (
+          <View key={section.title} style={styles.fallbackSection}>
+            <Text style={styles.fallbackSectionTitle}>{section.title}</Text>
+            {section.lines.map((line, index) => (
+              <Text key={`${section.title}-${index}`} style={styles.fallbackLine}>
+                {line}
+              </Text>
+            ))}
+          </View>
+        ))}
       </Page>
     </Document>
   );

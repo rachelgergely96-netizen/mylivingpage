@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncPageHostingState } from "@/lib/hosting-state";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import type { PageRecord } from "@/types/resume";
 
 export async function fetchPublicLivePage(
@@ -10,13 +11,18 @@ export async function fetchPublicLivePage(
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, plan, billing_cohort, hosting_trial_started_at")
-    .eq("username", username)
-    .maybeSingle();
+  const { data: profile, error: profileError } =
+    await fetchProfileWithHostingAccess<{
+      id: string;
+      plan?: string | null;
+    }>({
+      supabase,
+      select: "id, plan",
+      matchField: "username",
+      matchValue: username,
+    });
 
-  if (!profile) {
+  if (profileError || !profile) {
     return null;
   }
 

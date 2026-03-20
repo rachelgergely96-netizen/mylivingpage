@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAccountAccessState } from "@/lib/account-access";
 import { syncPageHostingState } from "@/lib/hosting-state";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 const routeTrustLevel = "authenticated_user";
@@ -12,11 +13,23 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceRoleSupabaseClient();
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id, username, full_name, email, avatar_url, plan, billing_cohort, hosting_trial_started_at, created_at, signup_referrer")
-    .eq("id", user.id)
-    .single();
+  const { data: profile, error } = await fetchProfileWithHostingAccess<{
+    id: string;
+    username: string | null;
+    full_name: string | null;
+    email: string | null;
+    avatar_url: string | null;
+    plan: string | null;
+    created_at: string;
+    signup_referrer?: string | null;
+  }>({
+    supabase,
+    select:
+      "id, username, full_name, email, avatar_url, plan, created_at, signup_referrer",
+    matchField: "id",
+    matchValue: user.id,
+    single: true,
+  });
 
   if (error || !profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });

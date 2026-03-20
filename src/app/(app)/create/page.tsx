@@ -10,6 +10,7 @@ import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { getAccountAccessState } from "@/lib/account-access";
 import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -161,11 +162,15 @@ export default function CreatePage() {
         setCurrentUserId(user.id);
 
         const [profileResponse, pagesResponse] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("plan, username, billing_cohort, hosting_trial_started_at")
-            .eq("id", user.id)
-            .maybeSingle(),
+          fetchProfileWithHostingAccess<{
+            plan?: string | null;
+            username?: string | null;
+          }>({
+            supabase,
+            select: "plan, username",
+            matchField: "id",
+            matchValue: user.id,
+          }),
           supabase
             .from("pages")
             .select("id", { count: "exact", head: true })

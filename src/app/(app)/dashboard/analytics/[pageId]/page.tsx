@@ -10,6 +10,7 @@ import {
   createUnavailablePageAnalyticsDashboard,
   fetchPageAnalyticsDashboard,
 } from "@/lib/analytics/pageAnalytics";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import {
   createServerSupabaseClient,
   createServiceRoleSupabaseClient,
@@ -47,11 +48,15 @@ export default async function AnalyticsPage({
     ? resolvedSearchParams.range
     : DEFAULT_ANALYTICS_RANGE;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan, username, billing_cohort, hosting_trial_started_at")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: profile } = await fetchProfileWithHostingAccess<{
+    plan?: string | null;
+    username?: string | null;
+  }>({
+    supabase,
+    select: "plan, username",
+    matchField: "id",
+    matchValue: user.id,
+  });
 
   const accountAccess = getAccountAccessState({
     plan: profile?.plan ?? null,

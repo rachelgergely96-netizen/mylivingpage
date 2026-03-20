@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { syncPageHostingState } from "@/lib/hosting-state";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getClientIp, hashSecurityIdentifier } from "@/lib/security/request";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -31,13 +32,17 @@ export async function POST(request: Request) {
     }
 
     const pageOwnerId = page.owner_id ?? page.user_id ?? null;
-    const { data: ownerProfile } = pageOwnerId
-      ? await supabase
-          .from("profiles")
-          .select("plan, billing_cohort, hosting_trial_started_at")
-          .eq("id", pageOwnerId)
-          .maybeSingle()
+    const ownerProfileResult = pageOwnerId
+      ? await fetchProfileWithHostingAccess<{
+          plan?: string | null;
+        }>({
+          supabase,
+          select: "plan",
+          matchField: "id",
+          matchValue: pageOwnerId,
+        })
       : { data: null };
+    const ownerProfile = ownerProfileResult.data;
 
     const syncedPage = await syncPageHostingState(supabase, page, {
       plan: ownerProfile?.plan ?? null,

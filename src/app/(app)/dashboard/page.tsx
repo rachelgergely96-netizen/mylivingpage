@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAccountAccessState } from "@/lib/account-access";
 import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 import DeletePageButton from "@/components/DeletePageButton";
@@ -15,18 +16,24 @@ export default async function DashboardPage() {
 
   const supabase = createServiceRoleSupabaseClient();
 
-  const [{ data: profile }, { data: pages }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name, username, plan, billing_cohort, hosting_trial_started_at")
-      .eq("id", user?.id ?? "")
-      .maybeSingle(),
+  const [profileResult, { data: pages }] = await Promise.all([
+    fetchProfileWithHostingAccess<{
+      full_name?: string | null;
+      username?: string | null;
+      plan?: string | null;
+    }>({
+      supabase,
+      select: "full_name, username, plan",
+      matchField: "id",
+      matchValue: user?.id ?? "",
+    }),
     supabase
       .from("pages")
       .select("*")
       .or(`user_id.eq.${user?.id ?? ""},owner_id.eq.${user?.id ?? ""}`)
       .order("created_at", { ascending: false }),
   ]);
+  const profile = profileResult.data;
 
   const displayName = profile?.full_name || profile?.username || null;
   const accountAccess = getAccountAccessState({

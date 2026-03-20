@@ -3,6 +3,7 @@ import {
   TRIAL_HOSTING_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { FREE_THEMES, isPremiumTheme } from "@/lib/plans";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
@@ -64,11 +65,16 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServiceRoleSupabaseClient();
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("plan, username, billing_cohort, hosting_trial_started_at")
-      .eq("id", user.id)
-      .maybeSingle();
+    const { data: profile, schema: profileSchema } =
+      await fetchProfileWithHostingAccess<{
+        plan?: string | null;
+        username?: string | null;
+      }>({
+        supabase,
+        select: "plan, username",
+        matchField: "id",
+        matchValue: user.id,
+      });
 
     const userPlan = profile?.plan ?? "spark";
     const accountAccess = getAccountAccessState({
@@ -103,25 +109,34 @@ export async function POST(request: Request) {
       !accountAccess.hasStartedFreeMonth;
 
     if (!profile?.username) {
-      await supabase.from("profiles").upsert(
-        {
-          id: user.id,
-          username,
-          email: user.email,
-          plan: userPlan,
-          billing_cohort: profile?.billing_cohort ?? TRIAL_HOSTING_BILLING_COHORT,
-          hosting_trial_started_at: shouldStartHostingTrial ? now : profile?.hosting_trial_started_at ?? null,
-        },
-        { onConflict: "id" },
-      );
-    } else if (shouldStartHostingTrial) {
-      const { error: trialStartError } = await supabase
-        .from("profiles")
-        .update({ hosting_trial_started_at: now })
-        .eq("id", user.id);
+      const profileUpsertFields: Record<string, unknown> = {
+        id: user.id,
+        username,
+        email: user.email,
+        plan: userPlan,
+      };
 
-      if (trialStartError) {
-        throw new Error(trialStartError.message);
+      if (profileSchema === "full") {
+        profileUpsertFields.billing_cohort =
+          profile?.billing_cohort ?? TRIAL_HOSTING_BILLING_COHORT;
+        profileUpsertFields.hosting_trial_started_at = shouldStartHostingTrial
+          ? now
+          : profile?.hosting_trial_started_at ?? null;
+      }
+
+      await supabase.from("profiles").upsert(profileUpsertFields, {
+        onConflict: "id",
+      });
+    } else if (shouldStartHostingTrial) {
+      if (profileSchema === "full") {
+        const { error: trialStartError } = await supabase
+          .from("profiles")
+          .update({ hosting_trial_started_at: now })
+          .eq("id", user.id);
+
+        if (trialStartError) {
+          throw new Error(trialStartError.message);
+        }
       }
     }
 

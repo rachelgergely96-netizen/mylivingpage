@@ -10,6 +10,7 @@ import {
   renderFallbackResumePdf,
   renderResumePdf,
 } from "@/lib/pdf/ResumePDFDocument";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
@@ -56,13 +57,17 @@ export async function POST(request: Request) {
     }
 
     const pageOwnerId = page?.owner_id ?? page?.user_id ?? null;
-    const { data: ownerProfile } = pageOwnerId
-      ? await supabase
-          .from("profiles")
-          .select("plan, billing_cohort, hosting_trial_started_at")
-          .eq("id", pageOwnerId)
-          .maybeSingle()
+    const ownerProfileResult = pageOwnerId
+      ? await fetchProfileWithHostingAccess<{
+          plan?: string | null;
+        }>({
+          supabase,
+          select: "plan",
+          matchField: "id",
+          matchValue: pageOwnerId,
+        })
       : { data: null };
+    const ownerProfile = ownerProfileResult.data;
 
     const syncedPage = page
       ? await syncPageHostingState(supabase, page, {

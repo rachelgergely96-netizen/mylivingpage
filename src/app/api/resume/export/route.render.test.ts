@@ -227,7 +227,7 @@ describe("POST /api/resume/export real render path", () => {
     const buffer = await renderResumePdf(buildRealWorldResumeData());
 
     expect(Buffer.from(buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
-    expect(countPdfPages(buffer)).toBeGreaterThanOrEqual(1);
+    expect(countPdfPages(buffer)).toBe(1);
   });
 
   it("renders a fallback PDF for malformed but salvageable saved data", async () => {

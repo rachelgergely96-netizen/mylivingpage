@@ -8,7 +8,14 @@ type PdfKitModule = {
 };
 type PdfDocumentInstance = any;
 
-const PAGE_MARGIN = 40;
+const PAGE_MARGIN = 50;
+const CONTENT_GUTTER = 4;
+const SECTION_TITLE_GAP = 3;
+const SECTION_CONTENT_GAP = 7;
+const ENTRY_COLUMN_GAP = 12;
+const ENTRY_DATE_WIDTH = 76;
+const BODY_FONT_SIZE = 8.8;
+const BODY_LINE_GAP = 1.4;
 let pdfKitPromise: Promise<PdfKitModule> | null = null;
 
 function getPdfKit() {
@@ -28,10 +35,30 @@ function displayLink(value: string | null) {
   return clean.replace(/^https?:\/\//i, "");
 }
 
-function buildContactLine(data: ResumeData) {
-  return [data.email, displayLink(data.linkedin), displayLink(data.github), displayLink(data.website)]
-    .filter(Boolean)
-    .join(" | ");
+function buildContactLines(data: ResumeData) {
+  const email = data.email ? normalizeResumeText(data.email) : "";
+  const links = [displayLink(data.linkedin), displayLink(data.github), displayLink(data.website)].filter(
+    Boolean,
+  ) as string[];
+
+  if (email && links.length) {
+    const combined = [email, ...links].join(" | ");
+    if (combined.length <= 72) {
+      return [combined];
+    }
+
+    return [email, links.join(" | ")];
+  }
+
+  if (email) {
+    return [email];
+  }
+
+  if (links.length) {
+    return [links.join(" | ")];
+  }
+
+  return [];
 }
 
 function buildFallbackSectionLines(data: ResumeData) {
@@ -149,21 +176,30 @@ function safePageWidth(doc: PdfDocumentInstance) {
   return pageWidth - PAGE_MARGIN * 2;
 }
 
+function getContentBounds(doc: PdfDocumentInstance) {
+  return {
+    left: PAGE_MARGIN + CONTENT_GUTTER,
+    width: safePageWidth(doc) - CONTENT_GUTTER * 2,
+  };
+}
+
 function renderSectionTitle(doc: PdfDocumentInstance, title: string) {
-  doc.moveDown(0.6);
-  doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#111827").text(title.toUpperCase(), {
+  const { left, width } = getContentBounds(doc);
+  doc.moveDown(0.8);
+  doc.font("Helvetica-Bold").fontSize(8.4).fillColor("#111827").text(title.toUpperCase(), left, doc.y, {
+    width,
     characterSpacing: 0.8,
   });
-  const lineY = doc.y + 2;
+  const lineY = doc.y + SECTION_TITLE_GAP;
   doc
     .save()
     .strokeColor("#CBD5E1")
     .lineWidth(0.5)
-    .moveTo(PAGE_MARGIN, lineY)
-    .lineTo(PAGE_MARGIN + safePageWidth(doc), lineY)
+    .moveTo(left, lineY)
+    .lineTo(left + width, lineY)
     .stroke()
     .restore();
-  doc.y = lineY + 4;
+  doc.y = lineY + SECTION_CONTENT_GAP;
 }
 
 function renderEntryDateLine(
@@ -172,29 +208,36 @@ function renderEntryDateLine(
   subtitle: string,
   dates: string,
 ) {
-  const startX = doc.x;
+  const { left, width } = getContentBounds(doc);
+  const startX = left;
   const startY = doc.y;
-  const pageWidth = safePageWidth(doc);
-  const dateWidth = 74;
-  const contentWidth = Math.max(180, pageWidth - dateWidth - 8);
+  const contentWidth = Math.max(170, width - ENTRY_DATE_WIDTH - ENTRY_COLUMN_GAP);
 
-  doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#111827").text(title, startX, startY, {
+  doc.font("Helvetica-Bold").fontSize(9.3).fillColor("#111827").text(title, startX, startY, {
     width: contentWidth,
+    lineGap: 0.6,
   });
 
-  const titleHeight = doc.heightOfString(title, { width: contentWidth });
-
-  doc.font("Helvetica").fontSize(9.25).fillColor("#374151").text(subtitle, startX, startY + titleHeight + 1, {
+  const titleHeight = doc.heightOfString(title, {
     width: contentWidth,
+    lineGap: 0.6,
   });
 
-  doc.font("Helvetica").fontSize(8.5).fillColor("#6B7280").text(dates, startX + contentWidth + 8, startY, {
-    width: dateWidth,
+  doc.font("Helvetica").fontSize(8.85).fillColor("#374151").text(subtitle, startX, startY + titleHeight + 2, {
+    width: contentWidth,
+    lineGap: 0.9,
+  });
+
+  doc.font("Helvetica").fontSize(8.1).fillColor("#6B7280").text(dates, startX + contentWidth + ENTRY_COLUMN_GAP, startY, {
+    width: ENTRY_DATE_WIDTH,
     align: "right",
   });
 
-  const subtitleHeight = doc.heightOfString(subtitle, { width: contentWidth });
-  doc.y = startY + titleHeight + subtitleHeight + 4;
+  const subtitleHeight = doc.heightOfString(subtitle, {
+    width: contentWidth,
+    lineGap: 0.9,
+  });
+  doc.y = startY + titleHeight + subtitleHeight + 6;
 }
 
 async function createPdfDocument(): Promise<PdfDocumentInstance> {
@@ -233,30 +276,42 @@ function bufferPdfDocument(doc: PdfDocumentInstance): Promise<Uint8Array> {
 
 async function renderPrimaryPdfDocument(data: ResumeData) {
   const doc = await createPdfDocument();
-  const pageWidth = safePageWidth(doc);
-  const contactLine = buildContactLine(data);
+  const { left, width } = getContentBounds(doc);
+  const contactLines = buildContactLines(data);
 
-  doc.font("Helvetica-Bold").fontSize(18).fillColor("#111827").text(data.name);
+  doc.font("Helvetica-Bold").fontSize(17.5).fillColor("#111827").text(data.name, left, doc.y, {
+    width,
+    lineGap: 0.4,
+  });
 
   if (data.headline) {
-    doc.moveDown(0.15);
-    doc.font("Helvetica").fontSize(10.5).fillColor("#374151").text(data.headline);
+    doc.moveDown(0.18);
+    doc.font("Helvetica").fontSize(10).fillColor("#374151").text(data.headline, left, doc.y, {
+      width,
+      lineGap: 0.6,
+    });
   }
 
   if (data.location) {
     doc.moveDown(0.15);
-    doc.font("Helvetica").fontSize(9).fillColor("#6B7280").text(data.location);
+    doc.font("Helvetica").fontSize(8.7).fillColor("#6B7280").text(data.location, left, doc.y, {
+      width,
+    });
   }
 
-  if (contactLine) {
-    doc.moveDown(0.35);
-    doc.font("Helvetica").fontSize(8.5).fillColor("#374151").text(contactLine);
-  }
+  contactLines.forEach((line, index) => {
+    doc.moveDown(index === 0 ? 0.28 : 0.12);
+    doc.font("Helvetica").fontSize(8.15).fillColor("#374151").text(line, left, doc.y, {
+      width,
+      lineGap: 0.8,
+    });
+  });
 
   if (data.summary) {
     renderSectionTitle(doc, "Summary");
-    doc.font("Helvetica").fontSize(9.25).fillColor("#374151").text(data.summary, {
-      width: pageWidth,
+    doc.font("Helvetica").fontSize(BODY_FONT_SIZE).fillColor("#374151").text(data.summary, left, doc.y, {
+      width,
+      lineGap: BODY_LINE_GAP,
     });
   }
 
@@ -271,25 +326,30 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
       );
 
       entry.highlights.forEach((highlight) => {
-        doc.font("Helvetica").fontSize(8.9).fillColor("#374151").text(`- ${highlight}`, {
-          width: pageWidth - 8,
-          indent: 8,
+        doc.font("Helvetica").fontSize(8.55).fillColor("#374151").text(`- ${highlight}`, left, doc.y, {
+          width,
+          lineGap: 1,
+          indent: 10,
         });
       });
 
-      doc.moveDown(0.4);
+      doc.moveDown(0.32);
     });
   }
 
   if (data.skills.length) {
     renderSectionTitle(doc, "Skills");
     data.skills.forEach((group) => {
-      doc.font("Helvetica").fontSize(8.9).fillColor("#374151").text(
+      doc.font("Helvetica").fontSize(8.5).fillColor("#374151").text(
         `${group.category}: ${group.items.join(", ")}`,
+        left,
+        doc.y,
         {
-          width: pageWidth,
+          width,
+          lineGap: 1,
         },
       );
+      doc.moveDown(0.08);
     });
   }
 
@@ -304,34 +364,39 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
   if (data.projects.length) {
     renderSectionTitle(doc, "Projects");
     data.projects.forEach((project) => {
-      doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#111827").text(project.name, {
-        width: pageWidth,
+      doc.font("Helvetica-Bold").fontSize(9.1).fillColor("#111827").text(project.name, left, doc.y, {
+        width,
       });
-      doc.font("Helvetica").fontSize(8.9).fillColor("#374151").text(project.description, {
-        width: pageWidth,
+      doc.font("Helvetica").fontSize(8.5).fillColor("#374151").text(project.description, left, doc.y, {
+        width,
+        lineGap: 1,
       });
       if (project.tech.length) {
-        doc.font("Helvetica").fontSize(8.9).fillColor("#374151").text(project.tech.join(", "), {
-          width: pageWidth,
+        doc.font("Helvetica").fontSize(8.4).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
+          width,
+          lineGap: 0.8,
         });
       }
-      doc.moveDown(0.4);
+      doc.moveDown(0.28);
     });
   }
 
   if (data.certifications.length) {
     renderSectionTitle(doc, "Certifications");
     data.certifications.forEach((certification) => {
-      doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#111827").text(certification.name, {
-        width: pageWidth,
+      doc.font("Helvetica-Bold").fontSize(9.1).fillColor("#111827").text(certification.name, left, doc.y, {
+        width,
       });
-      doc.font("Helvetica").fontSize(9.25).fillColor("#374151").text(
+      doc.font("Helvetica").fontSize(8.6).fillColor("#374151").text(
         [certification.issuer, certification.date].filter(Boolean).join(" | "),
+        left,
+        doc.y,
         {
-          width: pageWidth,
+          width,
+          lineGap: 0.8,
         },
       );
-      doc.moveDown(0.3);
+      doc.moveDown(0.22);
     });
   }
 
@@ -340,36 +405,48 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
 
 async function renderFallbackPdfDocument(data: ResumeData) {
   const doc = await createPdfDocument();
-  const pageWidth = safePageWidth(doc);
-  const contactLine = buildContactLine(data);
+  const { left, width } = getContentBounds(doc);
+  const contactLines = buildContactLines(data);
   const sections = buildFallbackSectionLines(data);
 
-  doc.font("Helvetica-Bold").fontSize(20).fillColor("#111827").text(data.name || "Resume");
+  doc.font("Helvetica-Bold").fontSize(18).fillColor("#111827").text(data.name || "Resume", left, doc.y, {
+    width,
+  });
 
   if (data.headline) {
     doc.moveDown(0.15);
-    doc.font("Helvetica").fontSize(9).fillColor("#4B5563").text(data.headline);
+    doc.font("Helvetica").fontSize(8.8).fillColor("#4B5563").text(data.headline, left, doc.y, {
+      width,
+      lineGap: 0.8,
+    });
   }
 
   if (data.location) {
     doc.moveDown(0.1);
-    doc.font("Helvetica").fontSize(9).fillColor("#4B5563").text(data.location);
+    doc.font("Helvetica").fontSize(8.6).fillColor("#4B5563").text(data.location, left, doc.y, {
+      width,
+    });
   }
 
-  if (contactLine) {
-    doc.moveDown(0.1);
-    doc.font("Helvetica").fontSize(9).fillColor("#4B5563").text(contactLine);
-  }
+  contactLines.forEach((line, index) => {
+    doc.moveDown(index === 0 ? 0.1 : 0.08);
+    doc.font("Helvetica").fontSize(8.25).fillColor("#4B5563").text(line, left, doc.y, {
+      width,
+      lineGap: 0.8,
+    });
+  });
 
   sections.forEach((section) => {
     doc.moveDown(0.6);
-    doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#111827").text(section.title.toUpperCase(), {
+    doc.font("Helvetica-Bold").fontSize(9.1).fillColor("#111827").text(section.title.toUpperCase(), left, doc.y, {
+      width,
       characterSpacing: 0.7,
     });
 
     section.lines.forEach((line) => {
-      doc.font("Helvetica").fontSize(9.2).fillColor("#1F2937").text(line, {
-        width: pageWidth,
+      doc.font("Helvetica").fontSize(8.7).fillColor("#1F2937").text(line, left, doc.y, {
+        width,
+        lineGap: 1,
       });
     });
   });

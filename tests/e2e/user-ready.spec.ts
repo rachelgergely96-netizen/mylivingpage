@@ -20,7 +20,6 @@ import {
   removeAvatarViaApi,
   sendStripeWebhook,
   seedPageAnalyticsHistory,
-  setPublicAtsDownloadState,
   setPlanForProfile,
   signIn,
   uploadAvatarViaApi,
@@ -66,112 +65,6 @@ const PARSED_RESUME_FIXTURE = {
   stats: [],
 };
 
-const ATS_REVIEW_FIXTURE = {
-  targeting: {
-    primaryTitle: "Founder",
-    titleVariants: [],
-    jobDescription: "",
-    lastExtractedKeywords: [],
-  },
-  score: {
-    machineReadability: 94,
-    recruiterSearchability: 91,
-    onePagePdf: 100,
-    overall: 95,
-  },
-  issues: [],
-  suggestions: [],
-  proposals: [],
-  appliedSuggestionIds: [],
-  proposalDecision: {
-    reviewContentHash: "fixture-hash",
-    acceptedProposalIds: [],
-    declinedProposalIds: [],
-    lastDecidedAt: null,
-  },
-  exportCheck: {
-    renderable: true,
-    renderFailureReason: null,
-    pageCount: 1,
-    fitsOnOnePage: true,
-    overflowReasons: [],
-    recommendedFixes: [],
-  },
-  candidateResumeData: PARSED_RESUME_FIXTURE,
-  candidateExportCheck: {
-    renderable: true,
-    renderFailureReason: null,
-    pageCount: 1,
-    fitsOnOnePage: true,
-    overflowReasons: [],
-    recommendedFixes: [],
-  },
-  changeSummary: [
-    {
-      id: "summary-tighten",
-      title: "Tightened summary",
-      description: "We shortened the summary for ATS readability and one-page fit.",
-      category: "machine_readability",
-    },
-  ],
-  status: "ready",
-  lastReviewedAt: "2026-03-14T12:00:00.000Z",
-  contentHash: "fixture-hash",
-  mode: "full",
-  source: "rules",
-  approvedResumeData: null,
-  approvedExportCheck: null,
-  approvedAt: null,
-  approvedContentHash: null,
-  availabilityReason: null,
-};
-
-const ATS_REVIEW_BLOCKED_FIXTURE = {
-  ...ATS_REVIEW_FIXTURE,
-  exportCheck: {
-    renderable: true,
-    renderFailureReason: null,
-    pageCount: 2,
-    fitsOnOnePage: false,
-    overflowReasons: ["The source resume is still too dense for a one-page ATS export."],
-    recommendedFixes: ["Shorten the source content and keep only the two most recent roles."],
-  },
-  candidateExportCheck: {
-    renderable: true,
-    renderFailureReason: null,
-    pageCount: 2,
-    fitsOnOnePage: false,
-    overflowReasons: ["The ATS version is still too dense for one page."],
-    recommendedFixes: ["Shorten the source content and keep only the two most recent roles."],
-  },
-  changeSummary: [
-    {
-      id: "searchability-tightened",
-      title: "Tightened title and summary",
-      description: "We made the role, skills, and contact details easier to find.",
-      category: "recruiter_searchability",
-    },
-    {
-      id: "experience-prioritized",
-      title: "Trimmed recent experience",
-      description: "We reduced bullets to protect one-page fit.",
-      category: "one_page_pdf",
-    },
-    {
-      id: "fit-trimmed",
-      title: "Removed lower-priority detail",
-      description: "We cut extra sections that matter less than recent roles and core skills.",
-      category: "one_page_pdf",
-    },
-  ],
-  status: "ready",
-  approvedResumeData: null,
-  approvedExportCheck: null,
-  approvedAt: null,
-  approvedContentHash: null,
-  availabilityReason: "Shorten the source content and keep only the two most recent roles.",
-};
-
 function buildParseSseBody() {
   return [
     'data: {"type":"progress","progress":25,"stage":"Analyzing resume structure..."}',
@@ -212,13 +105,6 @@ test.describe.serial("authenticated user journeys", () => {
         body: buildParseSseBody(),
       });
     });
-    await page.route("**/api/generate/ats-review", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(ATS_REVIEW_FIXTURE),
-      });
-    });
 
     await signIn(page);
 
@@ -231,26 +117,19 @@ test.describe.serial("authenticated user journeys", () => {
     }
 
     await page.getByRole("link", { name: "Create Your Page" }).click();
-    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Generate both versions" }).click();
-    await expect(page.getByTestId("ats-review-panel")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByTestId("ats-preview-card")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("Review the recommended ATS draft")).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText("Machine Readability")).toHaveCount(0);
-    const atsPanelBox = await page.getByTestId("ats-review-panel").boundingBox();
-    const themeSectionBox = await page.getByTestId("create-theme-section").boundingBox();
-    expect(atsPanelBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(themeSectionBox?.y ?? Number.NEGATIVE_INFINITY);
+    await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
+    await page.getByRole("button", { name: "Create my page" }).click();
+    await expect(page.getByRole("heading", { name: "Review your living page" })).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("Resume PDF")).toBeVisible();
     await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish Living Page" }).click();
     await expect(page.getByRole("heading", { name: "Your living page is live" })).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/dashboard");
-    await page.getByRole("link", { name: "Edit" }).click();
+    await page.getByRole("link", { name: "Edit Page" }).click();
     const headlineInput = page.locator('input[type="text"]').nth(1);
     await headlineInput.fill(`Updated headline ${Date.now()}`);
     await page.getByRole("button", { name: "Save Changes" }).click();
-    await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
-    await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Saved successfully!")).toBeVisible();
 
     await page.goto("/dashboard/settings");
@@ -261,7 +140,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("Username updated")).toBeVisible();
   });
 
-  test("signup intent can carry an ATS-focused ref into the create flow for existing users", async ({ page }) => {
+  test("signup intent can carry a create ref into the flow for existing users", async ({ page }) => {
     test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
 
     await page.goto("/signup?ref=landing_self_test&next=/create");
@@ -273,7 +152,7 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
-    await expect(page.getByRole("heading", { name: "Paste anything resume-related" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Paste your info" })).toBeVisible();
   });
 
   test("legacy global create drafts are ignored for the signed-in user", async ({ page }) => {
@@ -294,13 +173,6 @@ test.describe.serial("authenticated user journeys", () => {
           selectedTheme: "cosmic",
           inputMode: "paste",
           step: "input",
-          atsTargeting: {
-            primaryTitle: "",
-            titleVariants: [],
-            jobDescription: "",
-            lastExtractedKeywords: [],
-          },
-          atsReview: null,
         },
         savedAt: Date.now(),
       }),
@@ -329,13 +201,6 @@ test.describe.serial("authenticated user journeys", () => {
           selectedTheme: "cosmic",
           inputMode: "paste",
           step: "input",
-          atsTargeting: {
-            primaryTitle: "",
-            titleVariants: [],
-            jobDescription: "",
-            lastExtractedKeywords: [],
-          },
-          atsReview: null,
         },
         savedAt: Date.now(),
       }),
@@ -350,7 +215,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await signIn(page);
     await page.goto("/create");
-    await page.getByPlaceholder("Paste your resume text here...").fill("Fresh scoped draft");
+    await page.getByPlaceholder("Paste your info here...").fill("Fresh scoped draft");
     await page.waitForTimeout(1200);
 
     await page.reload();
@@ -368,93 +233,34 @@ test.describe.serial("authenticated user journeys", () => {
     await page.goto("/create");
     await expect(page.getByRole("button", { name: "Load Sample" })).toHaveCount(0);
 
-    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Generate both versions" }).click();
+    await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
+    await page.getByRole("button", { name: "Create my page" }).click();
 
-    await expect(page.getByText("We couldn't reach resume parsing right now. Continue manually or try again in a moment.")).toBeVisible();
+    await expect(page.getByText("We couldn't reach page creation right now. Continue manually or try again in a moment.")).toBeVisible();
     await expect(page.getByText("Failed to fetch")).toHaveCount(0);
     await page.getByRole("button", { name: "Continue manually" }).click();
     await expect(page.getByText("Let's start with who you are")).toBeVisible();
   });
 
-  test("create stays publishable when the ATS review request fails", async ({ page }) => {
-    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
-
-    await signIn(page);
-    await page.route("**/api/generate/parse", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: buildParseSseBody(),
-      });
-    });
-    await page.route("**/api/generate/ats-review", async (route) => {
-      await route.abort();
-    });
-
-    await page.goto("/create");
-    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Generate both versions" }).click();
-
-    await expect(page.getByText("We couldn't reach ATS review right now. Retry the review or continue without it for now.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retry ATS Review" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible();
-  });
-
-  test("create no longer blocks publish when the ATS PDF still needs work", async ({ page }) => {
-    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
-
-    await signIn(page);
-    await page.route("**/api/generate/parse", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: buildParseSseBody(),
-      });
-    });
-    await page.route("**/api/generate/ats-review", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(ATS_REVIEW_BLOCKED_FIXTURE),
-      });
-    });
-
-    await page.goto("/create");
-    await page.getByPlaceholder("Paste your resume text here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Generate both versions" }).click();
-
-    await expect(page.getByText("You can approve and use this ATS draft now")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Fix ATS PDF" })).toHaveCount(0);
-  });
-
-  test("public ATS download only appears when an approved ATS resume exists", async ({ page, browser }) => {
+  test("public Resume PDF download appears on live pages for owners and viewers", async ({ page, browser }) => {
     test.skip(
       !canRunAdminFixtureFlows,
-      "Set Playwright Supabase service-role env vars to run ATS public download coverage.",
+      "Set Playwright Supabase service-role env vars to run public download coverage.",
     );
 
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
     await setPlanForProfile(profile.id, "pro");
-    const livePage = await ensureLivePageForProfile(profile);
+    await ensureLivePageForProfile(profile);
 
-    await setPublicAtsDownloadState(livePage.id, "needs_review");
     await page.goto(`/${profile.username}`);
-    await expect(page.getByText("ATS PDF not ready")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Download ATS PDF" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
 
     const viewerContext = await browser.newContext();
     const viewerPage = await viewerContext.newPage();
     await viewerPage.goto(`/${profile.username}`);
-    await expect(viewerPage.getByText("ATS PDF not ready")).toHaveCount(0);
-    await expect(viewerPage.getByRole("button", { name: "Download ATS PDF" })).toHaveCount(0);
+    await expect(viewerPage.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
     await viewerContext.close();
-
-    await setPublicAtsDownloadState(livePage.id, "ready");
-    await page.reload();
-    await expect(page.getByRole("button", { name: "Download ATS PDF" })).toBeVisible();
   });
 
   test("billing checkout, webhook unlock, portal access, and downgrade stay healthy", async ({ page }) => {

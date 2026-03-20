@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: GuidePageProps): Promise<Meta
   if (!guide) {
     return {
       title: `Guides | ${SITE_NAME}`,
-      description: "Practical guides for ATS visibility and recruiter-friendly pages.",
+      description: "Practical guides for cleaner Resume PDFs and recruiter-friendly pages.",
     };
   }
 
@@ -167,7 +167,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Build</p>
               <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">Start from the resume you already use</h2>
               <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-                Keep the ATS-safe resume for applications, then publish one page that is easier to scan once a person wants more context.
+                Start from the information you already use, then publish one page that is easier to scan once a person wants more context.
               </p>
             </Link>
             <Link

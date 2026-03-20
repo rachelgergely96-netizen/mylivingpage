@@ -1,14 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import type { ResumeData } from "@/types/resume";
 
 interface DownloadResumeButtonProps {
-  data: ResumeData | null;
-  pageId: string | null;
-  unavailableReason?: string | null;
-  ownerEditHref?: string | null;
+  data: ResumeData;
+  pageId: string;
 }
 
 function sanitizeDownloadErrorMessage(message: string) {
@@ -18,23 +15,17 @@ function sanitizeDownloadErrorMessage(message: string) {
     normalized.includes("invariant violation") ||
     normalized.includes("objects are not valid as a react child")
   ) {
-    return "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.";
+    return "Unable to export the Resume PDF right now. Please try again.";
   }
 
   return message;
 }
 
-export default function DownloadResumeButton({
-  data,
-  pageId,
-  unavailableReason,
-  ownerEditHref,
-}: DownloadResumeButtonProps) {
+export default function DownloadResumeButton({ data, pageId }: DownloadResumeButtonProps) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDownload = async () => {
-    if (!data || !pageId) return;
     setGenerating(true);
     setError(null);
     try {
@@ -44,20 +35,6 @@ export default function DownloadResumeButton({
         body: JSON.stringify({ pageId }),
       });
 
-      if (response.status === 409) {
-        const payload = (await response.json()) as {
-          error?: string;
-          recommendedFixes?: string[];
-          overflowReasons?: string[];
-        };
-        throw new Error(
-          payload.error ??
-          payload.recommendedFixes?.[0] ??
-          payload.overflowReasons?.[0] ??
-          "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
-        );
-      }
-
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(payload?.error ?? "PDF generation failed. Try again.");
@@ -65,10 +42,10 @@ export default function DownloadResumeButton({
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${(data.name || "resume").replace(/\s+/g, "-").toLowerCase()}-ats-resume.pdf`;
-      a.click();
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${(data.name || "resume").replace(/\s+/g, "-").toLowerCase()}-resume.pdf`;
+      anchor.click();
       URL.revokeObjectURL(url);
     } catch (downloadError) {
       setError(
@@ -82,34 +59,13 @@ export default function DownloadResumeButton({
     }
   };
 
-  if (!data) {
-    if (!ownerEditHref) {
-      return null;
-    }
-
-    return (
-      <div className="fixed bottom-5 right-5 z-40 max-w-sm rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.88)] px-4 py-4 text-left shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">ATS PDF not ready</p>
-        <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-          {unavailableReason ?? "Rerun ATS review and save to rebuild your ATS PDF."}
-        </p>
-        <Link
-          href={ownerEditHref}
-          className="mt-3 inline-flex rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
-        >
-          Open ATS Resume Editor
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
       <button
         type="button"
         onClick={handleDownload}
         disabled={generating}
-        className="flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] sm:text-sm text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] disabled:opacity-60 disabled:hover:translate-y-0"
+        className="flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] disabled:opacity-60 disabled:hover:translate-y-0 sm:text-sm"
       >
         {generating ? (
           <svg
@@ -146,7 +102,7 @@ export default function DownloadResumeButton({
             />
           </svg>
         )}
-        <span>{generating ? "Checking..." : "Download ATS PDF"}</span>
+        <span>{generating ? "Preparing..." : "Download Resume PDF"}</span>
       </button>
       {error ? (
         <p className="rounded-lg bg-[rgba(10,22,40,0.9)] px-3 py-1.5 text-xs text-[#ff8e8e] backdrop-blur-xl">

@@ -174,7 +174,7 @@ export default function LandingUnifiedShowcase() {
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
               <p className="text-sm font-semibold text-[#F0F4FF]">Start with the resume you already use</p>
               <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Keep the ATS-safe file for applications and shape the same story into something faster for people to scan.
+                Upload your info once and shape the same story into something faster for people to scan.
               </p>
             </div>
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">

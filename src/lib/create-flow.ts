@@ -93,7 +93,7 @@ function normalizeStructuredFailure(error: unknown): NormalizedCreateFlowError |
   };
 }
 
-export function normalizeCreateFlowError(stage: "parse" | "review", error: unknown): NormalizedCreateFlowError {
+export function normalizeCreateFlowError(error: unknown): NormalizedCreateFlowError {
   const structured = normalizeStructuredFailure(error);
   if (structured) {
     return structured;
@@ -104,10 +104,7 @@ export function normalizeCreateFlowError(stage: "parse" | "review", error: unkno
 
   if (!message) {
     return {
-      message:
-        stage === "parse"
-          ? "We couldn't parse that resume right now. Continue manually or try again in a moment."
-          : "ATS review is temporarily unavailable. Retry the review or continue without it for now.",
+      message: "We couldn't build your page from that input right now. Continue manually or try again in a moment.",
       code: null,
       retryable: true,
     };
@@ -119,10 +116,7 @@ export function normalizeCreateFlowError(stage: "parse" | "review", error: unkno
     lower.includes("network request failed")
   ) {
     return {
-      message:
-        stage === "parse"
-          ? "We couldn't reach resume parsing right now. Continue manually or try again in a moment."
-          : "We couldn't reach ATS review right now. Retry the review or continue without it for now.",
+      message: "We couldn't reach page creation right now. Continue manually or try again in a moment.",
       code: "network",
       retryable: true,
     };
@@ -140,15 +134,8 @@ export function normalizeCreateFlowError(stage: "parse" | "review", error: unkno
     return { message, code: null, retryable: true };
   }
 
-  if (lower.includes("ats review")) {
-    return { message, code: null, retryable: true };
-  }
-
   return {
-    message:
-      stage === "parse"
-        ? "We couldn't parse that resume right now. Continue manually or try again in a moment."
-        : "ATS review is temporarily unavailable. Retry the review or continue without it for now.",
+    message: "We couldn't build your page from that input right now. Continue manually or try again in a moment.",
     code: "unknown",
     retryable: true,
   };

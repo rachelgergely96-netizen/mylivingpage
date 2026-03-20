@@ -991,69 +991,6 @@ function buildOptimizedSummary(data: ResumeData, targeting: AtsTargeting, maxLen
   return trimSentence(candidate, maxLength);
 }
 
-function trimExperienceHighlights(
-  data: ResumeData,
-  limitForIndex: (index: number, entry: ResumeData["experience"][number]) => number,
-) {
-  return {
-    ...data,
-    experience: data.experience.map((entry, index) => ({
-      ...entry,
-      highlights: entry.highlights.slice(0, Math.max(1, limitForIndex(index, entry))),
-    })),
-  } satisfies ResumeData;
-}
-
-function trimProjectsForAts(data: ResumeData, maxProjects: number) {
-  return {
-    ...data,
-    projects: data.projects.slice(0, Math.max(0, maxProjects)),
-  } satisfies ResumeData;
-}
-
-function trimCertificationsForAts(data: ResumeData, maxCertifications: number) {
-  return {
-    ...data,
-    certifications: data.certifications.slice(0, Math.max(0, maxCertifications)),
-  } satisfies ResumeData;
-}
-
-function trimExperienceCountForAts(data: ResumeData, maxRoles: number) {
-  const minRoles = Math.min(data.experience.length, 2);
-  return {
-    ...data,
-    experience: data.experience.slice(0, Math.max(minRoles, maxRoles)),
-  } satisfies ResumeData;
-}
-
-function trimSkillsForAts(data: ResumeData, maxItems: number) {
-  const totalItems = data.skills.reduce((count, group) => count + group.items.length, 0);
-  const minItems = Math.min(totalItems, 6);
-  let remaining = Math.max(minItems, maxItems);
-  const nextSkills = data.skills
-    .map((group) => {
-      if (remaining <= 0) {
-        return null;
-      }
-
-      const items = group.items.slice(0, remaining);
-      remaining -= items.length;
-
-      return items.length
-        ? {
-            ...group,
-            items,
-          }
-        : null;
-    })
-    .filter((group): group is ResumeData["skills"][number] => group !== null);
-
-  return {
-    ...data,
-    skills: nextSkills,
-  } satisfies ResumeData;
-}
-
 export function summarizeCandidateChanges(baseData: ResumeData, candidateData: ResumeData) {
   const summary: AtsChangeSummaryItem[] = [];
   const changedHeadline = formatHeadlineText(baseData) !== formatHeadlineText(candidateData);

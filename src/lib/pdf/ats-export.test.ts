@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAtsPdfData, checkAtsResumeExport } from "@/lib/pdf/ats-export";
+import { buildResumePdfData, checkResumeExport } from "@/lib/pdf/ats-export";
 import type { ResumeData } from "@/types/resume";
 
 function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
@@ -33,7 +33,7 @@ function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
 
 function buildLongResume(): ResumeData {
   const longBullet =
-    "Led a cross-functional initiative that consolidated fragmented workflows, improved ATS keyword coverage, and documented measurable delivery outcomes across teams.";
+    "Led a cross-functional initiative that consolidated fragmented workflows, improved keyword coverage, and documented measurable delivery outcomes across teams.";
 
   return buildResume({
     summary:
@@ -73,9 +73,9 @@ function buildLongResume(): ResumeData {
   });
 }
 
-describe("ATS PDF export", () => {
-  it("normalizes ATS export data and removes public-page-only stats", () => {
-    const exportData = buildAtsPdfData(buildResume());
+describe("Resume PDF export", () => {
+  it("normalizes export data and removes public-page-only stats", () => {
+    const exportData = buildResumePdfData(buildResume());
 
     expect(exportData.summary).toBe("Product Manager - shipping SaaS products with SQL and UX collaboration.");
     expect(exportData.linkedin).toBe("linkedin.com/in/taylor-reed");
@@ -83,8 +83,8 @@ describe("ATS PDF export", () => {
     expect(exportData.stats).toEqual([]);
   });
 
-  it("renders a compliant resume as a single ATS-safe page", async () => {
-    const exportCheck = await checkAtsResumeExport(buildResume());
+  it("renders a compliant resume as a single clean page", async () => {
+    const exportCheck = await checkResumeExport(buildResume());
 
     expect(exportCheck.renderable).toBe(true);
     expect(exportCheck.renderFailureReason).toBeNull();
@@ -93,13 +93,13 @@ describe("ATS PDF export", () => {
     expect(exportCheck.overflowReasons).toEqual([]);
   });
 
-  it("renders oversized ATS resumes as a valid multi-page PDF instead of falling back to validation failure", async () => {
-    const exportCheck = await checkAtsResumeExport(buildLongResume());
+  it("renders oversized resumes as a valid multi-page PDF instead of falling back to validation failure", async () => {
+    const exportCheck = await checkResumeExport(buildLongResume());
 
     expect(exportCheck.renderable).toBe(true);
     expect(exportCheck.renderFailureReason).toBeNull();
     expect(exportCheck.pageCount).toBeGreaterThan(1);
     expect(exportCheck.fitsOnOnePage).toBe(false);
-    expect(exportCheck.overflowReasons).not.toContain("The ATS PDF could not be validated with the current content shape.");
+    expect(exportCheck.overflowReasons).not.toContain("The Resume PDF could not be validated with the current content shape.");
   });
 });

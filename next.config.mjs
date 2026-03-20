@@ -18,6 +18,15 @@ try {
 const nextConfig = {
   reactStrictMode: true,
   allowedDevOrigins: ["127.0.0.1"],
+  async redirects() {
+    return [
+      {
+        source: "/guides/ats-resume-test",
+        destination: "/guides/resume-pdf-check",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns,
   },

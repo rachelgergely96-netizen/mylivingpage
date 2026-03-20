@@ -9,12 +9,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/pdf/ResumePDFDocument", () => ({
-  checkAtsResumeExport: mocks.checkExport,
-  getFriendlyAtsPdfError: (
+  checkResumeExport: mocks.checkExport,
+  getFriendlyResumePdfError: (
     exportCheck: { renderFailureReason?: string | null; recommendedFixes?: string[]; overflowReasons?: string[] } | null | undefined,
     fallback?: string,
-  ) => exportCheck?.renderFailureReason ?? exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly ATS PDF error.",
-  renderAtsResumePdf: mocks.renderPdf,
+  ) => exportCheck?.renderFailureReason ?? exportCheck?.recommendedFixes?.[0] ?? exportCheck?.overflowReasons?.[0] ?? fallback ?? "Friendly Resume PDF error.",
+  renderResumePdf: mocks.renderPdf,
 }));
 
 vi.mock("@/lib/security/rate-limit", () => ({
@@ -32,7 +32,7 @@ vi.mock("@/lib/track-event", () => ({
 import { POST } from "@/app/api/resume/export/route";
 import type { ResumeData } from "@/types/resume";
 
-function buildApprovedResumeData(name: string): ResumeData {
+function buildResumeData(name: string): ResumeData {
   return {
     name,
     headline: "Product Manager",
@@ -52,43 +52,16 @@ function buildApprovedResumeData(name: string): ResumeData {
   };
 }
 
-function createPageResponse(options: {
-  approvedResumeData?: ResumeData | null;
-  approvedExportCheck?: {
-    renderable?: boolean;
-    renderFailureReason?: string | null;
-    pageCount: number;
-    fitsOnOnePage: boolean;
-    overflowReasons: string[];
-    recommendedFixes: string[];
-  } | null;
-  candidateResumeData?: ResumeData | null;
-  approvalStatus?: "pending" | "approved" | "out_of_sync" | null;
+function createPageResponse(options?: {
   visibility?: "public" | "private";
   status?: "live" | "draft";
+  resumeData?: ResumeData;
 }) {
   return {
     id: "page-1",
-    visibility: options.visibility ?? "public",
-    status: options.status ?? "live",
-    page_config: {
-      ats: {
-        candidateResumeData: options.candidateResumeData ?? null,
-        approvedResumeData: options.approvedResumeData ?? null,
-        approvedExportCheck: options.approvedResumeData
-          ? (options.approvedExportCheck ?? {
-              renderable: true,
-              renderFailureReason: null,
-              pageCount: 1,
-              fitsOnOnePage: true,
-              overflowReasons: [],
-              recommendedFixes: [],
-            })
-          : null,
-        approvalStatus: options.approvalStatus ?? (options.approvedResumeData ? "approved" : "pending"),
-        availabilityReason: "Rerun ATS review and save to rebuild your ATS PDF.",
-      },
-    },
+    visibility: options?.visibility ?? "public",
+    status: options?.status ?? "live",
+    resume_data: options?.resumeData ?? buildResumeData("Saved Resume"),
   };
 }
 
@@ -130,13 +103,13 @@ describe("POST /api/resume/export", () => {
     });
   });
 
-  it("rejects public export when no approved ATS resume exists", async () => {
+  it("rejects export when the page is not public and live", async () => {
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({ approvedResumeData: null }),
+              data: createPageResponse({ visibility: "private" }),
               error: null,
             }),
           })),
@@ -154,21 +127,21 @@ describe("POST /api/resume/export", () => {
       }),
     );
 
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({
-      error: "Rerun ATS review and save to rebuild your ATS PDF.",
+      error: "Page not found.",
     });
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 
-  it("renders the approved ATS resume instead of trusting browser resume data", async () => {
-    const approvedResumeData = buildApprovedResumeData("Approved Resume");
+  it("renders the saved living-page resume and ignores any extra browser payload", async () => {
+    const savedResumeData = buildResumeData("Saved Resume");
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({ approvedResumeData }),
+              data: createPageResponse({ resumeData: savedResumeData }),
               error: null,
             }),
           })),
@@ -184,130 +157,42 @@ describe("POST /api/resume/export", () => {
         },
         body: JSON.stringify({
           pageId: "page-1",
-          resumeData: buildApprovedResumeData("Untrusted Browser Payload"),
+          resumeData: buildResumeData("Untrusted Browser Payload"),
         }),
       }),
     );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(response.headers.get("Content-Disposition")).toContain("saved-resume-resume.pdf");
     expect(mocks.checkExport).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Approved Resume" }),
+      expect.objectContaining({ name: "Saved Resume" }),
     );
     expect(mocks.renderPdf).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Approved Resume" }),
-    );
-    expect(mocks.trackEvent).toHaveBeenCalledWith(
-      null,
-      "resume.export.downloaded",
-      expect.objectContaining({
-        page_id: "page-1",
-      }),
+      expect.objectContaining({ name: "Saved Resume" }),
     );
   });
 
-  it("keeps serving the last approved ATS PDF even when a newer working draft exists", async () => {
-    const approvedResumeData = buildApprovedResumeData("Approved Resume");
-    const newerDraft = buildApprovedResumeData("Working Draft");
+  it("allows multi-page Resume PDFs when they still render cleanly", async () => {
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({
-                approvedResumeData,
-                candidateResumeData: newerDraft,
-                approvalStatus: "approved",
-              }),
+              data: createPageResponse(),
               error: null,
             }),
           })),
         })),
       })),
     });
-
-    const response = await POST(
-      new Request("http://localhost/api/resume/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pageId: "page-1" }),
-      }),
-    );
-
-    expect(response.status).toBe(200);
-    expect(mocks.checkExport).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Approved Resume" }),
-    );
-    expect(mocks.renderPdf).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Approved Resume" }),
-    );
-  });
-
-  it("blocks download when approved artifacts exist but the ATS snapshot is no longer approved", async () => {
-    const approvedResumeData = buildApprovedResumeData("Approved Resume");
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({ approvedResumeData, approvalStatus: "pending" }),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
-
-    const response = await POST(
-      new Request("http://localhost/api/resume/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pageId: "page-1" }),
-      }),
-    );
-
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({
-      error: "Rerun ATS review and save to rebuild your ATS PDF.",
-    });
-    expect(mocks.renderPdf).not.toHaveBeenCalled();
-  });
-
-  it("downloads the approved ATS resume even when it spans more than one page", async () => {
-    const approvedResumeData = buildApprovedResumeData("Approved Resume");
     mocks.checkExport.mockResolvedValue({
       renderable: true,
       renderFailureReason: null,
       pageCount: 2,
       fitsOnOnePage: false,
-      overflowReasons: ["The approved ATS draft still spans more than one page."],
-      recommendedFixes: ["Trim the draft if you want a one-page version."],
-    });
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({
-                approvedResumeData,
-                approvedExportCheck: {
-                  renderable: true,
-                  renderFailureReason: null,
-                  pageCount: 2,
-                  fitsOnOnePage: false,
-                  overflowReasons: ["The approved ATS draft still spans more than one page."],
-                  recommendedFixes: ["Trim the draft and re-approve it for public PDF download."],
-                },
-              }),
-              error: null,
-            }),
-          })),
-        })),
-      })),
+      overflowReasons: ["The exported resume still spans more than one page."],
+      recommendedFixes: ["Trim lower-priority sections and shorten long bullets before exporting again."],
     });
 
     const response = await POST(
@@ -321,54 +206,37 @@ describe("POST /api/resume/export", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("application/pdf");
-    expect(mocks.renderPdf).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Approved Resume" }),
-    );
+    expect(mocks.renderPdf).toHaveBeenCalled();
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       null,
       "resume.export.downloaded",
       expect.objectContaining({
-        page_id: "page-1",
         page_count: 2,
         fits_on_one_page: false,
-        renderable: true,
       }),
     );
   });
 
-  it("returns a friendly error when the ATS PDF renderer fails", async () => {
-    const approvedResumeData = buildApprovedResumeData("Approved Resume");
-    mocks.checkExport.mockResolvedValue({
-      renderable: false,
-      renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
-      pageCount: null,
-      fitsOnOnePage: null,
-      overflowReasons: [],
-      recommendedFixes: [],
-    });
-    mocks.renderPdf.mockRejectedValue(new Error("Minified React error #31"));
+  it("returns a friendly error when the Resume PDF cannot render cleanly", async () => {
     mocks.serviceRoleFactory.mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({
-                approvedResumeData,
-                approvedExportCheck: {
-                  renderable: true,
-                  renderFailureReason: null,
-                  pageCount: 2,
-                  fitsOnOnePage: false,
-                  overflowReasons: ["The approved ATS draft still spans more than one page."],
-                  recommendedFixes: ["Trim the draft if you want a one-page version."],
-                },
-              }),
+              data: createPageResponse(),
               error: null,
             }),
           })),
         })),
       })),
+    });
+    mocks.checkExport.mockResolvedValue({
+      renderable: false,
+      renderFailureReason: "The Resume PDF could not render cleanly from the current content.",
+      pageCount: null,
+      fitsOnOnePage: null,
+      overflowReasons: [],
+      recommendedFixes: [],
     });
 
     const response = await POST(
@@ -383,25 +251,14 @@ describe("POST /api/resume/export", () => {
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({
-      error: "The ATS PDF could not render cleanly from the current content.",
+      error: "The Resume PDF could not render cleanly from the current content.",
       renderable: false,
-      renderFailureReason: "The ATS PDF could not render cleanly from the current content.",
+      renderFailureReason: "The Resume PDF could not render cleanly from the current content.",
       pageCount: null,
       fitsOnOnePage: null,
       overflowReasons: [],
       recommendedFixes: [],
     });
-    expect(mocks.trackEvent).toHaveBeenCalledWith(
-      null,
-      "resume.export.download_failed",
-      expect.objectContaining({
-        page_id: "page-1",
-        page_count: null,
-        fits_on_one_page: null,
-        renderable: false,
-        render_failure_reason: "The ATS PDF could not render cleanly from the current content.",
-        error: "The ATS PDF could not render cleanly from the current content.",
-      }),
-    );
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 });

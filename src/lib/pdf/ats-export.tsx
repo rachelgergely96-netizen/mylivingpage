@@ -1,6 +1,6 @@
 import React from "react";
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import { normalizeAtsText, normalizeResumeDataForAts } from "@/lib/ats-review";
+import { normalizeResumeDataForExport, normalizeResumeText } from "@/lib/resume-export";
 import type { AtsExportCheck, ResumeData } from "@/types/resume";
 
 const styles = StyleSheet.create({
@@ -99,7 +99,7 @@ function displayLink(value: string | null) {
     return null;
   }
 
-  const clean = normalizeAtsText(value);
+  const clean = normalizeResumeText(value);
   return clean.replace(/^https?:\/\//i, "");
 }
 
@@ -115,7 +115,7 @@ function countOverflowReasons(data: ResumeData) {
   const totalHighlights = data.experience.reduce((count, entry) => count + entry.highlights.length, 0);
 
   if (data.summary.length > 320) {
-    reasons.push("The summary is still too long for a one-page ATS resume.");
+    reasons.push("The summary is still too long for a one-page Resume PDF.");
     fixes.push("Shorten the summary to two tight sentences with the exact role and top skills.");
   }
 
@@ -131,7 +131,7 @@ function countOverflowReasons(data: ResumeData) {
 
   if (data.projects.length > 2) {
     reasons.push("Projects are taking too much one-page space.");
-    fixes.push("Keep only the two most relevant projects in the ATS PDF.");
+    fixes.push("Keep only the two most relevant projects in the Resume PDF.");
   }
 
   if (data.certifications.length > 2) {
@@ -150,24 +150,26 @@ function countOverflowReasons(data: ResumeData) {
   };
 }
 
-export function buildAtsPdfData(data: ResumeData) {
-  const normalized = normalizeResumeDataForAts(data);
+export function buildResumePdfData(data: ResumeData) {
+  const normalized = normalizeResumeDataForExport(data);
 
   return {
     ...normalized,
-    summary: normalizeAtsText(normalized.summary),
+    summary: normalizeResumeText(normalized.summary),
     stats: [],
   } satisfies ResumeData;
 }
+
+export const buildAtsPdfData = buildResumePdfData;
 
 export function countPdfPages(buffer: Uint8Array) {
   const body = Buffer.from(buffer).toString("latin1");
   return Math.max(1, (body.match(/\/Type\s*\/Page\b/g) ?? []).length);
 }
 
-export function getFriendlyAtsPdfError(
+export function getFriendlyResumePdfError(
   exportCheck: Partial<AtsExportCheck> | null | undefined,
-  fallback = "Unable to generate the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
+  fallback = "Unable to generate the Resume PDF right now. Please try again.",
 ) {
   return (
     exportCheck?.renderFailureReason ??
@@ -177,12 +179,14 @@ export function getFriendlyAtsPdfError(
   );
 }
 
-export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportCheck> {
-  const exportData = buildAtsPdfData(data);
+export const getFriendlyAtsPdfError = getFriendlyResumePdfError;
+
+export async function checkResumeExport(data: ResumeData): Promise<AtsExportCheck> {
+  const exportData = buildResumePdfData(data);
   const heuristics = countOverflowReasons(exportData);
 
   try {
-    const buffer = await renderToBuffer(<AtsResumePDFDocument data={exportData} />);
+    const buffer = await renderToBuffer(<ResumePDFDocument data={exportData} />);
     const pageCount = countPdfPages(buffer);
 
     return {
@@ -207,7 +211,7 @@ export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportC
     return {
       renderable: false,
       renderFailureReason:
-        "The ATS PDF could not render cleanly from the current content. Save your latest edits or rerun ATS review to rebuild it.",
+        "The Resume PDF could not render cleanly from the current content.",
       pageCount: null,
       fitsOnOnePage: null,
       overflowReasons: [],
@@ -216,13 +220,17 @@ export async function checkAtsResumeExport(data: ResumeData): Promise<AtsExportC
   }
 }
 
-export async function renderAtsResumePdf(data: ResumeData) {
-  const exportData = buildAtsPdfData(data);
-  return renderToBuffer(<AtsResumePDFDocument data={exportData} />);
+export const checkAtsResumeExport = checkResumeExport;
+
+export async function renderResumePdf(data: ResumeData) {
+  const exportData = buildResumePdfData(data);
+  return renderToBuffer(<ResumePDFDocument data={exportData} />);
 }
 
-export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
-  const normalized = buildAtsPdfData(data);
+export const renderAtsResumePdf = renderResumePdf;
+
+export function ResumePDFDocument({ data }: { data: ResumeData }) {
+  const normalized = buildResumePdfData(data);
   const contactLine = buildContactLine(normalized);
 
   return (
@@ -331,3 +339,6 @@ export default function AtsResumePDFDocument({ data }: { data: ResumeData }) {
     </Document>
   );
 }
+
+export const AtsResumePDFDocument = ResumePDFDocument;
+export default ResumePDFDocument;

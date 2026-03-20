@@ -38,19 +38,19 @@ export const RATE_LIMIT_POLICIES = {
     scope: "ip",
   },
   ats_export_download: {
-    label: "Public ATS download",
+    label: "Public resume download",
     maxRequests: 12,
     windowMs: 60 * 60 * 1000,
     scope: "ip",
   },
   ats_export_preview: {
-    label: "ATS preview",
+    label: "Resume preview",
     maxRequests: 24,
     windowMs: 10 * 60 * 1000,
     scope: "user",
   },
   ats_export_check: {
-    label: "ATS validation",
+    label: "Resume validation",
     maxRequests: 60,
     windowMs: 10 * 60 * 1000,
     scope: "user",

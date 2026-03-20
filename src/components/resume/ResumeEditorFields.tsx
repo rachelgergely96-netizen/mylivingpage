@@ -5,7 +5,7 @@ import type { ResumeData } from "@/types/resume";
 interface ResumeEditorFieldsProps {
   data: ResumeData;
   onChange: (next: ResumeData) => void;
-  mode?: "living" | "ats";
+  mode?: "living" | "compact";
 }
 
 const fieldsetClass = "glass-card space-y-3 rounded-2xl p-4 sm:p-5";
@@ -36,7 +36,7 @@ export default function ResumeEditorFields({
   return (
     <div className="space-y-5">
       <fieldset className={fieldsetClass}>
-        <legend className={legendClass}>{mode === "living" ? "Profile" : "ATS Header"}</legend>
+        <legend className={legendClass}>Profile</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <input
             type="text"

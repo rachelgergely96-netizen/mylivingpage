@@ -5,10 +5,10 @@ test("landing page is simplified around hero, showcase, how-it-works, pricing, a
 
   const header = page.locator("header");
   await expect(
-    page.getByRole("heading", { name: "Keep your resume for the system. Give people a page they can scan fast." }),
+    page.getByRole("heading", { name: "Upload your info once. Publish a page people can scan fast." }),
   ).toBeVisible();
-  await expect(page.getByText("Start with your current resume")).toBeVisible();
-  await expect(page.getByText("One page link stays current")).toBeVisible();
+  await expect(page.getByText("Start with the information you already have")).toBeVisible();
+  await expect(page.getByText("keep the same link current anywhere a recruiter or hiring manager can click")).toBeVisible();
 
   const hero = page.locator("#hero-section");
   await expect(hero.getByRole("link", { name: "See the Demo" })).toHaveAttribute("href", "#demo-section");

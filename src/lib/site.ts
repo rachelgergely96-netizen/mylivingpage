@@ -2,9 +2,9 @@ const DEFAULT_APP_URL = "https://www.mylivingpage.com";
 
 export const SITE_NAME = "MyLivingPage";
 export const ORGANIZATION_NAME = SITE_NAME;
-export const SITE_TAGLINE = "Visible to ATS, Memorable to People";
+export const SITE_TAGLINE = "Your info, one Living Page, one Resume PDF";
 export const SITE_DESCRIPTION =
-  "Keep an ATS-safe resume for the machines and one living page recruiters actually remember once they click.";
+  "Upload your info once, publish a Living Page, and download a clean Resume PDF from the same saved content.";
 export const SITE_URL = getAppUrl();
 
 export function getAppUrl(): string {

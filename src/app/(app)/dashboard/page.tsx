@@ -112,13 +112,7 @@ export default async function DashboardPage() {
                   href={`/dashboard/edit/${page.id}/living-page`}
                   className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
                 >
-                  Edit Living
-                </Link>
-                <Link
-                  href={`/dashboard/edit/${page.id}/ats-resume`}
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
-                >
-                  Edit ATS
+                  Edit Page
                 </Link>
                 {premium ? (
                   <Link

@@ -32,9 +32,9 @@ test("robots.txt and sitemap.xml expose the SEO foundation routes", async ({ req
     `${origin}/`,
     `${origin}/examples`,
     `${origin}/guides`,
-    `${origin}/guides/ats-resume-test`,
     `${origin}/guides/living-page-vs-pdf-resume`,
     `${origin}/guides/recruiter-search-keywords`,
+    `${origin}/guides/resume-pdf-check`,
     `${origin}/legal`,
     `${origin}/pricing`,
     `${origin}/privacy`,
@@ -47,38 +47,38 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
   const cases = [
     {
       path: "/",
-      title: "MyLivingPage | Visible to ATS, Memorable to People",
+      title: "MyLivingPage | Your info, one Living Page, one Resume PDF",
       description:
-        "Keep an ATS-safe resume for the machines and one living page recruiters actually remember once they click.",
+        "Upload your info once, publish a Living Page, and download a clean Resume PDF from the same saved content.",
       pathname: "/",
     },
     {
       path: "/pricing",
       title: "Pricing | MyLivingPage",
       description:
-        "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+        "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
       pathname: "/pricing",
     },
     {
       path: "/examples",
       title: "Examples | MyLivingPage",
       description:
-        "Browse sample living pages that help recruiters understand you faster once your ATS-safe resume gets you seen.",
+        "Browse sample Living Pages that help recruiters understand you faster after they click.",
       pathname: "/examples",
     },
     {
       path: "/guides",
-      title: "ATS Resume and Recruiter Search Guides | MyLivingPage",
+      title: "Resume PDF and Living Page Guides | MyLivingPage",
       description:
-        "Answer-first guides on ATS readability, recruiter keyword search behavior, and when to use a living page alongside your PDF resume.",
+        "Answer-first guides on checking your Resume PDF, improving search visibility, and using a Living Page alongside your PDF.",
       pathname: "/guides",
     },
     {
-      path: "/guides/ats-resume-test",
-      title: "ATS Resume Test: How to Check If Your Resume Is Readable | MyLivingPage",
+      path: "/guides/resume-pdf-check",
+      title: "Resume PDF Check: How to Make Sure Your PDF Reads Cleanly | MyLivingPage",
       description:
-        "Run a 30-second ATS resume test to see whether your PDF extracts clean text and what to fix before you apply.",
-      pathname: "/guides/ats-resume-test",
+        "Run a quick Resume PDF check to confirm your file copies clean text and is ready to share.",
+      pathname: "/guides/resume-pdf-check",
     },
   ];
 
@@ -103,29 +103,34 @@ test("homepage, examples, and guide pages emit the expected JSON-LD types", asyn
   jsonLd = await getJsonLdText(page);
   expect(jsonLd).toContain('"@type":"CollectionPage"');
 
-  await page.goto("/guides/ats-resume-test");
+  await page.goto("/guides/resume-pdf-check");
   jsonLd = await getJsonLdText(page);
   expect(jsonLd).toContain('"@type":"Article"');
-  expect(jsonLd).toContain('"headline":"ATS Resume Test: How to Check If Your Resume Is Readable"');
+  expect(jsonLd).toContain('"headline":"Resume PDF Check: How to Make Sure Your PDF Reads Cleanly"');
 });
 
 test("guide articles link into the funnel with distinct CTA refs", async ({ page }) => {
-  await page.goto("/guides/ats-resume-test");
+  await page.goto("/guides/resume-pdf-check");
 
   await expect(page.getByText("Short answer")).toBeVisible();
-  await expect(page.getByText("Before you apply", { exact: true })).toBeVisible();
+  await expect(page.getByText("Before you send it", { exact: true })).toBeVisible();
   await expect(page.getByText("By MyLivingPage Editorial Team")).toBeVisible();
-  await expect(page.locator('time[dateTime="2026-03-12"]')).toHaveText("March 12, 2026");
+  await expect(page.locator('time[dateTime="2026-03-20"]')).toHaveText("March 20, 2026");
   await expect(page.getByRole("link", { name: "Start from the resume you already use" })).toHaveAttribute(
     "href",
-    "/signup?ref=guide_ats-resume-test_build&next=/create",
+    "/signup?ref=guide_resume-pdf-check_build&next=/create",
   );
   await expect(page.getByRole("link", { name: "See sample pages recruiters can scan quickly" })).toHaveAttribute(
     "href",
-    "/examples?ref=guide_ats-resume-test_examples",
+    "/examples?ref=guide_resume-pdf-check_examples",
   );
   await expect(page.getByRole("link", { name: "See PDF export and QR-ready share card options" })).toHaveAttribute(
     "href",
-    "/pricing?ref=guide_ats-resume-test_pricing",
+    "/pricing?ref=guide_resume-pdf-check_pricing",
   );
+});
+
+test("legacy ATS guide URLs permanently redirect to the new Resume PDF guide", async ({ page }) => {
+  await page.goto("/guides/ats-resume-test");
+  await expect(page).toHaveURL(/\/guides\/resume-pdf-check$/);
 });

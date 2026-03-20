@@ -1,18 +1,18 @@
 import { expect, test } from "@playwright/test";
 
-test("examples page matches ATS-safe resume positioning", async ({ page }) => {
+test("examples page matches the simpler Living Page and Resume PDF positioning", async ({ page }) => {
   await page.goto("/examples");
 
   await expect(page.getByRole("heading", { name: "See what the human click can look like after the application is already in." })).toBeVisible();
   await expect(
-    page.getByText("once your ATS-safe resume has already handled extraction and search visibility."),
+    page.getByText("once someone opens your link and wants faster context."),
   ).toBeVisible();
   await expect(page.getByText("After you apply", { exact: true })).toBeVisible();
   await expect(page.getByText("Why this helps a human", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Keep the resume for", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Use the PDF", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Open large preview" }).first()).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Ready to keep your ATS-safe resume and send a better page?" }),
+    page.getByRole("heading", { name: "Ready to publish one page and keep the PDF aligned?" }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Start Free" }).first()).toHaveAttribute(
     "href",

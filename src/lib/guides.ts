@@ -1,9 +1,9 @@
 export const GUIDE_AUTHOR_NAME = "MyLivingPage Editorial Team";
 export const GUIDE_PUBLISHED_AT = "2026-03-12";
-export const GUIDE_UPDATED_AT = "2026-03-12";
+export const GUIDE_UPDATED_AT = "2026-03-20";
 
 export type GuideSlug =
-  | "ats-resume-test"
+  | "resume-pdf-check"
   | "recruiter-search-keywords"
   | "living-page-vs-pdf-resume";
 
@@ -31,24 +31,24 @@ export interface GuideEntry {
 
 export const GUIDES: GuideEntry[] = [
   {
-    slug: "ats-resume-test",
-    title: "ATS Resume Test: How to Check If Your Resume Is Readable",
+    slug: "resume-pdf-check",
+    title: "Resume PDF Check: How to Make Sure Your PDF Reads Cleanly",
     description:
-      "Run a 30-second ATS resume test to see whether your PDF extracts clean text and what to fix before you apply.",
-    decisionStage: "Before you apply",
+      "Run a quick Resume PDF check to confirm your file copies clean text and is ready to share.",
+    decisionStage: "Before you send it",
     answer:
-      "Open the PDF, highlight a few lines, copy them into plain text, and compare the result. If sections disappear, bullets break, or spacing collapses, fix the resume before you apply.",
+      "Open the PDF, highlight a few lines, copy them into plain text, and compare the result. If sections disappear, bullets break, or spacing collapses, fix the file before you send it.",
     summary:
-      "Use this guide when you suspect your PDF looks polished but may be unreadable to the systems that parse it first.",
+      "Use this guide when your PDF looks polished visually but you want to confirm the text layer still behaves cleanly.",
     hubSummary:
-      "Use a quick copy-and-paste test to catch broken text extraction before a recruiter search ever has a chance to find you.",
+      "Use a quick copy-and-paste check to catch broken text extraction before your PDF gets shared more widely.",
     readTime: "4 min read",
     author: GUIDE_AUTHOR_NAME,
     publishedAt: GUIDE_PUBLISHED_AT,
     updatedAt: GUIDE_UPDATED_AT,
     sections: [
       {
-        title: "What does the 30-second ATS resume test catch?",
+        title: "What does a quick Resume PDF check catch?",
         paragraphs: [
           "The fastest way to spot extraction problems is to copy text out of the PDF and paste it into Notepad or TextEdit. What matters is whether the machine-readable layer matches what you thought you sent.",
           "This catches hidden failures before you spend another week assuming the issue is your experience instead of the file itself.",
@@ -61,17 +61,17 @@ export const GUIDES: GuideEntry[] = [
         ],
       },
       {
-        title: "Why does readability come before keywords?",
+        title: "Why should the PDF read cleanly before you share it?",
         paragraphs: [
-          "Keyword strategy cannot help if the parser cannot see the words in the first place. A readable resume is the floor, not the extra credit.",
-          "That is why the safest workflow starts with the resume you already use, checks readability, and only then worries about exact title and skill coverage.",
+          "A clean PDF is the floor, not the extra credit. If the copied text is broken, the file becomes harder to reuse, review, or search later.",
+          "That is why the safest workflow starts with the information you already have, checks the PDF, and only then worries about sharpening titles, links, and positioning.",
         ],
       },
       {
-        title: "What should you do after the ATS resume test passes?",
+        title: "What should you do after the Resume PDF check passes?",
         paragraphs: [
-          "Start with the resume you already use, publish a page that is easier to scan, and keep one link everywhere a recruiter or hiring manager can click.",
-          "From the same structured information, you can also create a fresh, search-friendly PDF resume and a PNG share card with a QR code that opens your page directly.",
+          "Start with the information you already use, publish a Living Page that is easier to scan, and keep one link everywhere a recruiter or hiring manager can click.",
+          "From the same saved content, you can also create a fresh Resume PDF and a PNG share card with a QR code that opens your page directly.",
         ],
       },
     ],
@@ -81,14 +81,14 @@ export const GUIDES: GuideEntry[] = [
     slug: "recruiter-search-keywords",
     title: "Recruiter Search Keywords: How Exact Titles and Skills Affect Visibility",
     description:
-      "Learn how exact job titles, explicit skill names, and title variations affect whether a recruiter ever sees your resume in search.",
+      "Learn how exact job titles, explicit skill names, and title variations affect whether a recruiter ever sees your profile in search.",
     decisionStage: "Get found in search",
     answer:
       "Recruiters often search with exact titles and exact skill strings. If your resume implies a concept but never names it, you can be invisible to the search before a person reviews the rest.",
     summary:
       "Use this guide when you need your resume to match recruiter search behavior more directly without stuffing it with random keywords.",
     hubSummary:
-      "Exact titles, explicit skills, and honest title variations matter more than vague concepts when recruiters search inside ATS tools.",
+      "Exact titles, explicit skills, and honest title variations matter more than vague concepts when recruiters search for people.",
     readTime: "5 min read",
     author: GUIDE_AUTHOR_NAME,
     publishedAt: GUIDE_PUBLISHED_AT,
@@ -116,48 +116,48 @@ export const GUIDES: GuideEntry[] = [
       {
         title: "What should happen after the recruiter finds you?",
         paragraphs: [
-          "Once the recruiter finds your resume, the living page gives them a faster surface to scan than another dense attachment.",
-          "You can keep the same link everywhere, then use PDF export and a QR-ready share card when you need something portable for follow-up or in-person conversations.",
+          "Once the recruiter finds your resume, the Living Page gives them a faster surface to scan than another dense attachment.",
+          "You can keep the same link everywhere, then use Resume PDF download and a QR-ready share card when you need something portable for follow-up or in-person conversations.",
         ],
       },
     ],
-    related: ["ats-resume-test", "living-page-vs-pdf-resume"],
+    related: ["resume-pdf-check", "living-page-vs-pdf-resume"],
   },
   {
     slug: "living-page-vs-pdf-resume",
     title: "Living Page vs PDF Resume: When Job Seekers Should Use Each One",
     description:
-      "Use an ATS-safe resume for machine visibility and a living page for the human click, then create a fresh PDF and share card from the same source.",
+      "Use a Resume PDF when you need a file, use a Living Page when you want something easier to scan, and keep both generated from the same source.",
     decisionStage: "After the click",
     answer:
-      "Use both. Keep the ATS-safe resume for applications that require a document, then use a living page when you need something faster to scan, easier to share, and easier to keep current.",
+      "Use both. Keep the PDF for moments that require a document, then use a Living Page when you need something faster to scan, easier to share, and easier to keep current.",
     summary:
       "Use this guide when you want a practical workflow for attachments, page links, PDF exports, and share cards without managing five different versions of your story.",
     hubSummary:
-      "Use the resume for machine visibility, the page for the human click, and one shared source to keep your PDF and share assets current.",
+      "Use the PDF when a file is required, use the page when a person can click, and keep one shared source for both.",
     readTime: "4 min read",
     author: GUIDE_AUTHOR_NAME,
     publishedAt: GUIDE_PUBLISHED_AT,
     updatedAt: GUIDE_UPDATED_AT,
     sections: [
       {
-        title: "Should you start with the resume you already use?",
+        title: "Should you start with the information you already use?",
         paragraphs: [
-          "You do not need a redesign project before you publish anything. The fastest path is to start with the resume text you already send and turn that into a cleaner public page.",
-          "That keeps the ATS-safe version intact while reducing how often you rebuild your story from scratch.",
+          "You do not need a redesign project before you publish anything. The fastest path is to start with the information you already send and turn that into a cleaner public page.",
+          "That keeps your story consistent while reducing how often you rebuild it from scratch.",
         ],
       },
       {
-        title: "Why is a living page easier to scan than a PDF?",
+        title: "Why is a Living Page easier to scan than a PDF?",
         paragraphs: [
-          "The living page helps recruiters and hiring managers understand your experience faster because the information is already visible, linked, and easier to move through than a static download tab.",
+          "The Living Page helps recruiters and hiring managers understand your experience faster because the information is already visible, linked, and easier to move through than a static download tab.",
           "That matters most in networking, referrals, LinkedIn, follow-ups, and any situation where a person can click before they ask for the attachment.",
         ],
       },
       {
         title: "Can one source create your sendable assets?",
         paragraphs: [
-          "From the information you upload, you can create a new PDF ready to send in a cleaner, search-friendly resume format.",
+          "From the information you upload, you can create a new Resume PDF ready to send in a cleaner one-column format.",
           "You can also generate a PNG share card with a QR code that leads straight to your page, which is useful for follow-up emails, events, and quick mobile sharing.",
         ],
       },
@@ -165,11 +165,11 @@ export const GUIDES: GuideEntry[] = [
         title: "Why keep the same page link everywhere someone can click?",
         paragraphs: [
           "A stable link reduces version drift across outreach, referrals, and profile links. Instead of scattering stale attachments, you keep one page current and update it in place.",
-          "That way the resume handles machine visibility, while the page, PDF export, and share card handle the human side of the job search.",
+          "That way the page, Resume PDF, and share card all stay aligned to the same saved story.",
         ],
       },
     ],
-    related: ["ats-resume-test", "recruiter-search-keywords"],
+    related: ["resume-pdf-check", "recruiter-search-keywords"],
   },
 ];
 

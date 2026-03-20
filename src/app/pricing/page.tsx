@@ -14,12 +14,12 @@ const canonicalUrl = getAbsoluteUrl("/pricing");
 export const metadata: Metadata = {
   title: `Pricing | ${SITE_NAME}`,
   description:
-    "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+    "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
   alternates: { canonical: canonicalUrl },
   openGraph: {
     title: `Pricing | ${SITE_NAME}`,
     description:
-      "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+      "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
     url: canonicalUrl,
     siteName: SITE_NAME,
     type: "website",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `Pricing | ${SITE_NAME}`,
     description:
-      "Compare MyLivingPage pricing for the living page you send after your ATS-safe resume gets you seen.",
+      "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
   },
 };
 
@@ -146,14 +146,14 @@ export default function PricingPage() {
                     Learn the search mechanics before you compare plans.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.62)]">
-                    Pricing only matters after the fundamentals work. These guides explain ATS readability, recruiter keyword search, and how a living page fits beside your PDF.
+                    Pricing only matters after the fundamentals work. These guides explain how to check your Resume PDF, sharpen recruiter search language, and decide where a Living Page fits beside your PDF.
                   </p>
                 </div>
                 <Link
                   href="/guides"
                   className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
                 >
-                  Browse all ATS and recruiter search guides
+                  Browse all resume and recruiter guides
                 </Link>
               </div>
 

@@ -6,5 +6,5 @@ interface LivingPageEditorRouteProps {
 
 export default async function LivingPageEditorRoute({ params }: LivingPageEditorRouteProps) {
   const { pageId } = await params;
-  return <PageEditorClient pageId={pageId} mode="living-page" />;
+  return <PageEditorClient pageId={pageId} />;
 }

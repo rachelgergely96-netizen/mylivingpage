@@ -1,4 +1,4 @@
-import PageEditorClient from "@/components/edit/PageEditorClient";
+import { redirect } from "next/navigation";
 
 interface AtsResumeEditorRouteProps {
   params: Promise<{ pageId: string }>;
@@ -6,5 +6,5 @@ interface AtsResumeEditorRouteProps {
 
 export default async function AtsResumeEditorRoute({ params }: AtsResumeEditorRouteProps) {
   const { pageId } = await params;
-  return <PageEditorClient pageId={pageId} mode="ats-resume" />;
+  redirect(`/dashboard/edit/${pageId}/living-page`);
 }

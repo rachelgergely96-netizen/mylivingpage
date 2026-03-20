@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
 
 describe("buildAuthCallbackUrl", () => {

@@ -6,9 +6,9 @@ import GuideLinkGrid from "@/components/marketing/GuideLinkGrid";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
 
-const title = `ATS Resume and Recruiter Search Guides | ${SITE_NAME}`;
+const title = `Resume PDF and Living Page Guides | ${SITE_NAME}`;
 const description =
-  "Answer-first guides on ATS readability, recruiter keyword search behavior, and when to use a living page alongside your PDF resume.";
+  "Answer-first guides on checking your Resume PDF, improving search visibility, and using a Living Page alongside your PDF.";
 const canonicalUrl = getAbsoluteUrl("/guides");
 
 function getSignupHref(ref: string) {
@@ -69,7 +69,7 @@ export default async function GuidesPage() {
               Use the right guide at the right moment in the funnel.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.64)] sm:text-lg">
-              Start with the resume you already use. First make sure it can be read, then make sure it can be found, then decide how to use one living page after a human clicks.
+              Start with the information you already use. First make sure the Resume PDF reads cleanly, then make sure the right terms are visible, then decide how to use a Living Page after a human clicks.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
@@ -90,17 +90,17 @@ export default async function GuidesPage() {
           <GuideLinkGrid
             eyebrow="Start here"
             title="Three practical guides, in the order active applicants usually need them"
-            description="Guide one helps you check the file. Guide two helps you match recruiter search behavior. Guide three shows where a living page fits after the click."
+            description="Guide one helps you check the file. Guide two helps you match recruiter search behavior. Guide three shows where a Living Page fits after the click."
             className="mt-12"
           />
 
           <section className="mt-14 text-center sm:mt-20">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.18)] px-6 py-10 sm:px-10 sm:py-12">
               <h2 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                Ready to start from the resume you already use?
+                Ready to start from the information you already use?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-                Keep the ATS-safe resume for applications, then use MyLivingPage to publish a clearer page for the moment a recruiter, hiring manager, or referral can click.
+                Upload your info once, publish a clearer page, and keep the Resume PDF aligned to the same saved content.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

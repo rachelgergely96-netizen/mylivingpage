@@ -17,12 +17,12 @@ function getSignupHref(ref: string) {
 export const metadata: Metadata = {
   title: `Examples | ${SITE_NAME}`,
   description:
-    "Browse sample living pages that help recruiters understand you faster once your ATS-safe resume gets you seen.",
+    "Browse sample Living Pages that help recruiters understand you faster after they click.",
   alternates: { canonical: canonicalUrl },
   openGraph: {
     title: `Examples | ${SITE_NAME}`,
     description:
-      "Browse sample living pages that help recruiters understand you faster once your ATS-safe resume gets you seen.",
+      "Browse sample Living Pages that help recruiters understand you faster after they click.",
     url: canonicalUrl,
     siteName: SITE_NAME,
     type: "website",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `Examples | ${SITE_NAME}`,
     description:
-      "Browse sample living pages that help recruiters understand you faster once your ATS-safe resume gets you seen.",
+      "Browse sample Living Pages that help recruiters understand you faster after they click.",
   },
 };
 
@@ -46,7 +46,7 @@ export default function ExamplesPage() {
           path: "/examples",
           name: "MyLivingPage Sample Pages",
           description:
-            "Browse sample living pages that help recruiters understand you faster once your ATS-safe resume gets you seen.",
+            "Browse sample Living Pages that help recruiters understand you faster after they click.",
         })}
       />
       <CosmicBackground />
@@ -80,7 +80,7 @@ export default function ExamplesPage() {
               See what the human click can look like after the application is already in.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.64)] sm:text-lg">
-              These are sample pages, not customer testimonials. Use them to see how different follow-up moments can be framed once your ATS-safe resume has already handled extraction and search visibility.
+              These are sample pages, not customer testimonials. Use them to see how different follow-up moments can be framed once someone opens your link and wants faster context.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
@@ -130,14 +130,14 @@ export default function ExamplesPage() {
                     Read the guide sequence behind these examples.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.62)]">
-                    Use the guides in order: check whether the resume can be read, make sure the search terms are explicit, then decide how to use a page after the click.
+                    Use the guides in order: check whether the Resume PDF reads cleanly, make sure the search terms are explicit, then decide how to use a page after the click.
                   </p>
                 </div>
                 <Link
                   href="/guides"
                   className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
                 >
-                  Browse all ATS and recruiter search guides
+                  Browse all resume and recruiter guides
                 </Link>
               </div>
 
@@ -160,10 +160,10 @@ export default function ExamplesPage() {
           <section className="mt-14 text-center sm:mt-20">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.18)] px-6 py-10 sm:px-10 sm:py-12">
               <h2 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                Ready to keep your ATS-safe resume and send a better page?
+                Ready to publish one page and keep the PDF aligned?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-                Start with the resume you already use for applications. Then publish one page that is easier for people to scan in follow-ups, referrals, and recruiter outreach.
+                Upload your info once. Then publish one page that is easier for people to scan in follow-ups, referrals, and recruiter outreach.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

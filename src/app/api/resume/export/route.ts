@@ -1,37 +1,31 @@
 import { NextResponse } from "next/server";
+import { normalizeResumeDataForExport } from "@/lib/resume-export";
 import {
-  canDownloadApprovedAtsResume,
-  getAtsRenderFailureReason,
-  getAtsAvailabilityReason,
-  isAtsExportRenderable,
-  normalizeResumeDataForAts,
-} from "@/lib/ats-review";
-import {
-  checkAtsResumeExport,
-  getFriendlyAtsPdfError,
-  renderAtsResumePdf,
+  checkResumeExport,
+  getFriendlyResumePdfError,
+  renderResumePdf,
 } from "@/lib/pdf/ResumePDFDocument";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
-import type { PageConfig, ResumeData } from "@/types/resume";
+import type { ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
 const routeTrustLevel = "public_read";
 
 function buildFileName(name: string) {
-  return `${(name || "resume").trim().replace(/\s+/g, "-").toLowerCase()}-ats-resume.pdf`;
+  return `${(name || "resume").trim().replace(/\s+/g, "-").toLowerCase()}-resume.pdf`;
 }
 
 interface ResumeExportRequestBody {
   pageId?: string;
 }
 
-interface PublicPageAtsSource {
+interface PublicPageResumeSource {
   id: string;
   status: "draft" | "live" | "archived" | null;
   visibility: "private" | "link" | "public" | null;
-  page_config: PageConfig | null;
+  resume_data: ResumeData;
 }
 
 export async function POST(request: Request) {
@@ -44,28 +38,19 @@ export async function POST(request: Request) {
     const supabase = createServiceRoleSupabaseClient();
     const { data: page, error: pageError } = await supabase
       .from("pages")
-      .select("id, status, visibility, page_config")
+      .select("id, status, visibility, resume_data")
       .eq("id", body.pageId)
-      .maybeSingle<PublicPageAtsSource>();
+      .maybeSingle<PublicPageResumeSource>();
 
     if (pageError) {
       throw new Error(pageError.message);
     }
 
-    if (!page || (page.status !== "live" && page.visibility !== "public")) {
+    const publicDownloadAllowed =
+      page?.visibility === "public" || (page?.visibility == null && page?.status === "live");
+
+    if (!page || !publicDownloadAllowed) {
       return NextResponse.json({ error: "Page not found." }, { status: 404 });
-    }
-
-    const atsReview = page.page_config?.ats ?? null;
-    const approvedResumeData = canDownloadApprovedAtsResume(atsReview)
-      ? (atsReview?.approvedResumeData ?? null)
-      : null;
-
-    if (!approvedResumeData) {
-      return NextResponse.json(
-        { error: getAtsAvailabilityReason(atsReview) },
-        { status: 409 },
-      );
     }
 
     const rateLimit = await enforceRateLimit({
@@ -77,23 +62,24 @@ export async function POST(request: Request) {
       return rateLimit.response;
     }
 
-    const normalized = normalizeResumeDataForAts(approvedResumeData as ResumeData);
-    const exportCheck = await checkAtsResumeExport(normalized);
-    if (!isAtsExportRenderable(exportCheck)) {
+    const normalized = normalizeResumeDataForExport(page.resume_data as ResumeData);
+    const exportCheck = await checkResumeExport(normalized);
+
+    if (!exportCheck.renderable) {
       await trackEvent(null, "resume.export.download_failed", {
         page_id: body.pageId,
         page_count: exportCheck.pageCount,
         fits_on_one_page: exportCheck.fitsOnOnePage,
         renderable: exportCheck.renderable,
         render_failure_reason: exportCheck.renderFailureReason,
-        error: exportCheck.renderFailureReason ?? "ats_pdf_render_check_failed",
+        error: exportCheck.renderFailureReason ?? "resume_pdf_render_check_failed",
       });
 
       return NextResponse.json(
         {
-          error: getFriendlyAtsPdfError(
+          error: getFriendlyResumePdfError(
             exportCheck,
-            "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
+            "Unable to export the Resume PDF right now. Please try again.",
           ),
           ...exportCheck,
         },
@@ -104,31 +90,24 @@ export async function POST(request: Request) {
     let buffer: Uint8Array;
 
     try {
-      buffer = await renderAtsResumePdf(normalized);
+      buffer = await renderResumePdf(normalized);
     } catch (error) {
-      const renderFailureReason = getAtsRenderFailureReason(
-        { renderable: false, renderFailureReason: null },
-        "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
-      );
-
       await trackEvent(null, "resume.export.download_failed", {
         page_id: body.pageId,
         page_count: exportCheck.pageCount,
         fits_on_one_page: exportCheck.fitsOnOnePage,
         renderable: false,
-        render_failure_reason: renderFailureReason,
+        render_failure_reason: exportCheck.renderFailureReason,
         error: error instanceof Error ? error.message : "unknown_render_error",
       });
 
       return NextResponse.json(
         {
-          error: renderFailureReason,
-          renderable: false,
-          renderFailureReason,
-          pageCount: null,
-          fitsOnOnePage: null,
-          overflowReasons: [],
-          recommendedFixes: [],
+          error: getFriendlyResumePdfError(
+            exportCheck,
+            "Unable to export the Resume PDF right now. Please try again.",
+          ),
+          ...exportCheck,
         },
         { status: 422 },
       );
@@ -150,9 +129,9 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       {
-        error: getFriendlyAtsPdfError(
+        error: getFriendlyResumePdfError(
           null,
-          "Unable to export the ATS PDF right now. Save your latest edits or rerun ATS review and try again.",
+          "Unable to export the Resume PDF right now. Please try again.",
         ),
       },
       { status: 400 },

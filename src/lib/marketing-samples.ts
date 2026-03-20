@@ -85,11 +85,11 @@ export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
 
 export const HIRING_WORKFLOW_STEPS: HiringWorkflowStep[] = [
   {
-    stage: "ATS extraction",
-    title: "Your resume still has to extract clean text.",
-    body: "If the parser cannot read the file, you never make it into the searchable pile.",
-    href: "/guides/ats-resume-test?ref=landing_workflow_readability",
-    ctaLabel: "Run the ATS test",
+    stage: "Resume PDF",
+    title: "Your PDF still has to copy clean text.",
+    body: "If the text layer breaks, the file becomes harder to review, reuse, and forward.",
+    href: "/guides/resume-pdf-check?ref=landing_workflow_readability",
+    ctaLabel: "Run the PDF check",
   },
   {
     stage: "Recruiter search",
@@ -101,7 +101,7 @@ export const HIRING_WORKFLOW_STEPS: HiringWorkflowStep[] = [
   {
     stage: "Human click",
     title: "MyLivingPage takes over after someone opens your link.",
-    body: "Keep the ATS-safe resume for applications, then give the recruiter or hiring manager a faster page to scan once they click.",
+    body: "Keep one Living Page and one Resume PDF aligned to the same saved content so the next human decision happens faster.",
     href: "/examples?ref=landing_workflow_examples",
     ctaLabel: "See example pages",
   },
@@ -117,8 +117,8 @@ export const PROOF_SIGNALS: ProofSignal[] = [
   {
     title: "Readable files still fail",
     body: "A polished PDF can still break during extraction, which is why the copy-paste check comes first.",
-    href: "/guides/ats-resume-test?ref=landing_proof_readability",
-    linkLabel: "See the 30-second test",
+    href: "/guides/resume-pdf-check?ref=landing_proof_readability",
+    linkLabel: "See the PDF check",
   },
   {
     title: "Tailoring creates lift",
@@ -131,7 +131,7 @@ export const PROOF_SIGNALS: ProofSignal[] = [
 export const TRUST_SIGNALS: TrustSignal[] = [
   {
     title: "Your resume stays intact",
-    body: "MyLivingPage is a companion after the click, not a replacement for the file you already submit through ATS portals.",
+    body: "MyLivingPage keeps your Living Page and Resume PDF aligned without forcing you to manage separate versions by hand.",
     href: "/guides/living-page-vs-pdf-resume",
     linkLabel: "See how both work together",
   },
@@ -159,7 +159,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Will this replace my resume?",
     answer:
-      "No. Keep the resume you already use for applications and ATS portals. MyLivingPage is for the moment after a person clicks your name and wants faster context.",
+      "No. MyLivingPage gives you a Living Page and a fresh Resume PDF from the same source so you are not juggling separate stories.",
   },
   {
     question: "Will my page look professional enough?",
@@ -186,7 +186,7 @@ export const LANDING_FAQS: LandingFaq[] = [
 export const PROCESS_STEPS = [
   {
     title: "Start with resume text that already works",
-    body: "Paste the resume you already use for applications and keep the clean structure that ATS systems need.",
+    body: "Paste the information you already use and let MyLivingPage structure it into one page and one clean PDF.",
   },
   {
     title: "Turn it into a living page",
@@ -280,7 +280,7 @@ export const MARKETING_SAMPLE_GROUPS: MarketingSampleGroup[] = [
   {
     id: "after-you-apply",
     title: "After you apply",
-    description: "Use the ATS-safe resume for the portal, then send one page that helps a human understand you faster in follow-up.",
+    description: "Use one Living Page and one Resume PDF from the same source so follow-up stays clear and consistent.",
   },
   {
     id: "when-a-recruiter-clicks",
@@ -302,7 +302,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     roleLabel: "Software engineer re-entering the market",
     bestUsedAfter: "You have already applied or a recruiter asked for more context than the resume gave them.",
     humanBenefit: "It turns scattered links, proof points, and recent momentum into one surface that feels current right away.",
-    resumeBoundary: "Keep the resume for ATS portals and exact keyword matching. Use the page once a person wants faster context.",
+    resumeBoundary: "Use the PDF when a file is requested. Use the page once a person wants faster context.",
     sampleBadge: "Sample page",
     ctaRef: "landing_recruiter_click_engineer",
     demoIndex: 0,
@@ -314,7 +314,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     roleLabel: "Designer moving into a new in-house role",
     bestUsedAfter: "A referral, portfolio contact, or hiring manager asks for a link that explains your pivot quickly.",
     humanBenefit: "It keeps the personality of a portfolio while still presenting your experience like a serious hiring asset.",
-    resumeBoundary: "Keep the resume for application systems. Use the page for people who can click before they request the file.",
+    resumeBoundary: "Use the PDF when someone asks for a file. Use the page for people who can click before they request it.",
     sampleBadge: "Sample page",
     ctaRef: "landing_referral_designer",
     demoIndex: 1,
@@ -326,7 +326,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     roleLabel: "Attorney who needs polish fast",
     bestUsedAfter: "You submitted the application and need a cleaner follow-up asset for emails, bios, or recruiter outreach.",
     humanBenefit: "It keeps a formal tone while giving your credentials, writing, and case work more context than a one-page resume.",
-    resumeBoundary: "Keep the resume for the application itself. Use the page once credibility and clarity matter more than parser rules.",
+    resumeBoundary: "Use the PDF for formal submissions. Use the page once credibility and clarity matter more than attachment friction.",
     sampleBadge: "Sample page",
     ctaRef: "landing_after_apply_attorney",
     demoIndex: 3,
@@ -338,7 +338,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     roleLabel: "Finance leader exploring new roles",
     bestUsedAfter: "A recruiter or senior contact has your resume and now wants a faster way to scan the headline, metrics, and positioning.",
     humanBenefit: "It lets high-stakes experience and proof points land faster than a document someone may never open closely.",
-    resumeBoundary: "Keep the resume for submissions and record-keeping. Use the page when the next step depends on speed of comprehension.",
+    resumeBoundary: "Use the PDF for submissions and record-keeping. Use the page when the next step depends on speed of comprehension.",
     sampleBadge: "Sample page",
     ctaRef: "landing_recruiter_click_finance",
     demoIndex: 2,

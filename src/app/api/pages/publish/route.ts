@@ -100,9 +100,12 @@ export async function POST(request: Request) {
       theme_id: body.theme_id,
       resume_data: body.resume_data,
       raw_resume: body.raw_resume ?? "",
-      page_config: body.page_config ?? {},
       published_at: now,
     };
+
+    if (body.page_config !== undefined) {
+      allFields.page_config = body.page_config;
+    }
 
     const { error, existingId, pageId } = await persistPageRecord(supabase, user.id, allFields);
 

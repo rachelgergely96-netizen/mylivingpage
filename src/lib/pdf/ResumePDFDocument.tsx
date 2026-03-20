@@ -1,8 +1,8 @@
 export {
-  buildAtsPdfData,
-  checkAtsResumeExport,
+  buildResumePdfData,
+  checkResumeExport,
   countPdfPages,
-  getFriendlyAtsPdfError,
-  renderAtsResumePdf,
+  getFriendlyResumePdfError,
+  renderResumePdf,
 } from "@/lib/pdf/ats-export";
 export { default } from "@/lib/pdf/ats-export";

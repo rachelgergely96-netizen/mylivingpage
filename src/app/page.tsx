@@ -65,10 +65,10 @@ export default async function LandingPage() {
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  Keep your resume for the system. Give people a page they can scan fast.
+                  Upload your info once. Publish a page people can scan fast.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  Start with the resume you already use, publish one living page, and keep the same link current anywhere a recruiter or hiring manager can click.
+                  Start with the information you already have, publish one Living Page, and keep the same link current anywhere a recruiter or hiring manager can click.
                 </p>
               </div>
 
@@ -116,7 +116,7 @@ export default async function LandingPage() {
             <div className="mb-8 max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">How it works</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                From ATS-safe resume to live page in three steps.
+                From your info to a live page in three steps.
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -144,7 +144,7 @@ export default async function LandingPage() {
                     Everything you need to make the click count is free.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Start with one living page while keeping your ATS-safe resume for applications, and upgrade later only if you want premium themes, share-card downloads, analytics, and a cleaner branded page.
+                    Start with one Living Page and one Resume PDF from the same saved content, then upgrade later only if you want premium themes, share-card downloads, analytics, and a cleaner branded page.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
@@ -210,9 +210,9 @@ export default async function LandingPage() {
                 </div>
               </div>
               <p className="mt-8 text-sm leading-7 text-[rgba(240,244,255,0.54)]">
-                Need the ATS basics first? Read the{" "}
-                <Link href="/guides/ats-resume-test?ref=landing_pricing_guides" className="text-[#93C5FD] transition-colors hover:text-[#BFDBFE]">
-                  ATS resume test
+                Need the PDF basics first? Read the{" "}
+                <Link href="/guides/resume-pdf-check?ref=landing_pricing_guides" className="text-[#93C5FD] transition-colors hover:text-[#BFDBFE]">
+                  Resume PDF check
                 </Link>{" "}
                 and the{" "}
                 <Link href="/guides/recruiter-search-keywords?ref=landing_pricing_guides" className="text-[#93C5FD] transition-colors hover:text-[#BFDBFE]">
@@ -230,7 +230,7 @@ export default async function LandingPage() {
                 Publish one calmer page for the click after the application.
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                Start with the resume you already use, keep the ATS-safe file for systems, and give recruiters one link that stays current wherever they can click.
+                Upload your info once, keep one page link current, and let the same saved content power your Living Page and Resume PDF.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

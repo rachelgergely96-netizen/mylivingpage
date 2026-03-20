@@ -237,61 +237,6 @@ export async function ensureLivePageForProfile(profile: ProfileFixture): Promise
   return data as PageFixture;
 }
 
-export async function setPublicAtsDownloadState(
-  pageId: string,
-  state: "ready" | "needs_review",
-) {
-  const supabase = requireSupabaseAdmin();
-  const { data: page, error: pageError } = await supabase
-    .from("pages")
-    .select("page_config, resume_data")
-    .eq("id", pageId)
-    .single();
-
-  if (pageError || !page) {
-    throw new Error(pageError?.message ?? "Unable to load page for ATS state update.");
-  }
-
-  const nextAts =
-    state === "ready"
-      ? {
-          approvedResumeData: (page.resume_data as Record<string, unknown>) ?? samplePage.data,
-          approvedExportCheck: {
-            pageCount: 1,
-            fitsOnOnePage: true,
-            overflowReasons: [],
-            recommendedFixes: [],
-          },
-          approvedAt: new Date().toISOString(),
-          approvedContentHash: "playwright-approved",
-          availabilityReason: null,
-        }
-      : {
-          approvedResumeData: null,
-          approvedExportCheck: null,
-          approvedAt: null,
-          approvedContentHash: null,
-          availabilityReason: "Rerun ATS review and save to rebuild your ATS PDF.",
-        };
-
-  const nextPageConfig = {
-    ...((page.page_config as Record<string, unknown> | null) ?? {}),
-    ats: {
-      ...((((page.page_config as Record<string, unknown> | null) ?? {}).ats as Record<string, unknown> | undefined) ?? {}),
-      ...nextAts,
-    },
-  };
-
-  const { error: updateError } = await supabase
-    .from("pages")
-    .update({ page_config: nextPageConfig })
-    .eq("id", pageId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-}
-
 export async function clearPageViewState(pageId: string) {
   const supabase = requireSupabaseAdmin();
   const { error: deleteError } = await supabase.from("page_views").delete().eq("page_id", pageId);

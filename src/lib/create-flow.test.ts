@@ -13,16 +13,12 @@ describe("create flow helpers", () => {
   });
 
   it("normalizes raw network failures into user-facing parse copy", () => {
-    expect(normalizeCreateFlowError("parse", new TypeError("Failed to fetch")).message).toContain("Continue manually");
-  });
-
-  it("normalizes raw network failures into user-facing ATS review copy", () => {
-    expect(normalizeCreateFlowError("review", new TypeError("Failed to fetch")).message).toContain("continue without it");
+    expect(normalizeCreateFlowError(new TypeError("Failed to fetch")).message).toContain("Continue manually");
   });
 
   it("preserves structured parse failures from the server", () => {
     expect(
-      normalizeCreateFlowError("parse", {
+      normalizeCreateFlowError({
         message: "The AI parser returned malformed output. Try again in a moment.",
         code: "invalid_json",
         retryable: true,

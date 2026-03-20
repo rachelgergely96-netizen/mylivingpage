@@ -4,7 +4,7 @@ export const SITE_NAME = "MyLivingPage";
 export const ORGANIZATION_NAME = SITE_NAME;
 export const SITE_TAGLINE = "Your info, one Living Page, one Resume PDF";
 export const SITE_DESCRIPTION =
-  "Upload your info once, publish a Living Page, and download a clean Resume PDF from the same saved content.";
+  "Upload your info once, start with one month of free live hosting, then continue your Living Page for $9.99/month.";
 export const SITE_URL = getAppUrl();
 
 export function getAppUrl(): string {

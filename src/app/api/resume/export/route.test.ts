@@ -75,9 +75,80 @@ function createPageResponse(options?: {
 }) {
   return {
     id: "page-1",
+    owner_id: "owner-1",
+    user_id: "owner-1",
     visibility: options?.visibility ?? "public",
     status: options?.status ?? "live",
     resume_data: options?.resumeData ?? buildResumeData("Saved Resume"),
+  };
+}
+
+function createOwnerProfile(options?: {
+  plan?: string | null;
+  billingCohort?: string | null;
+  hostingTrialStartedAt?: string | null;
+}) {
+  return {
+    plan: options?.plan ?? "spark",
+    billing_cohort: options?.billingCohort ?? "legacy_freemium",
+    hosting_trial_started_at: options?.hostingTrialStartedAt ?? null,
+  };
+}
+
+function createServiceRoleClient(options?: {
+  page?: ReturnType<typeof createPageResponse> | null;
+  ownerProfile?: ReturnType<typeof createOwnerProfile> | null;
+  onPageUpdate?: (values: Record<string, unknown>) => void;
+}) {
+  const page = options?.page ?? createPageResponse();
+  const ownerProfile = options?.ownerProfile ?? createOwnerProfile();
+
+  return {
+    from(table: string) {
+      if (table === "pages") {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: vi.fn().mockResolvedValue({
+                    data: page,
+                    error: null,
+                  }),
+                };
+              },
+            };
+          },
+          update(values: Record<string, unknown>) {
+            options?.onPageUpdate?.(values);
+            return {
+              eq: vi.fn().mockResolvedValue({
+                error: null,
+              }),
+            };
+          },
+        };
+      }
+
+      if (table === "profiles") {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: vi.fn().mockResolvedValue({
+                    data: ownerProfile,
+                    error: null,
+                  }),
+                };
+              },
+            };
+          },
+        };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    },
   };
 }
 
@@ -118,18 +189,11 @@ describe("POST /api/resume/export", () => {
   });
 
   it("rejects export when the page is not public and live", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({ visibility: "private" }),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        page: createPageResponse({ visibility: "private" }),
+      }),
+    );
 
     const response = await POST(
       new Request("http://localhost/api/resume/export", {
@@ -148,20 +212,47 @@ describe("POST /api/resume/export", () => {
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 
+  it("blocks Resume PDF downloads once hosting is inactive for an expired new-cohort page", async () => {
+    const pageUpdateValues = vi.fn();
+
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        ownerProfile: createOwnerProfile({
+          billingCohort: "trial_hosting_v1",
+          hostingTrialStartedAt: "2026-01-01T00:00:00.000Z",
+        }),
+        onPageUpdate: pageUpdateValues,
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: "Page not found.",
+    });
+    expect(pageUpdateValues).toHaveBeenCalledWith({
+      status: "draft",
+      visibility: "private",
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+  });
+
   it("renders the saved living-page resume and ignores any extra browser payload", async () => {
     const savedResumeData = buildResumeData("Saved Resume");
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({ resumeData: savedResumeData }),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        page: createPageResponse({ resumeData: savedResumeData }),
+      }),
+    );
 
     const response = await POST(
       new Request("http://localhost/api/resume/export", {
@@ -185,25 +276,18 @@ describe("POST /api/resume/export", () => {
   });
 
   it("coerces malformed stored data before rendering the Resume PDF", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({
-                resumeData: {
-                  name: 123,
-                  summary: ["Legacy summary"],
-                  experience: null,
-                  skills: [{ category: "Core", items: "Strategy" }],
-                },
-              }),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        page: createPageResponse({
+          resumeData: {
+            name: 123,
+            summary: ["Legacy summary"],
+            experience: null,
+            skills: [{ category: "Core", items: "Strategy" }],
+          },
+        }),
+      }),
+    );
 
     const response = await POST(
       new Request("http://localhost/api/resume/export", {
@@ -227,18 +311,7 @@ describe("POST /api/resume/export", () => {
   });
 
   it("allows multi-page content to download without a blocking pre-check", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse(),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.renderPdf.mockResolvedValue(Uint8Array.from([1, 2, 3, 4, 5]).buffer);
 
     const response = await POST(
@@ -263,18 +336,7 @@ describe("POST /api/resume/export", () => {
   });
 
   it("returns a real 429 when the download rate limit is actually exceeded", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse(),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.enforceRateLimit.mockResolvedValueOnce({
       limited: true,
       identifierHash: "hash",
@@ -307,18 +369,7 @@ describe("POST /api/resume/export", () => {
   });
 
   it("fails open when rate-limit persistence is unavailable and still downloads the PDF", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse(),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.enforceRateLimit.mockRejectedValueOnce(new Error("events table unavailable"));
 
     const response = await POST(
@@ -343,18 +394,7 @@ describe("POST /api/resume/export", () => {
   });
 
   it("falls back to a simpler PDF when the primary render fails", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse(),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.renderPdf.mockRejectedValueOnce(new Error("Primary render failed."));
 
     const response = await POST(
@@ -376,36 +416,30 @@ describe("POST /api/resume/export", () => {
       "resume.export.downloaded",
       expect.objectContaining({
         fallback_used: true,
+        primary_error: "Primary render failed.",
       }),
     );
   });
 
   it("sanitizes unicode-heavy saved content before attempting the fallback PDF", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse({
-                resumeData: {
-                  name: "Jos\u00e9 \ud83d\ude80",
-                  summary: "Led growth \u2022 shipped tools \ud83c\udf1f",
-                  experience: [
-                    {
-                      title: "Founder",
-                      company: "Cr\u00e8me",
-                      dates: "2022 \u2014 2024",
-                      highlights: ["Built the platform \ud83d\udca1"],
-                    },
-                  ],
-                },
-              }),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        page: createPageResponse({
+          resumeData: {
+            name: "Jos\u00e9 \ud83d\ude80",
+            summary: "Led growth \u2022 shipped tools \ud83c\udf1f",
+            experience: [
+              {
+                title: "Founder",
+                company: "Cr\u00e8me",
+                dates: "2022 \u2014 2024",
+                highlights: ["Built the platform \ud83d\udca1"],
+              },
+            ],
+          },
+        }),
+      }),
+    );
     mocks.renderPdf.mockRejectedValueOnce(new Error("Primary render failed."));
 
     const response = await POST(
@@ -435,18 +469,7 @@ describe("POST /api/resume/export", () => {
   });
 
   it("returns a friendly error only when both primary and fallback PDF renders fail", async () => {
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: createPageResponse(),
-              error: null,
-            }),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.renderPdf.mockRejectedValueOnce(new Error("Primary render failed."));
     mocks.fallbackRenderPdf.mockRejectedValueOnce(new Error("Fallback render failed."));
 
@@ -465,5 +488,15 @@ describe("POST /api/resume/export", () => {
       error: "Unable to export the Resume PDF right now. Please try again.",
     });
     expect(mocks.fallbackRenderPdf).toHaveBeenCalled();
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "resume.export.download_failed",
+      expect.objectContaining({
+        error_stage: "fallback",
+        primary_error: "Primary render failed.",
+        fallback_error: "Fallback render failed.",
+        error: "Fallback render failed.",
+      }),
+    );
   });
 });

@@ -8,7 +8,6 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
-import { isPremiumPlan } from "@/lib/plans";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { THEME_IDS, type ThemeId } from "@/themes/types";
@@ -74,13 +73,6 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
   const pageUserId = page.user_id ?? page.owner_id ?? "";
 
-  const { data: ownerProfile } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", pageUserId)
-    .maybeSingle();
-  const premium = isPremiumPlan(ownerProfile?.plan);
-
   return (
     <main className="min-h-screen">
       <ViewTracker pageId={page.id} />
@@ -102,10 +94,9 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
         slug={page.slug}
         themeId={themeId}
         resumeData={page.resume_data}
-        premium={premium}
-        avoidBadge={!premium}
+        avoidBadge
       />
-      <MadeWithBadge pageUserId={pageUserId} premium={premium} />
+      <MadeWithBadge />
     </main>
   );
 }

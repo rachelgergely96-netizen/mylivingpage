@@ -8,6 +8,7 @@ import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { getAccountAccessState } from "@/lib/account-access";
 import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
@@ -16,7 +17,7 @@ import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
-import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
+import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 
 type Step = "input" | "processing" | "review" | "success";
 type InputMode = "paste" | "guided";
@@ -80,9 +81,11 @@ export default function CreatePage() {
   const [publishedSlug, setPublishedSlug] = useState("");
   const [publishedPageId, setPublishedPageId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<string>("spark");
+  const [accountAccess, setAccountAccess] = useState(() =>
+    getAccountAccessState({ plan: "spark" }),
+  );
   const [pageCount, setPageCount] = useState<number>(0);
-  const premium = isPremiumPlan(userPlan);
+  const featuresUnlocked = accountAccess.featuresUnlocked;
   const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
@@ -160,7 +163,7 @@ export default function CreatePage() {
         const [profileResponse, pagesResponse] = await Promise.all([
           supabase
             .from("profiles")
-            .select("plan, username")
+            .select("plan, username, billing_cohort, hosting_trial_started_at")
             .eq("id", user.id)
             .maybeSingle(),
           supabase
@@ -169,7 +172,14 @@ export default function CreatePage() {
             .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`),
         ]);
 
-        setUserPlan(profileResponse.data?.plan ?? "spark");
+        setAccountAccess(
+          getAccountAccessState({
+            plan: profileResponse.data?.plan ?? "spark",
+            billing_cohort: profileResponse.data?.billing_cohort ?? null,
+            hosting_trial_started_at:
+              profileResponse.data?.hosting_trial_started_at ?? null,
+          }),
+        );
         setPublicSlug(profileResponse.data?.username ?? usernameFromEmail(user.email));
         setPageCount(pagesResponse.count ?? 0);
       } catch {
@@ -306,9 +316,15 @@ export default function CreatePage() {
         slug?: string;
         pageId?: string;
         error?: string;
+        code?: string;
+        redirectTo?: string;
       } | null;
 
       if (!response.ok) {
+        if (response.status === 402 && result?.code === "subscription_required") {
+          router.push(result.redirectTo ?? "/dashboard/settings");
+          return;
+        }
         throw new Error(result?.error ?? "Publish failed.");
       }
 
@@ -529,7 +545,9 @@ export default function CreatePage() {
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Publish</p>
                   <p className="mt-2 text-sm leading-6 text-[#E8F2FF]">
-                    Publishing makes the living page live and turns on Resume PDF download from the public page.
+                    {accountAccess.isLegacyAccount
+                      ? "Publishing makes the living page live and turns on Resume PDF download from the public page."
+                      : "Publishing makes the living page live, turns on Resume PDF download, and starts your one month of free hosting."}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -581,7 +599,7 @@ export default function CreatePage() {
               themes={THEME_REGISTRY}
               selectedThemeId={selectedTheme}
               onSelectTheme={setSelectedTheme}
-              premium={premium}
+              premium={featuresUnlocked}
               showDescription
             />
           </section>
@@ -596,7 +614,9 @@ export default function CreatePage() {
               Your living page is live
             </h2>
             <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              You now have one public living page and one Resume PDF download built from the same saved information.
+              {accountAccess.isLegacyAccount
+                ? "You now have one public living page and one Resume PDF download built from the same saved information."
+                : "You now have one public living page, one Resume PDF download, and one month of free live hosting built from the same saved information."}
             </p>
 
             <div className="mt-5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">

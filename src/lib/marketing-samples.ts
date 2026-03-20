@@ -179,7 +179,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Is it actually free?",
     answer:
-      "Yes. The free tier gives you one public page, core themes, and the main workflow. Upgrade later only if you want premium themes, share cards, or analytics.",
+      "Yes, for the first month your page is live. New accounts get one month of free hosting with all features unlocked, then monthly hosting is $9.99 if you want to keep the page live.",
   },
 ];
 
@@ -194,7 +194,7 @@ export const PROCESS_STEPS = [
   },
   {
     title: "Keep one link and export fresh assets",
-    body: "Keep using the same page link everywhere a person can click, and upgrade later if you want QR-ready share cards and other premium presentation extras from the same source.",
+    body: "Keep using the same page link everywhere a person can click, then continue hosting it for $9.99/month after the first free month if you want it to stay live.",
   },
 ];
 
@@ -222,19 +222,18 @@ export const COMPARISON_ROWS = [
 ];
 
 export const PRICING_REASSURANCE = {
-  free: [
-    "One living page",
-    "Core themes and guided setup from your current resume",
-    "Public page URL",
-    "Keep one page link current",
-    "Start free with no credit card",
+  trial: [
+    "One month of free live hosting",
+    "All features unlocked from day one",
+    "One Living Page and Resume PDF from the same saved content",
+    "No card required to publish",
+    "Keep one page link current while the trial is active",
   ],
-  pro: [
-    "Unlock premium themes built for creative, technical, and leadership roles",
-    "Download a PNG share card for outreach and follow-ups",
-    "See page analytics",
-    "Remove the MyLivingPage badge",
-    `Upgrade anytime for ${PRO_PLAN_PRICE.displayLabel}`,
+  subscription: [
+    `Continue hosting for ${PRO_PLAN_PRICE.displayLabel}`,
+    "Keep the public page live after the free month",
+    "Cancel anytime from billing settings",
+    "All themes, share cards, analytics, and exports stay available",
   ],
 };
 

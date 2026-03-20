@@ -50,7 +50,7 @@ export default function LandingNav() {
           className="gold-pill px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] sm:px-5 sm:text-xs sm:tracking-[0.16em]"
         >
           <span className="sm:hidden">Start</span>
-          <span className="hidden sm:inline">Start Free</span>
+          <span className="hidden sm:inline">Start Your Free Month</span>
         </Link>
 
         {/* Hamburger - mobile only */}
@@ -118,7 +118,7 @@ export default function LandingNav() {
                   onClick={() => setOpen(false)}
                   className="gold-pill block w-full py-3 text-center text-sm font-semibold"
                 >
-                  Start Free
+                  Start Your Free Month
                 </Link>
               </div>
             </li>

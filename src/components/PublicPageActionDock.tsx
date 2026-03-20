@@ -11,7 +11,7 @@ interface PublicPageActionDockProps {
   slug: string;
   themeId: string;
   resumeData: ResumeData;
-  premium?: boolean;
+  shareCardEnabled?: boolean;
   avoidBadge?: boolean;
 }
 
@@ -21,7 +21,7 @@ export default function PublicPageActionDock({
   slug,
   themeId,
   resumeData,
-  premium = false,
+  shareCardEnabled = true,
   avoidBadge = false,
 }: PublicPageActionDockProps) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -78,7 +78,7 @@ export default function PublicPageActionDock({
           slug={slug}
           themeId={themeId}
           resumeData={resumeData}
-          premium={premium}
+          enabled={shareCardEnabled}
           className="w-full justify-center"
         />
       </div>

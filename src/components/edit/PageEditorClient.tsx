@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getAccountAccessState } from "@/lib/account-access";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
@@ -11,7 +12,6 @@ import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { isPremiumPlan } from "@/lib/plans";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 import type { PageRecord, ResumeData } from "@/types/resume";
@@ -56,8 +56,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const [userPlan, setUserPlan] = useState<string>("spark");
-  const premium = isPremiumPlan(userPlan);
+  const [accountAccess, setAccountAccess] = useState(() =>
+    getAccountAccessState({ plan: "spark" }),
+  );
+  const featuresUnlocked = accountAccess.featuresUnlocked;
 
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(
     `mlp-draft-edit-${pageId}-living-page`,
@@ -121,8 +123,19 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
         const profileResponse = await fetch("/api/profile");
         if (profileResponse.ok) {
-          const profile = (await profileResponse.json()) as { plan?: string; username?: string };
-          setUserPlan(profile.plan ?? "spark");
+          const profile = (await profileResponse.json()) as {
+            plan?: string;
+            username?: string;
+            billing_cohort?: string | null;
+            hosting_trial_started_at?: string | null;
+          };
+          setAccountAccess(
+            getAccountAccessState({
+              plan: profile.plan ?? "spark",
+              billing_cohort: profile.billing_cohort ?? null,
+              hosting_trial_started_at: profile.hosting_trial_started_at ?? null,
+            }),
+          );
           setPublicSlug(profile.username ?? row.slug);
         }
       } catch {
@@ -357,7 +370,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           themes={THEME_REGISTRY}
           selectedThemeId={themeId}
           onSelectTheme={setThemeId}
-          premium={premium}
+          premium={featuresUnlocked}
           showDescription
         />
 

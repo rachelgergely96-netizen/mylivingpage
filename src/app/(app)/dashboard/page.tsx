@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { getAccountAccessState } from "@/lib/account-access";
+import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 import DeletePageButton from "@/components/DeletePageButton";
-import { MAX_PAGES_PER_ACCOUNT, isPremiumPlan } from "@/lib/plans";
+import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
+import { PRO_PLAN_PRICE } from "@/lib/billing";
 
 export default async function DashboardPage() {
   const authClient = await createServerSupabaseClient();
@@ -15,7 +18,7 @@ export default async function DashboardPage() {
   const [{ data: profile }, { data: pages }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name, username, plan")
+      .select("full_name, username, plan, billing_cohort, hosting_trial_started_at")
       .eq("id", user?.id ?? "")
       .maybeSingle(),
     supabase
@@ -26,9 +29,30 @@ export default async function DashboardPage() {
   ]);
 
   const displayName = profile?.full_name || profile?.username || null;
+  const accountAccess = getAccountAccessState({
+    plan: profile?.plan ?? null,
+    billing_cohort: profile?.billing_cohort ?? null,
+    hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+  });
   const list = (pages ?? []) as PageRecord[];
-  const premium = isPremiumPlan(profile?.plan);
+  const syncedList = await Promise.all(
+    list.map(async (page) => {
+      const synced = await syncPageHostingState(supabase, page, {
+        plan: profile?.plan ?? null,
+        billing_cohort: profile?.billing_cohort ?? null,
+        hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+      });
+      return synced.page as PageRecord;
+    }),
+  );
   const publicSlug = profile?.username ?? list[0]?.slug ?? null;
+  const trialEndsAt = accountAccess.trialEndsAt
+    ? new Date(accountAccess.trialEndsAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
@@ -68,6 +92,25 @@ export default async function DashboardPage() {
         </section>
       ) : (
         <section className="grid gap-3">
+          {!accountAccess.isLegacyAccount ? (
+            <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.74)]">
+              {accountAccess.hasPaidSubscription ? (
+                <>Monthly hosting is active at {PRO_PLAN_PRICE.displayLabel}. Manage it from settings anytime.</>
+              ) : accountAccess.requiresSubscription ? (
+                <>
+                  Your free hosting month has ended and your public page is offline.{" "}
+                  <Link href="/dashboard/settings" className="text-[#93C5FD] hover:text-[#BFDBFE]">
+                    Continue hosting for {PRO_PLAN_PRICE.displayLabel}
+                  </Link>
+                  .
+                </>
+              ) : accountAccess.isActiveFreeMonth && trialEndsAt ? (
+                <>Your free hosting month is active until {trialEndsAt}. All features stay unlocked while you build.</>
+              ) : (
+                <>Your free hosting month starts the first time your page goes live. All features are already unlocked while you build.</>
+              )}
+            </div>
+          ) : null}
           <div className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.68)]">
             V1 supports one public page per account. Edit your current page, or delete it before creating a replacement.
           </div>
@@ -76,7 +119,10 @@ export default async function DashboardPage() {
               This account still has legacy extra pages. Your public URL resolves through one username, so remove extras before relying on the page publicly.
             </div>
           ) : null}
-          {list.map((page) => (
+          {syncedList.map((page) => {
+            const publicViewAvailable = isPubliclyAvailablePage(page);
+
+            return (
             <article
               key={page.id}
               className="glass-card grid gap-3 rounded-2xl p-4 sm:gap-4 sm:p-5 md:grid-cols-[2fr_1fr_1fr_1fr_auto] md:items-center"
@@ -84,7 +130,7 @@ export default async function DashboardPage() {
               <div>
                 <p className="font-heading text-lg text-[#F0F4FF] sm:text-2xl">{page.resume_data?.name ?? "Untitled"}</p>
                 <p className="text-sm text-[rgba(240,244,255,0.45)]">
-                  /{publicSlug ?? page.slug} · {page.resume_data?.headline ?? "No headline"}
+                  /{publicSlug ?? page.slug} - {page.resume_data?.headline ?? "No headline"}
                 </p>
               </div>
               <div>
@@ -98,23 +144,32 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">Status</p>
                 <p className="text-sm capitalize text-[rgba(240,244,255,0.75)]">
-                  {page.status ?? (page.visibility === "public" ? "live" : page.visibility) ?? "—"}
+                  {page.status ?? (page.visibility === "public" ? "live" : page.visibility) ?? "-"}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <Link
-                  href={`/${publicSlug ?? page.slug}`}
-                  className="rounded-full border border-[rgba(59,130,246,0.35)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] sm:px-4 sm:py-2"
-                >
-                  View
-                </Link>
+                {publicViewAvailable ? (
+                  <Link
+                    href={`/${publicSlug ?? page.slug}`}
+                    className="rounded-full border border-[rgba(59,130,246,0.35)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                  >
+                    View
+                  </Link>
+                ) : (
+                  <Link
+                    href="/dashboard/settings"
+                    className="rounded-full border border-[rgba(245,158,11,0.24)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#FCD34D] hover:text-[#FDE68A] sm:px-4 sm:py-2"
+                  >
+                    Hosting Inactive
+                  </Link>
+                )}
                 <Link
                   href={`/dashboard/edit/${page.id}/living-page`}
                   className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
                 >
                   Edit Page
                 </Link>
-                {premium ? (
+                {accountAccess.featuresUnlocked ? (
                   <Link
                     href={`/dashboard/analytics/${page.id}`}
                     className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
@@ -133,7 +188,8 @@ export default async function DashboardPage() {
                 <DeletePageButton pageId={page.id} />
               </div>
             </article>
-          ))}
+          );
+          })}
         </section>
       )}
     </main>

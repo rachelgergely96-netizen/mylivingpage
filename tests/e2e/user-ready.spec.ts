@@ -315,6 +315,32 @@ test.describe.serial("authenticated user journeys", () => {
     await assertStackedDock();
   });
 
+  test("logged-out visitors see the subtle signup prompt on public pages", async ({ page, browser }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run public prompt coverage.",
+    );
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    await ensureLivePageForProfile(profile);
+
+    await page.goto(`/${profile.username}`);
+    await expect(page.getByTestId("public-page-signup-prompt")).toHaveCount(0);
+
+    const viewerContext = await browser.newContext();
+    const viewerPage = await viewerContext.newPage();
+    await viewerPage.goto(`/${profile.username}`);
+
+    const prompt = viewerPage.getByTestId("public-page-signup-prompt");
+    await expect(prompt).toBeVisible();
+    await expect(
+      prompt.getByRole("link", { name: /Make your own Living Page/i }),
+    ).toHaveAttribute("href", "/signup?ref=public_page_prompt&next=/create");
+
+    await viewerContext.close();
+  });
+
   test("public action dock shows the Resume PDF error above the stacked controls", async ({ page }) => {
     test.skip(
       !canRunAdminFixtureFlows,
@@ -387,7 +413,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.goto("/dashboard/settings?upgraded=true");
     await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
-    await expect(page.getByText("Welcome to Pro! Your premium features are now active.")).toBeVisible();
+    await expect(page.getByText("Hosting subscription is active.")).toBeVisible();
 
     await page.goto("/dashboard");
     await expect(page.getByRole("link", { name: /^Analytics$/ })).toBeVisible();

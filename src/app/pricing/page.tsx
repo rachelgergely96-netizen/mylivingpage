@@ -1,25 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
-import ComparisonTable from "@/components/marketing/demo/ComparisonTable";
-import { COMPARISON_FEATURES } from "@/components/marketing/demo/demo-data";
 import { PRO_PLAN_PRICE } from "@/lib/billing";
 import { GUIDES } from "@/lib/guides";
+import { PRICING_REASSURANCE } from "@/lib/marketing-samples";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
-
-const freeFeatures = COMPARISON_FEATURES.filter((f) => f.free).map((f) => f.feature);
-const proOnlyFeatures = COMPARISON_FEATURES.filter((f) => f.pro && !f.free).map((f) => f.feature);
 const canonicalUrl = getAbsoluteUrl("/pricing");
 
 export const metadata: Metadata = {
   title: `Pricing | ${SITE_NAME}`,
   description:
-    "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
+    "One month of free MyLivingPage hosting, then $9.99/month to keep your page live.",
   alternates: { canonical: canonicalUrl },
   openGraph: {
     title: `Pricing | ${SITE_NAME}`,
     description:
-      "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
+      "One month of free MyLivingPage hosting, then $9.99/month to keep your page live.",
     url: canonicalUrl,
     siteName: SITE_NAME,
     type: "website",
@@ -28,7 +24,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `Pricing | ${SITE_NAME}`,
     description:
-      "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
+      "One month of free MyLivingPage hosting, then $9.99/month to keep your page live.",
   },
 };
 
@@ -59,7 +55,7 @@ export default function PricingPage() {
               href="/signup?ref=pricing_nav"
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Build My Page Free
+              Start Your Free Month
             </Link>
           </nav>
         </header>
@@ -69,72 +65,64 @@ export default function PricingPage() {
           <div className="mb-12 text-center sm:mb-16">
             <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Pricing</p>
             <h1 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              Simple, transparent pricing
+              One month free, then simple monthly hosting
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-              Start free with the resume you already use, one stable page link, and a page that is easier to scan. Upgrade when you want premium themes, analytics, and a QR-ready share card.
+              New accounts get one month of free live hosting with every feature unlocked. After that, keep your page live for {PRO_PLAN_PRICE.displayLabel}.
             </p>
           </div>
 
-          {/* Plan Cards */}
-          <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
-            {/* Free / Spark */}
-            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.55)] p-6 backdrop-blur-xl sm:p-8">
-              <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.5)]">Spark</p>
-              <div className="mb-6 flex items-baseline gap-1">
-                <span className="font-heading text-4xl font-bold text-[#F0F4FF]">Free</span>
-                <span className="text-sm text-[rgba(240,244,255,0.4)]">forever</span>
+          <div className="mx-auto max-w-3xl rounded-2xl border border-[rgba(59,130,246,0.3)] bg-[rgba(10,22,40,0.55)] p-6 shadow-[0_0_40px_rgba(59,130,246,0.08)] backdrop-blur-xl sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Hosting</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-heading text-4xl font-bold text-[#F0F4FF]">Free for 30 days</span>
+                </div>
+                <p className="mt-3 text-sm text-[rgba(240,244,255,0.62)]">
+                  Start with your current info, publish a live page, and keep every feature unlocked during the first month.
+                </p>
               </div>
-              <ul className="mb-8 space-y-3">
-                {freeFeatures.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-[rgba(240,244,255,0.7)]">
-                    <span className="mt-0.5 text-[#5BD67C]">&#10003;</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/signup?ref=pricing_free_card"
-                className="block w-full rounded-full border border-[rgba(255,255,255,0.18)] py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.75)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-              >
-                Build My Page Free
-              </Link>
+              <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Then</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
+                  <span className="text-sm text-[rgba(240,244,255,0.4)]">{PRO_PLAN_PRICE.intervalLabel}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Pro */}
-            <div className="relative rounded-2xl border border-[rgba(59,130,246,0.3)] bg-[rgba(10,22,40,0.55)] p-6 shadow-[0_0_40px_rgba(59,130,246,0.08)] backdrop-blur-xl sm:p-8">
-              <div className="absolute -top-3 right-6 rounded-full bg-[#3B82F6] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
-                Popular
+            <div className="mt-8 grid gap-5 md:grid-cols-2">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">During the free month</p>
+                <ul className="mt-4 space-y-3">
+                  {PRICING_REASSURANCE.trial.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm text-[rgba(240,244,255,0.74)]">
+                      <span className="mt-0.5 text-[#5BD67C]">&#10003;</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <p className="mb-1 text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Pro</p>
-              <div className="mb-6 flex items-baseline gap-1">
-                <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
-                <span className="text-sm text-[rgba(240,244,255,0.4)]">{PRO_PLAN_PRICE.intervalLabel}</span>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">If you want the page to stay live</p>
+                <ul className="mt-4 space-y-3">
+                  {PRICING_REASSURANCE.subscription.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm text-[rgba(240,244,255,0.74)]">
+                      <span className="mt-0.5 text-[#3B82F6]">&#10003;</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <p className="mb-4 text-xs text-[rgba(240,244,255,0.45)]">Everything in Spark, plus:</p>
-              <ul className="mb-8 space-y-3">
-                {proOnlyFeatures.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-[rgba(240,244,255,0.7)]">
-                    <span className="mt-0.5 text-[#3B82F6]">&#10003;</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/signup?ref=pricing_pro_card"
-                className="gold-pill block w-full py-3 text-center text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
-              >
-                Upgrade to Pro
-              </Link>
             </div>
-          </div>
 
-          {/* Comparison Table */}
-          <div className="mx-auto mt-16 max-w-2xl sm:mt-20">
-            <h2 className="mb-6 text-center font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-              Full feature comparison
-            </h2>
-            <ComparisonTable />
+            <Link
+              href="/signup?ref=pricing_free_card"
+              className="gold-pill mt-8 block w-full py-3 text-center text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
+            >
+              Start Your Free Month
+            </Link>
           </div>
 
           <section className="mx-auto mt-16 max-w-5xl sm:mt-20">

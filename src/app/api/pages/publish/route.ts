@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { FREE_THEMES, isPremiumPlan, isPremiumTheme } from "@/lib/plans";
+import {
+  TRIAL_HOSTING_BILLING_COHORT,
+  getAccountAccessState,
+} from "@/lib/account-access";
+import { FREE_THEMES, isPremiumTheme } from "@/lib/plans";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { usernameFromEmail } from "@/lib/usernames";
@@ -62,20 +66,41 @@ export async function POST(request: Request) {
     const supabase = createServiceRoleSupabaseClient();
     const { data: profile } = await supabase
       .from("profiles")
-      .select("plan, username")
+      .select("plan, username, billing_cohort, hosting_trial_started_at")
       .eq("id", user.id)
       .maybeSingle();
 
     const userPlan = profile?.plan ?? "spark";
-    const premium = isPremiumPlan(userPlan);
+    const accountAccess = getAccountAccessState({
+      plan: userPlan,
+      billing_cohort: profile?.billing_cohort ?? null,
+      hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+    });
     const username = profile?.username ?? usernameFromEmail(user.email);
 
-    if (!premium && isPremiumTheme(body.theme_id)) {
+    if (!accountAccess.featuresUnlocked && isPremiumTheme(body.theme_id)) {
       return NextResponse.json(
         { error: `The "${body.theme_id}" theme requires a premium plan. Free themes: ${FREE_THEMES.join(", ")}.` },
         { status: 403 },
       );
     }
+
+    if (accountAccess.requiresSubscription) {
+      return NextResponse.json(
+        {
+          error: "Your free month of live hosting has ended. Continue hosting for $9.99/mo from settings to bring the page back online.",
+          code: "subscription_required",
+          redirectTo: "/dashboard/settings",
+        },
+        { status: 402 },
+      );
+    }
+
+    const now = new Date().toISOString();
+    const shouldStartHostingTrial =
+      !accountAccess.isLegacyAccount &&
+      !accountAccess.hasPaidSubscription &&
+      !accountAccess.hasStartedFreeMonth;
 
     if (!profile?.username) {
       await supabase.from("profiles").upsert(
@@ -84,12 +109,22 @@ export async function POST(request: Request) {
           username,
           email: user.email,
           plan: userPlan,
+          billing_cohort: profile?.billing_cohort ?? TRIAL_HOSTING_BILLING_COHORT,
+          hosting_trial_started_at: shouldStartHostingTrial ? now : profile?.hosting_trial_started_at ?? null,
         },
         { onConflict: "id" },
       );
+    } else if (shouldStartHostingTrial) {
+      const { error: trialStartError } = await supabase
+        .from("profiles")
+        .update({ hosting_trial_started_at: now })
+        .eq("id", user.id);
+
+      if (trialStartError) {
+        throw new Error(trialStartError.message);
+      }
     }
 
-    const now = new Date().toISOString();
     const allFields: Record<string, unknown> = {
       user_id: user.id,
       owner_id: user.id,

@@ -23,16 +23,16 @@ export interface StripePriceSnapshot {
 }
 
 export const PRO_PLAN_PRICE: PlanPriceConfig = {
-  amountCents: 900,
+  amountCents: 999,
   currency: "usd",
   interval: "month",
   intervalCount: 1,
-  amountLabel: "$9",
+  amountLabel: "$9.99",
   intervalLabel: "/month",
-  displayLabel: "$9/month",
-  productName: "MyLivingPage Pro",
+  displayLabel: "$9.99/month",
+  productName: "MyLivingPage Hosting",
   productDescription:
-    "$9/month subscription for premium themes, PNG share cards, analytics, and badge removal.",
+    "$9.99/month subscription to continue hosting your live MyLivingPage after the first free month.",
 };
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);

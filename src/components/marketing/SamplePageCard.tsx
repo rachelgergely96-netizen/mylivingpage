@@ -116,7 +116,7 @@ export default function SamplePageCard({
               href={signupHref}
               className="gold-pill inline-flex items-center gap-2 px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_14px_42px_rgba(59,130,246,0.3)]"
             >
-              Start Free
+              Start Your Free Month
             </Link>
             {previewHref ? (
               <Link
@@ -173,7 +173,7 @@ export default function SamplePageCard({
                   href={signupHref}
                   className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_14px_42px_rgba(59,130,246,0.3)]"
                 >
-                  Start Free
+                  Start Your Free Month
                 </Link>
                 <button
                   type="button"

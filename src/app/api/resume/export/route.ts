@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { syncPageHostingState } from "@/lib/hosting-state";
 import {
   buildResumePdfFileName,
   coerceResumeDataForExport,
@@ -22,14 +23,23 @@ interface ResumeExportRequestBody {
 
 interface PublicPageResumeSource {
   id: string;
+  owner_id?: string | null;
+  user_id?: string | null;
   status: "draft" | "live" | "archived" | null;
   visibility: "private" | "link" | "public" | null;
   resume_data: unknown;
 }
 
+function getResumePdfErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "unknown_render_error";
+}
+
 export async function POST(request: Request) {
+  let requestedPageId: string | undefined;
+
   try {
     const body = (await request.json()) as ResumeExportRequestBody;
+    requestedPageId = body.pageId;
     if (!body.pageId) {
       return NextResponse.json({ error: "pageId is required." }, { status: 400 });
     }
@@ -37,7 +47,7 @@ export async function POST(request: Request) {
     const supabase = createServiceRoleSupabaseClient();
     const { data: page, error: pageError } = await supabase
       .from("pages")
-      .select("id, status, visibility, resume_data")
+      .select("id, owner_id, user_id, status, visibility, resume_data")
       .eq("id", body.pageId)
       .maybeSingle<PublicPageResumeSource>();
 
@@ -45,8 +55,26 @@ export async function POST(request: Request) {
       throw new Error(pageError.message);
     }
 
+    const pageOwnerId = page?.owner_id ?? page?.user_id ?? null;
+    const { data: ownerProfile } = pageOwnerId
+      ? await supabase
+          .from("profiles")
+          .select("plan, billing_cohort, hosting_trial_started_at")
+          .eq("id", pageOwnerId)
+          .maybeSingle()
+      : { data: null };
+
+    const syncedPage = page
+      ? await syncPageHostingState(supabase, page, {
+          plan: ownerProfile?.plan ?? null,
+          billing_cohort: ownerProfile?.billing_cohort ?? null,
+          hosting_trial_started_at: ownerProfile?.hosting_trial_started_at ?? null,
+        })
+      : null;
+
     const publicDownloadAllowed =
-      page?.visibility === "public" || (page?.visibility == null && page?.status === "live");
+      syncedPage?.page.visibility === "public" ||
+      (syncedPage?.page.visibility == null && syncedPage?.page.status === "live");
 
     if (!page || !publicDownloadAllowed) {
       return NextResponse.json({ error: "Page not found." }, { status: 404 });
@@ -71,27 +99,40 @@ export async function POST(request: Request) {
       });
     }
 
-    const normalized = coerceResumeDataForExport(page.resume_data);
+    const normalized = coerceResumeDataForExport(syncedPage.page.resume_data);
     let buffer: Uint8Array;
     let fallbackUsed = false;
+    let primaryRenderError: string | null = null;
 
     try {
       buffer = await renderResumePdf(normalized);
     } catch (error) {
+      primaryRenderError = getResumePdfErrorMessage(error);
+      console.error("resume.export.primary_render_failed", {
+        page_id: body.pageId,
+        error: primaryRenderError,
+      });
+
       try {
         buffer = await renderFallbackResumePdf(normalized);
         fallbackUsed = true;
       } catch (fallbackError) {
+        const fallbackRenderError = getResumePdfErrorMessage(fallbackError);
+
+        console.error("resume.export.fallback_render_failed", {
+          page_id: body.pageId,
+          primary_error: primaryRenderError,
+          fallback_error: fallbackRenderError,
+        });
+
         await trackEvent(null, "resume.export.download_failed", {
           page_id: body.pageId,
           renderable: false,
           fallback_used: false,
-          error:
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : error instanceof Error
-                ? error.message
-                : "unknown_render_error",
+          error_stage: "fallback",
+          error: fallbackRenderError,
+          primary_error: primaryRenderError,
+          fallback_error: fallbackRenderError,
         });
 
         return NextResponse.json(
@@ -114,6 +155,7 @@ export async function POST(request: Request) {
       fits_on_one_page: pageCount === 1,
       renderable: true,
       fallback_used: fallbackUsed,
+      primary_error: primaryRenderError,
     });
 
     return new Response(new Uint8Array(buffer), {
@@ -122,7 +164,12 @@ export async function POST(request: Request) {
         "Content-Disposition": `attachment; filename="${buildResumePdfFileName(normalized.name)}"`,
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("resume.export.unhandled_error", {
+      page_id: requestedPageId ?? null,
+      error: getResumePdfErrorMessage(error),
+    });
+
     return NextResponse.json(
       {
         error: getFriendlyResumePdfError(

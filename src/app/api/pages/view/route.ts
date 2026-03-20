@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { syncPageHostingState } from "@/lib/hosting-state";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getClientIp, hashSecurityIdentifier } from "@/lib/security/request";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -30,6 +31,24 @@ export async function POST(request: Request) {
     }
 
     const pageOwnerId = page.owner_id ?? page.user_id ?? null;
+    const { data: ownerProfile } = pageOwnerId
+      ? await supabase
+          .from("profiles")
+          .select("plan, billing_cohort, hosting_trial_started_at")
+          .eq("id", pageOwnerId)
+          .maybeSingle()
+      : { data: null };
+
+    const syncedPage = await syncPageHostingState(supabase, page, {
+      plan: ownerProfile?.plan ?? null,
+      billing_cohort: ownerProfile?.billing_cohort ?? null,
+      hosting_trial_started_at: ownerProfile?.hosting_trial_started_at ?? null,
+    });
+
+    if (syncedPage.changed || (syncedPage.page.status !== "live" && syncedPage.page.visibility !== "public")) {
+      return NextResponse.json({ error: "Page not found" }, { status: 404 });
+    }
+
     if (user?.id && pageOwnerId === user.id) {
       return NextResponse.json({ ok: true, ignored: true });
     }

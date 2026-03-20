@@ -44,17 +44,17 @@ describe("billing helpers", () => {
     expect(messages).toEqual([
       "Expected price id price_live_expected, received price_live_wrong.",
       "Expected active=true, received false.",
-      "Expected amount 900 cents, received 1200.",
+      "Expected amount 999 cents, received 1200.",
       "Expected currency usd, received eur.",
       "Expected interval month, received year.",
       "Expected interval_count 1, received 12.",
-      'Expected product name "MyLivingPage Pro", received "Unexpected Plan".',
+      'Expected product name "MyLivingPage Hosting", received "Unexpected Plan".',
     ]);
   });
 
   it("keeps the user-facing reassurance copy aligned with the managed price config", () => {
-    expect(PRICING_REASSURANCE.pro).toContain(
-      `Upgrade anytime for ${PRO_PLAN_PRICE.displayLabel}`,
+    expect(PRICING_REASSURANCE.subscription).toContain(
+      `Continue hosting for ${PRO_PLAN_PRICE.displayLabel}`,
     );
   });
 });

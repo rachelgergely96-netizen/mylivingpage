@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import PageAnalyticsDashboard from "@/components/analytics/PageAnalyticsDashboard";
+import { getAccountAccessState } from "@/lib/account-access";
 import {
   DEFAULT_ANALYTICS_RANGE,
   isAnalyticsRangeKey,
@@ -9,7 +10,6 @@ import {
   createUnavailablePageAnalyticsDashboard,
   fetchPageAnalyticsDashboard,
 } from "@/lib/analytics/pageAnalytics";
-import { isPremiumPlan } from "@/lib/plans";
 import {
   createServerSupabaseClient,
   createServiceRoleSupabaseClient,
@@ -49,11 +49,17 @@ export default async function AnalyticsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan, username")
+    .select("plan, username, billing_cohort, hosting_trial_started_at")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!isPremiumPlan(profile?.plan)) {
+  const accountAccess = getAccountAccessState({
+    plan: profile?.plan ?? null,
+    billing_cohort: profile?.billing_cohort ?? null,
+    hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+  });
+
+  if (!accountAccess.featuresUnlocked) {
     redirect("/dashboard/settings");
   }
 

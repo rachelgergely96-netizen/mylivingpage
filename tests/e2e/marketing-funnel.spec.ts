@@ -14,7 +14,7 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
   await expect(
     page.getByRole("heading", { name: "Ready to publish one page and keep the PDF aligned?" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start Free" }).first()).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Start Your Free Month" }).first()).toHaveAttribute(
     "href",
     "/signup?ref=examples_nav_start&next=/create",
   );
@@ -28,13 +28,13 @@ test("signup page keeps the form above the fold while preserving create intent",
     page.getByRole("heading", { name: "Start from the resume you already use." }),
   ).toBeVisible();
   await expect(
-    page.getByText("Keep your resume intact for applications, then publish one page when you are ready."),
+    page.getByText("Keep your resume intact for applications, then publish one live page with one month of free hosting when you are ready."),
   ).toBeVisible();
 
-  const googleButton = page.getByRole("button", { name: "Start with Google" });
+  const googleButton = page.getByRole("button", { name: "Start Your Free Month with Google" });
   const emailField = page.getByPlaceholder("Email address");
   const passwordField = page.getByPlaceholder("Create password");
-  const submitButton = page.getByRole("button", { name: "Start From My Resume" });
+  const submitButton = page.getByRole("button", { name: "Start My Free Month" });
 
   await expect(googleButton).toBeInViewport();
   await expect(emailField).toBeInViewport();

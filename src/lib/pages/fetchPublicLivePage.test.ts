@@ -1,18 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
-import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
+import { describe, expect, it, vi } from "vitest";
+import {
+  fetchPublicLivePage,
+} from "@/lib/pages/fetchPublicLivePage";
 import type { PageRecord } from "@/types/resume";
 
 interface SupabaseScenario {
-  profileId?: string;
+  profile?: {
+    id: string;
+    plan?: string | null;
+    billing_cohort?: string | null;
+    hosting_trial_started_at?: string | null;
+  } | null;
   publicPage?: PageRecord | null;
   legacyPage?: PageRecord | null;
+  onPageUpdate?: (values: Record<string, unknown>) => void;
 }
 
 function buildPageRecord(id: string, slug: string): PageRecord {
   return {
     id,
     owner_id: "user-1",
+    user_id: "user-1",
     slug,
     status: "live",
     visibility: "public",
@@ -50,38 +59,64 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
     from(table: string) {
       const filters: Record<string, unknown> = {};
 
-      const chain = {
-        select() {
-          return chain;
-        },
-        eq(field: string, value: unknown) {
-          filters[field] = value;
-          return chain;
-        },
-        order() {
-          return chain;
-        },
-        limit() {
-          return chain;
-        },
-        async maybeSingle() {
-          if (table === "profiles") {
-            return { data: scenario.profileId ? { id: scenario.profileId } : null, error: null };
-          }
+      if (table === "pages") {
+        return {
+          select() {
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          order() {
+            return this;
+          },
+          limit() {
+            return this;
+          },
+          update(values: Record<string, unknown>) {
+            scenario.onPageUpdate?.(values);
+            return {
+              eq: vi.fn().mockResolvedValue({
+                error: null,
+              }),
+            };
+          },
+          async maybeSingle() {
+            if (
+              filters.owner_id === scenario.profile?.id &&
+              filters.visibility === "public"
+            ) {
+              return { data: scenario.publicPage ?? null, error: null };
+            }
 
-          if (table === "pages" && filters.owner_id === scenario.profileId && filters.visibility === "public") {
-            return { data: scenario.publicPage ?? null, error: null };
-          }
+            if (
+              filters.user_id === scenario.profile?.id &&
+              filters.status === "live"
+            ) {
+              return { data: scenario.legacyPage ?? null, error: null };
+            }
 
-          if (table === "pages" && filters.user_id === scenario.profileId && filters.status === "live") {
-            return { data: scenario.legacyPage ?? null, error: null };
-          }
+            return { data: null, error: null };
+          },
+        };
+      }
 
-          return { data: null, error: null };
-        },
-      };
+      if (table === "profiles") {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          async maybeSingle() {
+            return { data: scenario.profile ?? null, error: null };
+          },
+        };
+      }
 
-      return chain;
+      throw new Error(`Unexpected table: ${table}`);
     },
   } as unknown as SupabaseClient;
 }
@@ -100,7 +135,11 @@ describe("fetchPublicLivePage", () => {
   it("returns the current public page when one exists", async () => {
     const publicPage = buildPageRecord("page-1", "ray");
     const supabase = createSupabaseMock({
-      profileId: "user-1",
+      profile: {
+        id: "user-1",
+        plan: "spark",
+        billing_cohort: "legacy_freemium",
+      },
       publicPage,
       legacyPage: buildPageRecord("legacy-1", "legacy-ray"),
     });
@@ -111,11 +150,35 @@ describe("fetchPublicLivePage", () => {
   it("falls back to the legacy live page when no owner-based public page exists", async () => {
     const legacyPage = buildPageRecord("legacy-1", "legacy-ray");
     const supabase = createSupabaseMock({
-      profileId: "user-1",
+      profile: {
+        id: "user-1",
+        plan: "spark",
+        billing_cohort: "legacy_freemium",
+      },
       publicPage: null,
       legacyPage,
     });
 
     await expect(fetchPublicLivePage(supabase, "ray")).resolves.toEqual(legacyPage);
+  });
+
+  it("returns null and unpublishes expired new-cohort pages", async () => {
+    const updates = vi.fn();
+    const supabase = createSupabaseMock({
+      profile: {
+        id: "user-1",
+        plan: "spark",
+        billing_cohort: "trial_hosting_v1",
+        hosting_trial_started_at: "2026-01-01T00:00:00.000Z",
+      },
+      publicPage: buildPageRecord("page-1", "ray"),
+      onPageUpdate: updates,
+    });
+
+    await expect(fetchPublicLivePage(supabase, "ray")).resolves.toBeNull();
+    expect(updates).toHaveBeenCalledWith({
+      status: "draft",
+      visibility: "private",
+    });
   });
 });

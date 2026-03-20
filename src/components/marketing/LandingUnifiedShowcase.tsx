@@ -190,7 +190,7 @@ export default function LandingUnifiedShowcase() {
               href={getSignupHref("landing_demo_primary")}
               className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.2)]"
             >
-              Start Free
+              Start Your Free Month
             </Link>
             <Link
               href="/examples"

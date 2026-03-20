@@ -4,6 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  getAccountAccessState,
+  type AccountAccessState,
+} from "@/lib/account-access";
 import { PRO_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
@@ -16,8 +20,56 @@ interface Profile {
   email: string | null;
   avatar_url: string | null;
   plan: string;
+  billing_cohort?: string | null;
+  hosting_trial_started_at?: string | null;
+  accountAccess?: AccountAccessState;
+  latestPage?: {
+    id: string;
+    status: string | null;
+    visibility: string | null;
+    published_at: string | null;
+  } | null;
   created_at: string;
   hasPassword: boolean;
+}
+
+function formatFriendlyDate(value: string | null | undefined) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatDaysRemaining(value: string | null | undefined) {
+  if (!value) return null;
+
+  const diff = new Date(value).getTime() - Date.now();
+  if (Number.isNaN(diff)) return null;
+
+  const days = Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
+  return `${days} day${days === 1 ? "" : "s"} left`;
+}
+
+function isLivePublicPage(
+  page:
+    | {
+        status: string | null;
+        visibility: string | null;
+      }
+    | null
+    | undefined,
+) {
+  return Boolean(
+    page &&
+      (page.visibility === "public" ||
+        (page.visibility == null && page.status === "live")),
+  );
 }
 
 export default function SettingsPage() {
@@ -71,10 +123,15 @@ export default function SettingsPage() {
       const data = (await res.json()) as Profile;
 
       const justUpgraded = searchParams.get("upgraded") === "true";
+      const upgradedAccess = data.accountAccess ?? getAccountAccessState({
+        plan: data.plan,
+        billing_cohort: data.billing_cohort ?? null,
+        hosting_trial_started_at: data.hosting_trial_started_at ?? null,
+      });
 
       // If returning from Stripe checkout but webhook hasn't updated the plan yet,
-      // poll up to 5 times (every 1.5s) until the plan reflects "pro"
-      if (justUpgraded && !isPremiumPlan(data.plan)) {
+      // poll up to 5 times (every 1.5s) until the paid hosting state is visible.
+      if (justUpgraded && !upgradedAccess.hasPaidSubscription) {
         let retries = 0;
         const poll = async (): Promise<Profile> => {
           if (retries >= 5 || cancelled) return data;
@@ -84,7 +141,12 @@ export default function SettingsPage() {
           const retry = await fetch("/api/profile");
           if (!retry.ok) return data;
           const fresh = (await retry.json()) as Profile;
-          if (isPremiumPlan(fresh.plan)) return fresh;
+          const freshAccess = fresh.accountAccess ?? getAccountAccessState({
+            plan: fresh.plan,
+            billing_cohort: fresh.billing_cohort ?? null,
+            hosting_trial_started_at: fresh.hosting_trial_started_at ?? null,
+          });
+          if (freshAccess.hasPaidSubscription) return fresh;
           return poll();
         };
         const final = await poll();
@@ -94,9 +156,16 @@ export default function SettingsPage() {
         setUsername(final.username ?? "");
         setAvatarUrl(final.avatar_url);
         setLoading(false);
-        showToast(isPremiumPlan(final.plan)
-          ? "Welcome to Pro! Your premium features are now active."
-          : "Upgrade processing — features will unlock shortly.");
+        const finalAccess = final.accountAccess ?? getAccountAccessState({
+          plan: final.plan,
+          billing_cohort: final.billing_cohort ?? null,
+          hosting_trial_started_at: final.hosting_trial_started_at ?? null,
+        });
+        showToast(
+          finalAccess.hasPaidSubscription
+            ? "Hosting subscription is active."
+            : "Subscription processing - hosting will activate shortly.",
+        );
         router.replace("/dashboard/settings", { scroll: false });
         return;
       }
@@ -107,7 +176,7 @@ export default function SettingsPage() {
       setAvatarUrl(data.avatar_url);
       setLoading(false);
       if (justUpgraded) {
-        showToast("Welcome to Pro! Your premium features are now active.");
+        showToast("Hosting subscription is active.");
         router.replace("/dashboard/settings", { scroll: false });
       }
     })();
@@ -272,6 +341,16 @@ export default function SettingsPage() {
   }
 
   const usernameChanged = normalizeUsernameSlug(username) !== profile.username;
+  const accountAccess =
+    profile.accountAccess ??
+    getAccountAccessState({
+      plan: profile.plan,
+      billing_cohort: profile.billing_cohort ?? null,
+      hosting_trial_started_at: profile.hosting_trial_started_at ?? null,
+    });
+  const trialEndsAtLabel = formatFriendlyDate(accountAccess.trialEndsAt);
+  const trialDaysRemaining = formatDaysRemaining(accountAccess.trialEndsAt);
+  const livePageActive = isLivePublicPage(profile.latestPage);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 sm:py-10 md:px-10">
@@ -445,7 +524,87 @@ export default function SettingsPage() {
 
       {/* ── Plan Section ── */}
       <section className="glass-card rounded-2xl p-5 sm:p-7 mb-5">
-        <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-3">Plan</h2>
+        <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-3">
+          {accountAccess.isLegacyAccount ? "Plan" : "Hosting"}
+        </h2>
+        {!accountAccess.isLegacyAccount ? (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${accountAccess.hasPaidSubscription ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : accountAccess.requiresSubscription ? "border-[rgba(245,158,11,0.35)] text-[#FCD34D]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
+                {accountAccess.hasPaidSubscription
+                  ? "subscription active"
+                  : accountAccess.requiresSubscription
+                    ? "hosting inactive"
+                    : accountAccess.isActiveFreeMonth
+                      ? "free month active"
+                      : "free month ready"}
+              </span>
+              {accountAccess.hasPaidSubscription ? (
+                <>
+                  <span className="text-xs text-[rgba(240,244,255,0.5)]">{PRO_PLAN_PRICE.displayLabel}</span>
+                  <button
+                    type="button"
+                    disabled={billingLoading}
+                    onClick={async () => {
+                      setBillingLoading(true);
+                      const res = await fetch("/api/stripe/portal", { method: "POST" });
+                      const data = await res.json();
+                      if (data.url) window.location.href = data.url;
+                      else setBillingLoading(false);
+                    }}
+                    className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#F0F4FF] disabled:opacity-50"
+                  >
+                    {billingLoading ? "Loading..." : "Manage Subscription"}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={billingLoading}
+                  onClick={async () => {
+                    setBillingLoading(true);
+                    const res = await fetch("/api/stripe/checkout", { method: "POST" });
+                    const data = await res.json();
+                    if (data.url) window.location.href = data.url;
+                    else setBillingLoading(false);
+                  }}
+                  className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
+                >
+                  {billingLoading ? "Loading..." : `Continue Hosting - ${PRO_PLAN_PRICE.amountLabel}/mo`}
+                </button>
+              )}
+            </div>
+            {!accountAccess.hasStartedFreeMonth ? (
+              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
+                Your free month starts the first time your page goes live. All features are already unlocked while you build, and no card is required to publish.
+              </p>
+            ) : null}
+            {accountAccess.isActiveFreeMonth && trialEndsAtLabel ? (
+              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
+                Your free hosting month is active until <span className="text-[#F0F4FF]">{trialEndsAtLabel}</span>{trialDaysRemaining ? ` (${trialDaysRemaining})` : ""}. Your page stays live during the trial, and you can switch to monthly hosting anytime.
+              </p>
+            ) : null}
+            {accountAccess.requiresSubscription ? (
+              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
+                Your free hosting month ended{trialEndsAtLabel ? ` on ${trialEndsAtLabel}` : ""}, so your public page is now offline. Continue hosting to bring the page back live.
+              </p>
+            ) : null}
+            {accountAccess.hasPaidSubscription ? (
+              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
+                Monthly hosting is active. Your page can stay live while the subscription remains active.
+              </p>
+            ) : null}
+            <div className="mt-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
+              {livePageActive
+                ? "Your public page is currently live."
+                : accountAccess.requiresSubscription
+                  ? "Your public page is currently offline until hosting resumes."
+                  : "Your page is not live yet. Publish it when you are ready to start the free hosting month."}
+            </div>
+          </>
+        ) : null}
+        {accountAccess.isLegacyAccount ? (
+          <>
         <div className="flex flex-wrap items-center gap-3">
           <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${isPremiumPlan(profile.plan) ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
             {profile.plan ?? "spark"}
@@ -481,7 +640,7 @@ export default function SettingsPage() {
               }}
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
             >
-              {billingLoading ? "Loading..." : `Upgrade to Pro — ${PRO_PLAN_PRICE.amountLabel}/mo`}
+              {billingLoading ? "Loading..." : `Upgrade to Pro - ${PRO_PLAN_PRICE.amountLabel}/mo`}
             </button>
           )}
         </div>
@@ -491,7 +650,7 @@ export default function SettingsPage() {
           </p>
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
-          Pro auto-renews monthly until canceled. By upgrading, you agree to our{" "}
+          Monthly hosting auto-renews until canceled. By subscribing, you agree to our{" "}
           <Link href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
             Terms
           </Link>{" "}
@@ -501,6 +660,8 @@ export default function SettingsPage() {
           </Link>
           . Cancel anytime from the billing portal. No refunds except where required by law.
         </p>
+          </>
+        ) : null}
       </section>
 
       {/* ── Danger Zone ── */}

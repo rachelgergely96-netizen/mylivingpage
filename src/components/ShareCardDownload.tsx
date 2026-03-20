@@ -20,7 +20,7 @@ interface ShareCardDownloadProps {
   slug: string;
   themeId: string;
   resumeData: ResumeData;
-  premium?: boolean;
+  enabled?: boolean;
   className?: string;
 }
 
@@ -29,7 +29,7 @@ export default function ShareCardDownload({
   slug,
   themeId,
   resumeData,
-  premium = false,
+  enabled = true,
   className,
 }: ShareCardDownloadProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -65,7 +65,7 @@ export default function ShareCardDownload({
   }, [open]);
 
   if (!isOwner) return null;
-  if (!premium) return null;
+  if (!enabled) return null;
 
   const visual = getShareCardVisual(themeId);
   const safeName = truncate(resumeData.name || "MyLivingPage User", 40);

@@ -88,7 +88,7 @@ export default async function LandingPage() {
                   href={getSignupHref("landing_start_free")}
                   className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
                 >
-                  Start Free
+                  Start Your Free Month
                 </Link>
                 <Link
                   href={getLoginHref()}
@@ -141,17 +141,17 @@ export default async function LandingPage() {
                 <div className="max-w-2xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Pricing</p>
                   <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                    Everything you need to make the click count is free.
+                    One month free, then simple monthly hosting.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Start with one Living Page and one Resume PDF from the same saved content, then upgrade later only if you want premium themes, share-card downloads, analytics, and a cleaner branded page.
+                    New accounts get one month of free live hosting with all features unlocked. After that, keep the page live for {PRO_PLAN_PRICE.displayLabel}.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
                       href={getSignupHref("landing_pricing_start")}
                       className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                     >
-                      Start Free
+                      Start Your Free Month
                     </Link>
                     <Link
                       href="/pricing"
@@ -162,49 +162,42 @@ export default async function LandingPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:min-w-[460px] lg:max-w-[480px]">
+                <div className="grid gap-4 lg:min-w-[460px] lg:max-w-[520px]">
                   <div className="rounded-3xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.09)] p-5 shadow-[0_0_40px_rgba(59,130,246,0.08)] ring-1 ring-[rgba(59,130,246,0.16)]">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Start here</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Hosting timeline</p>
                       <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
-                        Free
+                        30 days free
                       </span>
                     </div>
                     <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.76)]">
-                      {PRICING_REASSURANCE.free.map((item) => (
+                      {PRICING_REASSURANCE.trial.map((item) => (
                         <li key={item} className="flex items-start gap-2.5">
                           <span className="mt-0.5 text-[#5BD67C]">&#10003;</span>
                           {item}
                         </li>
                       ))}
                     </ul>
+                    <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">After the free month</p>
+                      <div className="mt-2 flex items-baseline gap-1">
+                        <span className="font-heading text-3xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
+                        <span className="text-sm text-[rgba(240,244,255,0.42)]">{PRO_PLAN_PRICE.intervalLabel}</span>
+                      </div>
+                      <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.72)]">
+                        {PRICING_REASSURANCE.subscription.map((item) => (
+                          <li key={item} className="flex items-start gap-2.5">
+                            <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                     <Link
                       href={getSignupHref("landing_free_start")}
                       className="mt-6 block w-full rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] py-3 text-center text-sm font-semibold text-[#F0F4FF] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
                     >
-                      Start Free
-                    </Link>
-                  </div>
-
-                  <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(240,244,255,0.48)]">Upgrade later</p>
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
-                      <span className="text-sm text-[rgba(240,244,255,0.42)]">{PRO_PLAN_PRICE.intervalLabel}</span>
-                    </div>
-                    <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.72)]">
-                      {PRICING_REASSURANCE.pro.map((item) => (
-                        <li key={item} className="flex items-start gap-2.5">
-                          <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                    <Link
-                      href="/pricing"
-                      className="mt-6 block w-full rounded-full border border-[rgba(255,255,255,0.14)] py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.74)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                    >
-                      See full pricing
+                      Start Your Free Month
                     </Link>
                   </div>
                 </div>
@@ -237,7 +230,7 @@ export default async function LandingPage() {
                   href={getSignupHref("landing_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)] sm:px-8 sm:py-4"
                 >
-                  Start Free
+                  Start Your Free Month
                 </Link>
                 <Link
                   href="/examples"
@@ -253,7 +246,7 @@ export default async function LandingPage() {
         <SiteLegalFooter siteId={site.id} />
         <MobileStickyCta
           href={getSignupHref("landing_mobile_start")}
-          label="Start Free"
+          label="Start Your Free Month"
           targetId="hero-section"
           hideNearId="final-cta"
         />

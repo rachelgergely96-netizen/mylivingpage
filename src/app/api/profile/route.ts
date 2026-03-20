@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getAccountAccessState } from "@/lib/account-access";
+import { syncPageHostingState } from "@/lib/hosting-state";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 const routeTrustLevel = "authenticated_user";
@@ -12,7 +14,7 @@ export async function GET() {
   const supabase = createServiceRoleSupabaseClient();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, username, full_name, email, avatar_url, plan, created_at, signup_referrer")
+    .select("id, username, full_name, email, avatar_url, plan, billing_cohort, hosting_trial_started_at, created_at, signup_referrer")
     .eq("id", user.id)
     .single();
 
@@ -23,9 +25,29 @@ export async function GET() {
   // Include auth provider info so the UI knows whether to show password change
   const providers = user.app_metadata?.providers as string[] | undefined;
   const hasPassword = providers?.includes("email") ?? !!user.email;
+  const { data: latestPage } = await supabase
+    .from("pages")
+    .select("id, status, visibility, published_at, owner_id, user_id")
+    .eq("owner_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const syncedPage = latestPage
+    ? await syncPageHostingState(supabase, latestPage, {
+        plan: profile.plan,
+        billing_cohort: profile.billing_cohort,
+        hosting_trial_started_at: profile.hosting_trial_started_at,
+      })
+    : null;
 
   return NextResponse.json({
     ...profile,
+    accountAccess: getAccountAccessState({
+      plan: profile.plan,
+      billing_cohort: profile.billing_cohort,
+      hosting_trial_started_at: profile.hosting_trial_started_at,
+    }),
+    latestPage: syncedPage?.page ?? null,
     signup_referrer:
       profile.signup_referrer ?? ((user.user_metadata?.signup_referrer as string | undefined) ?? null),
     hasPassword,

@@ -49,14 +49,14 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
       path: "/",
       title: "MyLivingPage | Your info, one Living Page, one Resume PDF",
       description:
-        "Upload your info once, publish a Living Page, and download a clean Resume PDF from the same saved content.",
+        "Upload your info once, start with one month of free live hosting, then continue your Living Page for $9.99/month.",
       pathname: "/",
     },
     {
       path: "/pricing",
       title: "Pricing | MyLivingPage",
       description:
-        "Compare MyLivingPage pricing for the Living Page and Resume PDF you can create from one saved source.",
+        "One month of free MyLivingPage hosting, then $9.99/month to keep your page live.",
       pathname: "/pricing",
     },
     {

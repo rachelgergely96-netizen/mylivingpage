@@ -67,7 +67,7 @@ export default function ExamplesPage() {
                 href={getSignupHref("examples_nav_start")}
                 className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
               >
-                Start Free
+                Start Your Free Month
               </Link>
             </div>
           </nav>
@@ -87,7 +87,7 @@ export default function ExamplesPage() {
                 href={getSignupHref("examples_after_apply")}
                 className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
               >
-                Start Free
+                Start Your Free Month
               </Link>
               <Link
                 href="/pricing"
@@ -170,7 +170,7 @@ export default function ExamplesPage() {
                   href={getSignupHref("examples_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                 >
-                  Start Free
+                  Start Your Free Month
                 </Link>
                 <Link
                   href="/"

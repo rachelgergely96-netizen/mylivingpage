@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { syncPageHostingState } from "@/lib/hosting-state";
 import type { PageRecord } from "@/types/resume";
 
 export async function fetchPublicLivePage(
@@ -11,7 +12,7 @@ export async function fetchPublicLivePage(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, plan, billing_cohort, hosting_trial_started_at")
     .eq("username", username)
     .maybeSingle();
 
@@ -29,7 +30,19 @@ export async function fetchPublicLivePage(
     .maybeSingle();
 
   if (publicPage) {
-    return publicPage as PageRecord;
+    const synced = await syncPageHostingState(
+      supabase,
+      publicPage as PageRecord,
+      {
+        plan: profile.plan,
+        billing_cohort: profile.billing_cohort,
+        hosting_trial_started_at: profile.hosting_trial_started_at,
+      },
+    );
+
+    return synced.access.publicHostingAllowed
+      ? (synced.page as PageRecord)
+      : null;
   }
 
   const { data: legacyPage } = await supabase
@@ -41,5 +54,21 @@ export async function fetchPublicLivePage(
     .limit(1)
     .maybeSingle();
 
-  return (legacyPage as PageRecord | null) ?? null;
+  if (!legacyPage) {
+    return null;
+  }
+
+  const synced = await syncPageHostingState(
+    supabase,
+    legacyPage as PageRecord,
+    {
+      plan: profile.plan,
+      billing_cohort: profile.billing_cohort,
+      hosting_trial_started_at: profile.hosting_trial_started_at,
+    },
+  );
+
+  return synced.access.publicHostingAllowed
+    ? (synced.page as PageRecord)
+    : null;
 }

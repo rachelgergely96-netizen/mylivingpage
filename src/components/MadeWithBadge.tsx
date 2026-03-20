@@ -4,12 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-interface MadeWithBadgeProps {
-  pageUserId: string;
-  premium?: boolean;
-}
-
-export default function MadeWithBadge({ pageUserId, premium }: MadeWithBadgeProps) {
+export default function MadeWithBadge() {
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -19,30 +14,36 @@ export default function MadeWithBadge({ pageUserId, premium }: MadeWithBadgeProp
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (user?.id === pageUserId) return;
+
+      if (user?.id) {
+        return;
+      }
+
       setTimeout(() => setShow(true), 800);
     };
-    check();
-  }, [pageUserId]);
 
-  if (!show || dismissed || premium) return null;
+    void check();
+  }, []);
+
+  if (!show || dismissed) return null;
 
   return (
     <div
+      data-testid="public-page-signup-prompt"
       className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2"
       style={{ animation: "badgeFadeIn 0.4s ease-out forwards" }}
     >
       <style>{`@keyframes badgeFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       <div className="flex items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] pl-4 pr-1.5 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)]">
         <Link
-          href="/signup?utm_source=badge&utm_medium=livingpage"
+          href="/signup?ref=public_page_prompt&next=/create"
           className="flex items-center gap-2.5 py-2.5 pr-2 text-[13px] sm:text-sm"
         >
-          <span className="text-[#3B82F6]">✦</span>
+          <span className="text-[#3B82F6]">*</span>
           <span className="whitespace-nowrap text-[rgba(240,244,255,0.7)]">
-            Create your own{" "}
+            Make your own{" "}
             <span className="font-heading font-bold text-[#F0F4FF]">
-              my<span className="text-[#3B82F6]">living</span>page
+              Living Page
             </span>
           </span>
           <span className="text-[rgba(240,244,255,0.35)]">&rarr;</span>

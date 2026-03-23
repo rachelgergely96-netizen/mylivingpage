@@ -97,6 +97,12 @@ export default async function AnalyticsPage({
     analyticsLoadError = errorMessage(error);
   }
 
+  await trackEvent(user.id, "analytics.dashboard.viewed", {
+    page_id: pageId,
+    range_key: rangeKey,
+    availability: analytics.state.availability,
+  }).catch(() => undefined);
+
   if (analytics.state.availability !== "full") {
     const eventName =
       analytics.state.availability === "basic"

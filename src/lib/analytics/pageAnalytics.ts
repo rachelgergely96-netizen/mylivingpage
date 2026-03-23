@@ -558,7 +558,7 @@ function buildInsights({
 }) {
   if (!currentRows.length) {
     return [
-      "No traffic yet. Share your public URL in follow-up emails, LinkedIn posts, or your email signature to start collecting insights.",
+      "No proof yet. Share your page in follow-up emails, messages, or your email signature to start seeing who actually reviewed it.",
     ];
   }
 
@@ -567,22 +567,22 @@ function buildInsights({
 
   if (topReferrer && topReferrer.label !== "Direct" && topReferrer.count >= 2) {
     insights.push(
-      `Most visitors are coming from ${topReferrer.label} (${Math.round(topReferrer.sharePct)}% of tracked views).`,
+      `Most people are finding this page through ${topReferrer.label} (${Math.round(topReferrer.sharePct)}% of reviews).`,
     );
   } else if (directSharePct >= 50) {
     insights.push(
-      "Most of your traffic is direct right now, which usually means people are opening the link from messages, saved notes, or your email signature.",
+      "Most people are opening the page from direct shares right now, which usually means messages, saved notes, or your email signature are doing the work.",
     );
   }
 
   if (includeEngagementInsights) {
     if (topActions[0] && outboundCtr > 0) {
       insights.push(
-        `${Math.round(outboundCtr)}% of tracked visitors clicked a link, with ${topActions[0].label} getting the most action.`,
+        `${Math.round(outboundCtr)}% of people who reviewed the page clicked a next step, with ${topActions[0].label} getting the most action.`,
       );
     } else if (currentRows.length >= 3) {
       insights.push(
-        "Visitors are arriving, but no outbound clicks were recorded yet. Tightening the top of the page or highlighting one next step may help.",
+        "People are arriving, but no next-step clicks were recorded yet. Tightening the top of the page or highlighting one action may help.",
       );
     }
 
@@ -592,7 +592,7 @@ function buildInsights({
       );
     } else if (avgEngagedTime > 0) {
       insights.push(
-        `Visitors are spending about ${formatDuration(avgEngagedTime)} on the page on average.`,
+        `People are spending about ${formatDuration(avgEngagedTime)} actually reading the page on average.`,
       );
     }
   }

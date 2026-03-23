@@ -65,7 +65,8 @@ export interface ResolvedMarketingSample extends MarketingSample {
 
 export const CREDIBILITY_POINTS = [
   "Start with your current resume",
-  "One page link stays current",
+  "See what happens after the click",
+  "Privacy and deletion details published",
 ];
 
 export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
@@ -194,7 +195,7 @@ export const PROCESS_STEPS = [
   },
   {
     title: "Keep one link and export fresh assets",
-    body: "Keep using the same page link everywhere a person can click, then continue hosting it for $9.99/month after the first free month if you want it to stay live.",
+    body: "Keep using the same page link everywhere a person can click, then see who reviewed it after you share and continue hosting it for $9.99/month after the first free month if you want it to stay live.",
   },
 ];
 

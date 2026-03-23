@@ -272,15 +272,25 @@ function InsightsStrip({ insights }: { insights: string[] }) {
   }
 
   return (
-    <section className="grid gap-3 md:grid-cols-3">
+    <section className="glass-card rounded-3xl p-5 sm:p-6">
+      <div className="mb-4">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
+          Proof summary
+        </p>
+        <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">
+          What the click is telling you
+        </h2>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
       {insights.map((insight) => (
         <div key={insight} className="glass-card rounded-2xl p-4 sm:p-5">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-            What&apos;s happening
+            Signal
           </p>
           <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.72)]">{insight}</p>
         </div>
       ))}
+      </div>
     </section>
   );
 }
@@ -400,39 +410,39 @@ export default function PageAnalyticsDashboard({
         }`}
       >
         <StatCard
-          label="Views"
+          label="People Reviewed"
           value={analytics.overview.views.value}
           formatter={formatInteger}
           metric={analytics.overview.views}
-          helpText={`Views counted in the selected ${analytics.rangeLabel.toLowerCase()}.`}
-          secondary={`All-time views: ${analytics.allTimeViews.toLocaleString()}`}
+          helpText={`People who opened your page in the selected ${analytics.rangeLabel.toLowerCase()}.`}
+          secondary={`All-time reviewed: ${analytics.allTimeViews.toLocaleString()}`}
           testId="analytics-stat-views"
         />
         <StatCard
-          label="Unique Visitors"
+          label="Distinct People"
           value={analytics.overview.uniqueVisitors.value}
           formatter={formatInteger}
           metric={analytics.overview.uniqueVisitors}
-          helpText="Distinct hashed visitor records in the selected range."
+          helpText="Distinct outside visitors we could separate in this range."
           testId="analytics-stat-unique-visitors"
         />
         {!isBasic ? (
           <StatCard
-            label="Outbound CTR"
+            label="Clicked Through"
             value={analytics.overview.outboundCtr.value}
             formatter={formatPercent}
             metric={analytics.overview.outboundCtr}
-            helpText="The share of tracked views that clicked at least one contact or portfolio link."
+            helpText="The share of page reviews that turned into at least one next-step click."
             testId="analytics-stat-outbound-ctr"
           />
         ) : null}
         {!isBasic ? (
           <StatCard
-            label="Avg Engaged Time"
+            label="Average Reading Time"
             value={analytics.overview.avgEngagedTime.value}
             formatter={formatDuration}
             metric={analytics.overview.avgEngagedTime}
-            helpText="Average engaged time from views that scrolled or interacted enough to report engagement."
+            helpText="Average time people spent reading once they scrolled or interacted enough to measure."
             testId="analytics-stat-avg-engaged-time"
           />
         ) : null}
@@ -442,8 +452,8 @@ export default function PageAnalyticsDashboard({
         <TrendChart analytics={analytics} />
       ) : (
         <GuidanceCard
-          title="No traffic yet"
-          description="Share your public URL in follow-up emails, LinkedIn posts, or your email signature. Once people start visiting, this page will show where they come from and what they click next."
+          title="No proof yet"
+          description="Share your tracked page URL in follow-up emails, LinkedIn messages, or your email signature. Once people start visiting, this page will show who reviewed it, where they came from, and what they did next."
         />
       )}
 
@@ -457,7 +467,7 @@ export default function PageAnalyticsDashboard({
                     Acquisition
                   </p>
                   <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
-                    Where visitors come from
+                    How people found the page
                   </h2>
                 </div>
                 <div className="rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.48)]">
@@ -506,7 +516,7 @@ export default function PageAnalyticsDashboard({
                       Conversion
                     </p>
                     <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
-                      Clicks that lead somewhere
+                      What they did next
                     </h2>
                   </div>
                   <div className="rounded-full border border-[rgba(59,130,246,0.24)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">
@@ -563,7 +573,7 @@ export default function PageAnalyticsDashboard({
                   Content Performance
                 </p>
                 <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
-                  What people stay with
+                  What kept attention
                 </h2>
                 {analytics.state.hasEngagement ? (
                   <div className="mt-5 grid gap-5 md:grid-cols-2">

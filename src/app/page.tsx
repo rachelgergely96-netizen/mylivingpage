@@ -11,6 +11,7 @@ import {
   CREDIBILITY_POINTS,
   PRICING_REASSURANCE,
   PROCESS_STEPS,
+  TRUST_SIGNALS,
 } from "@/lib/marketing-samples";
 import { getAbsoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 
@@ -65,10 +66,10 @@ export default async function LandingPage() {
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  Upload your info once. Publish a page people can scan fast.
+                  The page you send when someone is deciding whether to move forward.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  Start with the information you already have, publish one Living Page, and keep the same link current anywhere a recruiter or hiring manager can click.
+                  Start with the information you already have, publish one Living Page, and keep the same link current anywhere a recruiter, hiring manager, referral, or client can click for faster context.
                 </p>
               </div>
 
@@ -105,7 +106,7 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Switch themes, preview the living page, and see how the share card and QR workflow look without leaving the homepage.
+                Switch themes, preview the living page, and see how the share card, tracked link, and QR workflow look without leaving the homepage.
               </p>
             </div>
           </section>
@@ -216,14 +217,45 @@ export default async function LandingPage() {
             </div>
           </section>
 
+          <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
+            <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10 sm:py-10">
+              <div className="max-w-3xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Why this exists</p>
+                <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
+                  Founder-built for the moment after discovery.
+                </h2>
+                <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
+                  MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants clean, credible context fast. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
+                </p>
+              </div>
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {TRUST_SIGNALS.map((signal) => (
+                  <article
+                    key={signal.title}
+                    className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5"
+                  >
+                    <p className="font-heading text-xl font-bold text-[#F0F4FF]">{signal.title}</p>
+                    <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">{signal.body}</p>
+                    <Link
+                      href={signal.href}
+                      className="mt-4 inline-flex text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                    >
+                      {signal.linkLabel}
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+
           <section id="final-cta" className="mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24 md:px-10">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 text-center sm:px-10 sm:py-12">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                Publish one calmer page for the click after the application.
+                Publish one calmer page for the moment someone is deciding.
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                Upload your info once, keep one page link current, and let the same saved content power your Living Page and Resume PDF.
+                Upload your info once, keep one page link current, and let the same saved content power your Living Page, Resume PDF, and the proof you get back after sharing it.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

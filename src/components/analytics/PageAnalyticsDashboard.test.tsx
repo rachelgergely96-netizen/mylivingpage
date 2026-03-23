@@ -75,9 +75,9 @@ describe("PageAnalyticsDashboard", () => {
     );
 
     expect(markup).toContain("Detailed engagement analytics are temporarily unavailable");
-    expect(markup).toContain("Views");
-    expect(markup).toContain("Unique Visitors");
-    expect(markup).not.toContain("Outbound CTR");
+    expect(markup).toContain("People Reviewed");
+    expect(markup).toContain("Distinct People");
+    expect(markup).not.toContain("Clicked Through");
     expect(markup).not.toContain("Content Performance");
     expect(markup).toContain("Detailed engagement analytics will return automatically");
   });
@@ -101,7 +101,7 @@ describe("PageAnalyticsDashboard", () => {
 
     expect(markup).toContain("Analytics are temporarily unavailable");
     expect(markup).toContain("Traffic data could not be loaded right now. Please try again soon.");
-    expect(markup).not.toContain("Unique Visitors");
+    expect(markup).not.toContain("Distinct People");
     expect(markup).not.toContain("Traffic over");
   });
 });

@@ -74,6 +74,7 @@ export default function PublicPageActionDock({
         />
 
         <ShareCardDownload
+          pageId={pageId}
           pageUserId={pageUserId}
           slug={slug}
           themeId={themeId}

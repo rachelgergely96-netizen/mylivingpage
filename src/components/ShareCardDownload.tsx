@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import type { ShareIntentEventName } from "@/lib/analytics/proofSummary";
 import {
   buildQrDataUrl,
   getFirstName,
@@ -16,6 +17,7 @@ import {
 import type { ResumeData } from "@/types/resume";
 
 interface ShareCardDownloadProps {
+  pageId: string;
   pageUserId: string;
   slug: string;
   themeId: string;
@@ -25,6 +27,7 @@ interface ShareCardDownloadProps {
 }
 
 export default function ShareCardDownload({
+  pageId,
   pageUserId,
   slug,
   themeId,
@@ -38,6 +41,10 @@ export default function ShareCardDownload({
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
   const [appUrl, setAppUrl] = useState(() => normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL));
+  const [shareFeedback, setShareFeedback] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
 
   useEffect(() => {
     const check = async () => {
@@ -78,6 +85,35 @@ export default function ShareCardDownload({
   const qrDataUrl = buildQrDataUrl(livePageUrl);
   const initial = safeName.slice(0, 1).toUpperCase() || "?";
 
+  const trackShareIntent = async (eventName: ShareIntentEventName) => {
+    try {
+      await fetch("/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventName,
+          metadata: {
+            page_id: pageId,
+            slug,
+          },
+        }),
+        keepalive: true,
+      });
+    } catch {
+      // Share tracking should never interrupt the share action.
+    }
+  };
+
+  const showProofFeedback = (title: string) => {
+    setShareFeedback({
+      title,
+      body:
+        "Once someone opens your page, Analytics will show how many people reviewed it, whether they viewed on mobile, and how long they stayed reading.",
+    });
+  };
+
   const handleDownload = async () => {
     if (!cardRef.current) {
       return;
@@ -85,6 +121,7 @@ export default function ShareCardDownload({
 
     setDownloading(true);
     try {
+      void trackShareIntent("page.share.download_card");
       const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
@@ -96,6 +133,7 @@ export default function ShareCardDownload({
       a.href = dataUrl;
       a.download = `${slug}-share-card.png`;
       a.click();
+      showProofFeedback("Tracked share card downloaded");
     } catch {
       // Silently fail
     } finally {
@@ -106,11 +144,18 @@ export default function ShareCardDownload({
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(livePageUrl);
+      void trackShareIntent("page.share.copy_link");
       setCopied(true);
+      showProofFeedback("Tracked page link copied");
       window.setTimeout(() => setCopied(false), 2400);
     } catch {
       setCopied(false);
     }
+  };
+
+  const handleOpenLivePage = () => {
+    void trackShareIntent("page.share.open_live_page");
+    showProofFeedback("Tracked live page opened");
   };
 
   return (
@@ -234,14 +279,30 @@ export default function ShareCardDownload({
                     Send people straight to {firstName}
                   </h4>
                   <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-                    Download the branded PNG, copy the direct page URL, or let someone scan the QR code on this card.
+                    Download the branded PNG, copy the tracked page URL, or let someone scan the QR code on this card.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Direct URL</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Tracked URL</p>
                   <p className="mt-2 break-all text-sm text-[#F0F4FF]">{livePageUrl}</p>
                 </div>
+
+                {shareFeedback ? (
+                  <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.1)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#93C5FD]">Proof ready</p>
+                    <p className="mt-2 font-semibold text-[#F0F4FF]">{shareFeedback.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+                      {shareFeedback.body}
+                    </p>
+                    <a
+                      href={`/dashboard/analytics/${pageId}`}
+                      className="mt-4 inline-flex rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
+                    >
+                      Open Analytics
+                    </a>
+                  </div>
+                ) : null}
 
                 <div className="flex flex-col gap-2.5">
                   <button
@@ -249,7 +310,7 @@ export default function ShareCardDownload({
                     onClick={handleCopyLink}
                     className="rounded-xl border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-4 py-3 text-sm font-medium text-[#93C5FD] transition-colors hover:bg-[rgba(59,130,246,0.18)]"
                   >
-                    {copied ? "Link copied" : "Copy Page Link"}
+                    {copied ? "Link copied" : "Copy Tracked Page Link"}
                   </button>
                   <button
                     type="button"
@@ -263,9 +324,10 @@ export default function ShareCardDownload({
                     href={livePageUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={handleOpenLivePage}
                     className="rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 text-center text-sm font-medium text-[rgba(240,244,255,0.7)] transition-colors hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
                   >
-                    Open Live Page
+                    Open Tracked Live Page
                   </a>
                 </div>
               </div>

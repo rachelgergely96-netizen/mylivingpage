@@ -63,6 +63,7 @@ describe("GET /callback", () => {
     );
 
     expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");
+    expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
   it("tracks callback failures with both request host and canonical auth origin", async () => {
@@ -81,6 +82,7 @@ describe("GET /callback", () => {
     expect(response.headers.get("location")).toBe(
       "https://www.mylivingpage.com/login?error=google_signin_expired&next=%2Fdashboard",
     );
+    expect(response.headers.get("cache-control")).toContain("no-store");
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       null,
       "auth.callback.failed",
@@ -89,6 +91,44 @@ describe("GET /callback", () => {
         request_host: "mylivingpage.com",
         auth_origin: "https://www.mylivingpage.com",
         redirect_to: "https://www.mylivingpage.com/dashboard",
+      }),
+    );
+  });
+
+  it("tracks successful callbacks with provider and redirect metadata", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-123",
+          app_metadata: {
+            provider: "google",
+          },
+          user_metadata: {},
+        },
+      },
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fcreate&legal_accept=1&legal_source=signup",
+        {
+          headers: {
+            host: "www.mylivingpage.com",
+          },
+        },
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/create");
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-123",
+      "auth.callback.succeeded",
+      expect.objectContaining({
+        auth_provider: "google",
+        next: "/create",
+        request_host: "www.mylivingpage.com",
+        legal_accept_requested: true,
+        legal_source: "signup",
       }),
     );
   });

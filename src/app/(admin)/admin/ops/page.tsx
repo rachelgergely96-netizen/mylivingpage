@@ -32,6 +32,14 @@ interface StripePriceStatus {
   errorMessage: string | null;
 }
 
+function formatPercent(value: number | null) {
+  if (value === null) {
+    return "n/a";
+  }
+
+  return `${value}%`;
+}
+
 function StatCard({
   label,
   value,
@@ -175,11 +183,16 @@ export default async function AdminOpsPage() {
     { count: webhookFailureCount },
     { count: publishFailureCount },
     { count: publishFallbackCount },
+    { count: authGoogleStartSuccessCount },
+    { count: authGoogleStartFailureCount },
+    { count: authCallbackSuccessCount },
     { count: authCallbackFailureCount },
     { count: parseFailureCount },
     { count: parseRateLimitCount },
     { count: rateLimitBlockedCount },
     { data: processedWebhookRows },
+    { data: authCallbackFailureRows },
+    { data: recentAuthRows },
     { data: recentBillingRows },
     { data: recentFailureRows },
     { data: recentRateLimitRows },
@@ -202,6 +215,21 @@ export default async function AdminOpsPage() {
       .select("*", { count: "exact", head: true })
       .eq("event_name", "page.publish.db_fallback_used")
       .gte("created_at", thirtyDayCutoff),
+    supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("event_name", "auth.google.start.succeeded")
+      .gte("created_at", sevenDayCutoff),
+    supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("event_name", "auth.google.start.failed")
+      .gte("created_at", sevenDayCutoff),
+    supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("event_name", "auth.callback.succeeded")
+      .gte("created_at", sevenDayCutoff),
     supabase
       .from("events")
       .select("*", { count: "exact", head: true })
@@ -232,6 +260,24 @@ export default async function AdminOpsPage() {
     supabase
       .from("events")
       .select("event_name, metadata, created_at, user_id")
+      .eq("event_name", "auth.callback.failed")
+      .gte("created_at", sevenDayCutoff)
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("events")
+      .select("event_name, metadata, created_at, user_id")
+      .in("event_name", [
+        "auth.google.start.succeeded",
+        "auth.google.start.failed",
+        "auth.callback.succeeded",
+        "auth.callback.failed",
+      ])
+      .order("created_at", { ascending: false })
+      .limit(16),
+    supabase
+      .from("events")
+      .select("event_name, metadata, created_at, user_id")
       .in("event_name", [
         "billing.checkout.session_created",
         "billing.portal.session_created",
@@ -250,6 +296,7 @@ export default async function AdminOpsPage() {
         "billing.portal.session_failed",
         "billing.webhook.failed",
         "page.publish.failed",
+        "auth.google.start.failed",
         "auth.callback.failed",
         "resume.parse.failed",
       ])
@@ -269,6 +316,8 @@ export default async function AdminOpsPage() {
   ]);
 
   const processedWebhooks = (processedWebhookRows ?? []) as EventRow[];
+  const authCallbackFailures = (authCallbackFailureRows ?? []) as EventRow[];
+  const recentAuthEvents = (recentAuthRows ?? []) as EventRow[];
   const recentBillingEvents = (recentBillingRows ?? []) as EventRow[];
   const recentFailureEvents = (recentFailureRows ?? []) as EventRow[];
   const recentRateLimitEvents = (recentRateLimitRows ?? []) as EventRow[];
@@ -294,6 +343,32 @@ export default async function AdminOpsPage() {
   const topBlockedPolicyLabel = topBlockedPolicy
     ? `${RATE_LIMIT_POLICIES[topBlockedPolicy[0] as RateLimitPolicyName]?.label ?? topBlockedPolicy[0]} x${topBlockedPolicy[1]}`
     : "Clear";
+  const authFailureCodes = authCallbackFailures.reduce<Record<string, number>>((acc, event) => {
+    const errorCode = typeof event.metadata?.error_code === "string" ? event.metadata.error_code : "unknown";
+    acc[errorCode] = (acc[errorCode] ?? 0) + 1;
+    return acc;
+  }, {});
+  const topAuthFailure = Object.entries(authFailureCodes)
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0] ?? null;
+  const authCallbackCompletionCount =
+    (authCallbackSuccessCount ?? 0) + (authCallbackFailureCount ?? 0);
+  const authCallbackFailureRate =
+    authCallbackCompletionCount > 0
+      ? Math.round(((authCallbackFailureCount ?? 0) / authCallbackCompletionCount) * 100)
+      : null;
+  const authCallbackSuccessRate =
+    authCallbackCompletionCount > 0
+      ? Math.round(((authCallbackSuccessCount ?? 0) / authCallbackCompletionCount) * 100)
+      : null;
+  const authStartCompletionRate =
+    (authGoogleStartSuccessCount ?? 0) > 0
+      ? Math.min(
+          100,
+          Math.round(
+            ((authCallbackCompletionCount ?? 0) / (authGoogleStartSuccessCount ?? 0)) * 100,
+          ),
+        )
+      : null;
 
   const latencyValues = processedWebhooks.flatMap((event) =>
     typeof event.metadata?.latency_ms === "number" ? [event.metadata.latency_ms] : [],
@@ -454,74 +529,170 @@ export default async function AdminOpsPage() {
           )}
         </section>
 
-        <section className="glass-card rounded-2xl p-5 sm:p-6">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
-            Legal Configuration
-          </p>
-          <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
-            Public policy values
-          </h2>
-          <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
-            These env-backed values are rendered on the public legal pages and should be finalized before broader launch.
-          </p>
-
-          {legalIssues.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
-              Legal contact fields are fully configured.
-            </p>
-          ) : (
-            <div className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3">
-              <p className="text-sm font-medium text-[#fbbf24]">
-                {legalIssues.length} legal env values still need real production data.
-              </p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[rgba(255,248,220,0.82)]">
-                {legalIssues.map((issue) => (
-                  <li key={issue.envKey}>{issue.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
-                Signup CAPTCHA
-              </p>
+        <div className="grid gap-4">
+          <section className="glass-card rounded-2xl p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+                  Google Auth Health
+                </p>
+                <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+                  OAuth callback completion
+                </h2>
+                <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+                  Tracks Google OAuth starts and callback outcomes so we can distinguish real auth regressions from abandoned sign-in attempts.
+                </p>
+              </div>
               <span
                 className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
-                  turnstileConfigured
-                    ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
-                    : "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
+                  (authCallbackFailureCount ?? 0) > 0
+                    ? "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
+                    : "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
                 }`}
               >
-                {turnstileConfigured ? "Configured" : "Missing"}
+                {(authCallbackFailureCount ?? 0) > 0 ? "Needs Attention" : "Healthy"}
               </span>
             </div>
-            <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
-              Email signup uses Cloudflare Turnstile only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is present.
-            </p>
-            {!turnstileConfigured ? (
-              <p className="mt-2 text-sm text-[#fbbf24]">
-                Add the site key to the app env and enable Cloudflare Turnstile in Supabase Auth CAPTCHA settings.
-              </p>
-            ) : null}
-          </div>
 
-          <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
-              Production Auth Checklist
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                  OAuth Starts (7d)
+                </p>
+                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                  {authGoogleStartSuccessCount ?? 0}
+                </p>
+                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                  Start failures: {authGoogleStartFailureCount ?? 0}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                  Callback Success Rate (7d)
+                </p>
+                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                  {formatPercent(authCallbackSuccessRate)}
+                </p>
+                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                  Callback fail rate: {formatPercent(authCallbackFailureRate)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                  Callback Outcomes (7d)
+                </p>
+                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                  {authCallbackSuccessCount ?? 0}/{authCallbackCompletionCount}
+                </p>
+                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                  Successful callbacks / completed callbacks
+                </p>
+              </div>
+              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                  Start Completion Rate
+                </p>
+                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                  {formatPercent(authStartCompletionRate)}
+                </p>
+                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                  Completed callbacks / Google OAuth starts
+                </p>
+              </div>
+            </div>
+
+            {topAuthFailure ? (
+              <div className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[rgba(255,248,220,0.82)]">
+                <p className="font-medium text-[#fbbf24]">
+                  Most common callback failure: {topAuthFailure[0]} x{topAuthFailure[1]}
+                </p>
+                <p className="mt-2 text-[rgba(255,248,220,0.82)]">
+                  {topAuthFailure[0] === "google_signin_expired"
+                    ? "Recent PKCE-style callback failures usually mean the browser returned without the verifier cookie state that started the OAuth flow."
+                    : "Review the recent auth event feed for the specific callback error metadata and verify the same-browser OAuth return path."}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
+                Google OAuth callbacks have completed without tracked failures in the sampled window.
+              </p>
+            )}
+          </section>
+
+          <section className="glass-card rounded-2xl p-5 sm:p-6">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+              Legal Configuration
             </p>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[rgba(240,244,255,0.56)]">
-              <li>Email confirmation remains enabled in Supabase Auth.</li>
-              <li>Turnstile is configured in app env and Supabase Auth CAPTCHA settings.</li>
-              <li>Supabase Auth provider rate limits stay at default or stricter values.</li>
-              <li>Playwright and integration secrets remain staging-only.</li>
-            </ul>
-          </div>
-        </section>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+              Public policy values
+            </h2>
+            <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+              These env-backed values are rendered on the public legal pages and should be finalized before broader launch.
+            </p>
+
+            {legalIssues.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
+                Legal contact fields are fully configured.
+              </p>
+            ) : (
+              <div className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3">
+                <p className="text-sm font-medium text-[#fbbf24]">
+                  {legalIssues.length} legal env values are missing and public legal pages are still using placeholder fallback copy.
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[rgba(255,248,220,0.82)]">
+                  {legalIssues.map((issue) => (
+                    <li key={issue.envKey}>{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                  Signup CAPTCHA
+                </p>
+                <span
+                  className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
+                    turnstileConfigured
+                      ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
+                      : "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
+                  }`}
+                >
+                  {turnstileConfigured ? "Configured" : "Missing"}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+                Email signup uses Cloudflare Turnstile only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is present.
+              </p>
+              {!turnstileConfigured ? (
+                <p className="mt-2 text-sm text-[#fbbf24]">
+                  Add the site key to the app env and enable Cloudflare Turnstile in Supabase Auth CAPTCHA settings.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                Production Auth Checklist
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[rgba(240,244,255,0.56)]">
+                <li>Email confirmation remains enabled in Supabase Auth.</li>
+                <li>Turnstile is configured in app env and Supabase Auth CAPTCHA settings.</li>
+                <li>Supabase Auth provider rate limits stay at default or stricter values.</li>
+                <li>Playwright and integration secrets remain staging-only.</li>
+              </ul>
+            </div>
+          </section>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
+        <EventFeed
+          title="Recent Auth Events"
+          emptyLabel="No recent Google auth events recorded."
+          events={recentAuthEvents}
+        />
         <EventFeed
           title="Recent Billing Events"
           emptyLabel="No billing events recorded yet."

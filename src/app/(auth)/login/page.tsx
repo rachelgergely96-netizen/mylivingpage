@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 import { getAuthErrorMessage, getPasswordAuthErrorMessage } from "@/lib/auth/auth-error";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -99,11 +100,11 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("");
     try {
-      const params = new URLSearchParams({
+      const googleAuthUrl = buildGoogleAuthStartUrl({
         next: nextPath,
         screen: "login",
       });
-      window.location.assign(`/api/auth/google?${params.toString()}`);
+      window.location.assign(googleAuthUrl);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? getAuthErrorMessage(error.message) : "Google login failed.");

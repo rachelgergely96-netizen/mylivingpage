@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
-import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
+import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -121,16 +121,14 @@ export default function SignupPage() {
     setStatus("loading");
     setMessage("");
     try {
-      const callbackParams = new URLSearchParams({
+      const googleAuthUrl = buildGoogleAuthStartUrl({
         next: nextPath,
         screen: "signup",
-        legal_accept: "1",
-        legal_source: "signup",
+        legalAcceptRequested: true,
+        legalSource: "signup",
+        ref: signupReferrer,
       });
-      if (signupReferrer) {
-        callbackParams.set("ref", signupReferrer);
-      }
-      window.location.assign(`/api/auth/google?${callbackParams.toString()}`);
+      window.location.assign(googleAuthUrl);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Google signup failed.");

@@ -6,6 +6,7 @@ import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { trackEvent } from "@/lib/track-event";
 
 const routeTrustLevel = "public_read";
+export const dynamic = "force-dynamic";
 
 function safeRedirectPath(value: string | null) {
   if (!value || !value.startsWith("/")) {
@@ -19,10 +20,9 @@ function safeAuthScreen(value: string | null) {
   return value === "signup" ? "signup" : "login";
 }
 
-function copyCookies(source: NextResponse, target: NextResponse) {
-  source.cookies.getAll().forEach((cookie) => {
-    target.cookies.set(cookie);
-  });
+function applyNoStoreHeaders(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
 }
 
 export async function GET(request: NextRequest) {
@@ -46,8 +46,10 @@ export async function GET(request: NextRequest) {
     fallbackRedirect.searchParams.set("ref", ref);
   }
 
-  const cookieResponse = NextResponse.next();
-  const supabase = createRouteHandlerSupabaseClient(request, cookieResponse);
+  const response = NextResponse.redirect(fallbackRedirect);
+  applyNoStoreHeaders(response);
+
+  const supabase = createRouteHandlerSupabaseClient(request, response);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -66,10 +68,20 @@ export async function GET(request: NextRequest) {
     });
 
     fallbackRedirect.searchParams.set("error", "google_signin_failed");
-    return NextResponse.redirect(fallbackRedirect);
+    response.headers.set("location", fallbackRedirect.toString());
+    return response;
   }
 
-  const oauthRedirect = NextResponse.redirect(data.url);
-  copyCookies(cookieResponse, oauthRedirect);
-  return oauthRedirect;
+  await trackEvent(null, "auth.google.start.succeeded", {
+    next,
+    screen,
+    request_host: getRequestHostname(request.headers),
+    auth_origin: appOrigin.origin,
+    redirect_to: callbackUrl.toString(),
+    legal_accept_requested: legalAcceptRequested,
+    ref,
+  });
+
+  response.headers.set("location", data.url);
+  return response;
 }

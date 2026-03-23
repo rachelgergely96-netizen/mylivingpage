@@ -21,6 +21,13 @@ function safeRedirectPath(value: string | null): string {
   return value;
 }
 
+function applyNoStoreHeaders(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+}
+
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const appOrigin = getAppOrigin();
@@ -33,10 +40,13 @@ export async function GET(request: NextRequest) {
   const redirectUrl = new URL(next, appOrigin);
 
   if (!code) {
-    return NextResponse.redirect(redirectUrl);
+    const missingCodeResponse = NextResponse.redirect(redirectUrl);
+    applyNoStoreHeaders(missingCodeResponse);
+    return missingCodeResponse;
   }
 
   const response = NextResponse.redirect(redirectUrl);
+  applyNoStoreHeaders(response);
   const supabase = createRouteHandlerSupabaseClient(request, response);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
@@ -52,7 +62,9 @@ export async function GET(request: NextRequest) {
     const errorRedirect = new URL("/login", appOrigin);
     errorRedirect.searchParams.set("error", errorCode);
     errorRedirect.searchParams.set("next", next);
-    return NextResponse.redirect(errorRedirect);
+    const errorResponse = NextResponse.redirect(errorRedirect);
+    applyNoStoreHeaders(errorResponse);
+    return errorResponse;
   }
 
   const {
@@ -60,6 +72,19 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    await trackEvent(user.id, "auth.callback.succeeded", {
+      auth_provider:
+        typeof user.app_metadata?.provider === "string"
+          ? user.app_metadata.provider
+          : null,
+      next,
+      request_host: getRequestHostname(request.headers),
+      auth_origin: appOrigin.origin,
+      redirect_to: redirectUrl.toString(),
+      legal_accept_requested: legalAcceptRequested,
+      legal_source: legalSource,
+    });
+
     const admin = createServiceRoleSupabaseClient();
     await ensureUserProfile(admin, user);
 

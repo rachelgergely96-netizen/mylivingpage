@@ -55,7 +55,16 @@ describe("GET /api/auth/google", () => {
     expect(response.headers.get("location")).toBe(
       "https://accounts.google.com/o/oauth2/v2/auth?client_id=test",
     );
+    expect(response.headers.get("cache-control")).toContain("no-store");
     expect(response.headers.get("set-cookie")).toContain("sb-pkce-code-verifier=test-verifier");
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "auth.google.start.succeeded",
+      expect.objectContaining({
+        next: "/dashboard",
+        screen: "login",
+      }),
+    );
   });
 
   it("canonicalizes apex-host OAuth starts onto the www callback origin", async () => {
@@ -107,6 +116,7 @@ describe("GET /api/auth/google", () => {
     expect(response.headers.get("location")).toBe(
       "https://www.mylivingpage.com/login?next=%2Fdashboard&error=google_signin_failed",
     );
+    expect(response.headers.get("cache-control")).toContain("no-store");
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       null,
       "auth.google.start.failed",

@@ -51,7 +51,7 @@ export function getLegalConfigIssues(
       {
         envKey,
         label,
-        message: `${label} is still using a fallback value. Set ${envKey} before broader launch.`,
+        message: `${label} is missing. Set ${envKey} so the public legal pages stop falling back to placeholder text before broader launch.`,
       },
     ];
   });

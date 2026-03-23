@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
+import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 
 describe("buildAuthCallbackUrl", () => {
   const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -33,6 +33,33 @@ describe("buildAuthCallbackUrl", () => {
       }),
     ).toBe(
       "https://www.mylivingpage.com/callback?next=%2Fcreate&legal_accept=1&legal_source=signup",
+    );
+  });
+
+  it("builds Google auth starts on the canonical app origin", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
+
+    expect(
+      buildGoogleAuthStartUrl({
+        next: "/dashboard",
+        screen: "login",
+      }),
+    ).toBe("https://www.mylivingpage.com/api/auth/google?next=%2Fdashboard&screen=login");
+  });
+
+  it("preserves signup metadata and referrers in Google auth starts", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
+
+    expect(
+      buildGoogleAuthStartUrl({
+        next: "/create",
+        screen: "signup",
+        legalAcceptRequested: true,
+        legalSource: "signup",
+        ref: "landing_apply_nav",
+      }),
+    ).toBe(
+      "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup&legal_accept=1&legal_source=signup&ref=landing_apply_nav",
     );
   });
 });

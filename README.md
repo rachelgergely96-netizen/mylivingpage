@@ -43,6 +43,21 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
   - `https://mylivingpage.com/callback` (temporary defense-in-depth while canonical auth stays on `www`)
   - `http://localhost:3000/callback`
 - Treat `https://www.mylivingpage.com` as the canonical production auth origin. OAuth starts from apex should still complete, but the callback should resolve on `www`.
+- Enable Cloudflare Turnstile in Supabase Auth CAPTCHA settings when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set in the app env.
+
+## Launch Configuration
+
+- Set all required public legal env vars before launch:
+  - `NEXT_PUBLIC_LEGAL_COMPANY_NAME`
+  - `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL`
+  - `NEXT_PUBLIC_LEGAL_MAILING_ADDRESS`
+  - `NEXT_PUBLIC_DMCA_AGENT_NAME`
+  - `NEXT_PUBLIC_DMCA_AGENT_EMAIL`
+  - `NEXT_PUBLIC_DMCA_AGENT_ADDRESS`
+  - `NEXT_PUBLIC_SECURITY_EMAIL`
+- Mirror those values into any CI or staging secrets that render legal pages or run release-readiness checks.
+- Keep `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and the matching Supabase CAPTCHA configuration aligned so email signup hardening is active in production.
+- The admin operations page now tracks Google OAuth start success, callback success, callback failures, and failure-rate context for PKCE troubleshooting.
 
 ## Stripe Setup
 

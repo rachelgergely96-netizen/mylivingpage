@@ -200,11 +200,11 @@ function getContentBounds(doc: PdfDocumentInstance) {
   };
 }
 
-function useRegularFont(doc: PdfDocumentInstance) {
+function applyRegularFont(doc: PdfDocumentInstance) {
   return doc.font(FONT_REGULAR);
 }
 
-function useBoldFont(doc: PdfDocumentInstance) {
+function applyBoldFont(doc: PdfDocumentInstance) {
   return doc.font(FONT_BOLD);
 }
 
@@ -220,7 +220,7 @@ function getTextHeight(
     fontSize?: number;
   } = {},
 ) {
-  (bold ? useBoldFont : useRegularFont)(doc).fontSize(fontSize);
+  (bold ? applyBoldFont : applyRegularFont)(doc).fontSize(fontSize);
   return doc.heightOfString(text, options);
 }
 
@@ -399,7 +399,7 @@ function renderSectionTitle(doc: PdfDocumentInstance, title: string) {
   const { left, width } = getContentBounds(doc);
   ensureSpace(doc, estimateSectionTitleHeight(doc, title));
   doc.moveDown(0.45);
-  useBoldFont(doc).fontSize(SECTION_TITLE_FONT_SIZE).fillColor("#111827").text(title.toUpperCase(), left, doc.y, {
+  applyBoldFont(doc).fontSize(SECTION_TITLE_FONT_SIZE).fillColor("#111827").text(title.toUpperCase(), left, doc.y, {
     width,
     characterSpacing: 0.8,
   });
@@ -426,7 +426,7 @@ function renderEntryDateLine(
   const startY = doc.y;
   const contentWidth = Math.max(170, width - ENTRY_DATE_WIDTH - ENTRY_COLUMN_GAP);
 
-  useBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(title, startX, startY, {
+  applyBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(title, startX, startY, {
     width: contentWidth,
     lineGap: 0.2,
   });
@@ -436,12 +436,12 @@ function renderEntryDateLine(
     lineGap: 0.2,
   });
 
-  useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(subtitle, startX, startY + titleHeight + 1.5, {
+  applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(subtitle, startX, startY + titleHeight + 1.5, {
     width: contentWidth,
     lineGap: 0.2,
   });
 
-  useRegularFont(doc).fontSize(DATE_FONT_SIZE).fillColor("#6B7280").text(dates, startX + contentWidth + ENTRY_COLUMN_GAP, startY, {
+  applyRegularFont(doc).fontSize(DATE_FONT_SIZE).fillColor("#6B7280").text(dates, startX + contentWidth + ENTRY_COLUMN_GAP, startY, {
     width: ENTRY_DATE_WIDTH,
     align: "right",
   });
@@ -492,14 +492,14 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
   const { left, width } = getContentBounds(doc);
   const contactLines = buildContactLines(data);
 
-  useBoldFont(doc).fontSize(NAME_FONT_SIZE).fillColor("#111827").text(data.name, left, doc.y, {
+  applyBoldFont(doc).fontSize(NAME_FONT_SIZE).fillColor("#111827").text(data.name, left, doc.y, {
     width,
     lineGap: 0.2,
   });
 
   if (data.headline) {
     doc.moveDown(0.08);
-    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#374151").text(data.headline, left, doc.y, {
+    applyRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#374151").text(data.headline, left, doc.y, {
       width,
       lineGap: 0.2,
     });
@@ -507,14 +507,14 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
 
   if (data.location) {
     doc.moveDown(0.05);
-    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#6B7280").text(data.location, left, doc.y, {
+    applyRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#6B7280").text(data.location, left, doc.y, {
       width,
     });
   }
 
   contactLines.forEach((line, index) => {
     doc.moveDown(index === 0 ? 0.14 : 0.06);
-    useRegularFont(doc).fontSize(10).fillColor("#374151").text(line, left, doc.y, {
+    applyRegularFont(doc).fontSize(10).fillColor("#374151").text(line, left, doc.y, {
       width,
       lineGap: 0.1,
     });
@@ -523,7 +523,7 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
   if (data.summary) {
     ensureSpace(doc, estimateSectionTitleHeight(doc, "Summary") + estimateParagraphHeight(doc, data.summary));
     renderSectionTitle(doc, "Summary");
-    useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(data.summary, left, doc.y, {
+    applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(data.summary, left, doc.y, {
       width,
       lineGap: BODY_LINE_GAP,
       align: "justify",
@@ -546,7 +546,7 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
       );
 
       entry.highlights.forEach((highlight) => {
-        useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(`- ${highlight}`, left, doc.y, {
+        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(`- ${highlight}`, left, doc.y, {
           width,
           lineGap: 0.25,
           indent: 8,
@@ -565,7 +565,7 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
     renderSectionTitle(doc, "Skills");
     data.skills.forEach((group) => {
       ensureSpace(doc, estimateSkillsGroupHeight(doc, group));
-      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
+      applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
         `${group.category}: ${group.items.join(", ")}`,
         left,
         doc.y,
@@ -600,16 +600,16 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
     renderSectionTitle(doc, "Projects");
     data.projects.forEach((project) => {
       ensureSpace(doc, estimateProjectHeight(doc, project));
-      useBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(project.name, left, doc.y, {
+      applyBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(project.name, left, doc.y, {
         width,
       });
-      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.description, left, doc.y, {
+      applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.description, left, doc.y, {
         width,
         lineGap: BODY_LINE_GAP,
         align: "justify",
       });
       if (project.tech.length) {
-        useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
+        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
           width,
           lineGap: BODY_LINE_GAP,
           align: "justify",
@@ -628,10 +628,10 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
     renderSectionTitle(doc, "Certifications");
     data.certifications.forEach((certification) => {
       ensureSpace(doc, estimateCertificationHeight(doc, certification));
-      useBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(certification.name, left, doc.y, {
+      applyBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(certification.name, left, doc.y, {
         width,
       });
-      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
+      applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
         [certification.issuer, certification.date].filter(Boolean).join(" | "),
         left,
         doc.y,
@@ -654,13 +654,13 @@ async function renderFallbackPdfDocument(data: ResumeData) {
   const contactLines = buildContactLines(data);
   const sections = buildFallbackSectionLines(data);
 
-  useBoldFont(doc).fontSize(NAME_FONT_SIZE).fillColor("#111827").text(data.name || "Resume", left, doc.y, {
+  applyBoldFont(doc).fontSize(NAME_FONT_SIZE).fillColor("#111827").text(data.name || "Resume", left, doc.y, {
     width,
   });
 
   if (data.headline) {
     doc.moveDown(0.08);
-    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#4B5563").text(data.headline, left, doc.y, {
+    applyRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#4B5563").text(data.headline, left, doc.y, {
       width,
       lineGap: 0.2,
     });
@@ -668,14 +668,14 @@ async function renderFallbackPdfDocument(data: ResumeData) {
 
   if (data.location) {
     doc.moveDown(0.05);
-    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#4B5563").text(data.location, left, doc.y, {
+    applyRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#4B5563").text(data.location, left, doc.y, {
       width,
     });
   }
 
   contactLines.forEach((line, index) => {
     doc.moveDown(index === 0 ? 0.12 : 0.05);
-    useRegularFont(doc).fontSize(10).fillColor("#4B5563").text(line, left, doc.y, {
+    applyRegularFont(doc).fontSize(10).fillColor("#4B5563").text(line, left, doc.y, {
       width,
       lineGap: 0.1,
     });
@@ -688,14 +688,14 @@ async function renderFallbackPdfDocument(data: ResumeData) {
         (section.lines[0] ? estimateParagraphHeight(doc, section.lines[0]) : 0),
     );
     doc.moveDown(0.4);
-    useBoldFont(doc).fontSize(SECTION_TITLE_FONT_SIZE).fillColor("#111827").text(section.title.toUpperCase(), left, doc.y, {
+    applyBoldFont(doc).fontSize(SECTION_TITLE_FONT_SIZE).fillColor("#111827").text(section.title.toUpperCase(), left, doc.y, {
       width,
       characterSpacing: 0.7,
     });
 
     section.lines.forEach((line) => {
       ensureSpace(doc, estimateParagraphHeight(doc, line));
-      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#1F2937").text(line, left, doc.y, {
+      applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#1F2937").text(line, left, doc.y, {
         width,
         lineGap: BODY_LINE_GAP,
         align: "justify",

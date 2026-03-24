@@ -26,7 +26,7 @@ export default function FreeProDemo() {
         <p className="mb-3 text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Live Demo</p>
         <h2 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl md:text-5xl">
           Free <span className="font-light italic text-[rgba(240,244,255,0.55)]">vs</span>{" "}
-          <span className="text-[#3B82F6]">Pro</span>
+          <span className="text-[#3B82F6]">Hosting</span>
         </h2>
         <p className="mt-3 text-sm text-[rgba(240,244,255,0.7)]">Flip the toggle. Watch the page come alive.</p>
         <div className="mt-5">
@@ -49,7 +49,7 @@ export default function FreeProDemo() {
           </div>
         </ThemeCanvas>
 
-        {/* Pro feature previews */}
+        {/* Hosting feature previews */}
         <div className="space-y-3 p-4">
           <AnalyticsPreview isPro={isPro} />
           <ShareCardPreview isPro={isPro} />
@@ -64,7 +64,7 @@ export default function FreeProDemo() {
       {/* Bottom CTA */}
       <div className="mx-auto mt-8 w-fit rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(10,22,40,0.55)] px-8 py-8 text-center backdrop-blur-xl sm:mt-10 sm:px-12 sm:py-10">
         <p className="mx-auto mb-5 max-w-md font-heading text-lg font-light italic leading-relaxed text-[#3B82F6] sm:text-xl">
-          The free page is the billboard.<br />The Pro page is the destination.
+          The free page is the billboard.<br />The hosted page is the destination.
         </p>
         <Link
           href="/signup"

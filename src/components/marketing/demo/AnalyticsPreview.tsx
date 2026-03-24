@@ -17,7 +17,7 @@ export default function AnalyticsPreview({ isPro }: AnalyticsPreviewProps) {
         className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-[rgba(6,10,24,0.72)] backdrop-blur-[4px] transition-opacity duration-500 ${isPro ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
         <span className="text-lg">&#x1F512;</span>
-        <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#3B82F6]">Pro &mdash; Page Analytics</span>
+        <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#3B82F6]">Hosting &mdash; Page Details</span>
       </div>
 
       {/* Header */}

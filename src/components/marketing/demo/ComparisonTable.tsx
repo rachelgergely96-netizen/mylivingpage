@@ -29,7 +29,7 @@ export default function ComparisonTable() {
       <div className="flex border-t border-[rgba(255,255,255,0.08)] px-5 py-2.5">
         <span className="flex-1" />
         <span className="w-14 text-center font-mono text-[9px] uppercase tracking-[0.1em] text-[rgba(240,244,255,0.3)]">Free</span>
-        <span className="w-14 text-center font-mono text-[9px] uppercase tracking-[0.1em] text-[#3B82F6]">Pro</span>
+        <span className="w-14 text-center font-mono text-[9px] uppercase tracking-[0.1em] text-[#3B82F6]">Hosting</span>
       </div>
     </div>
   );

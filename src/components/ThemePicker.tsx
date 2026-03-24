@@ -102,7 +102,7 @@ export default function ThemePicker({
                       {locked ? (
                         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
                           <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
-                            Pro
+                            Hosting
                           </span>
                         </div>
                       ) : null}

@@ -171,7 +171,7 @@ export function getShareCardTags(resume: ResumeData): string[] {
   return Array.from(
     new Set(
       [...skills, ...projects]
-        .map((item) => truncate(item, 18))
+        .map((item) => item.trim())
         .filter(Boolean),
     ),
   ).slice(0, 4);

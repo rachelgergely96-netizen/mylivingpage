@@ -524,7 +524,7 @@ export default async function AdminOpsPage() {
             </div>
           ) : (
             <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
-              Stripe matches the app&apos;s current Pro pricing contract.
+              Stripe matches the app&apos;s current hosting pricing contract.
             </p>
           )}
         </section>

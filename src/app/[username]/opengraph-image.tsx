@@ -317,6 +317,7 @@ export default async function OGImage({ params }: OgImageProps) {
                     background: "rgba(10,22,40,0.40)",
                     fontSize: 15,
                     color: "rgba(240,244,255,0.78)",
+                    maxWidth: "100%",
                   }}
                 >
                   {tag}

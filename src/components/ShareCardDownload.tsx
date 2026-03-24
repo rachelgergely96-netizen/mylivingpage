@@ -243,7 +243,7 @@ export default function ShareCardDownload({
                     {shareTags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs text-[rgba(240,244,255,0.78)]"
+                        className="max-w-full rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs leading-5 text-[rgba(240,244,255,0.78)] whitespace-normal break-words"
                       >
                         {tag}
                       </span>
@@ -299,7 +299,7 @@ export default function ShareCardDownload({
                       href={`/dashboard/analytics/${pageId}`}
                       className="mt-4 inline-flex rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
                     >
-                      See The Details
+                      Open Page Analytics
                     </a>
                   </div>
                 ) : null}

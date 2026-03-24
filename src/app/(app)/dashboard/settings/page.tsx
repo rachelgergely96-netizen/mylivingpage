@@ -112,6 +112,12 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  const legacyPlanLabel = profile
+    ? isPremiumPlan(profile.plan)
+      ? "hosting active"
+      : "basic access"
+    : "basic access";
+
   // Load profile (with polling retry after upgrade to handle webhook race condition)
   useEffect(() => {
     let cancelled = false;
@@ -607,7 +613,7 @@ export default function SettingsPage() {
           <>
         <div className="flex flex-wrap items-center gap-3">
           <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${isPremiumPlan(profile.plan) ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
-            {profile.plan ?? "spark"}
+            {legacyPlanLabel}
           </span>
           {isPremiumPlan(profile.plan) ? (
             <>
@@ -640,13 +646,13 @@ export default function SettingsPage() {
               }}
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
             >
-              {billingLoading ? "Loading..." : `Upgrade to Pro - ${PRO_PLAN_PRICE.amountLabel}/mo`}
+              {billingLoading ? "Loading..." : `Start Hosting - ${PRO_PLAN_PRICE.amountLabel}/mo`}
             </button>
           )}
         </div>
         {!isPremiumPlan(profile.plan) && (
           <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
-            Unlock premium themes, PNG share cards, people-looked details, and remove the badge.
+            Unlock additional themes, PNG share cards, people-looked details, and remove the badge.
           </p>
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">

@@ -290,7 +290,7 @@ export default function FirstViewActivationHub({
                 href={analyticsHref}
                 className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
               >
-                See the details
+                Open page analytics
               </Link>
             <Link
               href={livePath}

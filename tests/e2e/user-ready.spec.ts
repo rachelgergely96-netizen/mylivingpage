@@ -401,7 +401,7 @@ test.describe.serial("authenticated user journeys", () => {
     const checkoutResponsePromise = page.waitForResponse((response) =>
       response.url().includes("/api/stripe/checkout") && response.request().method() === "POST",
     );
-    await page.getByRole("button", { name: /Upgrade to Pro/ }).click();
+    await page.getByRole("button", { name: /Start Hosting/ }).click();
     const checkoutResponse = await checkoutResponsePromise;
     expect(checkoutResponse.ok()).toBeTruthy();
     await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
@@ -416,7 +416,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("Hosting subscription is active.")).toBeVisible();
 
     await page.goto("/dashboard");
-    await expect(page.getByRole("link", { name: /^See Details$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Page Analytics/ }).first()).toBeVisible();
 
     await page.goto("/dashboard/settings");
     const portalResponsePromise = page.waitForResponse((response) =>
@@ -430,7 +430,7 @@ test.describe.serial("authenticated user journeys", () => {
     profile = await getProfileFixtureByEmail();
     await sendStripeWebhook(page.context().request, await buildSubscriptionDeletedEvent(profile));
     await page.goto("/dashboard/settings");
-    await expect(page.getByRole("button", { name: /Upgrade to Pro/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start Hosting/ })).toBeVisible();
   });
 
   test("avatar replacement failures preserve the current avatar", async ({ page }) => {

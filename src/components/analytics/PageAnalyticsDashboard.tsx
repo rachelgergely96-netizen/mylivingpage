@@ -229,10 +229,13 @@ function TopBar({
     <section className="glass-card rounded-3xl p-5 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">What happened after you shared it</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Page Analytics</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
             {pageName}
           </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+            See who opened your page, how long they stayed, and what they did next after you shared it.
+          </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[rgba(240,244,255,0.5)]">
             <a
               href={publicPath}

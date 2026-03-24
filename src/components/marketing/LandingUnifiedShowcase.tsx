@@ -101,7 +101,7 @@ function ShareCardPreview({ themeId }: { themeId: ShowcaseThemeId }) {
         {shareTags.map((tag) => (
           <span
             key={tag}
-            className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs text-[rgba(240,244,255,0.78)]"
+            className="max-w-full rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs leading-5 text-[rgba(240,244,255,0.78)] whitespace-normal break-words"
           >
             {tag}
           </span>

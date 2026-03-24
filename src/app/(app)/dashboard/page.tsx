@@ -196,6 +196,8 @@ export default async function DashboardPage() {
     }),
   );
   const publicSlug = profile?.username ?? list[0]?.slug ?? null;
+  const primaryAnalyticsPage =
+    syncedList.find((page) => isPubliclyAvailablePage(page)) ?? syncedList[0] ?? null;
   const trialEndsAt = accountAccess.trialEndsAt
     ? new Date(accountAccess.trialEndsAt).toLocaleDateString("en-US", {
         month: "short",
@@ -269,6 +271,33 @@ export default async function DashboardPage() {
               This account still has legacy extra pages. Your public URL resolves through one username, so remove extras before relying on the page publicly.
             </div>
           ) : null}
+          {primaryAnalyticsPage ? (
+            <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-3xl">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
+                    Page Analytics
+                  </p>
+                  <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
+                    See who opened your page and what happened next.
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+                    This is the clear place to review people who looked, device mix, reading time, and follow-up activity after you share your page.
+                  </p>
+                </div>
+                <Link
+                  href={
+                    accountAccess.featuresUnlocked
+                      ? `/dashboard/analytics/${primaryAnalyticsPage.id}`
+                      : "/dashboard/settings"
+                  }
+                  className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
+                >
+                  {accountAccess.featuresUnlocked ? "Open Page Analytics" : "Unlock Page Analytics"}
+                </Link>
+              </div>
+            </div>
+          ) : null}
           {syncedList.map((page) => {
             const publicViewAvailable = isPubliclyAvailablePage(page);
             const proof = proofByPageId.get(page.id) ?? buildPageProofSummary({
@@ -328,17 +357,17 @@ export default async function DashboardPage() {
                   {accountAccess.featuresUnlocked ? (
                     <Link
                       href={`/dashboard/analytics/${page.id}`}
-                      className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                      className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
                     >
-                      See Details
+                      Page Analytics
                     </Link>
                   ) : (
                     <Link
                       href="/dashboard/settings"
                       className="flex items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] sm:px-4 sm:py-2"
                     >
-                      See Details
-                      <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span>
+                      Page Analytics
+                      <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">HOSTING</span>
                     </Link>
                   )}
                   <DeletePageButton pageId={page.id} />
@@ -361,7 +390,7 @@ export default async function DashboardPage() {
                         href={`/dashboard/analytics/${page.id}`}
                         className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
                       >
-                        See The Details
+                        Open Page Analytics
                       </Link>
                     ) : null}
                   </div>

@@ -133,6 +133,120 @@ function buildRealWorldResumeData(): ResumeData {
   };
 }
 
+function buildDenseResumeData(): ResumeData {
+  return {
+    name: "Rachel Gergely",
+    headline: "Founder | Attorney | Product Architect",
+    location: "New York City & Orlando, Florida",
+    email: "rachelgergely@outlook.com",
+    linkedin: "linkedin.com/in/rachel-gergely-75ba86105/",
+    github: null,
+    website: null,
+    avatar_url: null,
+    summary:
+      "New York-admitted attorney and product founder working at the intersection of law, behavioral design, and digital systems. Focused on building systems that reduce friction in complex environments and make intimidating processes feel simple. Graduated magna cum laude from Brooklyn Law School with expertise in product architecture and behavioral system design.",
+    experience: [
+      {
+        title: "Founder & Product Lead",
+        company: "BarPrepPlay",
+        dates: "2024 - Present",
+        highlights: [
+          "Built gamified bar exam preparation platform serving 300+ active users.",
+          "Designed adaptive reinforcement loops grounded in behavioral engagement mechanics.",
+        ],
+        url: "barprepplay.com",
+      },
+      {
+        title: "Founder & Architect",
+        company: "MyLivingPage",
+        dates: "2024 - Present",
+        highlights: [
+          "Designed a living resume platform that replaces static PDFs with evolving professional presence.",
+          "Built modular identity architecture that clarifies experience, proof, and contact moments.",
+        ],
+        url: "mylivingpage.com",
+      },
+      {
+        title: "Legal Associate",
+        company: "Simmons Jannace DeLuca, LLP",
+        dates: "2024 - 2025",
+        highlights: [
+          "Worked on litigation matters involving legal research, motion drafting, and procedural strategy.",
+          "Analyzed factual records and developed arguments for case positioning and motion practice.",
+        ],
+        url: null,
+      },
+      {
+        title: "Legal Associate",
+        company: "Law Offices of Eyal Talassazan, P.C.",
+        dates: "2022 - 2023",
+        highlights: [
+          "Managed family law and litigation practice responsibilities with strong client communication.",
+          "Drafted pleadings, motions, and discovery materials while supporting trial preparation.",
+        ],
+        url: null,
+      },
+    ],
+    education: [
+      {
+        degree: "Juris Doctor, Magna Cum Laude",
+        school: "Brooklyn Law School",
+        year: "2019 - 2022",
+      },
+      {
+        degree: "Bachelor of Science in Business, Management, Marketing, Magna Cum Laude",
+        school: "University at Albany, SUNY",
+        year: "2014 - 2018",
+      },
+      {
+        degree: "High School Diploma",
+        school: "St. Anthony's High School",
+        year: "2010 - 2014",
+      },
+    ],
+    projects: [],
+    skills: [
+      {
+        category: "Product & Design",
+        items: [
+          "Product Architecture",
+          "Behavioral System Design",
+          "User Engagement Systems",
+          "Narrative Systems Design",
+          "Figma",
+        ],
+      },
+      {
+        category: "Legal",
+        items: [
+          "Legal Analysis",
+          "Litigation",
+          "Legal Research",
+          "Motion Drafting",
+          "Family Law",
+        ],
+      },
+      {
+        category: "Tools",
+        items: ["Next.js", "TypeScript", "Supabase", "Systems Thinking"],
+      },
+    ],
+    certifications: [
+      {
+        name: "New York Bar",
+        issuer: "New York State",
+        date: null,
+      },
+      {
+        name: "Florida Bar Admission",
+        issuer: "Florida State",
+        date: "Pending",
+      },
+    ],
+    stats: [],
+  };
+}
+
 function createPageResponse() {
   return {
     id: "page-1",
@@ -267,5 +381,12 @@ describe("POST /api/resume/export real render path", () => {
 
     expect(Buffer.from(buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
     expect(countPdfPages(buffer)).toBeGreaterThanOrEqual(1);
+  });
+
+  it("keeps a denser resume fixture to a tighter page count", async () => {
+    const buffer = await renderResumePdf(buildDenseResumeData());
+
+    expect(Buffer.from(buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
+    expect(countPdfPages(buffer)).toBeLessThanOrEqual(2);
   });
 });

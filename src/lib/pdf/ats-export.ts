@@ -8,14 +8,20 @@ type PdfKitModule = {
 };
 type PdfDocumentInstance = any;
 
-const PAGE_MARGIN = 50;
-const CONTENT_GUTTER = 4;
-const SECTION_TITLE_GAP = 3;
-const SECTION_CONTENT_GAP = 7;
-const ENTRY_COLUMN_GAP = 12;
-const ENTRY_DATE_WIDTH = 76;
-const BODY_FONT_SIZE = 8.8;
-const BODY_LINE_GAP = 1.4;
+const FONT_REGULAR = "Times-Roman";
+const FONT_BOLD = "Times-Bold";
+const PAGE_MARGIN = 34;
+const CONTENT_GUTTER = 0;
+const SECTION_TITLE_GAP = 2;
+const SECTION_CONTENT_GAP = 4;
+const ENTRY_COLUMN_GAP = 8;
+const ENTRY_DATE_WIDTH = 64;
+const NAME_FONT_SIZE = 17;
+const META_FONT_SIZE = 11;
+const SECTION_TITLE_FONT_SIZE = 9.6;
+const BODY_FONT_SIZE = 11;
+const DATE_FONT_SIZE = 10;
+const BODY_LINE_GAP = 0.45;
 let pdfKitPromise: Promise<PdfKitModule> | null = null;
 
 function getPdfKit() {
@@ -176,6 +182,17 @@ function safePageWidth(doc: PdfDocumentInstance) {
   return pageWidth - PAGE_MARGIN * 2;
 }
 
+function pageBottom(doc: PdfDocumentInstance) {
+  const pageHeight = typeof doc.page.height === "number" ? doc.page.height : 792;
+  return pageHeight - PAGE_MARGIN;
+}
+
+function ensureSpace(doc: PdfDocumentInstance, requiredHeight: number) {
+  if (doc.y + requiredHeight > pageBottom(doc)) {
+    doc.addPage();
+  }
+}
+
 function getContentBounds(doc: PdfDocumentInstance) {
   return {
     left: PAGE_MARGIN + CONTENT_GUTTER,
@@ -183,10 +200,206 @@ function getContentBounds(doc: PdfDocumentInstance) {
   };
 }
 
+function useRegularFont(doc: PdfDocumentInstance) {
+  return doc.font(FONT_REGULAR);
+}
+
+function useBoldFont(doc: PdfDocumentInstance) {
+  return doc.font(FONT_BOLD);
+}
+
+function getTextHeight(
+  doc: PdfDocumentInstance,
+  text: string,
+  options: Record<string, unknown>,
+  {
+    bold = false,
+    fontSize = BODY_FONT_SIZE,
+  }: {
+    bold?: boolean;
+    fontSize?: number;
+  } = {},
+) {
+  (bold ? useBoldFont : useRegularFont)(doc).fontSize(fontSize);
+  return doc.heightOfString(text, options);
+}
+
+function estimateSectionTitleHeight(doc: PdfDocumentInstance, title: string) {
+  const { width } = getContentBounds(doc);
+  const headingHeight = getTextHeight(
+    doc,
+    title.toUpperCase(),
+    {
+      width,
+      characterSpacing: 0.8,
+    },
+    {
+      bold: true,
+      fontSize: SECTION_TITLE_FONT_SIZE,
+    },
+  );
+
+  return headingHeight + SECTION_TITLE_GAP + SECTION_CONTENT_GAP + 4;
+}
+
+function getEntryContentWidth(doc: PdfDocumentInstance) {
+  const { width } = getContentBounds(doc);
+  return Math.max(170, width - ENTRY_DATE_WIDTH - ENTRY_COLUMN_GAP);
+}
+
+function estimateEntryDateLineHeight(
+  doc: PdfDocumentInstance,
+  title: string,
+  subtitle: string,
+  dates: string,
+) {
+  const contentWidth = getEntryContentWidth(doc);
+  const titleHeight = getTextHeight(
+    doc,
+    title,
+    {
+      width: contentWidth,
+      lineGap: 0.2,
+    },
+    {
+      bold: true,
+      fontSize: BODY_FONT_SIZE,
+    },
+  );
+  const subtitleHeight = subtitle
+    ? getTextHeight(
+        doc,
+        subtitle,
+        {
+          width: contentWidth,
+          lineGap: 0.2,
+        },
+        {
+          fontSize: BODY_FONT_SIZE,
+        },
+      ) + 1.5
+    : 0;
+  const dateHeight = dates
+    ? getTextHeight(
+        doc,
+        dates,
+        {
+          width: ENTRY_DATE_WIDTH,
+          align: "right",
+        },
+        {
+          fontSize: DATE_FONT_SIZE,
+        },
+      )
+    : 0;
+
+  return Math.max(titleHeight + subtitleHeight + 3, dateHeight);
+}
+
+function estimateParagraphHeight(doc: PdfDocumentInstance, text: string) {
+  const { width } = getContentBounds(doc);
+  return getTextHeight(
+    doc,
+    text,
+    {
+      width,
+      lineGap: BODY_LINE_GAP,
+      align: "justify",
+    },
+    {
+      fontSize: BODY_FONT_SIZE,
+    },
+  );
+}
+
+function estimateExperienceEntryHeight(doc: PdfDocumentInstance, entry: ResumeData["experience"][number]) {
+  const { width } = getContentBounds(doc);
+  let height = estimateEntryDateLineHeight(
+    doc,
+    entry.title,
+    `${entry.company}${entry.url ? ` | ${displayLink(entry.url)}` : ""}`,
+    entry.dates,
+  );
+
+  entry.highlights.forEach((highlight) => {
+    height += getTextHeight(
+      doc,
+      `- ${highlight}`,
+      {
+        width,
+        lineGap: 0.25,
+        indent: 8,
+      },
+      {
+        fontSize: BODY_FONT_SIZE,
+      },
+    ) + 1.5;
+  });
+
+  return height + 4;
+}
+
+function estimateSkillsGroupHeight(doc: PdfDocumentInstance, group: ResumeData["skills"][number]) {
+  return estimateParagraphHeight(doc, `${group.category}: ${group.items.join(", ")}`) + 1;
+}
+
+function estimateEducationEntryHeight(doc: PdfDocumentInstance, entry: ResumeData["education"][number]) {
+  return estimateEntryDateLineHeight(doc, entry.degree, entry.school, entry.year) + 2;
+}
+
+function estimateProjectHeight(doc: PdfDocumentInstance, project: ResumeData["projects"][number]) {
+  let height = getTextHeight(
+    doc,
+    project.name,
+    {
+      width: getContentBounds(doc).width,
+    },
+    {
+      bold: true,
+      fontSize: BODY_FONT_SIZE,
+    },
+  );
+
+  if (project.description) {
+    height += estimateParagraphHeight(doc, project.description);
+  }
+
+  if (project.tech.length) {
+    height += estimateParagraphHeight(doc, project.tech.join(", "));
+  }
+
+  return height + 3;
+}
+
+function estimateCertificationHeight(
+  doc: PdfDocumentInstance,
+  certification: ResumeData["certifications"][number],
+) {
+  let height = getTextHeight(
+    doc,
+    certification.name,
+    {
+      width: getContentBounds(doc).width,
+    },
+    {
+      bold: true,
+      fontSize: BODY_FONT_SIZE,
+    },
+  );
+
+  const details = [certification.issuer, certification.date].filter(Boolean).join(" | ");
+  if (details) {
+    height += estimateParagraphHeight(doc, details);
+  }
+
+  return height + 2;
+}
+
 function renderSectionTitle(doc: PdfDocumentInstance, title: string) {
   const { left, width } = getContentBounds(doc);
-  doc.moveDown(0.8);
-  doc.font("Helvetica-Bold").fontSize(8.4).fillColor("#111827").text(title.toUpperCase(), left, doc.y, {
+  ensureSpace(doc, estimateSectionTitleHeight(doc, title));
+  doc.moveDown(0.45);
+  useBoldFont(doc).fontSize(SECTION_TITLE_FONT_SIZE).fillColor("#111827").text(title.toUpperCase(), left, doc.y, {
     width,
     characterSpacing: 0.8,
   });
@@ -213,31 +426,31 @@ function renderEntryDateLine(
   const startY = doc.y;
   const contentWidth = Math.max(170, width - ENTRY_DATE_WIDTH - ENTRY_COLUMN_GAP);
 
-  doc.font("Helvetica-Bold").fontSize(9.3).fillColor("#111827").text(title, startX, startY, {
+  useBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(title, startX, startY, {
     width: contentWidth,
-    lineGap: 0.6,
+    lineGap: 0.2,
   });
 
   const titleHeight = doc.heightOfString(title, {
     width: contentWidth,
-    lineGap: 0.6,
+    lineGap: 0.2,
   });
 
-  doc.font("Helvetica").fontSize(8.85).fillColor("#374151").text(subtitle, startX, startY + titleHeight + 2, {
+  useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(subtitle, startX, startY + titleHeight + 1.5, {
     width: contentWidth,
-    lineGap: 0.9,
+    lineGap: 0.2,
   });
 
-  doc.font("Helvetica").fontSize(8.1).fillColor("#6B7280").text(dates, startX + contentWidth + ENTRY_COLUMN_GAP, startY, {
+  useRegularFont(doc).fontSize(DATE_FONT_SIZE).fillColor("#6B7280").text(dates, startX + contentWidth + ENTRY_COLUMN_GAP, startY, {
     width: ENTRY_DATE_WIDTH,
     align: "right",
   });
 
   const subtitleHeight = doc.heightOfString(subtitle, {
     width: contentWidth,
-    lineGap: 0.9,
+    lineGap: 0.2,
   });
-  doc.y = startY + titleHeight + subtitleHeight + 6;
+  doc.y = startY + titleHeight + subtitleHeight + 3.5;
 }
 
 async function createPdfDocument(): Promise<PdfDocumentInstance> {
@@ -279,45 +492,52 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
   const { left, width } = getContentBounds(doc);
   const contactLines = buildContactLines(data);
 
-  doc.font("Helvetica-Bold").fontSize(17.5).fillColor("#111827").text(data.name, left, doc.y, {
+  useBoldFont(doc).fontSize(NAME_FONT_SIZE).fillColor("#111827").text(data.name, left, doc.y, {
     width,
-    lineGap: 0.4,
+    lineGap: 0.2,
   });
 
   if (data.headline) {
-    doc.moveDown(0.18);
-    doc.font("Helvetica").fontSize(10).fillColor("#374151").text(data.headline, left, doc.y, {
+    doc.moveDown(0.08);
+    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#374151").text(data.headline, left, doc.y, {
       width,
-      lineGap: 0.6,
+      lineGap: 0.2,
     });
   }
 
   if (data.location) {
-    doc.moveDown(0.15);
-    doc.font("Helvetica").fontSize(8.7).fillColor("#6B7280").text(data.location, left, doc.y, {
+    doc.moveDown(0.05);
+    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#6B7280").text(data.location, left, doc.y, {
       width,
     });
   }
 
   contactLines.forEach((line, index) => {
-    doc.moveDown(index === 0 ? 0.28 : 0.12);
-    doc.font("Helvetica").fontSize(8.15).fillColor("#374151").text(line, left, doc.y, {
+    doc.moveDown(index === 0 ? 0.14 : 0.06);
+    useRegularFont(doc).fontSize(10).fillColor("#374151").text(line, left, doc.y, {
       width,
-      lineGap: 0.8,
+      lineGap: 0.1,
     });
   });
 
   if (data.summary) {
+    ensureSpace(doc, estimateSectionTitleHeight(doc, "Summary") + estimateParagraphHeight(doc, data.summary));
     renderSectionTitle(doc, "Summary");
-    doc.font("Helvetica").fontSize(BODY_FONT_SIZE).fillColor("#374151").text(data.summary, left, doc.y, {
+    useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(data.summary, left, doc.y, {
       width,
       lineGap: BODY_LINE_GAP,
+      align: "justify",
     });
   }
 
   if (data.experience.length) {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, "Experience") + estimateExperienceEntryHeight(doc, data.experience[0]),
+    );
     renderSectionTitle(doc, "Experience");
     data.experience.forEach((entry) => {
+      ensureSpace(doc, estimateExperienceEntryHeight(doc, entry));
       renderEntryDateLine(
         doc,
         entry.title,
@@ -326,77 +546,102 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
       );
 
       entry.highlights.forEach((highlight) => {
-        doc.font("Helvetica").fontSize(8.55).fillColor("#374151").text(`- ${highlight}`, left, doc.y, {
+        useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(`- ${highlight}`, left, doc.y, {
           width,
-          lineGap: 1,
-          indent: 10,
+          lineGap: 0.25,
+          indent: 8,
         });
       });
 
-      doc.moveDown(0.32);
+      doc.moveDown(0.12);
     });
   }
 
   if (data.skills.length) {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, "Skills") + estimateSkillsGroupHeight(doc, data.skills[0]),
+    );
     renderSectionTitle(doc, "Skills");
     data.skills.forEach((group) => {
-      doc.font("Helvetica").fontSize(8.5).fillColor("#374151").text(
+      ensureSpace(doc, estimateSkillsGroupHeight(doc, group));
+      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
         `${group.category}: ${group.items.join(", ")}`,
         left,
         doc.y,
         {
           width,
-          lineGap: 1,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
         },
       );
-      doc.moveDown(0.08);
+      doc.moveDown(0.02);
     });
   }
 
   if (data.education.length) {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, "Education") + estimateEducationEntryHeight(doc, data.education[0]),
+    );
     renderSectionTitle(doc, "Education");
     data.education.forEach((entry) => {
+      ensureSpace(doc, estimateEducationEntryHeight(doc, entry));
       renderEntryDateLine(doc, entry.degree, entry.school, entry.year);
-      doc.moveDown(0.2);
+      doc.moveDown(0.04);
     });
   }
 
   if (data.projects.length) {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, "Projects") + estimateProjectHeight(doc, data.projects[0]),
+    );
     renderSectionTitle(doc, "Projects");
     data.projects.forEach((project) => {
-      doc.font("Helvetica-Bold").fontSize(9.1).fillColor("#111827").text(project.name, left, doc.y, {
+      ensureSpace(doc, estimateProjectHeight(doc, project));
+      useBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(project.name, left, doc.y, {
         width,
       });
-      doc.font("Helvetica").fontSize(8.5).fillColor("#374151").text(project.description, left, doc.y, {
+      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.description, left, doc.y, {
         width,
-        lineGap: 1,
+        lineGap: BODY_LINE_GAP,
+        align: "justify",
       });
       if (project.tech.length) {
-        doc.font("Helvetica").fontSize(8.4).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
+        useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
           width,
-          lineGap: 0.8,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
         });
       }
-      doc.moveDown(0.28);
+      doc.moveDown(0.12);
     });
   }
 
   if (data.certifications.length) {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, "Certifications") +
+        estimateCertificationHeight(doc, data.certifications[0]),
+    );
     renderSectionTitle(doc, "Certifications");
     data.certifications.forEach((certification) => {
-      doc.font("Helvetica-Bold").fontSize(9.1).fillColor("#111827").text(certification.name, left, doc.y, {
+      ensureSpace(doc, estimateCertificationHeight(doc, certification));
+      useBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(certification.name, left, doc.y, {
         width,
       });
-      doc.font("Helvetica").fontSize(8.6).fillColor("#374151").text(
+      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
         [certification.issuer, certification.date].filter(Boolean).join(" | "),
         left,
         doc.y,
         {
           width,
-          lineGap: 0.8,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
         },
       );
-      doc.moveDown(0.22);
+      doc.moveDown(0.08);
     });
   }
 
@@ -409,44 +654,51 @@ async function renderFallbackPdfDocument(data: ResumeData) {
   const contactLines = buildContactLines(data);
   const sections = buildFallbackSectionLines(data);
 
-  doc.font("Helvetica-Bold").fontSize(18).fillColor("#111827").text(data.name || "Resume", left, doc.y, {
+  useBoldFont(doc).fontSize(NAME_FONT_SIZE).fillColor("#111827").text(data.name || "Resume", left, doc.y, {
     width,
   });
 
   if (data.headline) {
-    doc.moveDown(0.15);
-    doc.font("Helvetica").fontSize(8.8).fillColor("#4B5563").text(data.headline, left, doc.y, {
+    doc.moveDown(0.08);
+    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#4B5563").text(data.headline, left, doc.y, {
       width,
-      lineGap: 0.8,
+      lineGap: 0.2,
     });
   }
 
   if (data.location) {
-    doc.moveDown(0.1);
-    doc.font("Helvetica").fontSize(8.6).fillColor("#4B5563").text(data.location, left, doc.y, {
+    doc.moveDown(0.05);
+    useRegularFont(doc).fontSize(META_FONT_SIZE).fillColor("#4B5563").text(data.location, left, doc.y, {
       width,
     });
   }
 
   contactLines.forEach((line, index) => {
-    doc.moveDown(index === 0 ? 0.1 : 0.08);
-    doc.font("Helvetica").fontSize(8.25).fillColor("#4B5563").text(line, left, doc.y, {
+    doc.moveDown(index === 0 ? 0.12 : 0.05);
+    useRegularFont(doc).fontSize(10).fillColor("#4B5563").text(line, left, doc.y, {
       width,
-      lineGap: 0.8,
+      lineGap: 0.1,
     });
   });
 
   sections.forEach((section) => {
-    doc.moveDown(0.6);
-    doc.font("Helvetica-Bold").fontSize(9.1).fillColor("#111827").text(section.title.toUpperCase(), left, doc.y, {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, section.title) +
+        (section.lines[0] ? estimateParagraphHeight(doc, section.lines[0]) : 0),
+    );
+    doc.moveDown(0.4);
+    useBoldFont(doc).fontSize(SECTION_TITLE_FONT_SIZE).fillColor("#111827").text(section.title.toUpperCase(), left, doc.y, {
       width,
       characterSpacing: 0.7,
     });
 
     section.lines.forEach((line) => {
-      doc.font("Helvetica").fontSize(8.7).fillColor("#1F2937").text(line, left, doc.y, {
+      ensureSpace(doc, estimateParagraphHeight(doc, line));
+      useRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#1F2937").text(line, left, doc.y, {
         width,
-        lineGap: 1,
+        lineGap: BODY_LINE_GAP,
+        align: "justify",
       });
     });
   });

@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import { getAccountAccessState } from "@/lib/account-access";
 import {
@@ -74,7 +75,7 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         eyebrow: "Proof loop",
         title: "Recent share recorded. Waiting for someone to look.",
         body:
-          "Once someone opens your page, this page will show that people looked, what device they used, and how long they stayed.",
+          "Once someone opens your page, this proof panel will start showing that people looked and whether tracking is active.",
         chips: [
           `${proof.shareIntentCountLast7d} recent share${proof.shareIntentCountLast7d === 1 ? "" : "s"}`,
           "Tracking is active",
@@ -86,8 +87,8 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         title: "Someone looked after you shared it.",
         body:
           proof.firstViewAfterLatestShareAt
-            ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Open the details to see device mix, referrers, and reading behavior.`
-            : "Your page is getting attention after a recent share. Open the details to see what happened after the click.",
+            ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.`
+            : "Your page is getting attention after a recent share. Use the Page Analytics button on this page card to see what happened after the click.",
         chips: [
           `${proof.viewsLast7d} looked this week`,
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "Desktop-heavy so far",
@@ -100,8 +101,8 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         title: `${proof.viewsLast7d} people looked at your page in the last 7 days.`,
         body:
           proof.latestViewAt
-            ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. This is where you can quickly see whether your page is still getting looked at between follow-ups.`
-            : "Your page has started getting outside traffic. Open the details for the full picture.",
+            ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Use the Page Analytics button on this page card to check whether your page is still getting looked at between follow-ups.`
+            : "Your page has started getting outside traffic. Use the Page Analytics button on this page card for the full picture.",
         chips: [
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "No mobile views yet",
           avgReading ? `${avgReading} avg reading` : "Reading time fills in automatically",
@@ -196,8 +197,6 @@ export default async function DashboardPage() {
     }),
   );
   const publicSlug = profile?.username ?? list[0]?.slug ?? null;
-  const primaryAnalyticsPage =
-    syncedList.find((page) => isPubliclyAvailablePage(page)) ?? syncedList[0] ?? null;
   const trialEndsAt = accountAccess.trialEndsAt
     ? new Date(accountAccess.trialEndsAt).toLocaleDateString("en-US", {
         month: "short",
@@ -271,29 +270,6 @@ export default async function DashboardPage() {
               This account still has legacy extra pages. Your public URL resolves through one username, so remove extras before relying on the page publicly.
             </div>
           ) : null}
-          {primaryAnalyticsPage ? (
-            <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 sm:p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="max-w-3xl">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                    Page Analytics
-                  </p>
-                  <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
-                    See when people open your page and what happens next.
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
-                    This is the clear place to review people who looked, device mix, reading time, and follow-up activity after you share your page.
-                  </p>
-                </div>
-                <Link
-                  href={`/dashboard/analytics/${primaryAnalyticsPage.id}`}
-                  className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
-                >
-                  Open Page Analytics
-                </Link>
-              </div>
-            </div>
-          ) : null}
           {syncedList.map((page) => {
             const publicViewAvailable = isPubliclyAvailablePage(page);
             const proof = proofByPageId.get(page.id) ?? buildPageProofSummary({
@@ -359,24 +335,16 @@ export default async function DashboardPage() {
                   <DeletePageButton pageId={page.id} />
                 </div>
                 <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 md:col-span-full">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="max-w-3xl">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                        {proofCopy.eyebrow}
-                      </p>
-                      <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
-                        {proofCopy.title}
-                      </h2>
-                      <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
-                        {proofCopy.body}
-                      </p>
-                    </div>
-                    <Link
-                      href={`/dashboard/analytics/${page.id}`}
-                      className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
-                    >
-                      Open Page Analytics
-                    </Link>
+                  <div className="max-w-3xl">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
+                      {proofCopy.eyebrow}
+                    </p>
+                    <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
+                      {proofCopy.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+                      {proofCopy.body}
+                    </p>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {proofCopy.chips.map((chip) => (

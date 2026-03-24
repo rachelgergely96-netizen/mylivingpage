@@ -41,6 +41,17 @@ function displayLink(value: string | null) {
   return clean.replace(/^https?:\/\//i, "");
 }
 
+export function formatExperienceHighlightsAsParagraph(highlights: string[]) {
+  const normalized = highlights
+    .map((highlight) => normalizeResumeText(highlight).replace(/^[-*\u2022\s]+/, "").trim())
+    .filter(Boolean)
+    .map((highlight) => highlight.replace(/[.!?]+$/, "").trim())
+    .filter(Boolean)
+    .map((highlight) => `${highlight}.`);
+
+  return normalized.length ? normalized.join(" ") : null;
+}
+
 function buildContactLines(data: ResumeData) {
   const email = data.email ? normalizeResumeText(data.email) : "";
   const links = [displayLink(data.linkedin), displayLink(data.github), displayLink(data.website)].filter(
@@ -82,8 +93,8 @@ function buildFallbackSectionLines(data: ResumeData) {
       title: "Experience",
       lines: data.experience.flatMap((entry) => {
         const heading = [entry.title, entry.company, entry.dates].filter(Boolean).join(" | ");
-        const highlights = entry.highlights.map((highlight) => `- ${highlight}`);
-        return [heading, ...highlights].filter(Boolean);
+        const highlightsParagraph = formatExperienceHighlightsAsParagraph(entry.highlights);
+        return [heading, highlightsParagraph].filter((line): line is string => Boolean(line));
       }),
     });
   }
@@ -152,8 +163,8 @@ function countOverflowReasons(data: ResumeData) {
   }
 
   if (totalHighlights > 8) {
-    reasons.push("There are too many bullet lines across experience.");
-    fixes.push("Trim each role to the strongest one or two bullets.");
+    reasons.push("There are too many experience details across roles.");
+    fixes.push("Trim each role to the strongest one or two statements.");
   }
 
   if (data.projects.length > 2) {
@@ -313,7 +324,6 @@ function estimateParagraphHeight(doc: PdfDocumentInstance, text: string) {
 }
 
 function estimateExperienceEntryHeight(doc: PdfDocumentInstance, entry: ResumeData["experience"][number]) {
-  const { width } = getContentBounds(doc);
   let height = estimateEntryDateLineHeight(
     doc,
     entry.title,
@@ -321,20 +331,22 @@ function estimateExperienceEntryHeight(doc: PdfDocumentInstance, entry: ResumeDa
     entry.dates,
   );
 
-  entry.highlights.forEach((highlight) => {
-    height += getTextHeight(
-      doc,
-      `- ${highlight}`,
-      {
-        width,
-        lineGap: 0.25,
-        indent: 8,
-      },
-      {
-        fontSize: BODY_FONT_SIZE,
-      },
-    ) + 1.5;
-  });
+  const highlightsParagraph = formatExperienceHighlightsAsParagraph(entry.highlights);
+  if (highlightsParagraph) {
+    height +=
+      getTextHeight(
+        doc,
+        highlightsParagraph,
+        {
+          width: getContentBounds(doc).width,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
+        },
+        {
+          fontSize: BODY_FONT_SIZE,
+        },
+      ) + 1.5;
+  }
 
   return height + 4;
 }
@@ -545,13 +557,14 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
         entry.dates,
       );
 
-      entry.highlights.forEach((highlight) => {
-        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(`- ${highlight}`, left, doc.y, {
+      const highlightsParagraph = formatExperienceHighlightsAsParagraph(entry.highlights);
+      if (highlightsParagraph) {
+        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(highlightsParagraph, left, doc.y, {
           width,
-          lineGap: 0.25,
-          indent: 8,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
         });
-      });
+      }
 
       doc.moveDown(0.12);
     });
@@ -762,7 +775,7 @@ export async function checkResumeExport(data: unknown): Promise<AtsExportCheck> 
           ? []
           : heuristics.recommendedFixes.length
             ? heuristics.recommendedFixes
-            : ["Trim lower-priority sections and shorten long bullets before exporting again."],
+            : ["Trim lower-priority sections and shorten long role descriptions before exporting again."],
     };
   } catch {
     return {

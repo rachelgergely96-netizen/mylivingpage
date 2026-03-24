@@ -271,6 +271,56 @@ test.describe.serial("authenticated user journeys", () => {
     await viewerContext.close();
   });
 
+  test("public recruiter skim stays collapsed until a viewer expands it on mobile and desktop", async ({ page, browser }) => {
+    test.skip(
+      !canRunAdminFixtureFlows,
+      "Set Playwright Supabase service-role env vars to run public recruiter skim coverage.",
+    );
+
+    await signIn(page);
+    const profile = await getProfileFixtureByEmail();
+    await setPlanForProfile(profile.id, "pro");
+    await ensureLivePageForProfile(profile);
+
+    const viewerContext = await browser.newContext();
+    const viewerPage = await viewerContext.newPage();
+
+    const assertRecruiterSkimDisclosure = async (viewport: { width: number; height: number }) => {
+      await viewerPage.setViewportSize(viewport);
+      await viewerPage.goto(`/${profile.username}`);
+
+      const panel = viewerPage.getByTestId("recruiter-skim-panel");
+      const expandButton = panel.getByRole("button", { name: "Expand recruiter skim" });
+
+      await expect(panel).toBeVisible();
+      await expect(expandButton).toBeVisible();
+      await expect(expandButton).toHaveAttribute("aria-expanded", "false");
+      await expect(panel.getByTestId("recruiter-skim-content")).toHaveCount(0);
+      await expect(panel.getByRole("button", { name: "Download Resume PDF" })).toHaveCount(0);
+      await expect(panel.getByRole("link", { name: "Email" })).toHaveCount(0);
+      await expect(panel.getByRole("link", { name: "LinkedIn" })).toHaveCount(0);
+      await expect(panel.getByRole("link", { name: "Open current page" })).toHaveCount(0);
+
+      await expandButton.click();
+
+      await expect(panel.getByRole("button", { name: "Collapse recruiter skim" })).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Collapse recruiter skim" })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      await expect(panel.getByTestId("recruiter-skim-content")).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "Email" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "LinkedIn" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "Open current page" })).toBeVisible();
+    };
+
+    await assertRecruiterSkimDisclosure({ width: 390, height: 844 });
+    await assertRecruiterSkimDisclosure({ width: 1280, height: 900 });
+
+    await viewerContext.close();
+  });
+
   test("public page keeps Resume PDF and share actions stacked without overlap for owners", async ({ page }) => {
     test.skip(
       !canRunAdminFixtureFlows,

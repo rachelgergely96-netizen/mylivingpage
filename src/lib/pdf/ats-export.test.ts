@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildResumePdfData, countPdfPages, renderResumePdf } from "@/lib/pdf/ats-export";
+import {
+  buildResumePdfData,
+  countPdfPages,
+  formatExperienceHighlightsAsParagraph,
+  renderResumePdf,
+} from "@/lib/pdf/ats-export";
 import type { ResumeData } from "@/types/resume";
 
 function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
@@ -72,6 +77,18 @@ describe("Resume PDF export data shaping", () => {
       certifications: [{ name: "Cert", issuer: "11", date: null }],
       stats: [],
     });
+  });
+
+  it("joins experience highlights into one justified-ready paragraph", () => {
+    expect(
+      formatExperienceHighlightsAsParagraph([
+        " - Built a better workflow",
+        "Partnered with engineering and design",
+        "\u2022 Reduced review time by 30%!",
+      ]),
+    ).toBe(
+      "Built a better workflow. Partnered with engineering and design. Reduced review time by 30%.",
+    );
   });
 
   it(

@@ -72,6 +72,7 @@ function createPageResponse(options?: {
   visibility?: "public" | "private";
   status?: "live" | "draft";
   resumeData?: unknown;
+  pageConfig?: Record<string, unknown> | null;
 }) {
   return {
     id: "page-1",
@@ -80,6 +81,7 @@ function createPageResponse(options?: {
     visibility: options?.visibility ?? "public",
     status: options?.status ?? "live",
     resume_data: options?.resumeData ?? buildResumeData("Saved Resume"),
+    page_config: options?.pageConfig ?? null,
   };
 }
 
@@ -272,6 +274,58 @@ describe("POST /api/resume/export", () => {
     expect(response.headers.get("Content-Disposition")).toContain("saved-resume-resume.pdf");
     expect(mocks.renderPdf).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Saved Resume" }),
+    );
+  });
+
+  it("exports a targeted variant when a variant id is requested", async () => {
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        page: createPageResponse({
+          resumeData: buildResumeData("Saved Resume"),
+          pageConfig: {
+            variants: [
+              {
+                id: "variant-1",
+                slug: "staff-pm",
+                label: "Staff PM version",
+                roleTitle: "Staff Product Manager",
+                headline: "Staff Product Manager",
+                summary: "Targeted summary",
+                featuredStatLabels: [],
+                featuredProjectNames: [],
+                sectionOrder: [
+                  "summary",
+                  "stats",
+                  "experience",
+                  "projects",
+                  "skills",
+                  "education",
+                  "certifications",
+                ],
+                ctaEmphasis: null,
+              },
+            ],
+          },
+        }),
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "page-1", variantId: "variant-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.renderPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headline: "Staff Product Manager",
+        summary: "Targeted summary",
+      }),
     );
   });
 

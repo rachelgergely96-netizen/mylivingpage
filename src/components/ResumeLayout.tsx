@@ -6,6 +6,7 @@ interface ResumeLayoutProps {
   compact?: boolean;
   headingLevel?: "h1" | "h2";
   disableExternalLinks?: boolean;
+  useExternalScrollRoot?: boolean;
 }
 
 /* ── Backward-compat helpers ───────────────────────────────────────── */
@@ -33,6 +34,7 @@ export default function ResumeLayout({
   compact = false,
   headingLevel = "h1",
   disableExternalLinks = false,
+  useExternalScrollRoot = false,
 }: ResumeLayoutProps) {
   const NameHeading = headingLevel;
   const headingSize = compact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl md:text-4xl";
@@ -46,8 +48,10 @@ export default function ResumeLayout({
 
   return (
     <div
-      data-analytics-scroll-root="true"
-      className={`relative z-10 h-full overflow-y-auto scrollbar-hide ${compact ? "px-3 py-4 sm:px-4 sm:py-5" : "px-4 py-5 sm:p-6 md:p-8"}`}
+      data-analytics-scroll-root={useExternalScrollRoot ? undefined : "true"}
+      className={`relative z-10 ${
+        useExternalScrollRoot ? "" : "h-full overflow-y-auto scrollbar-hide"
+      } ${compact ? "px-3 py-4 sm:px-4 sm:py-5" : "px-4 py-5 sm:p-6 md:p-8"}`}
     >
       <div className="mx-auto max-w-4xl">
         {/* ── Header ─────────────────────────────────────────────── */}

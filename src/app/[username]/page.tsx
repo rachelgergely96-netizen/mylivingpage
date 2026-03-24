@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import MadeWithBadge from "@/components/MadeWithBadge";
 import PageOwnerBar from "@/components/PageOwnerBar";
 import PublicPageActionDock from "@/components/PublicPageActionDock";
+import RecruiterSkimPanel from "@/components/public/RecruiterSkimPanel";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
+import { buildRecruiterSkimModel, buildVariantHref, getPageVariant } from "@/lib/page-variants";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -18,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 interface PublicPageProps {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ v?: string; s?: string; sl?: string }>;
 }
 
 export async function generateMetadata({ params }: PublicPageProps): Promise<Metadata> {
@@ -58,9 +61,12 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
   };
 }
 
-export default async function PublicLivingPage({ params }: PublicPageProps) {
+export default async function PublicLivingPage({
+  params,
+  searchParams,
+}: PublicPageProps) {
   noStore();
-  const { username } = await params;
+  const [{ username }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const supabase = createServiceRoleSupabaseClient();
   const page = await fetchPublicLivePage(supabase, username);
   const publicPageAvailable =
@@ -72,10 +78,22 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
 
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
   const pageUserId = page.user_id ?? page.owner_id ?? "";
+  const selectedVariant = getPageVariant(page.page_config, resolvedSearchParams.v ?? null);
+  const recruiterSkim = buildRecruiterSkimModel(page.resume_data, selectedVariant);
+  const variantAwarePath = buildVariantHref(`/${username}`, {
+    variantId: selectedVariant?.id ?? null,
+  });
+  const variantAwareUrl = absoluteUrl(variantAwarePath as `/${string}`);
 
   return (
     <main className="min-h-screen">
-      <ViewTracker pageId={page.id} />
+      <ViewTracker
+        pageId={page.id}
+        variantId={selectedVariant?.id ?? null}
+        variantLabel={selectedVariant?.label ?? null}
+        shareScenario={resolvedSearchParams.s ?? null}
+        shareLinkId={resolvedSearchParams.sl ?? null}
+      />
       <ThemeCanvas
         themeId={themeId}
         height="100dvh"
@@ -84,7 +102,26 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
       >
         <PageOwnerBar pageId={page.id} pageUserId={pageUserId}>
           <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
-            <ResumeLayout data={page.resume_data} />
+            <div
+              data-analytics-scroll-root="true"
+              className="h-full overflow-y-auto scrollbar-hide"
+            >
+              <RecruiterSkimPanel
+                pageId={page.id}
+                publicPath={variantAwarePath}
+                resumeData={recruiterSkim.data}
+                variant={selectedVariant}
+                variantId={selectedVariant?.id ?? null}
+                fitHeading={recruiterSkim.fitHeading}
+                proofPoints={recruiterSkim.proofPoints}
+                featuredProject={recruiterSkim.featuredProject}
+                ctaEmphasis={recruiterSkim.ctaEmphasis}
+              />
+              <ResumeLayout
+                data={recruiterSkim.data}
+                useExternalScrollRoot
+              />
+            </div>
           </div>
         </PageOwnerBar>
       </ThemeCanvas>
@@ -93,7 +130,9 @@ export default async function PublicLivingPage({ params }: PublicPageProps) {
         pageUserId={pageUserId}
         slug={page.slug}
         themeId={themeId}
-        resumeData={page.resume_data}
+        resumeData={recruiterSkim.data}
+        variantId={selectedVariant?.id ?? null}
+        liveUrl={variantAwareUrl}
         avoidBadge
       />
       <MadeWithBadge />

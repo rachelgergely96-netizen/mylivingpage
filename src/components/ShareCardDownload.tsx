@@ -22,6 +22,8 @@ interface ShareCardDownloadProps {
   slug: string;
   themeId: string;
   resumeData: ResumeData;
+  liveUrl?: string;
+  variantId?: string | null;
   enabled?: boolean;
   className?: string;
 }
@@ -32,6 +34,8 @@ export default function ShareCardDownload({
   slug,
   themeId,
   resumeData,
+  liveUrl,
+  variantId = null,
   enabled = true,
   className,
 }: ShareCardDownloadProps) {
@@ -80,8 +84,13 @@ export default function ShareCardDownload({
   const safeLocation = truncate(resumeData.location || "", 40);
   const firstName = getFirstName(safeName);
   const shareTags = getShareCardTags(resumeData);
-  const livePageUrl = toLivePageUrl(appUrl, slug);
-  const displayUrl = truncate(toDisplayDomainUrl(appUrl, slug), 42);
+  const livePageUrl = liveUrl ?? toLivePageUrl(appUrl, slug);
+  const displayUrl = truncate(
+    liveUrl
+      ? livePageUrl.replace(/^https?:\/\/(www\.)?/i, "")
+      : toDisplayDomainUrl(appUrl, slug),
+    42,
+  );
   const qrDataUrl = buildQrDataUrl(livePageUrl);
   const initial = safeName.slice(0, 1).toUpperCase() || "?";
 
@@ -97,6 +106,7 @@ export default function ShareCardDownload({
           metadata: {
             page_id: pageId,
             slug,
+            variant_id: variantId,
           },
         }),
         keepalive: true,

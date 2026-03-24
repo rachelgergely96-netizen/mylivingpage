@@ -62,7 +62,7 @@ export default async function LandingPage() {
             <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
               <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Built for the moment after you hit send.
+                Professional decision page
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
@@ -141,12 +141,12 @@ export default async function LandingPage() {
               <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">One page. Always up to date.</p>
-                  <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                    Build it once. Send it whenever someone is deciding whether to move forward.
-                  </h2>
-                  <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Your page, Resume PDF, and shareable link stay aligned automatically. New accounts get one month of free live hosting with all features unlocked, then keep the page live for {HOSTING_PLAN_PRICE.displayLabel}.
-                  </p>
+                <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
+                  Build it once. Send it whenever someone is deciding whether to move forward.
+                </h2>
+                <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
+                    Your page, Resume PDF, and shareable link stay aligned automatically so you can send a professional decision page instead of another attachment. New accounts get one month of free live hosting with all features unlocked, then keep the page live for {HOSTING_PLAN_PRICE.displayLabel}.
+                </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
                       href={getSignupHref("landing_pricing_start")}
@@ -225,7 +225,7 @@ export default async function LandingPage() {
                   Simple. Professional. Yours.
                 </h2>
                 <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                  MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants clean, credible context fast. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
+                  MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants clean, credible context fast. It is a living resume on the surface, but the real job is helping someone decide to move forward. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
                 </p>
               </div>
               <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

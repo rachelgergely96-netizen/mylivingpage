@@ -3,22 +3,26 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import DecisionReadinessCard from "@/components/create/DecisionReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
+import VariantPlanner from "@/components/create/VariantPlanner";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { getAccountAccessState } from "@/lib/account-access";
 import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
+import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
+import { applyPageVariant } from "@/lib/page-variants";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { usernameFromEmail } from "@/lib/usernames";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
-import type { ResumeData } from "@/types/resume";
+import type { PageVariant, ResumeData } from "@/types/resume";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 
 type Step = "input" | "processing" | "review" | "success";
@@ -37,6 +41,8 @@ interface CreateDraft {
   selectedTheme: ThemeId;
   inputMode: InputMode;
   step: Step;
+  variants: PageVariant[];
+  selectedPreviewVariantId: string | null;
 }
 
 const PROGRESS_STEPS: Array<Exclude<Step, "processing">> = ["input", "review", "success"];
@@ -82,6 +88,8 @@ export default function CreatePage() {
   const [publicSlug, setPublicSlug] = useState("");
   const [publishedSlug, setPublishedSlug] = useState("");
   const [publishedPageId, setPublishedPageId] = useState<string | null>(null);
+  const [variants, setVariants] = useState<PageVariant[]>([]);
+  const [selectedPreviewVariantId, setSelectedPreviewVariantId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({ plan: "spark" }),
@@ -101,10 +109,11 @@ export default function CreatePage() {
     return Boolean(
       resumeText.trim() ||
         (guidedData.name ?? "").trim() ||
-        parsedData ||
+      parsedData ||
+        variants.length > 0 ||
         selectedTheme !== "cosmic",
     );
-  }, [guidedData.name, parsedData, resumeText, selectedTheme, step]);
+  }, [guidedData.name, parsedData, resumeText, selectedTheme, step, variants.length]);
 
   useUnsavedChanges(isDirty && step !== "processing");
 
@@ -120,8 +129,21 @@ export default function CreatePage() {
       selectedTheme,
       inputMode,
       step,
+      variants,
+      selectedPreviewVariantId,
     });
-  }, [guidedData, inputMode, isDirty, parsedData, resumeText, saveDraft, selectedTheme, step]);
+  }, [
+    guidedData,
+    inputMode,
+    isDirty,
+    parsedData,
+    resumeText,
+    saveDraft,
+    selectedPreviewVariantId,
+    selectedTheme,
+    step,
+    variants,
+  ]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) {
@@ -135,6 +157,8 @@ export default function CreatePage() {
     setSelectedTheme(draft.selectedTheme ?? "cosmic");
     setInputMode(draft.inputMode ?? "paste");
     setStep(draft.step === "success" ? "input" : draft.step ?? "input");
+    setVariants(draft.variants ?? []);
+    setSelectedPreviewVariantId(draft.selectedPreviewVariantId ?? null);
     setCreateFlowFailure(null);
     setError("");
     dismissDraft();
@@ -196,12 +220,23 @@ export default function CreatePage() {
     void fetchPlanInfo();
   }, []);
 
+  useEffect(() => {
+    if (
+      selectedPreviewVariantId &&
+      !variants.some((variant) => variant.id === selectedPreviewVariantId)
+    ) {
+      setSelectedPreviewVariantId(null);
+    }
+  }, [selectedPreviewVariantId, variants]);
+
   const beginReviewOutputs = useCallback(
     async (nextData: ResumeData, mode: InputMode) => {
       setParsedData(nextData);
       setInputMode(mode);
       setCreateFlowFailure(null);
       setError("");
+      setVariants([]);
+      setSelectedPreviewVariantId(null);
       setStep("review");
     },
     [],
@@ -315,6 +350,10 @@ export default function CreatePage() {
           theme_id: selectedTheme,
           resume_data: parsedData,
           raw_resume: resumeText,
+          page_config: {
+            variants,
+            decision_readiness: readiness,
+          },
         }),
       });
 
@@ -350,6 +389,14 @@ export default function CreatePage() {
   const progressStep = step === "processing" ? "review" : step;
   const currentProgressIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
   const predictedSlug = publishedSlug || publicSlug || "your-username";
+  const selectedPreviewVariant =
+    variants.find((variant) => variant.id === selectedPreviewVariantId) ?? null;
+  const previewData = parsedData
+    ? applyPageVariant(parsedData, selectedPreviewVariant)
+    : null;
+  const readiness = parsedData
+    ? buildDecisionReadinessState(parsedData, variants)
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -518,7 +565,7 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {step === "review" && parsedData ? (
+      {step === "review" && parsedData && previewData && readiness ? (
         <section className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 2</p>
@@ -526,9 +573,19 @@ export default function CreatePage() {
               This is what someone will see when you send it.
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Your information is ready as a page. Publish it when it looks right, and the live page will also include a downloadable Resume PDF built from the same saved content.
+              Your information is ready as a professional decision page. Tighten the parts that help someone decide faster, then publish it with the same Resume PDF and tracked link.
             </p>
           </div>
+
+          <DecisionReadinessCard readiness={readiness} />
+
+          <VariantPlanner
+            baseData={parsedData}
+            variants={variants}
+            selectedVariantId={selectedPreviewVariantId}
+            onSelectVariant={setSelectedPreviewVariantId}
+            onChange={setVariants}
+          />
 
           <div className="space-y-5">
             <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">
@@ -537,13 +594,20 @@ export default function CreatePage() {
                 This is what someone will see when you send it
               </h3>
               <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-                Keep the preview and publish controls here so the flow stays simple.
+                {selectedPreviewVariant
+                  ? `You are previewing "${selectedPreviewVariant.label}". Targeted links will open this version first.`
+                  : "You are previewing the base page. Add a targeted version above if you want a sharper send for a recruiter, follow-up, or referral."}
               </p>
               <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
                 <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
                   mylivingpage.com/{publicSlug || "your-username"}
                 </div>
+                {selectedPreviewVariant ? (
+                  <p className="mt-2 text-sm text-[rgba(240,244,255,0.58)]">
+                    The tracked share link for this version will include its own targeted URL automatically after publish.
+                  </p>
+                ) : null}
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
                 <div>
@@ -588,7 +652,7 @@ export default function CreatePage() {
               </div>
               <ThemeCanvas themeId={selectedTheme} height="min(540px, calc(100dvh - 280px))" className="rounded-none">
                 <div className="h-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.55)_100%)]">
-                  <ResumeLayout data={parsedData} />
+                  <ResumeLayout data={previewData} />
                 </div>
               </ThemeCanvas>
             </div>
@@ -648,7 +712,7 @@ export default function CreatePage() {
                 <p className="text-[10px] uppercase tracking-[0.16em]">Resume PDF</p>
                 <h3 className="mt-2 font-heading text-xl font-semibold">Ready from the live page</h3>
                 <p className="mt-2 text-sm leading-6">
-                  Anyone viewing your page can download the Resume PDF directly from the same saved content.
+                  Anyone viewing your page can download the Resume PDF directly from the same saved content, including any targeted version you share.
                 </p>
               </div>
             </div>
@@ -659,6 +723,8 @@ export default function CreatePage() {
               pageId={publishedPageId}
               livePath={`/${predictedSlug}`}
               analyticsHref={`/dashboard/analytics/${publishedPageId}`}
+              variants={variants}
+              defaultVariantId={selectedPreviewVariantId}
             />
           ) : null}
 

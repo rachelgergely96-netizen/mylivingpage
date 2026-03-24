@@ -3,6 +3,7 @@ export const SHARE_INTENT_EVENT_NAMES = [
   "page.share.download_card",
   "page.share.open_live_page",
 ] as const;
+export const SHARE_OUTCOME_EVENT_NAME = "page.share_link.opened";
 
 export type ShareIntentEventName = (typeof SHARE_INTENT_EVENT_NAMES)[number];
 export type ShareScenario =
@@ -46,6 +47,9 @@ export interface PageProofSummary {
   firstViewAfterLatestShareDeviceLabel: string | null;
   firstViewAfterLatestShareEngagedSeconds: number | null;
   lastShareScenario: ShareScenario | null;
+  lastShareVariantId: string | null;
+  lastShareVariantLabel: string | null;
+  bestScenarioLast7d: ShareScenario | null;
 }
 
 export interface PageProofResponse {
@@ -61,6 +65,9 @@ export interface PageProofResponse {
   firstViewAfterLatestShareDeviceLabel: string | null;
   firstViewAfterLatestShareEngagedSeconds: number | null;
   lastShareScenario: ShareScenario | null;
+  lastShareVariantId: string | null;
+  lastShareVariantLabel: string | null;
+  bestScenarioLast7d: ShareScenario | null;
 }
 
 interface BuildPageProofSummaryInput {
@@ -86,6 +93,14 @@ function getMetadataScenario(metadata: Record<string, unknown> | null): ShareSce
     scenario === "connection"
     ? scenario
     : null;
+}
+
+function getMetadataText(
+  metadata: Record<string, unknown> | null,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 function isMobile(userAgent: string | null) {
@@ -137,9 +152,20 @@ export function buildPageProofSummary({
         getMetadataPageId(event.metadata) === pageId,
     )
     .sort((left, right) => left.created_at.localeCompare(right.created_at));
+  const shareOutcomeEvents = events
+    .filter(
+      (event) =>
+        event.event_name === SHARE_OUTCOME_EVENT_NAME &&
+        isRecord(event.metadata) &&
+        getMetadataPageId(event.metadata) === pageId,
+    )
+    .sort((left, right) => left.created_at.localeCompare(right.created_at));
 
   const recentViews = pageViews.filter((view) => view.viewed_at >= last7dCutoff);
   const recentShareEvents = shareEvents.filter((event) => event.created_at >= last7dCutoff);
+  const recentShareOutcomeEvents = shareOutcomeEvents.filter(
+    (event) => event.created_at >= last7dCutoff,
+  );
   const latestViewAt = pageViews.at(-1)?.viewed_at ?? null;
   const lastShareEvent = shareEvents.at(-1) ?? null;
   const lastShareAt = lastShareEvent?.created_at ?? null;
@@ -149,6 +175,19 @@ export function buildPageProofSummary({
   const recentEngagedSeconds = recentViews
     .map((view) => view.engaged_seconds)
     .filter((value): value is number => typeof value === "number" && value > 0);
+  const scenarioCounts = new Map<ShareScenario, number>();
+
+  for (const event of recentShareOutcomeEvents) {
+    const scenario = getMetadataScenario(event.metadata);
+    if (!scenario) {
+      continue;
+    }
+    scenarioCounts.set(scenario, (scenarioCounts.get(scenario) ?? 0) + 1);
+  }
+
+  const bestScenarioLast7d =
+    Array.from(scenarioCounts.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ??
+    null;
 
   let status: PageProofStatus = "ready_to_share";
 
@@ -186,6 +225,9 @@ export function buildPageProofSummary({
         ? firstViewAfterLatestShare.engaged_seconds
         : null,
     lastShareScenario: getMetadataScenario(lastShareEvent?.metadata ?? null),
+    lastShareVariantId: getMetadataText(lastShareEvent?.metadata ?? null, "variant_id"),
+    lastShareVariantLabel: getMetadataText(lastShareEvent?.metadata ?? null, "variant_label"),
+    bestScenarioLast7d,
   };
 }
 
@@ -211,5 +253,8 @@ export function buildPageProofResponse(summary: PageProofSummary): PageProofResp
     firstViewAfterLatestShareDeviceLabel: summary.firstViewAfterLatestShareDeviceLabel,
     firstViewAfterLatestShareEngagedSeconds: summary.firstViewAfterLatestShareEngagedSeconds,
     lastShareScenario: summary.lastShareScenario,
+    lastShareVariantId: summary.lastShareVariantId,
+    lastShareVariantLabel: summary.lastShareVariantLabel,
+    bestScenarioLast7d: summary.bestScenarioLast7d,
   };
 }

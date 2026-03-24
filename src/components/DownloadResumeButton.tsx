@@ -7,6 +7,7 @@ import type { ResumeData } from "@/types/resume";
 interface DownloadResumeButtonProps {
   data: ResumeData;
   pageId: string;
+  variantId?: string | null;
   className?: string;
   onErrorChange?: (message: string | null) => void;
 }
@@ -29,6 +30,7 @@ function sanitizeDownloadErrorMessage(message: string) {
 export default function DownloadResumeButton({
   data,
   pageId,
+  variantId = null,
   className,
   onErrorChange,
 }: DownloadResumeButtonProps) {
@@ -41,7 +43,7 @@ export default function DownloadResumeButton({
       const response = await fetch("/api/resume/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageId }),
+        body: JSON.stringify({ pageId, variantId }),
       });
 
       if (!response.ok) {

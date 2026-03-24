@@ -38,6 +38,53 @@ export interface ResumeData {
   stats: Array<{ value: string; label: string }>;
 }
 
+export type PageVariantSectionId =
+  | "summary"
+  | "stats"
+  | "experience"
+  | "projects"
+  | "skills"
+  | "education"
+  | "certifications";
+
+export interface PageVariant {
+  id: string;
+  slug: string;
+  label: string;
+  roleTitle: string;
+  headline: string | null;
+  summary: string | null;
+  featuredStatLabels: string[];
+  featuredProjectNames: string[];
+  sectionOrder: PageVariantSectionId[];
+  ctaEmphasis: string | null;
+}
+
+export type DecisionReadinessStatus = "ready" | "needs_attention";
+
+export interface DecisionReadinessCheck {
+  id: string;
+  title: string;
+  status: DecisionReadinessStatus;
+  detail: string;
+}
+
+export interface DecisionReadinessSuggestion {
+  id: string;
+  title: string;
+  detail: string;
+}
+
+export interface DecisionReadinessState {
+  overallStatus: DecisionReadinessStatus;
+  readyCount: number;
+  totalChecks: number;
+  summary: string;
+  checks: DecisionReadinessCheck[];
+  suggestions: DecisionReadinessSuggestion[];
+  lastEvaluatedAt: string;
+}
+
 export type AtsIssueCategory =
   | "machine_readability"
   | "recruiter_searchability"
@@ -172,6 +219,8 @@ export interface AtsSuggestionFeedback {
 
 export interface PageConfig {
   ats?: AtsReviewSnapshot | null;
+  variants?: PageVariant[] | null;
+  decision_readiness?: DecisionReadinessState | null;
   [key: string]: unknown;
 }
 

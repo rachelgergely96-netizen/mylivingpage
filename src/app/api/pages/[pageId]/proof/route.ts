@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   buildPageProofResponse,
   buildPageProofSummary,
+  SHARE_OUTCOME_EVENT_NAME,
   SHARE_INTENT_EVENT_NAMES,
 } from "@/lib/analytics/proofSummary";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -57,7 +58,7 @@ export async function GET(
       .from("events")
       .select("event_name, created_at, metadata")
       .eq("user_id", userId)
-      .in("event_name", [...SHARE_INTENT_EVENT_NAMES])
+      .in("event_name", [...SHARE_INTENT_EVENT_NAMES, SHARE_OUTCOME_EVENT_NAME])
       .order("created_at", { ascending: false }),
   ]);
 

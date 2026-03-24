@@ -8,6 +8,10 @@ import type {
 
 interface ViewTrackerProps {
   pageId: string;
+  variantId?: string | null;
+  variantLabel?: string | null;
+  shareScenario?: string | null;
+  shareLinkId?: string | null;
 }
 
 interface ClickAggregate {
@@ -22,7 +26,13 @@ interface ViewResponse {
   pageViewId?: string;
 }
 
-export default function ViewTracker({ pageId }: ViewTrackerProps) {
+export default function ViewTracker({
+  pageId,
+  variantId = null,
+  variantLabel = null,
+  shareScenario = null,
+  shareLinkId = null,
+}: ViewTrackerProps) {
   const pageViewIdRef = useRef<string | null>(null);
   const clicksRef = useRef(new Map<string, ClickAggregate>());
   const sectionRatiosRef = useRef(new Map<AnalyticsSectionId, number>());
@@ -269,7 +279,13 @@ export default function ViewTracker({ pageId }: ViewTrackerProps) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ pageId }),
+      body: JSON.stringify({
+        pageId,
+        variantId,
+        variantLabel,
+        shareScenario,
+        shareLinkId,
+      }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -298,7 +314,7 @@ export default function ViewTracker({ pageId }: ViewTrackerProps) {
       handlePageHide();
       cancelled = true;
     };
-  }, [pageId]);
+  }, [pageId, shareLinkId, shareScenario, variantId, variantLabel]);
 
   return null;
 }

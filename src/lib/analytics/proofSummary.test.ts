@@ -55,7 +55,22 @@ describe("buildPageProofSummary", () => {
         {
           event_name: "page.share.copy_link",
           created_at: "2026-03-23T14:00:00.000Z",
-          metadata: { page_id: "page-1", scenario: "application_follow_up" },
+          metadata: {
+            page_id: "page-1",
+            scenario: "application_follow_up",
+            variant_id: "variant-1",
+            variant_label: "Recruiter version",
+          },
+        },
+        {
+          event_name: "page.share_link.opened",
+          created_at: "2026-03-23T14:05:00.000Z",
+          metadata: {
+            page_id: "page-1",
+            scenario: "application_follow_up",
+            variant_id: "variant-1",
+            variant_label: "Recruiter version",
+          },
         },
       ],
       now: NOW,
@@ -69,6 +84,8 @@ describe("buildPageProofSummary", () => {
     expect(summary.firstViewAfterLatestShareDeviceLabel).toBe("Mobile");
     expect(summary.firstViewAfterLatestShareEngagedSeconds).toBe(44);
     expect(summary.lastShareScenario).toBe("application_follow_up");
+    expect(summary.lastShareVariantLabel).toBe("Recruiter version");
+    expect(summary.bestScenarioLast7d).toBe("application_follow_up");
   });
 
   it("falls back to active traffic when views exist without a fresh share event", () => {

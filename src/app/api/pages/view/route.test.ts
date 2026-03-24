@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   insertPageView: vi.fn(),
   pageUpdate: vi.fn(),
   rpc: vi.fn(),
+  trackEvent: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -32,6 +33,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createServiceRoleSupabaseClient: vi.fn(() =>
     mocks.createServiceRoleSupabaseClient(),
   ),
+}));
+
+vi.mock("@/lib/track-event", () => ({
+  trackEvent: (...args: unknown[]) => mocks.trackEvent(...args),
 }));
 
 import { POST } from "@/app/api/pages/view/route";
@@ -161,6 +166,7 @@ describe("POST /api/pages/view", () => {
       get: () => null,
     });
     mocks.rpc.mockResolvedValue({ error: null });
+    mocks.trackEvent.mockResolvedValue(undefined);
   });
 
   it("does not count views for pages whose free hosting has expired", async () => {

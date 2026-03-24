@@ -10,14 +10,19 @@ import type {
 } from "@/lib/analytics/proofSummary";
 import {
   buildShareScenarioMessage,
+  buildTrackedSharePath,
+  createShareLinkId,
   getShareScenarioLabel,
   SHARE_SCENARIO_OPTIONS,
 } from "@/lib/create-share";
+import type { PageVariant } from "@/types/resume";
 
 interface FirstViewActivationHubProps {
   pageId: string;
   livePath: string;
   analyticsHref: string;
+  variants?: PageVariant[];
+  defaultVariantId?: string | null;
 }
 
 function formatRelativeTime(value: string | null) {
@@ -64,9 +69,14 @@ export default function FirstViewActivationHub({
   pageId,
   livePath,
   analyticsHref,
+  variants = [],
+  defaultVariantId = null,
 }: FirstViewActivationHubProps) {
   const [selectedScenario, setSelectedScenario] =
     useState<ShareScenario>("application_follow_up");
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    defaultVariantId ?? variants[0]?.id ?? null,
+  );
   const [loopState, setLoopState] =
     useState<FirstViewLoopState>("repeat_share_prompt");
   const [proof, setProof] = useState<PageProofResponse | null>(null);
@@ -77,13 +87,19 @@ export default function FirstViewActivationHub({
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "",
   );
   const sharePanelRef = useRef<HTMLDivElement | null>(null);
-  const liveUrl = useMemo(
-    () => (appOrigin ? `${appOrigin}${livePath}` : livePath),
-    [appOrigin, livePath],
+  const selectedVariant =
+    variants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const previewSharePath = useMemo(
+    () => buildTrackedSharePath(livePath, selectedScenario, { variant: selectedVariant }),
+    [livePath, selectedScenario, selectedVariant],
+  );
+  const previewShareUrl = useMemo(
+    () => (appOrigin ? `${appOrigin}${previewSharePath}` : previewSharePath),
+    [appOrigin, previewSharePath],
   );
   const message = useMemo(
-    () => buildShareScenarioMessage(selectedScenario, liveUrl),
-    [selectedScenario, liveUrl],
+    () => buildShareScenarioMessage(selectedScenario, previewShareUrl, selectedVariant),
+    [selectedScenario, previewShareUrl, selectedVariant],
   );
 
   useEffect(() => {
@@ -115,9 +131,22 @@ export default function FirstViewActivationHub({
     }
   };
 
-  const handleCopyMessage = async () => {
+  const handleTrackedCopy = async (mode: "message_template" | "link_only") => {
+    const shareLinkId = createShareLinkId();
+    const trackedSharePath = buildTrackedSharePath(livePath, selectedScenario, {
+      variant: selectedVariant,
+      shareLinkId,
+    });
+    const trackedShareUrl = appOrigin
+      ? `${appOrigin}${trackedSharePath}`
+      : trackedSharePath;
+    const value =
+      mode === "message_template"
+        ? buildShareScenarioMessage(selectedScenario, trackedShareUrl, selectedVariant)
+        : trackedShareUrl;
+
     try {
-      await navigator.clipboard.writeText(message);
+      await navigator.clipboard.writeText(value);
       setCopyState("copied");
       setProofError(null);
       setLoopState("waiting_for_first_view");
@@ -125,7 +154,11 @@ export default function FirstViewActivationHub({
         page_id: pageId,
         scenario: selectedScenario,
         surface: "create_success",
-        mode: "message_template",
+        mode,
+        variant_id: selectedVariant?.id ?? null,
+        variant_label: selectedVariant?.label ?? null,
+        share_link_id: shareLinkId,
+        share_path: trackedSharePath,
       });
       window.setTimeout(() => {
         setCopyState((current) => (current === "copied" ? "idle" : current));
@@ -181,32 +214,15 @@ export default function FirstViewActivationHub({
     sharePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const handleCopyLinkOnly = async () => {
-    try {
-      await navigator.clipboard.writeText(liveUrl);
-      setCopyState("copied");
-      setProofError(null);
-      setLoopState("waiting_for_first_view");
-      void trackShareIntent("page.share.copy_link", {
-        page_id: pageId,
-        scenario: selectedScenario,
-        surface: "create_success",
-        mode: "link_only",
-      });
-      window.setTimeout(() => {
-        setCopyState((current) => (current === "copied" ? "idle" : current));
-      }, 2400);
-    } catch {
-      setCopyState("error");
-    }
-  };
-
   const handleOpenLivePage = () => {
     void trackShareIntent("page.share.open_live_page", {
       page_id: pageId,
       scenario: selectedScenario,
       surface: "create_success",
       mode: "activation_hub",
+      variant_id: selectedVariant?.id ?? null,
+      variant_label: selectedVariant?.label ?? null,
+      share_path: previewSharePath,
     });
   };
 
@@ -214,7 +230,7 @@ export default function FirstViewActivationHub({
     ? "That worked. Send it again."
     : "Who will you send this to?";
   const repeatShareBody = proof?.firstViewAfterLatestShareAt
-    ? "Someone looked after your last share. Keep the momentum going by sending the same page to one more person."
+    ? `Someone looked after your last share${proof?.lastShareVariantLabel ? ` of "${proof.lastShareVariantLabel}"` : ""}. Keep the momentum going by sending the same page to one more person.`
     : "Pick one real follow-up moment, copy the message, and send it now so the proof loop can start.";
   const firstViewRelative = formatRelativeTime(proof?.firstViewAfterLatestShareAt ?? null);
   const firstViewDuration = formatDuration(
@@ -235,7 +251,8 @@ export default function FirstViewActivationHub({
               Waiting for someone to look
             </h3>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
-              Send this now. You&apos;ll know when they open it. After you send the copied message, come back here and see if someone looked.
+              Send this now. You&apos;ll know when they open it. After you send the copied
+              message, come back here and see if someone looked.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
@@ -265,6 +282,9 @@ export default function FirstViewActivationHub({
                 ? `The first look after your recent share happened ${firstViewRelative}.`
                 : "The first look after your recent share has landed."}{" "}
               {lastShareScenarioLabel ? `This came after you used "${lastShareScenarioLabel}."` : ""}
+              {proof?.lastShareVariantLabel
+                ? ` The version they saw was "${proof.lastShareVariantLabel}."`
+                : ""}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {proof?.firstViewAfterLatestShareDeviceLabel ? (
@@ -277,6 +297,11 @@ export default function FirstViewActivationHub({
                   ? `Read for about ${firstViewDuration}`
                   : "Reading time will appear after they finish browsing"}
               </span>
+              {proof?.bestScenarioLast7d ? (
+                <span className="rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[rgba(240,244,255,0.76)]">
+                  Best scenario so far: {getShareScenarioLabel(proof.bestScenarioLast7d)}
+                </span>
+              ) : null}
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
@@ -292,12 +317,12 @@ export default function FirstViewActivationHub({
               >
                 Open page analytics
               </Link>
-            <Link
-              href={livePath}
-              onClick={handleOpenLivePage}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-            >
-              Open your page
+              <Link
+                href={previewSharePath}
+                onClick={handleOpenLivePage}
+                className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+              >
+                Open your page
               </Link>
             </div>
           </>
@@ -328,11 +353,12 @@ export default function FirstViewActivationHub({
             Want to test it once?
           </h3>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-            Open the link from another logged-out device or ask one trusted contact to open it once. Opening it from this same logged-in owner session will not count.
+            Open the link from another logged-out device or ask one trusted contact to open it
+            once. Opening it from this same logged-in owner session will not count.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
-              href={livePath}
+              href={previewSharePath}
               onClick={handleOpenLivePage}
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
             >
@@ -363,6 +389,41 @@ export default function FirstViewActivationHub({
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.62)]">
           Choose one real follow-up moment. The fastest path is good enough, sent quickly.
         </p>
+
+        {variants.length > 0 ? (
+          <div className="mt-5">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+              Targeted version
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedVariantId(null)}
+                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
+                  selectedVariantId === null
+                    ? "border-[rgba(59,130,246,0.42)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
+                    : "border-[rgba(255,255,255,0.14)] text-[rgba(240,244,255,0.68)] hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
+                }`}
+              >
+                Base page
+              </button>
+              {variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  onClick={() => setSelectedVariantId(variant.id)}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
+                    selectedVariantId === variant.id
+                      ? "border-[rgba(59,130,246,0.42)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
+                      : "border-[rgba(255,255,255,0.14)] text-[rgba(240,244,255,0.68)] hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
+                  }`}
+                >
+                  {variant.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-5 flex flex-wrap gap-3">
           {SHARE_SCENARIO_OPTIONS.map((option) => {
@@ -395,20 +456,25 @@ export default function FirstViewActivationHub({
                 ?.description
             }
           </p>
+          {selectedVariant ? (
+            <p className="mt-2 text-sm text-[#93C5FD]">
+              This link will open the &quot;{selectedVariant.label}&quot; version first.
+            </p>
+          ) : null}
           <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(8,16,28,0.72)] p-4 font-mono text-sm leading-7 text-[#F0F4FF]">
             {message}
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => void handleCopyMessage()}
+              onClick={() => void handleTrackedCopy("message_template")}
               className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em]"
             >
               {copyState === "copied" ? "Message copied" : "Copy message"}
             </button>
             <button
               type="button"
-              onClick={() => void handleCopyLinkOnly()}
+              onClick={() => void handleTrackedCopy("link_only")}
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
             >
               Copy your link

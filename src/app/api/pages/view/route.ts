@@ -5,12 +5,19 @@ import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getClientIp, hashSecurityIdentifier } from "@/lib/security/request";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/track-event";
 
 const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { pageId?: string };
+    const body = (await request.json()) as {
+      pageId?: string;
+      variantId?: string | null;
+      variantLabel?: string | null;
+      shareScenario?: string | null;
+      shareLinkId?: string | null;
+    };
     if (!body.pageId) {
       return NextResponse.json({ error: "Missing pageId" }, { status: 400 });
     }
@@ -81,6 +88,15 @@ export async function POST(request: Request) {
       .gte("viewed_at", dedupeCutoff);
 
     if (recentView && recentView.length > 0) {
+      await trackEvent(pageOwnerId, "page.share_link.opened", {
+        page_id: body.pageId,
+        page_view_id: recentView[0].id,
+        variant_id: body.variantId ?? null,
+        variant_label: body.variantLabel ?? null,
+        scenario: body.shareScenario ?? null,
+        share_link_id: body.shareLinkId ?? null,
+        deduped: true,
+      });
       return NextResponse.json({
         ok: true,
         deduped: true,
@@ -105,6 +121,15 @@ export async function POST(request: Request) {
     }
 
     await supabase.rpc("increment_page_views", { page_id: body.pageId });
+    await trackEvent(pageOwnerId, "page.share_link.opened", {
+      page_id: body.pageId,
+      page_view_id: insertedView.id,
+      variant_id: body.variantId ?? null,
+      variant_label: body.variantLabel ?? null,
+      scenario: body.shareScenario ?? null,
+      share_link_id: body.shareLinkId ?? null,
+      deduped: false,
+    });
 
     return NextResponse.json({ ok: true, pageViewId: insertedView.id });
   } catch (error) {

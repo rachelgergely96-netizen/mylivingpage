@@ -11,6 +11,8 @@ interface PublicPageActionDockProps {
   slug: string;
   themeId: string;
   resumeData: ResumeData;
+  variantId?: string | null;
+  liveUrl?: string;
   shareCardEnabled?: boolean;
   avoidBadge?: boolean;
 }
@@ -21,6 +23,8 @@ export default function PublicPageActionDock({
   slug,
   themeId,
   resumeData,
+  variantId = null,
+  liveUrl,
   shareCardEnabled = true,
   avoidBadge = false,
 }: PublicPageActionDockProps) {
@@ -69,6 +73,7 @@ export default function PublicPageActionDock({
         <DownloadResumeButton
           data={resumeData}
           pageId={pageId}
+          variantId={variantId}
           onErrorChange={handleDownloadErrorChange}
           className="w-full justify-center"
         />
@@ -79,6 +84,8 @@ export default function PublicPageActionDock({
           slug={slug}
           themeId={themeId}
           resumeData={resumeData}
+          liveUrl={liveUrl}
+          variantId={variantId}
           enabled={shareCardEnabled}
           className="w-full justify-center"
         />

@@ -4,6 +4,7 @@ import {
   buildResumePdfFileName,
   coerceResumeDataForExport,
 } from "@/lib/resume-export";
+import { applyPageVariant, getPageVariant } from "@/lib/page-variants";
 import {
   countPdfPages,
   getFriendlyResumePdfError,
@@ -20,6 +21,7 @@ const routeTrustLevel = "public_read";
 
 interface ResumeExportRequestBody {
   pageId?: string;
+  variantId?: string | null;
 }
 
 interface PublicPageResumeSource {
@@ -29,6 +31,7 @@ interface PublicPageResumeSource {
   status: "draft" | "live" | "archived" | null;
   visibility: "private" | "link" | "public" | null;
   resume_data: unknown;
+  page_config?: Record<string, unknown> | null;
 }
 
 function getResumePdfErrorMessage(error: unknown) {
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
     const supabase = createServiceRoleSupabaseClient();
     const { data: page, error: pageError } = await supabase
       .from("pages")
-      .select("id, owner_id, user_id, status, visibility, resume_data")
+      .select("id, owner_id, user_id, status, visibility, resume_data, page_config")
       .eq("id", body.pageId)
       .maybeSingle<PublicPageResumeSource>();
 
@@ -104,7 +107,16 @@ export async function POST(request: Request) {
       });
     }
 
-    const normalized = coerceResumeDataForExport(syncedPage.page.resume_data);
+    const selectedVariant = getPageVariant(
+      syncedPage.page.page_config ?? null,
+      body.variantId ?? null,
+    );
+    const normalized = coerceResumeDataForExport(
+      applyPageVariant(
+        coerceResumeDataForExport(syncedPage.page.resume_data),
+        selectedVariant,
+      ),
+    );
     let buffer: Uint8Array;
     let fallbackUsed = false;
     let primaryRenderError: string | null = null;
@@ -132,6 +144,7 @@ export async function POST(request: Request) {
 
         await trackEvent(null, "resume.export.download_failed", {
           page_id: body.pageId,
+          variant_id: body.variantId ?? null,
           renderable: false,
           fallback_used: false,
           error_stage: "fallback",
@@ -156,6 +169,7 @@ export async function POST(request: Request) {
 
     await trackEvent(null, "resume.export.downloaded", {
       page_id: body.pageId,
+      variant_id: body.variantId ?? null,
       page_count: pageCount,
       fits_on_one_page: pageCount === 1,
       renderable: true,

@@ -84,9 +84,9 @@ export async function POST(request: Request) {
     });
     const username = profile?.username ?? usernameFromEmail(user.email);
 
-    if (!accountAccess.featuresUnlocked && isPremiumTheme(body.theme_id)) {
+    if (!accountAccess.themeFeaturesUnlocked && isPremiumTheme(body.theme_id)) {
       return NextResponse.json(
-        { error: `The "${body.theme_id}" theme requires a premium plan. Free themes: ${FREE_THEMES.join(", ")}.` },
+        { error: `The "${body.theme_id}" theme requires hosting access. Core themes: ${FREE_THEMES.join(", ")}.` },
         { status: 403 },
       );
     }

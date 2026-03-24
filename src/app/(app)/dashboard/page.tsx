@@ -4,7 +4,7 @@ import {
   buildPageProofSummary,
   SHARE_INTENT_EVENT_NAMES,
 } from "@/lib/analytics/proofSummary";
-import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE } from "@/lib/billing";
 import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
@@ -247,12 +247,12 @@ export default async function DashboardPage() {
           {!accountAccess.isLegacyAccount ? (
             <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.74)]">
               {accountAccess.hasPaidSubscription ? (
-                <>Monthly hosting is active at {PRO_PLAN_PRICE.displayLabel}. Manage it from settings anytime.</>
+                <>Monthly hosting is active at {HOSTING_PLAN_PRICE.displayLabel}. Manage it from settings anytime.</>
               ) : accountAccess.requiresSubscription ? (
                 <>
                   Your free hosting month has ended and your public page is offline.{" "}
                   <Link href="/dashboard/settings" className="text-[#93C5FD] hover:text-[#BFDBFE]">
-                    Continue hosting for {PRO_PLAN_PRICE.displayLabel}
+                    Continue hosting for {HOSTING_PLAN_PRICE.displayLabel}
                   </Link>
                   .
                 </>
@@ -279,21 +279,17 @@ export default async function DashboardPage() {
                     Page Analytics
                   </p>
                   <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
-                    See who opened your page and what happened next.
+                    See when people open your page and what happens next.
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
                     This is the clear place to review people who looked, device mix, reading time, and follow-up activity after you share your page.
                   </p>
                 </div>
                 <Link
-                  href={
-                    accountAccess.featuresUnlocked
-                      ? `/dashboard/analytics/${primaryAnalyticsPage.id}`
-                      : "/dashboard/settings"
-                  }
+                  href={`/dashboard/analytics/${primaryAnalyticsPage.id}`}
                   className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
                 >
-                  {accountAccess.featuresUnlocked ? "Open Page Analytics" : "Unlock Page Analytics"}
+                  Open Page Analytics
                 </Link>
               </div>
             </div>
@@ -354,22 +350,12 @@ export default async function DashboardPage() {
                   >
                     Edit Page
                   </Link>
-                  {accountAccess.featuresUnlocked ? (
-                    <Link
-                      href={`/dashboard/analytics/${page.id}`}
-                      className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
-                    >
-                      Page Analytics
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/dashboard/settings"
-                      className="flex items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] sm:px-4 sm:py-2"
-                    >
-                      Page Analytics
-                      <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">HOSTING</span>
-                    </Link>
-                  )}
+                  <Link
+                    href={`/dashboard/analytics/${page.id}`}
+                    className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
+                  >
+                    Page Analytics
+                  </Link>
                   <DeletePageButton pageId={page.id} />
                 </div>
                 <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 md:col-span-full">
@@ -385,14 +371,12 @@ export default async function DashboardPage() {
                         {proofCopy.body}
                       </p>
                     </div>
-                    {accountAccess.featuresUnlocked ? (
-                      <Link
-                        href={`/dashboard/analytics/${page.id}`}
-                        className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
-                      >
-                        Open Page Analytics
-                      </Link>
-                    ) : null}
+                    <Link
+                      href={`/dashboard/analytics/${page.id}`}
+                      className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
+                    >
+                      Open Page Analytics
+                    </Link>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {proofCopy.chips.map((chip) => (

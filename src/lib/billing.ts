@@ -1,4 +1,6 @@
-export type ManagedPlan = "spark" | "pro";
+import type { StoredPlan } from "@/lib/plans";
+
+export type ManagedPlan = StoredPlan;
 
 export interface PlanPriceConfig {
   amountCents: number;
@@ -22,7 +24,7 @@ export interface StripePriceSnapshot {
   productName: string | null;
 }
 
-export const PRO_PLAN_PRICE: PlanPriceConfig = {
+export const HOSTING_PLAN_PRICE: PlanPriceConfig = {
   amountCents: 999,
   currency: "usd",
   interval: "month",
@@ -34,28 +36,31 @@ export const PRO_PLAN_PRICE: PlanPriceConfig = {
   productDescription:
     "$9.99/month subscription to continue hosting your live MyLivingPage after the first free month.",
 };
+export const PRO_PLAN_PRICE = HOSTING_PLAN_PRICE;
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 
-export function getManagedPlanForSubscriptionStatus(
+export function getStoredPlanForSubscriptionStatus(
   status: string | null | undefined,
 ): ManagedPlan {
   return status && ACTIVE_SUBSCRIPTION_STATUSES.has(status) ? "pro" : "spark";
 }
+export const getManagedPlanForSubscriptionStatus = getStoredPlanForSubscriptionStatus;
 
-export function getExpectedProPlanStripeSnapshot(
+export function getExpectedHostingPlanStripeSnapshot(
   priceId: string | null | undefined,
 ): StripePriceSnapshot {
   return {
     id: priceId ?? null,
     active: true,
-    amountCents: PRO_PLAN_PRICE.amountCents,
-    currency: PRO_PLAN_PRICE.currency,
-    interval: PRO_PLAN_PRICE.interval,
-    intervalCount: PRO_PLAN_PRICE.intervalCount,
-    productName: PRO_PLAN_PRICE.productName,
+    amountCents: HOSTING_PLAN_PRICE.amountCents,
+    currency: HOSTING_PLAN_PRICE.currency,
+    interval: HOSTING_PLAN_PRICE.interval,
+    intervalCount: HOSTING_PLAN_PRICE.intervalCount,
+    productName: HOSTING_PLAN_PRICE.productName,
   };
 }
+export const getExpectedProPlanStripeSnapshot = getExpectedHostingPlanStripeSnapshot;
 
 export function getStripePriceDriftMessages(
   actual: StripePriceSnapshot,

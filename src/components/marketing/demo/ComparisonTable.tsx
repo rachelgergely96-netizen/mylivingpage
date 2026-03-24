@@ -19,8 +19,8 @@ export default function ComparisonTable() {
           <span className="w-14 text-center font-mono text-[13px]" style={{ color: item.free ? "#5BD67C" : "rgba(240,244,255,0.15)" }}>
             {item.free ? "\u2713" : "\u2014"}
           </span>
-          <span className="w-14 text-center font-mono text-[13px]" style={{ color: item.pro ? "#3B82F6" : "rgba(240,244,255,0.15)" }}>
-            {item.pro ? "\u2713" : "\u2014"}
+          <span className="w-14 text-center font-mono text-[13px]" style={{ color: item.hosting ? "#3B82F6" : "rgba(240,244,255,0.15)" }}>
+            {item.hosting ? "\u2713" : "\u2014"}
           </span>
         </div>
       ))}

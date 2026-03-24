@@ -59,7 +59,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({ plan: "spark" }),
   );
-  const featuresUnlocked = accountAccess.featuresUnlocked;
+  const themeFeaturesUnlocked = accountAccess.themeFeaturesUnlocked;
 
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(
     `mlp-draft-edit-${pageId}-living-page`,
@@ -370,7 +370,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           themes={THEME_REGISTRY}
           selectedThemeId={themeId}
           onSelectTheme={setThemeId}
-          premium={featuresUnlocked}
+          premium={themeFeaturesUnlocked}
           showDescription
         />
 

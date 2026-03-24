@@ -1,6 +1,6 @@
 import {
-  PRO_PLAN_PRICE,
-  getExpectedProPlanStripeSnapshot,
+  HOSTING_PLAN_PRICE,
+  getExpectedHostingPlanStripeSnapshot,
   getStripePriceDriftMessages,
   type StripePriceSnapshot,
 } from "@/lib/billing";
@@ -151,7 +151,7 @@ async function getStripePriceStatus(): Promise<StripePriceStatus> {
       actual,
       driftMessages: getStripePriceDriftMessages(
         actual,
-        getExpectedProPlanStripeSnapshot(configuredPriceId),
+        getExpectedHostingPlanStripeSnapshot(configuredPriceId),
       ),
       errorMessage: null,
     };
@@ -460,10 +460,10 @@ export default async function AdminOpsPage() {
                 Stripe Price Health
               </p>
               <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
-                {PRO_PLAN_PRICE.productName}
+                {HOSTING_PLAN_PRICE.productName}
               </h2>
               <p className="mt-1 text-sm text-[rgba(240,244,255,0.52)]">
-                Expected {PRO_PLAN_PRICE.displayLabel}, {PRO_PLAN_PRICE.currency.toUpperCase()}, recurring {PRO_PLAN_PRICE.interval}.
+                Expected {HOSTING_PLAN_PRICE.displayLabel}, {HOSTING_PLAN_PRICE.currency.toUpperCase()}, recurring {HOSTING_PLAN_PRICE.interval}.
               </p>
             </div>
             <span

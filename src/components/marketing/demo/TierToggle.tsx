@@ -1,4 +1,4 @@
-import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE } from "@/lib/billing";
 
 interface TierToggleProps {
   isPro: boolean;
@@ -32,7 +32,7 @@ export default function TierToggle({ isPro, onToggle }: TierToggleProps) {
         onClick={() => isPro || onToggle()}
         className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${isPro ? "text-[#3B82F6]" : "text-[rgba(240,244,255,0.5)]"}`}
       >
-        Hosting &mdash; {PRO_PLAN_PRICE.amountLabel}/mo
+        Hosting &mdash; {HOSTING_PLAN_PRICE.amountLabel}/mo
       </button>
     </div>
   );

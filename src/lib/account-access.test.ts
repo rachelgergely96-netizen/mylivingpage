@@ -14,6 +14,8 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       isLegacyAccount: true,
+      themeFeaturesUnlocked: false,
+      analyticsAccessAllowed: true,
       featuresUnlocked: false,
       publicHostingAllowed: true,
       requiresSubscription: false,
@@ -29,6 +31,8 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       isLegacyAccount: true,
+      themeFeaturesUnlocked: true,
+      analyticsAccessAllowed: true,
       featuresUnlocked: true,
       publicHostingAllowed: true,
       requiresSubscription: false,
@@ -44,6 +48,8 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       isLegacyAccount: false,
+      themeFeaturesUnlocked: true,
+      analyticsAccessAllowed: true,
       featuresUnlocked: true,
       publicHostingAllowed: true,
       hasStartedFreeMonth: false,
@@ -61,6 +67,8 @@ describe("getAccountAccessState", () => {
 
     expect(access).toMatchObject({
       isLegacyAccount: false,
+      themeFeaturesUnlocked: true,
+      analyticsAccessAllowed: true,
       featuresUnlocked: true,
       publicHostingAllowed: true,
       hasStartedFreeMonth: true,
@@ -81,6 +89,8 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       isLegacyAccount: false,
+      themeFeaturesUnlocked: true,
+      analyticsAccessAllowed: true,
       featuresUnlocked: true,
       publicHostingAllowed: false,
       hasStartedFreeMonth: true,
@@ -101,6 +111,8 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       isLegacyAccount: false,
+      themeFeaturesUnlocked: true,
+      analyticsAccessAllowed: true,
       featuresUnlocked: true,
       publicHostingAllowed: true,
       requiresSubscription: false,

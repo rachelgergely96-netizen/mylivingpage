@@ -65,7 +65,7 @@ export default async function AnalyticsPage({
     hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
   });
 
-  if (!accountAccess.featuresUnlocked) {
+  if (!accountAccess.analyticsAccessAllowed) {
     redirect("/dashboard/settings");
   }
 

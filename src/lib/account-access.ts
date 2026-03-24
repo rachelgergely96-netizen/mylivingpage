@@ -1,4 +1,4 @@
-import { isPremiumPlan } from "@/lib/plans";
+import { hasHostingSubscription } from "@/lib/plans";
 
 export const LEGACY_BILLING_COHORT = "legacy_freemium";
 export const TRIAL_HOSTING_BILLING_COHORT = "trial_hosting_v1";
@@ -16,6 +16,8 @@ export interface AccountAccessInput {
 }
 
 export interface AccountAccessState {
+  themeFeaturesUnlocked: boolean;
+  analyticsAccessAllowed: boolean;
   billingCohort: BillingCohort;
   featuresUnlocked: boolean;
   publicHostingAllowed: boolean;
@@ -59,12 +61,16 @@ export function getAccountAccessState(
   const trialEndsAtDate = trialStartedAtDate
     ? addDays(trialStartedAtDate, FREE_HOSTING_TRIAL_DAYS)
     : null;
-  const hasPaidSubscription = isPremiumPlan(input.plan);
+  const hasPaidSubscription = hasHostingSubscription(input.plan);
 
   if (billingCohort === LEGACY_BILLING_COHORT) {
+    const themeFeaturesUnlocked = hasPaidSubscription;
+
     return {
+      themeFeaturesUnlocked,
+      analyticsAccessAllowed: true,
       billingCohort,
-      featuresUnlocked: hasPaidSubscription,
+      featuresUnlocked: themeFeaturesUnlocked,
       publicHostingAllowed: true,
       trialStartedAt: null,
       trialEndsAt: null,
@@ -92,10 +98,13 @@ export function getAccountAccessState(
   );
   const publicHostingAllowed =
     hasPaidSubscription || !hasStartedFreeMonth || isActiveFreeMonth;
+  const themeFeaturesUnlocked = true;
 
   return {
+    themeFeaturesUnlocked,
+    analyticsAccessAllowed: true,
     billingCohort,
-    featuresUnlocked: true,
+    featuresUnlocked: themeFeaturesUnlocked,
     publicHostingAllowed,
     trialStartedAt: trialStartedAtDate?.toISOString() ?? null,
     trialEndsAt: trialEndsAtDate?.toISOString() ?? null,

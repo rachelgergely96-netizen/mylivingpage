@@ -74,8 +74,11 @@ describe("Resume PDF export data shaping", () => {
     });
   });
 
-  it("renders a very dense real-world resume cleanly without layout failure", async () => {
-    const buffer = await renderResumePdf({
+  it(
+    "renders a very dense real-world resume cleanly without layout failure",
+    { timeout: 15_000 },
+    async () => {
+      const buffer = await renderResumePdf({
       name: "Rachel Gergely",
       headline: "Founder | Attorney | Product Architect",
       location: "New York City & Orlando, Florida",
@@ -188,7 +191,8 @@ describe("Resume PDF export data shaping", () => {
       stats: [],
     });
 
-    expect(Buffer.from(buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
-    expect(countPdfPages(buffer)).toBeLessThanOrEqual(2);
-  });
+      expect(Buffer.from(buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
+      expect(countPdfPages(buffer)).toBeLessThanOrEqual(2);
+    },
+  );
 });

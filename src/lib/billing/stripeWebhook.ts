@@ -4,7 +4,7 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/legal-version";
-import { getManagedPlanForSubscriptionStatus, type ManagedPlan } from "@/lib/billing";
+import { getStoredPlanForSubscriptionStatus, type ManagedPlan } from "@/lib/billing";
 
 export interface BillingRepository {
   updatePlanByCustomerId(customerId: string, plan: ManagedPlan): Promise<void>;
@@ -169,7 +169,7 @@ export async function processStripeWebhookEvent({
       if (!customerId) {
         await trackWebhookProcessed(trackEvent, null, event, processedAt, {
           customer_id: null,
-          plan: getManagedPlanForSubscriptionStatus(subscription.status),
+          plan: getStoredPlanForSubscriptionStatus(subscription.status),
         });
         return;
       }
@@ -177,7 +177,7 @@ export async function processStripeWebhookEvent({
       const plan =
         event.type === "customer.subscription.deleted"
           ? "spark"
-          : getManagedPlanForSubscriptionStatus(subscription.status);
+          : getStoredPlanForSubscriptionStatus(subscription.status);
 
       await repository.updatePlanByCustomerId(customerId, plan);
       const userId = await repository.findUserIdByCustomerId(customerId);

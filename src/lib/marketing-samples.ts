@@ -1,6 +1,6 @@
 import type { DemoPage } from "@/lib/demo-data";
 import { DEMO_PAGES } from "@/lib/demo-data";
-import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE } from "@/lib/billing";
 
 export interface MarketingSample {
   id: string;
@@ -180,7 +180,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Is it actually free?",
     answer:
-      "Yes, for the first month your page is live. New accounts get one month of free hosting with all features unlocked, then monthly hosting is $9.99 if you want to keep the page live.",
+      `Yes, for the first month your page is live. New accounts get one month of free hosting with all features unlocked, then monthly hosting is ${HOSTING_PLAN_PRICE.displayLabel} if you want to keep the page live.`,
   },
 ];
 
@@ -231,10 +231,10 @@ export const PRICING_REASSURANCE = {
     "Keep one page link current while the trial is active",
   ],
   subscription: [
-    `Continue hosting for ${PRO_PLAN_PRICE.displayLabel}`,
+    `Continue hosting for ${HOSTING_PLAN_PRICE.displayLabel}`,
     "Keep the public page live after the free month",
     "Cancel anytime from billing settings",
-    "All themes, share cards, people-looked details, and exports stay available",
+    "All themes, share cards, and exports stay available",
   ],
 };
 

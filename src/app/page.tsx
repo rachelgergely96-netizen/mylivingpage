@@ -5,7 +5,7 @@ import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
 import LandingUnifiedShowcase from "@/components/marketing/LandingUnifiedShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
-import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE } from "@/lib/billing";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   CREDIBILITY_POINTS,
@@ -145,7 +145,7 @@ export default async function LandingPage() {
                     Build it once. Send it whenever someone is deciding whether to move forward.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Your page, Resume PDF, and shareable link stay aligned automatically. New accounts get one month of free live hosting with all features unlocked, then keep the page live for {PRO_PLAN_PRICE.displayLabel}.
+                    Your page, Resume PDF, and shareable link stay aligned automatically. New accounts get one month of free live hosting with all features unlocked, then keep the page live for {HOSTING_PLAN_PRICE.displayLabel}.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
@@ -182,8 +182,8 @@ export default async function LandingPage() {
                     <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">After the free month</p>
                       <div className="mt-2 flex items-baseline gap-1">
-                        <span className="font-heading text-3xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
-                        <span className="text-sm text-[rgba(240,244,255,0.42)]">{PRO_PLAN_PRICE.intervalLabel}</span>
+                        <span className="font-heading text-3xl font-bold text-[#F0F4FF]">{HOSTING_PLAN_PRICE.amountLabel}</span>
+                        <span className="text-sm text-[rgba(240,244,255,0.42)]">{HOSTING_PLAN_PRICE.intervalLabel}</span>
                       </div>
                       <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.72)]">
                         {PRICING_REASSURANCE.subscription.map((item) => (

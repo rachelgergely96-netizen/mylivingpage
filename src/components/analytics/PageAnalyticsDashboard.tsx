@@ -234,7 +234,7 @@ function TopBar({
             {pageName}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-            See who opened your page, how long they stayed, and what they did next after you shared it.
+            See when people opened your page, how long they stayed, and what they did next after you shared it.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[rgba(240,244,255,0.5)]">
             <a

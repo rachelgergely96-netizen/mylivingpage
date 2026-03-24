@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { describe, expect, it } from "vitest";
 import {
-  getExpectedProPlanStripeSnapshot,
+  getExpectedHostingPlanStripeSnapshot,
   getStripePriceDriftMessages,
   type StripePriceSnapshot,
 } from "@/lib/billing";
@@ -39,7 +39,7 @@ describe("live Stripe pricing configuration", () => {
     expect(
       getStripePriceDriftMessages(
         actual,
-        getExpectedProPlanStripeSnapshot(process.env.STRIPE_PRICE_ID!),
+        getExpectedHostingPlanStripeSnapshot(process.env.STRIPE_PRICE_ID!),
       ),
     ).toEqual([]);
   });

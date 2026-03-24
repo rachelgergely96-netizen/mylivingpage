@@ -1,29 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
-  PRO_PLAN_PRICE,
-  getExpectedProPlanStripeSnapshot,
-  getManagedPlanForSubscriptionStatus,
+  HOSTING_PLAN_PRICE,
+  getExpectedHostingPlanStripeSnapshot,
+  getStoredPlanForSubscriptionStatus,
   getStripePriceDriftMessages,
 } from "@/lib/billing";
 import { PRICING_REASSURANCE } from "@/lib/marketing-samples";
 
 describe("billing helpers", () => {
   it("maps active subscription states to the managed plan model", () => {
-    expect(getManagedPlanForSubscriptionStatus("active")).toBe("pro");
-    expect(getManagedPlanForSubscriptionStatus("trialing")).toBe("pro");
-    expect(getManagedPlanForSubscriptionStatus("past_due")).toBe("spark");
-    expect(getManagedPlanForSubscriptionStatus(null)).toBe("spark");
+    expect(getStoredPlanForSubscriptionStatus("active")).toBe("pro");
+    expect(getStoredPlanForSubscriptionStatus("trialing")).toBe("pro");
+    expect(getStoredPlanForSubscriptionStatus("past_due")).toBe("spark");
+    expect(getStoredPlanForSubscriptionStatus(null)).toBe("spark");
   });
 
   it("builds the expected Stripe snapshot from the managed price config", () => {
-    expect(getExpectedProPlanStripeSnapshot("price_live_123")).toEqual({
+    expect(getExpectedHostingPlanStripeSnapshot("price_live_123")).toEqual({
       id: "price_live_123",
       active: true,
-      amountCents: PRO_PLAN_PRICE.amountCents,
-      currency: PRO_PLAN_PRICE.currency,
-      interval: PRO_PLAN_PRICE.interval,
-      intervalCount: PRO_PLAN_PRICE.intervalCount,
-      productName: PRO_PLAN_PRICE.productName,
+      amountCents: HOSTING_PLAN_PRICE.amountCents,
+      currency: HOSTING_PLAN_PRICE.currency,
+      interval: HOSTING_PLAN_PRICE.interval,
+      intervalCount: HOSTING_PLAN_PRICE.intervalCount,
+      productName: HOSTING_PLAN_PRICE.productName,
     });
   });
 
@@ -38,7 +38,7 @@ describe("billing helpers", () => {
         intervalCount: 12,
         productName: "Unexpected Plan",
       },
-      getExpectedProPlanStripeSnapshot("price_live_expected"),
+      getExpectedHostingPlanStripeSnapshot("price_live_expected"),
     );
 
     expect(messages).toEqual([
@@ -54,7 +54,7 @@ describe("billing helpers", () => {
 
   it("keeps the user-facing reassurance copy aligned with the managed price config", () => {
     expect(PRICING_REASSURANCE.subscription).toContain(
-      `Continue hosting for ${PRO_PLAN_PRICE.displayLabel}`,
+      `Continue hosting for ${HOSTING_PLAN_PRICE.displayLabel}`,
     );
   });
 });

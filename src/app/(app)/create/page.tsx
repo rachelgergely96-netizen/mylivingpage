@@ -87,7 +87,7 @@ export default function CreatePage() {
     getAccountAccessState({ plan: "spark" }),
   );
   const [pageCount, setPageCount] = useState<number>(0);
-  const featuresUnlocked = accountAccess.featuresUnlocked;
+  const themeFeaturesUnlocked = accountAccess.themeFeaturesUnlocked;
   const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
@@ -606,7 +606,7 @@ export default function CreatePage() {
               themes={THEME_REGISTRY}
               selectedThemeId={selectedTheme}
               onSelectTheme={setSelectedTheme}
-              premium={featuresUnlocked}
+              premium={themeFeaturesUnlocked}
               showDescription
             />
           </section>

@@ -62,18 +62,18 @@ export const MOCK_ANALYTICS = {
 export interface ComparisonFeature {
   feature: string;
   free: boolean;
-  pro: boolean;
+  hosting: boolean;
 }
 
 export const COMPARISON_FEATURES: ComparisonFeature[] = [
-  { feature: "One public page", free: true, pro: true },
-  { feature: "Full page, all sections", free: true, pro: true },
-  { feature: "Mobile responsive", free: true, pro: true },
-  { feature: "Public page URL", free: true, pro: true },
-  { feature: "Core themes", free: true, pro: true },
-  { feature: "Resume PDF download", free: true, pro: true },
-  { feature: "Page analytics", free: false, pro: true },
-  { feature: "Premium themes", free: false, pro: true },
-  { feature: "PNG share card download", free: false, pro: true },
-  { feature: "Remove branding", free: false, pro: true },
+  { feature: "One public page", free: true, hosting: true },
+  { feature: "Full page, all sections", free: true, hosting: true },
+  { feature: "Mobile responsive", free: true, hosting: true },
+  { feature: "Public page URL", free: true, hosting: true },
+  { feature: "Core themes", free: true, hosting: true },
+  { feature: "Resume PDF download", free: true, hosting: true },
+  { feature: "Page analytics", free: true, hosting: true },
+  { feature: "Premium themes", free: false, hosting: true },
+  { feature: "PNG share card download", free: false, hosting: true },
+  { feature: "Remove branding", free: false, hosting: true },
 ];

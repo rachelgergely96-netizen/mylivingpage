@@ -8,10 +8,10 @@ import {
   getAccountAccessState,
   type AccountAccessState,
 } from "@/lib/account-access";
-import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
-import { isPremiumPlan } from "@/lib/plans";
+import { getAccountTierLabel } from "@/lib/plans";
 
 interface Profile {
   id: string;
@@ -112,11 +112,7 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const legacyPlanLabel = profile
-    ? isPremiumPlan(profile.plan)
-      ? "hosting active"
-      : "basic access"
-    : "basic access";
+  const legacyPlanLabel = profile ? getAccountTierLabel(profile.plan) : "basic access";
 
   // Load profile (with polling retry after upgrade to handle webhook race condition)
   useEffect(() => {
@@ -547,7 +543,7 @@ export default function SettingsPage() {
               </span>
               {accountAccess.hasPaidSubscription ? (
                 <>
-                  <span className="text-xs text-[rgba(240,244,255,0.5)]">{PRO_PLAN_PRICE.displayLabel}</span>
+                  <span className="text-xs text-[rgba(240,244,255,0.5)]">{HOSTING_PLAN_PRICE.displayLabel}</span>
                   <button
                     type="button"
                     disabled={billingLoading}
@@ -576,7 +572,7 @@ export default function SettingsPage() {
                   }}
                   className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
                 >
-                  {billingLoading ? "Loading..." : `Continue Hosting - ${PRO_PLAN_PRICE.amountLabel}/mo`}
+                  {billingLoading ? "Loading..." : `Continue Hosting - ${HOSTING_PLAN_PRICE.amountLabel}/mo`}
                 </button>
               )}
             </div>
@@ -612,12 +608,12 @@ export default function SettingsPage() {
         {accountAccess.isLegacyAccount ? (
           <>
         <div className="flex flex-wrap items-center gap-3">
-          <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${isPremiumPlan(profile.plan) ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
+          <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${accountAccess.hasPaidSubscription ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
             {legacyPlanLabel}
           </span>
-          {isPremiumPlan(profile.plan) ? (
+          {accountAccess.hasPaidSubscription ? (
             <>
-              <span className="text-xs text-[rgba(240,244,255,0.5)]">{PRO_PLAN_PRICE.displayLabel}</span>
+              <span className="text-xs text-[rgba(240,244,255,0.5)]">{HOSTING_PLAN_PRICE.displayLabel}</span>
               <button
                 type="button"
                 disabled={billingLoading}
@@ -646,13 +642,13 @@ export default function SettingsPage() {
               }}
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
             >
-              {billingLoading ? "Loading..." : `Start Hosting - ${PRO_PLAN_PRICE.amountLabel}/mo`}
+              {billingLoading ? "Loading..." : `Start Hosting - ${HOSTING_PLAN_PRICE.amountLabel}/mo`}
             </button>
           )}
         </div>
-        {!isPremiumPlan(profile.plan) && (
+        {!accountAccess.hasPaidSubscription && (
           <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
-            Unlock additional themes, PNG share cards, people-looked details, and remove the badge.
+            Unlock additional themes, PNG share cards, and remove the badge. Page Analytics are already included.
           </p>
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
@@ -691,7 +687,7 @@ export default function SettingsPage() {
           <div className="w-full max-w-md rounded-2xl border border-[rgba(239,68,68,0.25)] bg-[rgba(10,22,40,0.95)] p-6 sm:p-7">
             <h3 className="font-heading text-xl font-bold text-[#ff8e8e] mb-3">Delete Account</h3>
             <p className="mb-4 text-sm text-[rgba(240,244,255,0.6)]">
-              This will permanently delete your profile, all pages, and people-looked data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
+              This will permanently delete your profile, all pages, and page activity data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
             </p>
             <input
               type="text"

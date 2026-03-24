@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
-import { PRO_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE } from "@/lib/billing";
 import { GUIDES } from "@/lib/guides";
 import { PRICING_REASSURANCE } from "@/lib/marketing-samples";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
@@ -68,7 +68,7 @@ export default function PricingPage() {
               One month free, then simple monthly hosting
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-              New accounts get one month of free live hosting with every feature unlocked. After that, keep your page live for {PRO_PLAN_PRICE.displayLabel}.
+              New accounts get one month of free live hosting with every feature unlocked. After that, keep your page live for {HOSTING_PLAN_PRICE.displayLabel}.
             </p>
           </div>
 
@@ -86,8 +86,8 @@ export default function PricingPage() {
               <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Then</p>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{PRO_PLAN_PRICE.amountLabel}</span>
-                  <span className="text-sm text-[rgba(240,244,255,0.4)]">{PRO_PLAN_PRICE.intervalLabel}</span>
+                  <span className="font-heading text-4xl font-bold text-[#F0F4FF]">{HOSTING_PLAN_PRICE.amountLabel}</span>
+                  <span className="text-sm text-[rgba(240,244,255,0.4)]">{HOSTING_PLAN_PRICE.intervalLabel}</span>
                 </div>
               </div>
             </div>

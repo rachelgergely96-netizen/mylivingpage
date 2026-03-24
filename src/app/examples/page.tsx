@@ -67,7 +67,7 @@ export default function ExamplesPage() {
                 href={getSignupHref("examples_nav_start")}
                 className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
               >
-                Start Your Free Month
+                Create Your Page (Free)
               </Link>
             </div>
           </nav>
@@ -87,7 +87,7 @@ export default function ExamplesPage() {
                 href={getSignupHref("examples_after_apply")}
                 className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
               >
-                Start Your Free Month
+                Create Your Page (Free)
               </Link>
               <Link
                 href="/pricing"
@@ -160,7 +160,7 @@ export default function ExamplesPage() {
           <section className="mt-14 text-center sm:mt-20">
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.18)] px-6 py-10 sm:px-10 sm:py-12">
               <h2 className="font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                Ready to publish one page and keep the PDF aligned?
+                Ready to create one page you can actually send?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
                 Upload your info once. Then publish one page that is easier for people to scan in follow-ups, referrals, recruiter outreach, and any other moment someone is deciding whether to move forward.
@@ -170,7 +170,7 @@ export default function ExamplesPage() {
                   href={getSignupHref("examples_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                 >
-                  Start Your Free Month
+                  Create Your Page (Free)
                 </Link>
                 <Link
                   href="/"

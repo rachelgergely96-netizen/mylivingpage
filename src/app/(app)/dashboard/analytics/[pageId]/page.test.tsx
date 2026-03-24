@@ -1,3 +1,4 @@
+import React from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";

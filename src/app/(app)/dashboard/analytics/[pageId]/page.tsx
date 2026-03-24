@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import PageAnalyticsDashboard from "@/components/analytics/PageAnalyticsDashboard";
@@ -28,7 +29,7 @@ function errorMessage(error: unknown) {
     return error.message;
   }
 
-  return "Unknown analytics dashboard error";
+  return "Unknown activity details error";
 }
 
 export default async function AnalyticsPage({
@@ -108,7 +109,7 @@ export default async function AnalyticsPage({
       analytics.state.availability === "basic"
         ? "analytics.dashboard.degraded"
         : "analytics.dashboard.load_failed";
-    const message = analyticsLoadError ?? analytics.state.notice ?? "Analytics unavailable";
+    const message = analyticsLoadError ?? analytics.state.notice ?? "Details unavailable";
 
     console.error(eventName, {
       pageId,
@@ -146,7 +147,7 @@ export default async function AnalyticsPage({
               d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
             />
           </svg>
-          Back to Dashboard
+          Back to Your Page
         </Link>
       </div>
 

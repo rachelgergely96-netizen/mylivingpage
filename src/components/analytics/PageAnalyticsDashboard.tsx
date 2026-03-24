@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import {
   ANALYTICS_RANGE_DAYS,
@@ -37,6 +38,10 @@ function formatDuration(seconds: number) {
   }
 
   return `${minutes}m ${remainder}s`;
+}
+
+function formatPeopleLooked(count: number) {
+  return `${count.toLocaleString()} ${count === 1 ? "person looked" : "people looked"}`;
 }
 
 function metricAccentClass(status: AnalyticsMetric["status"]) {
@@ -124,16 +129,16 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-            Trend
+            Recent activity
           </p>
           <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">
-            Traffic over {analytics.rangeLabel.toLowerCase()}
+            When people looked over {analytics.rangeLabel.toLowerCase()}
           </h2>
           <p
             data-testid="analytics-trend-total"
             className="mt-2 text-sm text-[rgba(240,244,255,0.5)]"
           >
-            {analytics.trend.totalViews.toLocaleString()} views in this range.
+            {formatPeopleLooked(analytics.trend.totalViews)} in this range.
           </p>
         </div>
         <div
@@ -155,7 +160,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
                   style={{ height: `${Math.max(height, 3)}%` }}
                 />
                 <div className="pointer-events-none absolute -top-10 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(6,12,24,0.95)] px-2 py-1 text-[10px] text-[rgba(240,244,255,0.82)] shadow-lg group-hover:block">
-                  {day.count} view{day.count === 1 ? "" : "s"}
+                  {formatPeopleLooked(day.count)}
                   <br />
                   {day.label}
                 </div>
@@ -224,7 +229,7 @@ function TopBar({
     <section className="glass-card rounded-3xl p-5 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Analytics</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">What happened after you shared it</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
             {pageName}
           </h1>
@@ -238,7 +243,7 @@ function TopBar({
               {publicPath}
             </a>
             <span className="text-[rgba(240,244,255,0.3)]">
-              All-time views: {analytics.allTimeViews.toLocaleString()}
+              All-time looks: {analytics.allTimeViews.toLocaleString()}
             </span>
           </div>
         </div>
@@ -332,7 +337,7 @@ function NoticeBanner({
       className="rounded-3xl border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6"
     >
       <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
-        Limited analytics mode
+        Limited detail mode
       </p>
       <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">{title}</h2>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-[rgba(240,244,255,0.66)]">
@@ -344,8 +349,8 @@ function NoticeBanner({
 
 function DetailedAnalyticsPendingCard({ description }: { description: string }) {
   return (
-    <GuidanceCard
-      title="Detailed engagement analytics will return automatically"
+      <GuidanceCard
+      title="Deeper detail will return automatically"
       description={description}
       testId="analytics-availability-notice"
     />
@@ -372,7 +377,7 @@ export default function PageAnalyticsDashboard({
         />
         <GuidanceCard
           testId="analytics-unavailable"
-          title="Analytics are temporarily unavailable"
+          title="Details are temporarily unavailable"
           description={
             analytics.state.notice ??
             "Traffic data could not be loaded right now. Please try again soon."
@@ -394,10 +399,10 @@ export default function PageAnalyticsDashboard({
       {isBasic ? (
         <NoticeBanner
           testId="analytics-availability-notice"
-          title="Detailed engagement analytics are temporarily unavailable"
+          title="Deeper detail is temporarily unavailable"
           description={
             analytics.state.notice ??
-            "Basic traffic analytics are still showing below. Richer engagement insights will return automatically once the analytics backend is available."
+            "Basic activity detail is still showing below. Richer reading and click insights will return automatically once the detailed data is available."
           }
         />
       ) : (
@@ -410,16 +415,16 @@ export default function PageAnalyticsDashboard({
         }`}
       >
         <StatCard
-          label="People Reviewed"
+          label="People Who Looked"
           value={analytics.overview.views.value}
           formatter={formatInteger}
           metric={analytics.overview.views}
           helpText={`People who opened your page in the selected ${analytics.rangeLabel.toLowerCase()}.`}
-          secondary={`All-time reviewed: ${analytics.allTimeViews.toLocaleString()}`}
+          secondary={`All-time looked: ${analytics.allTimeViews.toLocaleString()}`}
           testId="analytics-stat-views"
         />
         <StatCard
-          label="Distinct People"
+          label="New People"
           value={analytics.overview.uniqueVisitors.value}
           formatter={formatInteger}
           metric={analytics.overview.uniqueVisitors}
@@ -452,8 +457,8 @@ export default function PageAnalyticsDashboard({
         <TrendChart analytics={analytics} />
       ) : (
         <GuidanceCard
-          title="No proof yet"
-          description="Share your tracked page URL in follow-up emails, LinkedIn messages, or your email signature. Once people start visiting, this page will show who reviewed it, where they came from, and what they did next."
+          title="No one has looked yet"
+          description="Share your tracked page URL in follow-up emails, LinkedIn messages, or your email signature. Once people start opening it, this page will show that they looked, where they came from, and what they did next."
         />
       )}
 
@@ -505,7 +510,7 @@ export default function PageAnalyticsDashboard({
 
           {isBasic ? (
             <DetailedAnalyticsPendingCard
-              description="We can still show views, traffic trends, referrers, devices, and countries right now. Click, engagement, and content insights will reappear automatically once the detailed analytics tables are available."
+              description="We can still show people who looked, activity trends, referrers, devices, and countries right now. Click, reading, and content insights will reappear automatically once the deeper detail is available."
             />
           ) : (
             <section className="grid gap-4 xl:grid-cols-2">
@@ -527,7 +532,7 @@ export default function PageAnalyticsDashboard({
                   <div className="mt-5">
                     <GuidanceCard
                       title="Traffic is showing up. Engagement is next."
-                      description="Visitors are landing on the page, but richer analytics need clicks or scrolling to build content and conversion insights. As more people explore the page, this view will fill in automatically."
+                      description="People are landing on the page, but richer detail needs clicks or scrolling to build next-step and content insights. As more people explore the page, this view will fill in automatically."
                     />
                   </div>
                 ) : (
@@ -535,7 +540,7 @@ export default function PageAnalyticsDashboard({
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
                         <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
-                          Clicked views
+                          People who clicked next
                         </p>
                         <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
                           {analytics.conversion.clickedViews.toLocaleString()}
@@ -543,7 +548,7 @@ export default function PageAnalyticsDashboard({
                       </div>
                       <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
                         <p className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.34)]">
-                          Outbound CTR
+                          Took next step
                         </p>
                         <p className="mt-2 font-mono text-xl text-[#F0F4FF]">
                           {formatPercent(analytics.overview.outboundCtr.value)}
@@ -588,7 +593,7 @@ export default function PageAnalyticsDashboard({
                           </p>
                           <p className="mt-2 text-sm text-[rgba(240,244,255,0.56)]">
                             {Math.round(analytics.contentPerformance.topSection.sharePct)}% of
-                            engaged views spent the most visible time here.
+                            engaged readers spent the most visible time here.
                           </p>
                         </div>
                       ) : (
@@ -632,7 +637,7 @@ export default function PageAnalyticsDashboard({
                   <div className="mt-5">
                     <GuidanceCard
                       title="Traffic is showing up. Engagement is next."
-                      description="Visitors are landing on the page, but richer analytics need clicks or scrolling to build content and conversion insights. As more people explore the page, this view will fill in automatically."
+                      description="People are landing on the page, but richer detail needs clicks or scrolling to build content insights. As more people explore the page, this view will fill in automatically."
                     />
                   </div>
                 )}

@@ -62,14 +62,14 @@ export default async function LandingPage() {
             <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
               <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Built for the click after discovery.
+                Built for the moment after you hit send.
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  The page you send when someone is deciding whether to move forward.
+                  Know when someone actually looks at your profile.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  Start with the information you already have, publish one Living Page, and keep the same link current anywhere a recruiter, hiring manager, referral, or client can click for faster context.
+                  Stop sending PDFs into the void. Share one clean page and know when people open it.
                 </p>
               </div>
 
@@ -89,7 +89,7 @@ export default async function LandingPage() {
                   href={getSignupHref("landing_start_free")}
                   className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
                 >
-                  Start Your Free Month
+                  Create Your Page (Free)
                 </Link>
                 <Link
                   href={getLoginHref()}
@@ -106,7 +106,7 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Switch themes, preview the living page, and see how the share card, tracked link, and QR workflow look without leaving the homepage.
+                Takes ~2 minutes. No card required.
               </p>
             </div>
           </section>
@@ -115,9 +115,9 @@ export default async function LandingPage() {
 
           <section id="how" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
             <div className="mb-8 max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">How it works</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">What happens after you send it</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                From your info to a live page in three steps.
+                Create, share, notice, repeat.
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -140,19 +140,19 @@ export default async function LandingPage() {
             <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10 sm:py-10">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Pricing</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">One page. Always up to date.</p>
                   <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                    One month free, then simple monthly hosting.
+                    Build it once. Send it whenever someone is deciding whether to move forward.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    New accounts get one month of free live hosting with all features unlocked. After that, keep the page live for {PRO_PLAN_PRICE.displayLabel}.
+                    Your page, Resume PDF, and shareable link stay aligned automatically. New accounts get one month of free live hosting with all features unlocked, then keep the page live for {PRO_PLAN_PRICE.displayLabel}.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
                       href={getSignupHref("landing_pricing_start")}
                       className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                     >
-                      Start Your Free Month
+                      Create Your Page (Free)
                     </Link>
                     <Link
                       href="/pricing"
@@ -168,7 +168,7 @@ export default async function LandingPage() {
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Hosting timeline</p>
                       <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
-                        30 days free
+                        One month free
                       </span>
                     </div>
                     <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.76)]">
@@ -198,7 +198,7 @@ export default async function LandingPage() {
                       href={getSignupHref("landing_free_start")}
                       className="mt-6 block w-full rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] py-3 text-center text-sm font-semibold text-[#F0F4FF] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
                     >
-                      Start Your Free Month
+                      Create Your Page (Free)
                     </Link>
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default async function LandingPage() {
               <div className="max-w-3xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Why this exists</p>
                 <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                  Founder-built for the moment after discovery.
+                  Simple. Professional. Yours.
                 </h2>
                 <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
                   MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants clean, credible context fast. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
@@ -252,17 +252,17 @@ export default async function LandingPage() {
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 text-center sm:px-10 sm:py-12">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                Publish one calmer page for the moment someone is deciding.
+                Ready to stop guessing?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                Upload your info once, keep one page link current, and let the same saved content power your Living Page, Resume PDF, and the proof you get back after sharing it.
+                Create your page. Send it once. See what happens.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href={getSignupHref("landing_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)] sm:px-8 sm:py-4"
                 >
-                  Start Your Free Month
+                  Create Your Page (Free)
                 </Link>
                 <Link
                   href="/examples"
@@ -278,7 +278,7 @@ export default async function LandingPage() {
         <SiteLegalFooter siteId={site.id} />
         <MobileStickyCta
           href={getSignupHref("landing_mobile_start")}
-          label="Start Your Free Month"
+          label="Create Your Page"
           targetId="hero-section"
           hideNearId="final-cta"
         />

@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("examples page matches the simpler Living Page and Resume PDF positioning", async ({ page }) => {
   await page.goto("/examples");
 
-  await expect(page.getByRole("heading", { name: "See what the human click can look like after the application is already in." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See what the decision page can look like once someone is considering you." })).toBeVisible();
   await expect(
     page.getByText("once someone opens your link and wants faster context."),
   ).toBeVisible();
@@ -12,9 +12,9 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
   await expect(page.getByText("Use the PDF", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Open large preview" }).first()).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Ready to publish one page and keep the PDF aligned?" }),
+    page.getByRole("heading", { name: "Ready to create one page you can actually send?" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start Your Free Month" }).first()).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Create Your Page (Free)" }).first()).toHaveAttribute(
     "href",
     "/signup?ref=examples_nav_start&next=/create",
   );
@@ -25,16 +25,16 @@ test("signup page keeps the form above the fold while preserving create intent",
   await page.goto("/signup?ref=landing_start_free&next=/create");
 
   await expect(
-    page.getByRole("heading", { name: "Start from the resume you already use." }),
+    page.getByRole("heading", { name: "Let's get your page live." }),
   ).toBeVisible();
   await expect(
-    page.getByText("Keep your resume intact for applications, then publish one live page with one month of free hosting when you are ready."),
+    page.getByText("You're a few minutes away from having something you can actually send."),
   ).toBeVisible();
 
-  const googleButton = page.getByRole("button", { name: "Start Your Free Month with Google" });
+  const googleButton = page.getByRole("button", { name: "Create Your Page with Google" });
   const emailField = page.getByPlaceholder("Email address");
   const passwordField = page.getByPlaceholder("Create password");
-  const submitButton = page.getByRole("button", { name: "Start My Free Month" });
+  const submitButton = page.getByRole("button", { name: "Create My Page" });
 
   await expect(googleButton).toBeInViewport();
   await expect(emailField).toBeInViewport();

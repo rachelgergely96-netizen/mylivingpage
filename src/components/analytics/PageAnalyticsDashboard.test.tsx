@@ -1,3 +1,4 @@
+import React from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -61,7 +62,7 @@ describe("PageAnalyticsDashboard", () => {
       ...analytics.state,
       availability: "basic",
       notice:
-        "Detailed engagement analytics are temporarily unavailable. Basic traffic analytics are still showing below.",
+        "Deeper detail is temporarily unavailable. Basic activity detail is still showing below.",
       hasEngagement: false,
     };
 
@@ -74,12 +75,12 @@ describe("PageAnalyticsDashboard", () => {
       />,
     );
 
-    expect(markup).toContain("Detailed engagement analytics are temporarily unavailable");
-    expect(markup).toContain("People Reviewed");
-    expect(markup).toContain("Distinct People");
+    expect(markup).toContain("Deeper detail is temporarily unavailable");
+    expect(markup).toContain("People Who Looked");
+    expect(markup).toContain("New People");
     expect(markup).not.toContain("Clicked Through");
     expect(markup).not.toContain("Content Performance");
-    expect(markup).toContain("Detailed engagement analytics will return automatically");
+    expect(markup).toContain("Deeper detail will return automatically");
   });
 
   it("shows an unavailable card instead of the full dashboard when analytics cannot load", () => {
@@ -99,9 +100,9 @@ describe("PageAnalyticsDashboard", () => {
       />,
     );
 
-    expect(markup).toContain("Analytics are temporarily unavailable");
+    expect(markup).toContain("Details are temporarily unavailable");
     expect(markup).toContain("Traffic data could not be loaded right now. Please try again soon.");
-    expect(markup).not.toContain("Distinct People");
-    expect(markup).not.toContain("Traffic over");
+    expect(markup).not.toContain("New People");
+    expect(markup).not.toContain("When people looked over");
   });
 });

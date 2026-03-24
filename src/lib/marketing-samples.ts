@@ -64,9 +64,9 @@ export interface ResolvedMarketingSample extends MarketingSample {
 }
 
 export const CREDIBILITY_POINTS = [
-  "Start with your current resume",
-  "See what happens after the click",
-  "Privacy and deletion details published",
+  "Create your page in minutes",
+  "No card required to publish",
+  "Know when people open it",
 ];
 
 export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
@@ -131,20 +131,20 @@ export const PROOF_SIGNALS: ProofSignal[] = [
 
 export const TRUST_SIGNALS: TrustSignal[] = [
   {
-    title: "Your resume stays intact",
-    body: "MyLivingPage keeps your Living Page and Resume PDF aligned without forcing you to manage separate versions by hand.",
+    title: "Works alongside your resume",
+    body: "Keep your page and Resume PDF aligned to the same saved information instead of juggling separate versions by hand.",
     href: "/guides/living-page-vs-pdf-resume",
     linkLabel: "See how both work together",
   },
   {
-    title: "You choose when a page goes live",
+    title: "You choose when it goes live",
     body: "Build and preview first, then publish only when you are ready to share the link with recruiters, hiring managers, or referrals.",
     href: "/signup?ref=landing_trust_publish&next=/create",
     linkLabel: "Start with a private build",
   },
   {
     title: "Delete your page or account anytime",
-    body: "Removal instructions are published and easy to find before you ever sign up or share a page.",
+    body: "Removal instructions are published and easy to find before you ever sign up or share your link.",
     href: "/delete-account",
     linkLabel: "Review deletion options",
   },
@@ -186,16 +186,16 @@ export const LANDING_FAQS: LandingFaq[] = [
 
 export const PROCESS_STEPS = [
   {
-    title: "Start with resume text that already works",
-    body: "Paste the information you already use and let MyLivingPage structure it into one page and one clean PDF.",
+    title: "You send your page",
+    body: "Drop one clean link into a follow-up, recruiter reply, or referral message instead of attaching another PDF.",
   },
   {
-    title: "Turn it into a living page",
-    body: "Choose a theme and shape the same experience into a page recruiters and hiring managers can scan quickly.",
+    title: "They open it",
+    body: "Your profile loads fast, stays easy to scan, and gives them the context they need in one place.",
   },
   {
-    title: "Keep one link and export fresh assets",
-    body: "Keep using the same page link everywhere a person can click, then see who reviewed it after you share and continue hosting it for $9.99/month after the first free month if you want it to stay live.",
+    title: "You know it landed",
+    body: "Come back and see that someone looked, how they opened it, and whether they stayed to read before you decide to share it again.",
   },
 ];
 
@@ -234,7 +234,7 @@ export const PRICING_REASSURANCE = {
     `Continue hosting for ${PRO_PLAN_PRICE.displayLabel}`,
     "Keep the public page live after the free month",
     "Cancel anytime from billing settings",
-    "All themes, share cards, analytics, and exports stay available",
+    "All themes, share cards, people-looked details, and exports stay available",
   ],
 };
 

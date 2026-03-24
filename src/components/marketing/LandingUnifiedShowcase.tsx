@@ -164,23 +164,23 @@ export default function LandingUnifiedShowcase() {
         <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] p-6 sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#E5B76B]">Unified demo</p>
           <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.02] tracking-[-0.03em] text-[#F7F1E8] sm:text-4xl">
-            Switch the theme. Preview the page and the share card in one place.
+            One page. Always up to date.
           </h2>
           <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-            This uses one representative profile so the differences stay easy to scan. Toggle between the living page and the QR-ready share card without leaving the homepage.
+            This uses one representative profile so the differences stay easy to scan. Preview the page, the share card, and the proof moment without leaving the homepage.
           </p>
 
           <div className="mt-6 grid gap-3">
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-sm font-semibold text-[#F0F4FF]">Start with the resume you already use</p>
+              <p className="text-sm font-semibold text-[#F0F4FF]">Start with what you already have</p>
               <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Upload your info once and shape the same story into something faster for people to scan.
+                Bring in your resume once and shape the same story into something easier to send and easier to read.
               </p>
             </div>
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-sm font-semibold text-[#F0F4FF]">Keep one link, then reuse it for follow-up assets</p>
+              <p className="text-sm font-semibold text-[#F0F4FF]">Know what happened after you shared it</p>
               <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Switch between the page view and the QR-ready share card to see how one profile can stay consistent across follow-up moments.
+                Switch between the page view and the QR-ready share card to see how one profile stays consistent across follow-up moments.
               </p>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function LandingUnifiedShowcase() {
               href={getSignupHref("landing_demo_primary")}
               className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.2)]"
             >
-              Start Your Free Month
+              Create Your Page (Free)
             </Link>
             <Link
               href="/examples"
@@ -278,7 +278,7 @@ export default function LandingUnifiedShowcase() {
             className="mt-5"
           >
             {viewId === "living-page" ? (
-              <div className="overflow-hidden rounded-[1.6rem] border border-[rgba(255,255,255,0.08)] shadow-[0_24px_70px_rgba(2,6,23,0.28)]">
+              <div className="relative overflow-hidden rounded-[1.6rem] border border-[rgba(255,255,255,0.08)] shadow-[0_24px_70px_rgba(2,6,23,0.28)]">
                 <div className="flex items-center gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(8,14,28,0.9)] px-4 py-3">
                   <div className="hidden gap-[5px] sm:flex">
                     <span className="h-2 w-2 rounded-full bg-[#ff5f57]" />
@@ -304,6 +304,17 @@ export default function LandingUnifiedShowcase() {
                       </div>
                     </div>
                   </ThemeCanvas>
+                </div>
+                <div className="pointer-events-none absolute right-4 top-16 z-10 rounded-2xl border border-[rgba(91,214,124,0.28)] bg-[rgba(8,14,28,0.9)] px-4 py-3 shadow-[0_18px_40px_rgba(2,6,23,0.36)]">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#5BD67C]">
+                    Proof
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#F0F4FF]">
+                    Someone just looked at your page
+                  </p>
+                  <p className="mt-1 text-xs text-[rgba(240,244,255,0.56)]">
+                    Viewed on mobile moments ago
+                  </p>
                 </div>
               </div>
             ) : (

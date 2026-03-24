@@ -72,9 +72,9 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
     case "awaiting_views":
       return {
         eyebrow: "Proof loop",
-        title: "Recent share recorded. Waiting for the first outside view.",
+        title: "Recent share recorded. Waiting for someone to look.",
         body:
-          "Once someone opens your page, this dashboard will show how many people reviewed it, what device they used, and how long they stayed.",
+          "Once someone opens your page, this page will show that people looked, what device they used, and how long they stayed.",
         chips: [
           `${proof.shareIntentCountLast7d} recent share${proof.shareIntentCountLast7d === 1 ? "" : "s"}`,
           "Tracking is active",
@@ -86,10 +86,10 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         title: "Someone looked after you shared it.",
         body:
           proof.firstViewAfterLatestShareAt
-            ? `Your first post-share view showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Open analytics to see device mix, referrers, and reading behavior.`
-            : "Your page is getting attention after a recent share. Open analytics to see what happened after the click.",
+            ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Open the details to see device mix, referrers, and reading behavior.`
+            : "Your page is getting attention after a recent share. Open the details to see what happened after the click.",
         chips: [
-          `${proof.viewsLast7d} reviewed this week`,
+          `${proof.viewsLast7d} looked this week`,
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "Desktop-heavy so far",
           avgReading ? `${avgReading} avg reading` : "Reading time will appear as people engage",
         ],
@@ -97,11 +97,11 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
     case "active":
       return {
         eyebrow: "Recent activity",
-        title: `${proof.viewsLast7d} people reviewed your page in the last 7 days.`,
+        title: `${proof.viewsLast7d} people looked at your page in the last 7 days.`,
         body:
           proof.latestViewAt
             ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. This is where you can quickly see whether your page is still getting looked at between follow-ups.`
-            : "Your page has started getting outside traffic. Open analytics for the full picture.",
+            : "Your page has started getting outside traffic. Open the details for the full picture.",
         chips: [
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "No mobile views yet",
           avgReading ? `${avgReading} avg reading` : "Reading time fills in automatically",
@@ -115,8 +115,8 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         eyebrow: "Proof loop",
         title: "Share your page to start the proof loop.",
         body:
-          "Copy your page link or send the share card. Once someone opens it, this dashboard will turn that click into visible proof.",
-        chips: ["Views", "Mobile mix", "Reading time"],
+          "Copy your page link or send the share card. Once someone opens it, this page will turn that click into visible proof.",
+        chips: ["People looked", "Mobile mix", "Reading time"],
       };
   }
 }
@@ -208,7 +208,7 @@ export default async function DashboardPage() {
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:mb-8 sm:flex-row sm:items-end sm:gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Dashboard</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Your page</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
             {displayName ? (
               <>
@@ -294,7 +294,7 @@ export default async function DashboardPage() {
                   <p className="text-sm capitalize text-[rgba(240,244,255,0.75)]">{page.theme_id}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">People Reviewed</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">People Who Looked</p>
                   <p className="font-mono text-sm text-[#93C5FD]">{page.views ?? 0}</p>
                 </div>
                 <div>
@@ -330,14 +330,14 @@ export default async function DashboardPage() {
                       href={`/dashboard/analytics/${page.id}`}
                       className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
                     >
-                      Analytics
+                      See Details
                     </Link>
                   ) : (
                     <Link
                       href="/dashboard/settings"
                       className="flex items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.3)] sm:px-4 sm:py-2"
                     >
-                      Analytics
+                      See Details
                       <span className="rounded-full bg-[rgba(59,130,246,0.15)] px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6]">PRO</span>
                     </Link>
                   )}
@@ -361,7 +361,7 @@ export default async function DashboardPage() {
                         href={`/dashboard/analytics/${page.id}`}
                         className="self-start rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
                       >
-                        Open Analytics
+                        See The Details
                       </Link>
                     ) : null}
                   </div>

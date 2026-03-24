@@ -64,7 +64,7 @@ export default function PageOwnerBar({ pageId, pageUserId, children }: PageOwner
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                Dashboard
+                Your Page
               </Link>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <Link

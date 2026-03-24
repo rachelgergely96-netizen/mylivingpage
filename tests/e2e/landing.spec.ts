@@ -5,14 +5,14 @@ test("landing page is simplified around hero, showcase, how-it-works, pricing, a
 
   const header = page.locator("header");
   await expect(
-    page.getByRole("heading", { name: "Upload your info once. Publish a page people can scan fast." }),
+    page.getByRole("heading", { name: "Know when someone actually looks at your profile." }),
   ).toBeVisible();
-  await expect(page.getByText("Start with the information you already have")).toBeVisible();
-  await expect(page.getByText("keep the same link current anywhere a recruiter or hiring manager can click")).toBeVisible();
+  await expect(page.getByText("Stop sending PDFs into the void.")).toBeVisible();
+  await expect(page.getByText("Takes ~2 minutes. No card required.")).toBeVisible();
 
   const hero = page.locator("#hero-section");
   await expect(hero.getByRole("link", { name: "See the Demo" })).toHaveAttribute("href", "#demo-section");
-  await expect(hero.getByRole("link", { name: "Start Your Free Month" })).toHaveAttribute(
+  await expect(hero.getByRole("link", { name: "Create Your Page (Free)" })).toHaveAttribute(
     "href",
     "/signup?ref=landing_start_free&next=/create",
   );
@@ -34,7 +34,7 @@ test("landing showcase switches themes and previews share card plus QR without e
 
   const demoSection = page.locator("#demo-section");
 
-  await expect(page.getByRole("heading", { name: "Switch the theme. Preview the page and the share card in one place." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One page. Always up to date." })).toBeVisible();
 
   const emberTab = page.getByRole("tab", { name: "Ember" });
   const auroraTab = page.getByRole("tab", { name: "Aurora" });
@@ -61,7 +61,7 @@ test("landing showcase switches themes and previews share card plus QR without e
   await expect(page.getByRole("img", { name: /QR code preview for/i })).toBeVisible();
 
   await expect(demoSection.getByRole("link", { name: "Browse sample pages" })).toHaveAttribute("href", "/examples");
-  await expect(demoSection.getByRole("link", { name: "Start Your Free Month" })).toHaveAttribute(
+  await expect(demoSection.getByRole("link", { name: "Create Your Page (Free)" })).toHaveAttribute(
     "href",
     "/signup?ref=landing_demo_primary&next=/create",
   );
@@ -78,7 +78,7 @@ test("mobile menu works and sticky CTA appears after the hero then hides near th
   await expect(mobileMenu.getByRole("link", { name: "How It Works" })).toBeVisible();
   await expect(mobileMenu.getByRole("link", { name: "Examples" })).toBeVisible();
   await expect(mobileMenu.getByRole("link", { name: "Log In" })).toHaveAttribute("href", "/login?next=/dashboard");
-  await expect(mobileMenu.getByRole("link", { name: "Start Your Free Month" })).toHaveAttribute(
+  await expect(mobileMenu.getByRole("link", { name: "Create Your Page (Free)" })).toHaveAttribute(
     "href",
     "/signup?ref=landing_apply_nav_mobile&next=/create",
   );

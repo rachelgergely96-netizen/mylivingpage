@@ -110,7 +110,7 @@ export default function ShareCardDownload({
     setShareFeedback({
       title,
       body:
-        "Once someone opens your page, Analytics will show how many people reviewed it, whether they viewed on mobile, and how long they stayed reading.",
+        "Once someone opens your page, you'll be able to see that people looked, whether they viewed on mobile, and how long they stayed reading.",
     });
   };
 
@@ -299,7 +299,7 @@ export default function ShareCardDownload({
                       href={`/dashboard/analytics/${pageId}`}
                       className="mt-4 inline-flex rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
                     >
-                      Open Analytics
+                      See The Details
                     </a>
                   </div>
                 ) : null}

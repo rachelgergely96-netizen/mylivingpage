@@ -100,7 +100,7 @@ export default function SignupPage() {
 
       setStatus("success");
       setPassword("");
-      setMessage("Check your email to confirm your account, then return here to sign in.");
+      setMessage("Check your email to confirm your account, then come back to get your page live.");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to create account.");
@@ -138,12 +138,12 @@ export default function SignupPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-5 py-10 sm:px-6 sm:py-12">
       <div className="glass-card w-full rounded-2xl p-6 md:p-7">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Start Your Free Month</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your page</p>
         <h1 className="mt-2 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-[2.2rem]">
-          Start from the resume you already use.
+          Let&apos;s get your page live.
         </h1>
         <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-          Keep your resume intact for applications, then publish one live page with one month of free hosting when you are ready.
+          You&apos;re a few minutes away from having something you can actually send.
         </p>
         <label className="mt-4 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
           <input
@@ -174,7 +174,7 @@ export default function SignupPage() {
             disabled={status === "loading"}
             className="mt-4 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-50"
           >
-          Start Your Free Month with Google
+          Create Your Page with Google
           </button>
 
         <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
@@ -213,7 +213,7 @@ export default function SignupPage() {
             disabled={status === "loading"}
             className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
           >
-            {status === "loading" ? "Starting..." : "Start My Free Month"}
+            {status === "loading" ? "Starting..." : "Create My Page"}
           </button>
         </form>
 
@@ -228,7 +228,7 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
-          No credit card to publish. New accounts get one month of free live hosting with every feature unlocked, then monthly hosting is $9.99/month.
+          No card required to publish. New accounts get one month of free live hosting with every feature unlocked, then monthly hosting is $9.99/month.
         </p>
 
         <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">

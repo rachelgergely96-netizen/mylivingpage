@@ -41,7 +41,7 @@ export default async function AuthenticatedLayout({
               href="/dashboard"
               className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"
             >
-              Dashboard
+              Your Page
             </Link>
             <Link
               href="/create"

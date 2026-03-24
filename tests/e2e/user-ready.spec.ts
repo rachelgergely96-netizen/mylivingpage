@@ -119,11 +119,11 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "Create Your Page" }).click();
     await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
     await page.getByRole("button", { name: "Create my page" }).click();
-    await expect(page.getByRole("heading", { name: "Review your living page" })).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("heading", { name: "This is what someone will see when you send it." })).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText("Resume PDF")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Publish Living Page" })).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Publish Living Page" }).click();
-    await expect(page.getByRole("heading", { name: "Your living page is live" })).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Publish Page" })).toBeVisible({ timeout: 45_000 });
+    await page.getByRole("button", { name: "Publish Page" }).click();
+    await expect(page.getByRole("heading", { name: "Your page is live." })).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Edit Page" }).click();
@@ -152,7 +152,7 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
-    await expect(page.getByRole("heading", { name: "Paste your info" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add your info" })).toBeVisible();
   });
 
   test("legacy global create drafts are ignored for the signed-in user", async ({ page }) => {
@@ -416,7 +416,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("Hosting subscription is active.")).toBeVisible();
 
     await page.goto("/dashboard");
-    await expect(page.getByRole("link", { name: /^Analytics$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^See Details$/ })).toBeVisible();
 
     await page.goto("/dashboard/settings");
     const portalResponsePromise = page.waitForResponse((response) =>
@@ -623,21 +623,21 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.goto(`/dashboard/analytics/${livePage.id}`);
     await expect(page.getByTestId("analytics-trend-total")).toHaveText(
-      "2 views in this range.",
+      "2 people looked in this range.",
     );
     await expect(page.getByTestId("analytics-stat-views")).toContainText("2");
 
     await page.getByRole("link", { name: "7 days" }).click();
     await page.waitForURL(new RegExp(`/dashboard/analytics/${livePage.id}\\?range=7d`));
     await expect(page.getByTestId("analytics-trend-total")).toHaveText(
-      "1 views in this range.",
+      "1 person looked in this range.",
     );
     await expect(page.getByTestId("analytics-stat-views")).toContainText("1");
 
     await page.getByRole("link", { name: "90 days" }).click();
     await page.waitForURL(new RegExp(`/dashboard/analytics/${livePage.id}\\?range=90d`));
     await expect(page.getByTestId("analytics-trend-total")).toHaveText(
-      "3 views in this range.",
+      "3 people looked in this range.",
     );
     await expect(page.getByTestId("analytics-stat-views")).toContainText("3");
   });

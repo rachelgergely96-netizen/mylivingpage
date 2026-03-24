@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import GuidedFlow from "@/components/create/GuidedFlow";
+import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";
@@ -354,9 +355,9 @@ export default function CreatePage() {
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
       <div className="mb-5 flex items-center justify-between sm:mb-7">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create Flow</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your page</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
-            Build Your Living Page
+            Build your page - send it - know when they open it
           </h1>
         </div>
         <div className="hidden gap-2 md:flex">
@@ -399,7 +400,7 @@ export default function CreatePage() {
             onClick={() => router.push("/dashboard")}
             className="mt-5 gold-pill px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.16em]"
           >
-            Go to Dashboard
+            Go to Your Page
           </button>
         </section>
       ) : null}
@@ -408,11 +409,10 @@ export default function CreatePage() {
         <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
           <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-            Paste your info
+            Add your info
           </h2>
           <p className="mt-2 text-sm text-[rgba(240,244,255,0.58)]">
-            Paste your resume, LinkedIn summary, portfolio bio, brag bullets, or rough notes. We&apos;ll turn that
-            into a living page you can publish and a downloadable Resume PDF from the same information.
+            Paste your resume or add the basics. You can clean it up later.
           </p>
           <textarea
             value={resumeText}
@@ -479,7 +479,7 @@ export default function CreatePage() {
             <div>
               <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Manual entry</p>
               <p className="mt-2 text-sm text-[#F0F4FF]">
-                Enter your information section by section, then preview the living page before you publish.
+                Add the basics section by section, then preview the page before you send it.
               </p>
             </div>
             <button
@@ -523,25 +523,24 @@ export default function CreatePage() {
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 2</p>
             <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-              Review your living page
+              This is what someone will see when you send it.
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Your information is ready as a living page. Publish it when it looks right, and the live page will also
-              include a downloadable Resume PDF built from the same saved content.
+              Your information is ready as a page. Publish it when it looks right, and the live page will also include a downloadable Resume PDF built from the same saved content.
             </p>
           </div>
 
           <div className="space-y-5">
             <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Living Page</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Preview</p>
               <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                Review the page people will read
+                This is what someone will see when you send it
               </h3>
               <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
                 Keep the preview and publish controls here so the flow stays simple.
               </p>
               <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Public URL</p>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
                 <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
                   mylivingpage.com/{publicSlug || "your-username"}
                 </div>
@@ -551,8 +550,11 @@ export default function CreatePage() {
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Publish</p>
                   <p className="mt-2 text-sm leading-6 text-[#E8F2FF]">
                     {accountAccess.isLegacyAccount
-                      ? "Publishing makes the living page live and turns on Resume PDF download from the public page."
-                      : "Publishing makes the living page live, turns on Resume PDF download, and starts your one month of free hosting."}
+                      ? "Your page goes live and turns on Resume PDF download from the public page."
+                      : "Your page goes live, turns on Resume PDF download, and starts your one month of free hosting."}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(232,242,255,0.78)]">
+                    When someone opens this, you&apos;ll know.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -569,7 +571,7 @@ export default function CreatePage() {
                     onClick={publishPage}
                     className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
                   >
-                    {publishing ? "Publishing..." : "Publish Living Page"}
+                    {publishing ? "Publishing..." : "Publish Page"}
                   </button>
                 </div>
               </div>
@@ -594,10 +596,10 @@ export default function CreatePage() {
 
           <section data-testid="create-theme-section" className="space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Living page themes</p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Choose the visual direction</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Theme</p>
+              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Make it feel like you</h3>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
-                Switch themes and keep watching the preview update in place.
+                Pick a clean style. Don&apos;t overthink it.
               </p>
             </div>
             <ThemePicker
@@ -616,24 +618,27 @@ export default function CreatePage() {
           <div className="glass-card rounded-2xl p-5 sm:p-8">
             <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 3</p>
             <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-              Your living page is live
+              Your page is live.
             </h2>
             <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
               {accountAccess.isLegacyAccount
-                ? "You now have one public living page and one Resume PDF download built from the same saved information."
-                : "You now have one public living page, one Resume PDF download, and one month of free live hosting built from the same saved information."}
+                ? "This is what you'll send instead of a PDF."
+                : "This is what you'll send instead of a PDF. Your first month of live hosting is now active."}
             </p>
 
             <div className="mt-5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Live URL</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
               <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
                 mylivingpage.com/{predictedSlug}
               </div>
+              <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                When someone opens this, you&apos;ll know.
+              </p>
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 text-[#E8F2FF]">
-                <p className="text-[10px] uppercase tracking-[0.16em]">Living Page</p>
+                <p className="text-[10px] uppercase tracking-[0.16em]">Page</p>
                 <h3 className="mt-2 font-heading text-xl font-semibold">Live now</h3>
                 <p className="mt-2 text-sm leading-6">
                   Your public page is live at mylivingpage.com/{predictedSlug}.
@@ -649,20 +654,36 @@ export default function CreatePage() {
             </div>
           </div>
 
+          {publishedPageId ? (
+            <FirstViewActivationHub
+              pageId={publishedPageId}
+              livePath={`/${predictedSlug}`}
+              analyticsHref={`/dashboard/analytics/${publishedPageId}`}
+            />
+          ) : null}
+
           <div className="flex flex-wrap gap-3">
             <Link
               href={`/${predictedSlug}`}
               className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
             >
-              View Live Page
+              Open Your Page
             </Link>
             {publishedPageId ? (
-              <Link
-                href={`/dashboard/edit/${publishedPageId}/living-page`}
-                className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
-              >
-                Edit Page
-              </Link>
+              <>
+                <Link
+                  href={`/dashboard/analytics/${publishedPageId}`}
+                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                >
+                  See The Details
+                </Link>
+                <Link
+                  href={`/dashboard/edit/${publishedPageId}/living-page`}
+                  className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
+                >
+                  Edit Page
+                </Link>
+              </>
             ) : null}
           </div>
         </section>

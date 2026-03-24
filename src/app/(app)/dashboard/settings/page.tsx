@@ -646,7 +646,7 @@ export default function SettingsPage() {
         </div>
         {!isPremiumPlan(profile.plan) && (
           <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
-            Unlock premium themes, PNG share cards, analytics, and remove the badge.
+            Unlock premium themes, PNG share cards, people-looked details, and remove the badge.
           </p>
         )}
         <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
@@ -685,7 +685,7 @@ export default function SettingsPage() {
           <div className="w-full max-w-md rounded-2xl border border-[rgba(239,68,68,0.25)] bg-[rgba(10,22,40,0.95)] p-6 sm:p-7">
             <h3 className="font-heading text-xl font-bold text-[#ff8e8e] mb-3">Delete Account</h3>
             <p className="mb-4 text-sm text-[rgba(240,244,255,0.6)]">
-              This will permanently delete your profile, all pages, and analytics data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
+              This will permanently delete your profile, all pages, and people-looked data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
             </p>
             <input
               type="text"

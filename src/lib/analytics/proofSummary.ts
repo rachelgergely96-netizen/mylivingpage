@@ -5,6 +5,14 @@ export const SHARE_INTENT_EVENT_NAMES = [
 ] as const;
 
 export type ShareIntentEventName = (typeof SHARE_INTENT_EVENT_NAMES)[number];
+export type ShareScenario =
+  | "application_follow_up"
+  | "recruiter_reply"
+  | "connection";
+export type FirstViewLoopState =
+  | "waiting_for_first_view"
+  | "first_view_detected"
+  | "repeat_share_prompt";
 
 export interface PageProofViewRow {
   page_id: string;
@@ -35,6 +43,24 @@ export interface PageProofSummary {
   lastShareAt: string | null;
   latestViewAt: string | null;
   firstViewAfterLatestShareAt: string | null;
+  firstViewAfterLatestShareDeviceLabel: string | null;
+  firstViewAfterLatestShareEngagedSeconds: number | null;
+  lastShareScenario: ShareScenario | null;
+}
+
+export interface PageProofResponse {
+  pageId: string;
+  loopState: FirstViewLoopState;
+  viewsLast7d: number;
+  mobileViewsLast7d: number;
+  avgEngagedSecondsLast7d: number | null;
+  shareIntentCountLast7d: number;
+  lastShareAt: string | null;
+  latestViewAt: string | null;
+  firstViewAfterLatestShareAt: string | null;
+  firstViewAfterLatestShareDeviceLabel: string | null;
+  firstViewAfterLatestShareEngagedSeconds: number | null;
+  lastShareScenario: ShareScenario | null;
 }
 
 interface BuildPageProofSummaryInput {
@@ -53,8 +79,35 @@ function getMetadataPageId(metadata: Record<string, unknown> | null) {
   return typeof pageId === "string" && pageId.trim().length > 0 ? pageId : null;
 }
 
+function getMetadataScenario(metadata: Record<string, unknown> | null): ShareScenario | null {
+  const scenario = metadata?.scenario;
+  return scenario === "application_follow_up" ||
+    scenario === "recruiter_reply" ||
+    scenario === "connection"
+    ? scenario
+    : null;
+}
+
 function isMobile(userAgent: string | null) {
   return /Mobile|Android|iPhone/i.test(userAgent ?? "");
+}
+
+function detectDeviceLabel(userAgent: string | null) {
+  const normalized = userAgent ?? "";
+
+  if (/Tablet|iPad/i.test(normalized)) {
+    return "Tablet";
+  }
+
+  if (/Mobile|Android|iPhone/i.test(normalized)) {
+    return "Mobile";
+  }
+
+  if (normalized) {
+    return "Desktop";
+  }
+
+  return null;
 }
 
 function average(values: number[]) {
@@ -88,10 +141,11 @@ export function buildPageProofSummary({
   const recentViews = pageViews.filter((view) => view.viewed_at >= last7dCutoff);
   const recentShareEvents = shareEvents.filter((event) => event.created_at >= last7dCutoff);
   const latestViewAt = pageViews.at(-1)?.viewed_at ?? null;
-  const lastShareAt = shareEvents.at(-1)?.created_at ?? null;
-  const firstViewAfterLatestShareAt = lastShareAt
-    ? pageViews.find((view) => view.viewed_at >= lastShareAt)?.viewed_at ?? null
-    : null;
+  const lastShareEvent = shareEvents.at(-1) ?? null;
+  const lastShareAt = lastShareEvent?.created_at ?? null;
+  const firstViewAfterLatestShare =
+    lastShareAt ? pageViews.find((view) => view.viewed_at >= lastShareAt) ?? null : null;
+  const firstViewAfterLatestShareAt = firstViewAfterLatestShare?.viewed_at ?? null;
   const recentEngagedSeconds = recentViews
     .map((view) => view.engaged_seconds)
     .filter((value): value is number => typeof value === "number" && value > 0);
@@ -125,5 +179,37 @@ export function buildPageProofSummary({
     lastShareAt,
     latestViewAt,
     firstViewAfterLatestShareAt,
+    firstViewAfterLatestShareDeviceLabel: detectDeviceLabel(firstViewAfterLatestShare?.user_agent ?? null),
+    firstViewAfterLatestShareEngagedSeconds:
+      typeof firstViewAfterLatestShare?.engaged_seconds === "number" &&
+      firstViewAfterLatestShare.engaged_seconds > 0
+        ? firstViewAfterLatestShare.engaged_seconds
+        : null,
+    lastShareScenario: getMetadataScenario(lastShareEvent?.metadata ?? null),
+  };
+}
+
+export function buildPageProofResponse(summary: PageProofSummary): PageProofResponse {
+  let loopState: FirstViewLoopState = "repeat_share_prompt";
+
+  if (summary.firstViewAfterLatestShareAt) {
+    loopState = "first_view_detected";
+  } else if (summary.status === "awaiting_views") {
+    loopState = "waiting_for_first_view";
+  }
+
+  return {
+    pageId: summary.pageId,
+    loopState,
+    viewsLast7d: summary.viewsLast7d,
+    mobileViewsLast7d: summary.mobileViewsLast7d,
+    avgEngagedSecondsLast7d: summary.avgEngagedSecondsLast7d,
+    shareIntentCountLast7d: summary.shareIntentCountLast7d,
+    lastShareAt: summary.lastShareAt,
+    latestViewAt: summary.latestViewAt,
+    firstViewAfterLatestShareAt: summary.firstViewAfterLatestShareAt,
+    firstViewAfterLatestShareDeviceLabel: summary.firstViewAfterLatestShareDeviceLabel,
+    firstViewAfterLatestShareEngagedSeconds: summary.firstViewAfterLatestShareEngagedSeconds,
+    lastShareScenario: summary.lastShareScenario,
   };
 }

@@ -84,7 +84,7 @@ export default function MobileStickyCta({
     >
       <div className="mx-auto flex max-w-lg items-center gap-2 rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(8,14,28,0.94)] px-3 py-2 shadow-[0_-10px_40px_rgba(2,6,23,0.4)] backdrop-blur-xl">
         <p className="min-w-0 flex-1 truncate text-xs font-medium text-[rgba(247,241,232,0.78)]">
-          Make the click count.
+          Know when someone looks.
         </p>
         <Link href={href} className="gold-pill shrink-0 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
           {label}

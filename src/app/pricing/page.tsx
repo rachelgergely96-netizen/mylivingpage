@@ -55,7 +55,7 @@ export default function PricingPage() {
               href="/signup?ref=pricing_nav"
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Start Your Free Month
+              Create Your Page (Free)
             </Link>
           </nav>
         </header>
@@ -121,7 +121,7 @@ export default function PricingPage() {
               href="/signup?ref=pricing_free_card"
               className="gold-pill mt-8 block w-full py-3 text-center text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Start Your Free Month
+              Create Your Page (Free)
             </Link>
           </div>
 

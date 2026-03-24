@@ -52,6 +52,23 @@ export function formatExperienceHighlightsAsParagraph(highlights: string[]) {
   return normalized.length ? normalized.join(" ") : null;
 }
 
+function ensureTerminalPeriod(text: string) {
+  const normalized = normalizeResumeText(text).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return `${normalized.replace(/[.!?]+$/, "").trim()}.`;
+}
+
+export function formatSkillsGroupAsSentence(group: ResumeData["skills"][number]) {
+  const category = normalizeResumeText(group.category).trim();
+  const items = group.items.map((item) => normalizeResumeText(item).trim()).filter(Boolean).join(", ");
+  const line = category && items ? `${category}: ${items}` : category || items;
+
+  return ensureTerminalPeriod(line);
+}
+
 function buildContactLines(data: ResumeData) {
   const email = data.email ? normalizeResumeText(data.email) : "";
   const links = [displayLink(data.linkedin), displayLink(data.github), displayLink(data.website)].filter(
@@ -103,11 +120,8 @@ function buildFallbackSectionLines(data: ResumeData) {
     sections.push({
       title: "Skills",
       lines: data.skills
-        .map((group) => {
-          const items = group.items.filter(Boolean).join(", ");
-          return items ? `${group.category}: ${items}` : group.category;
-        })
-        .filter(Boolean),
+        .map((group) => formatSkillsGroupAsSentence(group))
+        .filter((line): line is string => Boolean(line)),
     });
   }
 
@@ -352,7 +366,8 @@ function estimateExperienceEntryHeight(doc: PdfDocumentInstance, entry: ResumeDa
 }
 
 function estimateSkillsGroupHeight(doc: PdfDocumentInstance, group: ResumeData["skills"][number]) {
-  return estimateParagraphHeight(doc, `${group.category}: ${group.items.join(", ")}`) + 1;
+  const line = formatSkillsGroupAsSentence(group);
+  return line ? estimateParagraphHeight(doc, line) + 1 : 1;
 }
 
 function estimateEducationEntryHeight(doc: PdfDocumentInstance, entry: ResumeData["education"][number]) {
@@ -578,8 +593,12 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
     renderSectionTitle(doc, "Skills");
     data.skills.forEach((group) => {
       ensureSpace(doc, estimateSkillsGroupHeight(doc, group));
+      const line = formatSkillsGroupAsSentence(group);
+      if (!line) {
+        return;
+      }
       applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(
-        `${group.category}: ${group.items.join(", ")}`,
+        line,
         left,
         doc.y,
         {

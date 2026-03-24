@@ -3,6 +3,7 @@ import {
   buildResumePdfData,
   countPdfPages,
   formatExperienceHighlightsAsParagraph,
+  formatSkillsGroupAsSentence,
   renderResumePdf,
 } from "@/lib/pdf/ats-export";
 import type { ResumeData } from "@/types/resume";
@@ -89,6 +90,15 @@ describe("Resume PDF export data shaping", () => {
     ).toBe(
       "Built a better workflow. Partnered with engineering and design. Reduced review time by 30%.",
     );
+  });
+
+  it("adds a terminal period to each skills sentence", () => {
+    expect(
+      formatSkillsGroupAsSentence({
+        category: "Tools",
+        items: ["SQL", "Figma", "Amplitude"],
+      }),
+    ).toBe("Tools: SQL, Figma, Amplitude.");
   });
 
   it(

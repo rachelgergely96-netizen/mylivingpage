@@ -16,6 +16,15 @@ export const PAGE_VARIANT_SECTION_IDS: PageVariantSectionId[] = [
   "certifications",
 ];
 
+export interface RecruiterSkimModel {
+  variantLabel: string;
+  collapsedChips: string[];
+  roleHeading: string | null;
+  summary: string | null;
+  featuredProject: ResumeData["projects"][number] | null;
+  ctaEmphasis: string | null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -232,30 +241,73 @@ function pickFeaturedHighlight(data: ResumeData) {
   return quantified ?? data.experience.flatMap((entry) => entry.highlights)[0] ?? null;
 }
 
+function buildProofPoints(data: ResumeData, featuredStatLabels: string[]) {
+  const featuredStats = featuredStatLabels.length
+    ? data.stats.filter((stat) => featuredStatLabels.includes(stat.label)).slice(0, 3)
+    : data.stats.slice(0, 3);
+
+  return featuredStats.length > 0
+    ? featuredStats.map((stat) => `${stat.value} ${stat.label}`.trim())
+    : [pickFeaturedHighlight(data)].filter((entry): entry is string => Boolean(entry));
+}
+
+function pickFeaturedProject(data: ResumeData, featuredProjectNames: string[]) {
+  return featuredProjectNames.length
+    ? data.projects.find((project) => featuredProjectNames.includes(project.name)) ?? data.projects[0] ?? null
+    : data.projects[0] ?? null;
+}
+
+function equalStringArrays(left: string[], right: string[]) {
+  return left.length === right.length && left.every((entry, index) => entry === right[index]);
+}
+
+function uniqueStrings(values: string[]) {
+  return values.filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
+}
+
 export function buildRecruiterSkimModel(
   baseData: ResumeData,
   variant: PageVariant | null | undefined,
-) {
+) : RecruiterSkimModel | null {
+  if (!variant) {
+    return null;
+  }
+
   const data = applyPageVariant(baseData, variant);
-  const featuredStats = variant?.featuredStatLabels?.length
-    ? data.stats
-        .filter((stat) => variant.featuredStatLabels.includes(stat.label))
-        .slice(0, 3)
-    : data.stats.slice(0, 3);
-  const featuredProject = variant?.featuredProjectNames?.length
-    ? data.projects.find((project) => variant.featuredProjectNames.includes(project.name)) ??
-      data.projects[0] ??
-      null
-    : data.projects[0] ?? null;
+  const baseRoleHeading = toText(baseData.headline) || "Professional profile";
+  const variantRoleTitle = toText(variant.roleTitle);
+  const variantHeadline = toText(data.headline);
+  const roleHeading =
+    variantRoleTitle && variantRoleTitle !== baseRoleHeading
+      ? variantRoleTitle
+      : variantHeadline && variantHeadline !== baseRoleHeading
+        ? variantHeadline
+        : null;
+  const summary = toText(data.summary) !== toText(baseData.summary) ? data.summary : null;
+  const ctaEmphasis = toOptionalText(variant.ctaEmphasis);
+  const proofPoints = buildProofPoints(data, variant.featuredStatLabels);
+  const baseProofPoints = buildProofPoints(baseData, []);
+  const changedProofPoints = equalStringArrays(proofPoints, baseProofPoints) ? [] : proofPoints;
+  const featuredProject = pickFeaturedProject(data, variant.featuredProjectNames);
+  const baseFeaturedProject = pickFeaturedProject(baseData, []);
+  const changedFeaturedProject =
+    featuredProject?.name && featuredProject.name !== baseFeaturedProject?.name ? featuredProject : null;
+
+  if (!roleHeading && !summary && !ctaEmphasis && !changedProofPoints.length && !changedFeaturedProject) {
+    return null;
+  }
 
   return {
-    data,
-    fitHeading: variant?.roleTitle || data.headline || "Professional profile",
-    proofPoints:
-      featuredStats.length > 0
-        ? featuredStats.map((stat) => `${stat.value} ${stat.label}`.trim())
-        : [pickFeaturedHighlight(data)].filter((entry): entry is string => Boolean(entry)),
-    featuredProject,
-    ctaEmphasis: variant?.ctaEmphasis ?? null,
+    variantLabel: variant.label,
+    collapsedChips: uniqueStrings([
+      ...(roleHeading ? [roleHeading] : []),
+      ...changedProofPoints,
+      ...(changedFeaturedProject ? [`Featured work: ${changedFeaturedProject.name}`] : []),
+      ...(ctaEmphasis ? [ctaEmphasis] : []),
+    ]),
+    roleHeading,
+    summary,
+    featuredProject: changedFeaturedProject,
+    ctaEmphasis,
   };
 }

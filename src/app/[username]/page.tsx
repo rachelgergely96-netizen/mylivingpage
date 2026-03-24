@@ -8,7 +8,12 @@ import RecruiterSkimPanel from "@/components/public/RecruiterSkimPanel";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
-import { buildRecruiterSkimModel, buildVariantHref, getPageVariant } from "@/lib/page-variants";
+import {
+  applyPageVariant,
+  buildRecruiterSkimModel,
+  buildVariantHref,
+  getPageVariant,
+} from "@/lib/page-variants";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -79,6 +84,7 @@ export default async function PublicLivingPage({
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
   const pageUserId = page.user_id ?? page.owner_id ?? "";
   const selectedVariant = getPageVariant(page.page_config, resolvedSearchParams.v ?? null);
+  const variantResumeData = applyPageVariant(page.resume_data, selectedVariant);
   const recruiterSkim = buildRecruiterSkimModel(page.resume_data, selectedVariant);
   const variantAwarePath = buildVariantHref(`/${username}`, {
     variantId: selectedVariant?.id ?? null,
@@ -106,19 +112,22 @@ export default async function PublicLivingPage({
               data-analytics-scroll-root="true"
               className="h-full overflow-y-auto scrollbar-hide"
             >
-              <RecruiterSkimPanel
-                pageId={page.id}
-                publicPath={variantAwarePath}
-                resumeData={recruiterSkim.data}
-                variant={selectedVariant}
-                variantId={selectedVariant?.id ?? null}
-                fitHeading={recruiterSkim.fitHeading}
-                proofPoints={recruiterSkim.proofPoints}
-                featuredProject={recruiterSkim.featuredProject}
-                ctaEmphasis={recruiterSkim.ctaEmphasis}
-              />
+              {recruiterSkim ? (
+                <RecruiterSkimPanel
+                  pageId={page.id}
+                  publicPath={variantAwarePath}
+                  resumeData={variantResumeData}
+                  variantLabel={recruiterSkim.variantLabel}
+                  variantId={selectedVariant?.id ?? null}
+                  collapsedChips={recruiterSkim.collapsedChips}
+                  roleHeading={recruiterSkim.roleHeading}
+                  summary={recruiterSkim.summary}
+                  featuredProject={recruiterSkim.featuredProject}
+                  ctaEmphasis={recruiterSkim.ctaEmphasis}
+                />
+              ) : null}
               <ResumeLayout
-                data={recruiterSkim.data}
+                data={variantResumeData}
                 useExternalScrollRoot
               />
             </div>
@@ -130,7 +139,7 @@ export default async function PublicLivingPage({
         pageUserId={pageUserId}
         slug={page.slug}
         themeId={themeId}
-        resumeData={recruiterSkim.data}
+        resumeData={variantResumeData}
         variantId={selectedVariant?.id ?? null}
         liveUrl={variantAwareUrl}
         avoidBadge

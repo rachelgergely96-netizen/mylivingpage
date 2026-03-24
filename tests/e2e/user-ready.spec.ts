@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { PageVariant } from "../../src/types/resume";
 import {
   buildCheckoutCompletedEvent,
   buildSubscriptionDeletedEvent,
@@ -20,6 +21,7 @@ import {
   removeAvatarViaApi,
   sendStripeWebhook,
   seedPageAnalyticsHistory,
+  setPageConfigForPage,
   setPlanForProfile,
   signIn,
   uploadAvatarViaApi,
@@ -271,7 +273,7 @@ test.describe.serial("authenticated user journeys", () => {
     await viewerContext.close();
   });
 
-  test("public recruiter skim stays collapsed until a viewer expands it on mobile and desktop", async ({ page, browser }) => {
+  test("public recruiter skim only appears for qualifying targeted versions and stays collapsed until expanded", async ({ page, browser }) => {
     test.skip(
       !canRunAdminFixtureFlows,
       "Set Playwright Supabase service-role env vars to run public recruiter skim coverage.",
@@ -280,25 +282,55 @@ test.describe.serial("authenticated user journeys", () => {
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
     await setPlanForProfile(profile.id, "pro");
-    await ensureLivePageForProfile(profile);
+    const livePage = await ensureLivePageForProfile(profile);
+    const recruiterVariant: PageVariant = {
+      id: "playwright-recruiter-variant",
+      slug: "playwright-recruiter-variant",
+      label: "Recruiter reply version",
+      roleTitle: "Staff Product Leader",
+      headline: "Staff Product Manager",
+      summary:
+        "Staff product leader helping teams simplify complex launches and scale internal platforms.",
+      featuredStatLabels: ["Builds Shipped"],
+      featuredProjectNames: ["Pipeline Pulse"],
+      sectionOrder: [
+        "summary",
+        "stats",
+        "experience",
+        "projects",
+        "skills",
+        "education",
+        "certifications",
+      ],
+      ctaEmphasis: "Open to staff product leadership roles",
+    };
+    await setPageConfigForPage(livePage.id, {
+      variants: [recruiterVariant],
+    });
 
     const viewerContext = await browser.newContext();
     const viewerPage = await viewerContext.newPage();
 
+    await viewerPage.goto(`/${profile.username}`);
+    await expect(viewerPage.getByTestId("recruiter-skim-panel")).toHaveCount(0);
+
     const assertRecruiterSkimDisclosure = async (viewport: { width: number; height: number }) => {
       await viewerPage.setViewportSize(viewport);
-      await viewerPage.goto(`/${profile.username}`);
+      await viewerPage.goto(`/${profile.username}?v=${recruiterVariant.id}`);
 
       const panel = viewerPage.getByTestId("recruiter-skim-panel");
       const expandButton = panel.getByRole("button", { name: "Expand recruiter skim" });
 
       await expect(panel).toBeVisible();
+      await expect(panel.getByText("Recruiter reply version")).toBeVisible();
+      await expect(panel.getByText("Staff Product Leader")).toBeVisible();
+      await expect(panel.getByText("12 Builds Shipped")).toBeVisible();
+      await expect(panel.getByText("Featured work: Pipeline Pulse")).toBeVisible();
       await expect(expandButton).toBeVisible();
       await expect(expandButton).toHaveAttribute("aria-expanded", "false");
       await expect(panel.getByTestId("recruiter-skim-content")).toHaveCount(0);
       await expect(panel.getByRole("button", { name: "Download Resume PDF" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Email" })).toHaveCount(0);
-      await expect(panel.getByRole("link", { name: "LinkedIn" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Open current page" })).toHaveCount(0);
 
       await expandButton.click();
@@ -311,8 +343,19 @@ test.describe.serial("authenticated user journeys", () => {
       await expect(panel.getByTestId("recruiter-skim-content")).toBeVisible();
       await expect(panel.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
       await expect(panel.getByRole("link", { name: "Email" })).toBeVisible();
-      await expect(panel.getByRole("link", { name: "LinkedIn" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "LinkedIn" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Open current page" })).toBeVisible();
+      await expect(panel.getByText("Target role")).toBeVisible();
+      await expect(panel.getByText("Staff Product Leader")).toBeVisible();
+      await expect(
+        panel.getByText("Staff product leader helping teams simplify complex launches and scale internal platforms."),
+      ).toBeVisible();
+      await expect(panel.getByText("Open to staff product leadership roles")).toBeVisible();
+      await expect(panel.getByText("Pipeline Pulse")).toBeVisible();
+      await expect(panel.getByText("Featured work sample")).toBeVisible();
+      await expect(panel.getByText("Full-stack engineer with 8 years of experience")).toHaveCount(0);
+      await expect(panel.getByText("Senior Full-Stack Engineer")).toHaveCount(0);
+      await expect(panel.getByText("Top proof")).toHaveCount(0);
     };
 
     await assertRecruiterSkimDisclosure({ width: 390, height: 844 });

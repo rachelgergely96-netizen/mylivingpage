@@ -8,6 +8,7 @@ import type {
 } from "../../src/lib/analytics/constants";
 import { DEMO_PAGES } from "../../src/lib/demo-data";
 import { PRIVACY_VERSION, TERMS_VERSION } from "../../src/lib/legal/legal-version";
+import type { PageConfig } from "../../src/types/resume";
 
 export interface ProfileFixture {
   id: string;
@@ -235,6 +236,17 @@ export async function ensureLivePageForProfile(profile: ProfileFixture): Promise
   }
 
   return data as PageFixture;
+}
+
+export async function setPageConfigForPage(pageId: string, pageConfig: PageConfig | null) {
+  const { error } = await requireSupabaseAdmin()
+    .from("pages")
+    .update({ page_config: pageConfig })
+    .eq("id", pageId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function clearPageViewState(pageId: string) {

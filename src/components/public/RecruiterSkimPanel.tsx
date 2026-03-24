@@ -2,16 +2,17 @@
 
 import { useId, useState } from "react";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
-import type { PageVariant, ResumeData } from "@/types/resume";
+import type { ResumeData } from "@/types/resume";
 
 interface RecruiterSkimPanelProps {
   pageId: string;
   publicPath: string;
   resumeData: ResumeData;
-  variant: PageVariant | null;
+  variantLabel: string;
   variantId?: string | null;
-  fitHeading: string;
-  proofPoints: string[];
+  collapsedChips: string[];
+  roleHeading?: string | null;
+  summary?: string | null;
   featuredProject:
     | {
         name: string;
@@ -31,16 +32,17 @@ export default function RecruiterSkimPanel({
   pageId,
   publicPath,
   resumeData,
-  variant,
+  variantLabel,
   variantId = null,
-  fitHeading,
-  proofPoints,
+  collapsedChips,
+  roleHeading = null,
+  summary = null,
   featuredProject,
   ctaEmphasis,
 }: RecruiterSkimPanelProps) {
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
-  const collapsedProofPoints = proofPoints.slice(0, 3);
+  const visibleChips = collapsedChips.slice(0, 3);
 
   return (
     <section
@@ -51,11 +53,12 @@ export default function RecruiterSkimPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-              Recruiter skim
+              Recruiter version
             </p>
-            {collapsedProofPoints.length > 0 ? (
+            <p className="mt-1 text-sm text-[rgba(240,244,255,0.58)]">{variantLabel}</p>
+            {visibleChips.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
-                {collapsedProofPoints.map((point) => (
+                {visibleChips.map((point) => (
                   <span
                     key={`collapsed-${point}`}
                     className="rounded-full border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-xs text-[#BFDBFE]"
@@ -94,20 +97,29 @@ export default function RecruiterSkimPanel({
             className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4"
           >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <h2 className="font-heading text-2xl font-semibold text-[#F0F4FF] sm:text-3xl">
-                  {fitHeading}
-                </h2>
-                {variant ? (
-                  <p className="mt-2 text-sm text-[rgba(240,244,255,0.48)]">
-                    Targeted version: {variant.label}
-                  </p>
+              <div className="max-w-3xl space-y-4">
+                {roleHeading ? (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+                      Target role
+                    </p>
+                    <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF] sm:text-2xl">
+                      {roleHeading}
+                    </h2>
+                  </div>
                 ) : null}
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.7)]">
-                  {resumeData.summary}
-                </p>
+                {summary ? (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+                      Opening summary
+                    </p>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.7)]">
+                      {summary}
+                    </p>
+                  </div>
+                ) : null}
                 {ctaEmphasis ? (
-                  <p className="mt-3 inline-flex rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(229,183,107,0.08)] px-3 py-1.5 text-xs text-[#F5D7A2]">
+                  <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(229,183,107,0.08)] px-3 py-1.5 text-xs text-[#F5D7A2]">
                     {ctaEmphasis}
                   </p>
                 ) : null}
@@ -146,24 +158,6 @@ export default function RecruiterSkimPanel({
                 </a>
               </div>
             </div>
-
-            {proofPoints.length > 0 ? (
-              <div className="mt-5">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
-                  Top proof
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {proofPoints.map((point) => (
-                    <span
-                      key={point}
-                      className="rounded-full border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-xs text-[#BFDBFE]"
-                    >
-                      {point}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
 
             {featuredProject ? (
               <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">

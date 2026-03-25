@@ -162,6 +162,42 @@ const checks = [
       ) as ok
     `,
   },
+  {
+    label: "page_views primary section constraint includes proof",
+    query: `
+      select exists (
+        select 1
+        from pg_constraint
+        where conname = 'page_views_primary_section_chk'
+          and conrelid = to_regclass('public.page_views')
+          and pg_get_constraintdef(oid) ilike '%proof%'
+      ) as ok
+    `,
+  },
+  {
+    label: "page_views primary section constraint includes testimonials",
+    query: `
+      select exists (
+        select 1
+        from pg_constraint
+        where conname = 'page_views_primary_section_chk'
+          and conrelid = to_regclass('public.page_views')
+          and pg_get_constraintdef(oid) ilike '%testimonials%'
+      ) as ok
+    `,
+  },
+  {
+    label: "page_interactions target key constraint includes proof_item",
+    query: `
+      select exists (
+        select 1
+        from pg_constraint
+        where conname = 'page_interactions_target_key_chk'
+          and conrelid = to_regclass('public.page_interactions')
+          and pg_get_constraintdef(oid) ilike '%proof_item%'
+      ) as ok
+    `,
+  },
 ];
 
 const client = new Client({
@@ -191,6 +227,9 @@ try {
     failures.forEach((failure) => console.error(`- ${failure}`));
     console.error(
       "- Apply and verify supabase/migrations/20260313121500_analytics_engagement.sql in the target environment.",
+    );
+    console.error(
+      "- Apply and verify supabase/migrations/20260325153000_proof_and_testimonial_analytics.sql in the target environment.",
     );
     process.exit(1);
   }

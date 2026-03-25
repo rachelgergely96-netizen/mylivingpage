@@ -5,7 +5,7 @@ import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
 import LandingUnifiedShowcase from "@/components/marketing/LandingUnifiedShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
-import { HOSTING_PLAN_PRICE } from "@/lib/billing";
+import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   CREDIBILITY_POINTS,
@@ -62,14 +62,14 @@ export default async function LandingPage() {
             <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
               <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Professional decision page
+                Living professional page
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  Know when someone actually looks at your profile.
+                  Share one page. Know when interest is real. Follow up better.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  Stop sending PDFs into the void. Share one clean page and know when people open it.
+                  Built for active job seekers who need proof, polish, and a cleaner follow-up asset than another static PDF.
                 </p>
               </div>
 
@@ -106,7 +106,7 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Takes ~2 minutes. No card required.
+                Takes ~2 minutes. Free preview, no card until you publish, and the same saved profile powers your page and resume export.
               </p>
             </div>
           </section>
@@ -140,19 +140,21 @@ export default async function LandingPage() {
             <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10 sm:py-10">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">One page. Always up to date.</p>
-                <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                  Build it once. Send it whenever someone is deciding whether to move forward.
-                </h2>
-                <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Your page, Resume PDF, and shareable link stay aligned automatically so you can send a professional decision page instead of another attachment. New accounts get one month of free live hosting with all features unlocked, then keep the page live for {HOSTING_PLAN_PRICE.displayLabel}.
-                </p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Free / Starter / Pro</p>
+                  <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
+                    Build for free. Add a card only when the page is ready to go live.
+                  </h2>
+                  <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
+                    Free is for discovery and setup. When you click publish, choose Starter or Pro,
+                    save a payment method, and start a 30-day free trial before monthly billing
+                    begins so every live page starts with real follow-up visibility.
+                  </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
                       href={getSignupHref("landing_pricing_start")}
                       className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                     >
-                      Create Your Page (Free)
+                      Start Free Preview
                     </Link>
                     <Link
                       href="/pricing"
@@ -163,43 +165,69 @@ export default async function LandingPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 lg:min-w-[460px] lg:max-w-[520px]">
-                  <div className="rounded-3xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.09)] p-5 shadow-[0_0_40px_rgba(59,130,246,0.08)] ring-1 ring-[rgba(59,130,246,0.16)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Hosting timeline</p>
-                      <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
-                        One month free
-                      </span>
-                    </div>
-                    <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.76)]">
-                      {PRICING_REASSURANCE.trial.map((item) => (
-                        <li key={item} className="flex items-start gap-2.5">
-                          <span className="mt-0.5 text-[#5BD67C]">&#10003;</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">After the free month</p>
-                      <div className="mt-2 flex items-baseline gap-1">
-                        <span className="font-heading text-3xl font-bold text-[#F0F4FF]">{HOSTING_PLAN_PRICE.amountLabel}</span>
-                        <span className="text-sm text-[rgba(240,244,255,0.42)]">{HOSTING_PLAN_PRICE.intervalLabel}</span>
-                      </div>
-                      <ul className="mt-4 space-y-3 text-sm text-[rgba(240,244,255,0.72)]">
-                        {PRICING_REASSURANCE.subscription.map((item) => (
-                          <li key={item} className="flex items-start gap-2.5">
+                <div className="grid gap-4 lg:min-w-[520px] lg:max-w-[560px]">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Free</p>
+                      <p className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF]">$0</p>
+                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                        Build and preview with no card.
+                      </p>
+                      <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.72)]">
+                        {PRICING_REASSURANCE.free.slice(0, 3).map((item) => (
+                          <li key={item} className="flex items-start gap-2">
                             <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
                             {item}
                           </li>
                         ))}
                       </ul>
                     </div>
-                    <Link
-                      href={getSignupHref("landing_free_start")}
-                      className="mt-6 block w-full rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] py-3 text-center text-sm font-semibold text-[#F0F4FF] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
-                    >
-                      Create Your Page (Free)
-                    </Link>
+
+                    <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Starter</p>
+                      <p className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF]">
+                        {STARTER_PLAN_PRICE.amountLabel}
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                        Live hosting, proof-first sharing, and dashboard view counts.
+                      </p>
+                      <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.72)]">
+                        {PRICING_REASSURANCE.starter.slice(0, 3).map((item) => (
+                          <li key={item} className="flex items-start gap-2">
+                            <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-3xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.09)] p-5 shadow-[0_0_40px_rgba(59,130,246,0.08)] ring-1 ring-[rgba(59,130,246,0.16)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#BFDBFE]">Pro</p>
+                        <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
+                          Most complete
+                        </span>
+                      </div>
+                      <p className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF]">
+                        {PRO_PLAN_PRICE.amountLabel}
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+                        Full analytics, all themes, and up to 3 targeted versions for higher-stakes follow-up.
+                      </p>
+                      <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.76)]">
+                        {PRICING_REASSURANCE.pro.slice(0, 3).map((item) => (
+                          <li key={item} className="flex items-start gap-2">
+                            <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+                    Free does not include live hosting. The card gate appears when you publish, so
+                    every live page starts with a payment method on file and a 30-day trial already
+                    running.
                   </div>
                 </div>
               </div>
@@ -225,7 +253,7 @@ export default async function LandingPage() {
                   Simple. Professional. Yours.
                 </h2>
                 <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                  MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants clean, credible context fast. It is a living resume on the surface, but the real job is helping someone decide to move forward. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
+                  MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants proof, credibility, and contact paths fast. It is a living resume on the surface, but the real job is helping someone decide to move forward. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
                 </p>
               </div>
               <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

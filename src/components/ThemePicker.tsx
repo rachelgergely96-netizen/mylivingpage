@@ -18,7 +18,9 @@ interface ThemePickerProps {
   themes: ThemeDefinition[];
   selectedThemeId: ThemeId;
   onSelectTheme: (themeId: ThemeId) => void;
-  premium: boolean;
+  premium?: boolean;
+  allowedThemeIds?: ThemeId[] | null;
+  lockedLabel?: string;
   showDescription?: boolean;
 }
 
@@ -26,10 +28,18 @@ export default function ThemePicker({
   themes,
   selectedThemeId,
   onSelectTheme,
-  premium,
+  premium = false,
+  allowedThemeIds,
+  lockedLabel = "Locked",
   showDescription = false,
 }: ThemePickerProps) {
   const [activeCollection, setActiveCollection] = useState<ThemeCollectionFilterId>("all");
+  const selectableThemeIds =
+    allowedThemeIds === undefined
+      ? premium
+        ? null
+        : FREE_THEMES
+      : allowedThemeIds;
 
   const sections = useMemo(() => {
     const collections = activeCollection === "all" ? THEME_COLLECTION_IDS : [activeCollection];
@@ -81,7 +91,9 @@ export default function ThemePicker({
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {section.themes.map((theme) => {
-                const locked = !premium && !FREE_THEMES.includes(theme.id);
+                const locked =
+                  selectableThemeIds !== null &&
+                  !selectableThemeIds.includes(theme.id);
                 return (
                   <button
                     key={theme.id}
@@ -102,7 +114,7 @@ export default function ThemePicker({
                       {locked ? (
                         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
                           <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
-                            Hosting
+                            {lockedLabel}
                           </span>
                         </div>
                       ) : null}

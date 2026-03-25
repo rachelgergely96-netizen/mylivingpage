@@ -100,7 +100,7 @@ export default function SignupPage() {
 
       setStatus("success");
       setPassword("");
-      setMessage("Check your email to confirm your account, then come back to get your page live.");
+      setMessage("Check your email to confirm your account, then come back to build and publish your page.");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to create account.");
@@ -140,10 +140,10 @@ export default function SignupPage() {
       <div className="glass-card w-full rounded-2xl p-6 md:p-7">
         <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your page</p>
         <h1 className="mt-2 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-[2.2rem]">
-          Let&apos;s get your page live.
+          Build your job-search page.
         </h1>
         <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-          You&apos;re a few minutes away from having something you can actually send.
+          Start with a free preview, add proof and follow-up context, then choose Starter or Pro when you&apos;re ready to publish.
         </p>
         <label className="mt-4 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
           <input
@@ -228,7 +228,7 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
-          No card required to publish. New accounts get one month of free live hosting with every feature unlocked, then monthly hosting is $9.99/month.
+          Free preview does not require a card. When you publish, you&apos;ll choose Starter or Pro, add a payment method, and start a 30-day free trial before billing begins.
         </p>
 
         <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">

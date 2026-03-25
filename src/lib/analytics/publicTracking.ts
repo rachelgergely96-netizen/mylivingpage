@@ -146,6 +146,10 @@ export function formatAnalyticsTargetLabel(
     return `Company: ${targetLabel}`;
   }
 
+  if (targetKey === "proof_item" && targetLabel) {
+    return `Proof: ${targetLabel}`;
+  }
+
   if (targetLabel) {
     return targetLabel;
   }
@@ -163,8 +167,9 @@ export function formatAnalyticsTargetLabel(
       return "Company link";
     case "project":
       return "Project link";
+    case "proof_item":
+      return "Proof link";
     default:
       return "Link";
   }
 }
-

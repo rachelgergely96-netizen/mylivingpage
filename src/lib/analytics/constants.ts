@@ -10,6 +10,8 @@ export const DEFAULT_ANALYTICS_RANGE: AnalyticsRangeKey = "30d";
 
 export const ANALYTICS_SECTION_IDS = [
   "summary",
+  "proof",
+  "testimonials",
   "experience",
   "projects",
   "education",
@@ -26,6 +28,7 @@ export const ANALYTICS_TARGET_KEYS = [
   "website",
   "experience_company",
   "project",
+  "proof_item",
 ] as const;
 
 export type AnalyticsTargetKey = (typeof ANALYTICS_TARGET_KEYS)[number];
@@ -50,4 +53,3 @@ export function isAnalyticsTargetKey(
 ): value is AnalyticsTargetKey {
   return Boolean(value && ANALYTICS_TARGET_KEYS.includes(value as AnalyticsTargetKey));
 }
-

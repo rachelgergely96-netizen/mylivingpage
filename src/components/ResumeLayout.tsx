@@ -29,6 +29,40 @@ function normalizeCerts(raw: ResumeData["certifications"]): Array<{ name: string
   return raw as Array<{ name: string; issuer: string | null; date: string | null }>;
 }
 
+function normalizeProofs(raw: ResumeData["proofs"]) {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.filter((proof) =>
+    Boolean(
+      proof &&
+        (proof.title?.trim() ||
+          proof.summary?.trim() ||
+          proof.outcome?.trim() ||
+          proof.url?.trim()),
+    ),
+  );
+}
+
+function normalizeTestimonials(raw: ResumeData["testimonials"]) {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.filter((testimonial) =>
+    Boolean(
+      testimonial &&
+        testimonial.status === "approved" &&
+        testimonial.name?.trim() &&
+        testimonial.quote?.trim(),
+    ),
+  );
+}
+
+function formatProofTypeLabel(value: string) {
+  return value
+    .split("_")
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function ResumeLayout({
   data,
   compact = false,
@@ -43,6 +77,10 @@ export default function ResumeLayout({
   const skills = compact ? allSkills.slice(0, 2).map(g => ({ ...g, items: g.items.slice(0, 4) })) : allSkills;
   const certs = normalizeCerts(data.certifications);
   const experience = compact ? data.experience?.slice(0, 2) : data.experience;
+  const proofs = compact ? normalizeProofs(data.proofs).slice(0, 1) : normalizeProofs(data.proofs).slice(0, 3);
+  const testimonials = compact
+    ? normalizeTestimonials(data.testimonials).slice(0, 1)
+    : normalizeTestimonials(data.testimonials).slice(0, 3);
 
   const hasContact = data.email || data.linkedin || data.github || data.website;
 
@@ -186,6 +224,98 @@ export default function ResumeLayout({
         ) : null}
 
         {/* ── Experience ──────────────────────────────────────────── */}
+        {proofs.length ? (
+          <section
+            data-analytics-section="proof"
+            className={compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"}
+          >
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Proof</h2>
+              {!compact ? (
+                <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.32)]">
+                  Proof over claims
+                </span>
+              ) : null}
+            </div>
+            <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
+              {proofs.map((proof) => {
+                const proofUrl =
+                  !disableExternalLinks && proof.url
+                    ? (proof.url.startsWith("http") ? proof.url : `https://${proof.url}`)
+                    : null;
+
+                return (
+                  <article
+                    key={proof.id}
+                    className="rounded-xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.05)] p-3 sm:p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[rgba(59,130,246,0.25)] bg-[rgba(59,130,246,0.08)] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">
+                        {formatProofTypeLabel(proof.type)}
+                      </span>
+                      {proof.source_label ? (
+                        <span className="text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.35)]">
+                          {proof.source_label}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-3 text-sm font-medium text-[#F0F4FF]">{proof.title}</p>
+                    {proof.summary ? (
+                      <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+                        {proof.summary}
+                      </p>
+                    ) : null}
+                    {proof.outcome ? (
+                      <p className="mt-3 text-xs leading-5 text-[#BFDBFE]">{proof.outcome}</p>
+                    ) : null}
+                    {proofUrl ? (
+                      <a
+                        href={proofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-analytics-target-key="proof_item"
+                        data-analytics-target-label={proof.title}
+                        className="pointer-events-auto mt-3 inline-flex items-center gap-1.5 text-xs text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                      >
+                        Open proof link
+                        <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                      </a>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {testimonials.length ? (
+          <section
+            data-analytics-section="testimonials"
+            className={compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"}
+          >
+            <h2 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Testimonials</h2>
+            <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
+              {testimonials.map((testimonial) => (
+                <article
+                  key={testimonial.id}
+                  className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] p-3 sm:p-4"
+                >
+                  <p className="text-sm leading-6 text-[rgba(240,244,255,0.76)]">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </p>
+                  <p className="mt-3 text-xs font-medium text-[#F0F4FF]">{testimonial.name}</p>
+                  <p className="mt-1 text-[11px] text-[rgba(240,244,255,0.4)]">
+                    {[testimonial.role, testimonial.company].filter(Boolean).join(" · ")}
+                    {testimonial.approved_at ? ` · Approved ${testimonial.approved_at}` : ""}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {experience?.length ? (
           <section
             data-analytics-section="experience"

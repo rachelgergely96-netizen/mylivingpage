@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { createClient } from "@supabase/supabase-js";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import Stripe from "stripe";
+import { PUBLISH_CC_TRIAL_BILLING_COHORT } from "../../src/lib/account-access";
 import type {
   AnalyticsSectionId,
   AnalyticsTargetKey,
@@ -15,6 +16,9 @@ export interface ProfileFixture {
   username: string;
   email: string | null;
   plan: string;
+  billing_cohort: string | null;
+  stripe_subscription_status: string | null;
+  stripe_trial_ends_at: string | null;
   stripe_customer_id: string | null;
   avatar_url: string | null;
 }
@@ -156,7 +160,9 @@ export async function getProfileFixtureByEmail(): Promise<ProfileFixture> {
 
   const { data, error } = await requireSupabaseAdmin()
     .from("profiles")
-    .select("id, username, email, plan, stripe_customer_id, avatar_url")
+    .select(
+      "id, username, email, plan, billing_cohort, stripe_subscription_status, stripe_trial_ends_at, stripe_customer_id, avatar_url",
+    )
     .eq("email", appAuthEmail)
     .single();
 
@@ -167,11 +173,49 @@ export async function getProfileFixtureByEmail(): Promise<ProfileFixture> {
   return data as ProfileFixture;
 }
 
-export async function setPlanForProfile(profileId: string, plan: "spark" | "pro") {
+export async function setBillingStateForProfile(
+  profileId: string,
+  input: {
+    plan: "spark" | "starter" | "pro";
+    billingCohort?: string | null;
+    stripeSubscriptionStatus?: string | null;
+    stripeTrialEndsAt?: string | null;
+    hostingTrialStartedAt?: string | null;
+  },
+) {
   const { error } = await requireSupabaseAdmin()
     .from("profiles")
-    .update({ plan })
+    .update({
+      plan: input.plan,
+      billing_cohort: input.billingCohort ?? PUBLISH_CC_TRIAL_BILLING_COHORT,
+      stripe_subscription_status: input.stripeSubscriptionStatus ?? null,
+      stripe_trial_ends_at: input.stripeTrialEndsAt ?? null,
+      hosting_trial_started_at: input.hostingTrialStartedAt ?? null,
+    })
     .eq("id", profileId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function setPlanForProfile(
+  profileId: string,
+  plan: "spark" | "starter" | "pro",
+) {
+  await setBillingStateForProfile(profileId, {
+    plan,
+    stripeSubscriptionStatus:
+      plan === "spark" ? null : "active",
+    stripeTrialEndsAt: null,
+  });
+}
+
+export async function clearPagesForProfile(profileId: string) {
+  const { error } = await requireSupabaseAdmin()
+    .from("pages")
+    .delete()
+    .or(`owner_id.eq.${profileId},user_id.eq.${profileId}`);
 
   if (error) {
     throw new Error(error.message);
@@ -487,6 +531,13 @@ export async function sendStripeWebhook(
 }
 
 export async function buildCheckoutCompletedEvent(profile: ProfileFixture): Promise<Stripe.Event> {
+  return buildCheckoutCompletedEventForPlan(profile, "starter");
+}
+
+export async function buildCheckoutCompletedEventForPlan(
+  profile: ProfileFixture,
+  selectedPlan: "starter" | "pro",
+): Promise<Stripe.Event> {
   return buildStripeEvent("checkout.session.completed", {
     id: `cs_test_${Date.now()}`,
     object: "checkout.session",
@@ -494,18 +545,71 @@ export async function buildCheckoutCompletedEvent(profile: ProfileFixture): Prom
     customer: profile.stripe_customer_id,
     metadata: {
       supabase_user_id: profile.id,
+      selected_plan: selectedPlan,
       terms_version: TERMS_VERSION,
       privacy_version: PRIVACY_VERSION,
     },
   });
 }
 
-export async function buildSubscriptionDeletedEvent(profile: ProfileFixture): Promise<Stripe.Event> {
+function getStripePriceIdForPlan(plan: "starter" | "pro") {
+  const priceId =
+    plan === "starter"
+      ? process.env.STRIPE_STARTER_MONTHLY_PRICE_ID
+      : process.env.STRIPE_PRO_MONTHLY_PRICE_ID;
+
+  if (!priceId) {
+    throw new Error(`Missing Stripe price id for ${plan}.`);
+  }
+
+  return priceId;
+}
+
+export async function buildSubscriptionUpdatedEvent(
+  profile: ProfileFixture,
+  input: {
+    plan: "starter" | "pro";
+    status: "trialing" | "active" | "past_due" | "canceled";
+    trialEnd?: string | null;
+    eventType?: "customer.subscription.created" | "customer.subscription.updated";
+  },
+): Promise<Stripe.Event> {
+  return buildStripeEvent(input.eventType ?? "customer.subscription.updated", {
+    id: `sub_test_${Date.now()}`,
+    object: "subscription",
+    customer: profile.stripe_customer_id,
+    status: input.status,
+    trial_end: input.trialEnd ? Math.floor(new Date(input.trialEnd).getTime() / 1000) : null,
+    items: {
+      data: [
+        {
+          price: {
+            id: getStripePriceIdForPlan(input.plan),
+          },
+        },
+      ],
+    },
+  });
+}
+
+export async function buildSubscriptionDeletedEvent(
+  profile: ProfileFixture,
+  plan: "starter" | "pro" = "pro",
+): Promise<Stripe.Event> {
   return buildStripeEvent("customer.subscription.deleted", {
     id: `sub_test_${Date.now()}`,
     object: "subscription",
     customer: profile.stripe_customer_id,
     status: "canceled",
+    items: {
+      data: [
+        {
+          price: {
+            id: getStripePriceIdForPlan(plan),
+          },
+        },
+      ],
+    },
   });
 }
 

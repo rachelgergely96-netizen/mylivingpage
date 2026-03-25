@@ -122,7 +122,7 @@ export function sanitizePageVariant(value: unknown): PageVariant | null {
   };
 }
 
-export function sanitizePageVariants(value: unknown) {
+export function sanitizePageVariants(value: unknown, maxVariants = MAX_PAGE_VARIANTS) {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -130,22 +130,26 @@ export function sanitizePageVariants(value: unknown) {
   return value
     .map((entry) => sanitizePageVariant(entry))
     .filter((entry): entry is PageVariant => entry !== null)
-    .slice(0, MAX_PAGE_VARIANTS);
+    .slice(0, maxVariants);
 }
 
-export function getPageVariants(pageConfig: PageConfig | null | undefined) {
-  return sanitizePageVariants(pageConfig?.variants ?? []);
+export function getPageVariants(
+  pageConfig: PageConfig | null | undefined,
+  maxVariants = MAX_PAGE_VARIANTS,
+) {
+  return sanitizePageVariants(pageConfig?.variants ?? [], maxVariants);
 }
 
 export function getPageVariant(
   pageConfig: PageConfig | null | undefined,
   variantId: string | null | undefined,
+  maxVariants = MAX_PAGE_VARIANTS,
 ) {
   if (!variantId) {
     return null;
   }
 
-  return getPageVariants(pageConfig).find((variant) => variant.id === variantId) ?? null;
+  return getPageVariants(pageConfig, maxVariants).find((variant) => variant.id === variantId) ?? null;
 }
 
 function cloneResumeData(data: ResumeData): ResumeData {
@@ -157,6 +161,8 @@ function cloneResumeData(data: ResumeData): ResumeData {
     skills: data.skills.map((entry) => ({ ...entry, items: [...entry.items] })),
     certifications: data.certifications.map((entry) => ({ ...entry })),
     stats: data.stats.map((entry) => ({ ...entry })),
+    proofs: (data.proofs ?? []).map((entry) => ({ ...entry })),
+    testimonials: (data.testimonials ?? []).map((entry) => ({ ...entry })),
   };
 }
 
@@ -242,9 +248,16 @@ function pickFeaturedHighlight(data: ResumeData) {
 }
 
 function buildProofPoints(data: ResumeData, featuredStatLabels: string[]) {
+  const proofOutcomes = (data.proofs ?? [])
+    .map((proof) => proof.outcome || proof.title)
+    .filter((entry) => entry.trim().length > 0);
   const featuredStats = featuredStatLabels.length
     ? data.stats.filter((stat) => featuredStatLabels.includes(stat.label)).slice(0, 3)
     : data.stats.slice(0, 3);
+
+  if (proofOutcomes.length > 0) {
+    return proofOutcomes.slice(0, 3);
+  }
 
   return featuredStats.length > 0
     ? featuredStats.map((stat) => `${stat.value} ${stat.label}`.trim())

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  MAX_PAGE_VARIANTS,
   createPageVariant,
   slugifyVariantLabel,
 } from "@/lib/page-variants";
@@ -13,6 +12,7 @@ interface VariantPlannerProps {
   selectedVariantId: string | null;
   onSelectVariant: (variantId: string | null) => void;
   onChange: (variants: PageVariant[]) => void;
+  maxVariants?: number;
 }
 
 function toggleSelection(values: string[], value: string) {
@@ -27,6 +27,7 @@ export default function VariantPlanner({
   selectedVariantId,
   onSelectVariant,
   onChange,
+  maxVariants = 3,
 }: VariantPlannerProps) {
   const updateVariant = (
     variantId: string,
@@ -56,7 +57,7 @@ export default function VariantPlanner({
   };
 
   const addVariant = () => {
-    if (variants.length >= MAX_PAGE_VARIANTS) {
+    if (variants.length >= maxVariants) {
       return;
     }
 
@@ -85,10 +86,10 @@ export default function VariantPlanner({
         <button
           type="button"
           onClick={addVariant}
-          disabled={variants.length >= MAX_PAGE_VARIANTS}
+          disabled={variants.length >= maxVariants}
           className="rounded-full border border-[rgba(59,130,246,0.3)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {variants.length >= MAX_PAGE_VARIANTS ? "3 versions saved" : "Add targeted version"}
+          {variants.length >= maxVariants ? `${maxVariants} version${maxVariants === 1 ? "" : "s"} saved` : "Add targeted version"}
         </button>
       </div>
 

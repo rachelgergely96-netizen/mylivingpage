@@ -4,10 +4,25 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/legal-version";
-import { getStoredPlanForSubscriptionStatus, type ManagedPlan } from "@/lib/billing";
+import {
+  PUBLISH_TRIAL_DAYS,
+  getPlanFromPriceId,
+  getStoredPlanForSubscriptionStatus,
+  type BillingPlan,
+  type ManagedPlan,
+} from "@/lib/billing";
+
+export interface BillingStateUpdate {
+  plan: ManagedPlan;
+  stripeSubscriptionStatus: string | null;
+  stripeTrialEndsAt: string | null;
+}
 
 export interface BillingRepository {
-  updatePlanByCustomerId(customerId: string, plan: ManagedPlan): Promise<void>;
+  updateBillingStateByCustomerId(
+    customerId: string,
+    state: BillingStateUpdate,
+  ): Promise<void>;
   findUserIdByCustomerId(customerId: string): Promise<string | null>;
 }
 
@@ -37,8 +52,15 @@ export function createSupabaseBillingRepository(
   supabase: SupabaseClient,
 ): BillingRepository {
   return {
-    async updatePlanByCustomerId(customerId, plan) {
-      await supabase.from("profiles").update({ plan }).eq("stripe_customer_id", customerId);
+    async updateBillingStateByCustomerId(customerId, state) {
+      await supabase
+        .from("profiles")
+        .update({
+          plan: state.plan,
+          stripe_subscription_status: state.stripeSubscriptionStatus,
+          stripe_trial_ends_at: state.stripeTrialEndsAt,
+        })
+        .eq("stripe_customer_id", customerId);
     },
     async findUserIdByCustomerId(customerId) {
       const { data: profile } = await supabase
@@ -72,8 +94,35 @@ function getAcceptedAt(createdAtSeconds: number | null | undefined): string | un
   return createdAtSeconds ? new Date(createdAtSeconds * 1000).toISOString() : undefined;
 }
 
+function getIsoDate(createdAtSeconds: number | null | undefined): string | null {
+  return createdAtSeconds ? new Date(createdAtSeconds * 1000).toISOString() : null;
+}
+
+function getCheckoutTrialEndsAt(createdAtSeconds: number | null | undefined): string | null {
+  if (!createdAtSeconds) {
+    return null;
+  }
+
+  return new Date(
+    (createdAtSeconds + PUBLISH_TRIAL_DAYS * 24 * 60 * 60) * 1000,
+  ).toISOString();
+}
+
 function getWebhookLatencyMs(eventCreatedSeconds: number, processedAt: Date): number {
   return Math.max(0, processedAt.getTime() - eventCreatedSeconds * 1000);
+}
+
+function getCheckoutSessionSelectedPlan(
+  session: Stripe.Checkout.Session,
+): BillingPlan | null {
+  return session.metadata?.selected_plan === "starter" ||
+    session.metadata?.selected_plan === "pro"
+    ? session.metadata.selected_plan
+    : null;
+}
+
+function getSubscriptionPriceId(subscription: Stripe.Subscription): string | null {
+  return subscription.items.data[0]?.price?.id ?? null;
 }
 
 async function trackWebhookProcessed(
@@ -130,9 +179,15 @@ export async function processStripeWebhookEvent({
       const session = event.data.object as Stripe.Checkout.Session;
       const customerId = getCheckoutSessionCustomerId(session);
       const metadataUserId = getMetadataUserId(session.metadata);
+      const selectedPlan = getCheckoutSessionSelectedPlan(session);
+      const trialEndsAt = getCheckoutTrialEndsAt(session.created ?? null);
 
-      if (customerId) {
-        await repository.updatePlanByCustomerId(customerId, "pro");
+      if (customerId && selectedPlan) {
+        await repository.updateBillingStateByCustomerId(customerId, {
+          plan: selectedPlan,
+          stripeSubscriptionStatus: "trialing",
+          stripeTrialEndsAt: trialEndsAt,
+        });
       }
 
       let userId = metadataUserId;
@@ -147,29 +202,41 @@ export async function processStripeWebhookEvent({
           userId,
           session,
         );
-        await trackEvent(userId, "billing.plan.upgraded", {
-          plan: "pro",
-          customer_id: customerId,
-          event_type: event.type,
-        });
+
+        if (selectedPlan) {
+          await trackEvent(userId, "billing.plan.upgraded", {
+            plan: selectedPlan,
+            customer_id: customerId,
+            event_type: event.type,
+            subscription_status: "trialing",
+            trial_ends_at: trialEndsAt,
+          });
+        }
       }
 
       await trackWebhookProcessed(trackEvent, userId, event, processedAt, {
         customer_id: customerId,
-        plan: "pro",
+        plan: selectedPlan ?? "pro",
+        subscription_status: "trialing",
+        trial_ends_at: trialEndsAt,
       });
       return;
     }
 
+    case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = getSubscriptionCustomerId(subscription);
+      const priceId = getSubscriptionPriceId(subscription);
+      const mappedPlan = getPlanFromPriceId(priceId);
 
       if (!customerId) {
         await trackWebhookProcessed(trackEvent, null, event, processedAt, {
           customer_id: null,
-          plan: getStoredPlanForSubscriptionStatus(subscription.status),
+          plan: getStoredPlanForSubscriptionStatus(subscription.status, mappedPlan ?? "pro"),
+          price_id: priceId,
+          subscription_status: subscription.status,
         });
         return;
       }
@@ -177,19 +244,32 @@ export async function processStripeWebhookEvent({
       const plan =
         event.type === "customer.subscription.deleted"
           ? "spark"
-          : getStoredPlanForSubscriptionStatus(subscription.status);
+          : getStoredPlanForSubscriptionStatus(
+              subscription.status,
+              mappedPlan ?? "pro",
+            );
+      const stripeTrialEndsAt =
+        subscription.status === "trialing"
+          ? getIsoDate(subscription.trial_end ?? null)
+          : null;
 
-      await repository.updatePlanByCustomerId(customerId, plan);
+      await repository.updateBillingStateByCustomerId(customerId, {
+        plan,
+        stripeSubscriptionStatus: subscription.status ?? null,
+        stripeTrialEndsAt,
+      });
       const userId = await repository.findUserIdByCustomerId(customerId);
 
       await trackEvent(
         userId,
-        plan === "pro" ? "billing.plan.upgraded" : "billing.plan.downgraded",
+        plan === "spark" ? "billing.plan.downgraded" : "billing.plan.upgraded",
         {
           plan,
           customer_id: customerId,
           event_type: event.type,
           subscription_status: subscription.status,
+          price_id: priceId,
+          trial_ends_at: stripeTrialEndsAt,
         },
       );
 
@@ -197,6 +277,8 @@ export async function processStripeWebhookEvent({
         customer_id: customerId,
         plan,
         subscription_status: subscription.status,
+        price_id: priceId,
+        trial_ends_at: stripeTrialEndsAt,
       });
       return;
     }

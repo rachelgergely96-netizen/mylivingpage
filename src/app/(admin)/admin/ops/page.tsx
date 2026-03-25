@@ -120,13 +120,13 @@ function EventFeed({
 }
 
 async function getStripePriceStatus(): Promise<StripePriceStatus> {
-  const configuredPriceId = process.env.STRIPE_PRICE_ID ?? null;
+  const configuredPriceId = process.env.STRIPE_PRO_MONTHLY_PRICE_ID ?? null;
   if (!configuredPriceId || !process.env.STRIPE_SECRET_KEY) {
     return {
       actual: null,
       driftMessages: [],
       errorMessage:
-        "Stripe price verification is unavailable because STRIPE_PRICE_ID or STRIPE_SECRET_KEY is missing.",
+        "Stripe price verification is unavailable because STRIPE_PRO_MONTHLY_PRICE_ID or STRIPE_SECRET_KEY is missing.",
     };
   }
 

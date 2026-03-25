@@ -1,7 +1,7 @@
 import React from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import PageAnalyticsDashboard from "@/components/analytics/PageAnalyticsDashboard";
 import {
   buildPageAnalyticsDashboard,
@@ -24,6 +24,7 @@ vi.mock("next/link", () => ({
 }));
 
 const NOW = new Date("2026-03-13T12:00:00.000Z");
+const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(NOW.getTime());
 
 function makeAnalytics() {
   return buildPageAnalyticsDashboard({
@@ -56,6 +57,10 @@ function makeAnalytics() {
 }
 
 describe("PageAnalyticsDashboard", () => {
+  afterAll(() => {
+    dateNowSpy.mockRestore();
+  });
+
   it("shows a basic-mode notice and hides engagement-only sections", () => {
     const analytics = makeAnalytics();
     analytics.state = {
@@ -104,5 +109,26 @@ describe("PageAnalyticsDashboard", () => {
     expect(markup).toContain("Traffic data could not be loaded right now. Please try again soon.");
     expect(markup).not.toContain("New People");
     expect(markup).not.toContain("When people looked over");
+  });
+
+  it("shows follow-up signals and variant guidance in full mode", () => {
+    const analytics = makeAnalytics();
+
+    const markup = renderToStaticMarkup(
+      <PageAnalyticsDashboard
+        analytics={analytics}
+        pageId="page-1"
+        pageName="Rachel"
+        publicPath="/rachel"
+        variantLabels={["Recruiter follow-up", "Hiring manager version"]}
+      />,
+    );
+
+    expect(markup).toContain("What to do after the click");
+    expect(markup).toContain("Suggested timing");
+    expect(markup).toContain("Follow up tomorrow");
+    expect(markup).toContain("Target the next send");
+    expect(markup).toContain("Recruiter follow-up");
+    expect(markup).toContain("Hiring manager version");
   });
 });

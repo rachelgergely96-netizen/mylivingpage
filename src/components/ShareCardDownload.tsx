@@ -25,6 +25,8 @@ interface ShareCardDownloadProps {
   liveUrl?: string;
   variantId?: string | null;
   enabled?: boolean;
+  analyticsHref?: string;
+  analyticsCtaLabel?: string;
   className?: string;
 }
 
@@ -37,6 +39,8 @@ export default function ShareCardDownload({
   liveUrl,
   variantId = null,
   enabled = true,
+  analyticsHref,
+  analyticsCtaLabel = "Open Page Analytics",
   className,
 }: ShareCardDownloadProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +97,7 @@ export default function ShareCardDownload({
   );
   const qrDataUrl = buildQrDataUrl(livePageUrl);
   const initial = safeName.slice(0, 1).toUpperCase() || "?";
+  const resolvedAnalyticsHref = analyticsHref ?? `/dashboard/analytics/${pageId}`;
 
   const trackShareIntent = async (eventName: ShareIntentEventName) => {
     try {
@@ -306,10 +311,10 @@ export default function ShareCardDownload({
                       {shareFeedback.body}
                     </p>
                     <a
-                      href={`/dashboard/analytics/${pageId}`}
+                      href={resolvedAnalyticsHref}
                       className="mt-4 inline-flex rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
                     >
-                      Open Page Analytics
+                      {analyticsCtaLabel}
                     </a>
                   </div>
                 ) : null}

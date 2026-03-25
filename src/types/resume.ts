@@ -1,3 +1,57 @@
+export type ProofType =
+  | "case_study"
+  | "quantified_result"
+  | "project_artifact"
+  | "writing_sample"
+  | "selected_win";
+
+export interface ProofItem {
+  id: string;
+  type: ProofType;
+  title: string;
+  summary: string;
+  outcome: string;
+  url: string | null;
+  source_label: string | null;
+}
+
+export type TestimonialStatus = "draft" | "requested" | "approved";
+
+export interface TestimonialRecord {
+  id: string;
+  name: string;
+  role: string;
+  company: string;
+  relationship: string | null;
+  quote: string;
+  status: TestimonialStatus;
+  requested_at: string | null;
+  approved_at: string | null;
+}
+
+export type JobSeekerRoleTrack =
+  | "engineering"
+  | "product"
+  | "marketing"
+  | "sales"
+  | "operations";
+
+export type JobSeekerGoal =
+  | "land_interviews"
+  | "strengthen_followups"
+  | "turn_referrals";
+
+export type JobSeekerAudience =
+  | "recruiter"
+  | "hiring_manager"
+  | "referral";
+
+export interface JobSeekerProfile {
+  role_track: JobSeekerRoleTrack;
+  primary_goal: JobSeekerGoal;
+  target_audience: JobSeekerAudience;
+}
+
 export interface ResumeData {
   name: string;
   headline: string;
@@ -36,6 +90,8 @@ export interface ResumeData {
     date: string | null;
   }>;
   stats: Array<{ value: string; label: string }>;
+  proofs?: ProofItem[];
+  testimonials?: TestimonialRecord[];
 }
 
 export type PageVariantSectionId =
@@ -221,6 +277,7 @@ export interface PageConfig {
   ats?: AtsReviewSnapshot | null;
   variants?: PageVariant[] | null;
   decision_readiness?: DecisionReadinessState | null;
+  job_search_profile?: JobSeekerProfile | null;
   [key: string]: unknown;
 }
 

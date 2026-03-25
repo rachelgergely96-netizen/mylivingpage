@@ -1,22 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
+  FREE_PARSE_TOTAL_LIMIT,
   LEGACY_BILLING_COHORT,
+  PAID_PARSE_RATE_LIMIT,
+  PAID_PARSE_RATE_LIMIT_WINDOW_MS,
+  PUBLISH_CC_TRIAL_BILLING_COHORT,
   TRIAL_HOSTING_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
 
 describe("getAccountAccessState", () => {
-  it("keeps legacy free accounts on the old restricted feature model", () => {
+  it("keeps legacy free accounts on the old restricted theme model", () => {
     expect(
       getAccountAccessState({
         plan: "spark",
         billing_cohort: LEGACY_BILLING_COHORT,
       }),
     ).toMatchObject({
+      publicPlanLabel: "Free",
       isLegacyAccount: true,
+      analyticsTier: "full",
+      shareCardAllowed: true,
+      variantLimit: 3,
       themeFeaturesUnlocked: false,
-      analyticsAccessAllowed: true,
-      featuresUnlocked: false,
       publicHostingAllowed: true,
       requiresSubscription: false,
       hasPaidSubscription: false,
@@ -30,17 +36,19 @@ describe("getAccountAccessState", () => {
         billing_cohort: LEGACY_BILLING_COHORT,
       }),
     ).toMatchObject({
+      publicPlanLabel: "Pro",
       isLegacyAccount: true,
+      analyticsTier: "full",
+      shareCardAllowed: true,
+      variantLimit: 3,
       themeFeaturesUnlocked: true,
-      analyticsAccessAllowed: true,
-      featuresUnlocked: true,
       publicHostingAllowed: true,
       requiresSubscription: false,
       hasPaidSubscription: true,
     });
   });
 
-  it("unlocks all features for new-cohort users before the first publish", () => {
+  it("keeps trial-hosting users fully unlocked before the first publish", () => {
     expect(
       getAccountAccessState({
         plan: "spark",
@@ -48,16 +56,19 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       isLegacyAccount: false,
+      billingCohort: TRIAL_HOSTING_BILLING_COHORT,
+      analyticsTier: "full",
+      shareCardAllowed: true,
+      variantLimit: 3,
       themeFeaturesUnlocked: true,
-      analyticsAccessAllowed: true,
-      featuresUnlocked: true,
       publicHostingAllowed: true,
       hasStartedFreeMonth: false,
       requiresSubscription: false,
+      requiresCheckoutToPublish: false,
     });
   });
 
-  it("keeps public hosting active during the first free month", () => {
+  it("keeps public hosting active during the legacy trial-hosting free month", () => {
     const access = getAccountAccessState({
       plan: "spark",
       billing_cohort: TRIAL_HOSTING_BILLING_COHORT,
@@ -66,10 +77,6 @@ describe("getAccountAccessState", () => {
     });
 
     expect(access).toMatchObject({
-      isLegacyAccount: false,
-      themeFeaturesUnlocked: true,
-      analyticsAccessAllowed: true,
-      featuresUnlocked: true,
       publicHostingAllowed: true,
       hasStartedFreeMonth: true,
       isActiveFreeMonth: true,
@@ -79,7 +86,7 @@ describe("getAccountAccessState", () => {
     expect(access.trialEndsAt).toBe("2026-03-31T00:00:00.000Z");
   });
 
-  it("requires a subscription after the free month expires", () => {
+  it("requires a subscription after the legacy trial-hosting free month expires", () => {
     expect(
       getAccountAccessState({
         plan: "spark",
@@ -88,10 +95,6 @@ describe("getAccountAccessState", () => {
         now: "2026-03-20T00:00:00.000Z",
       }),
     ).toMatchObject({
-      isLegacyAccount: false,
-      themeFeaturesUnlocked: true,
-      analyticsAccessAllowed: true,
-      featuresUnlocked: true,
       publicHostingAllowed: false,
       hasStartedFreeMonth: true,
       isActiveFreeMonth: false,
@@ -101,22 +104,71 @@ describe("getAccountAccessState", () => {
     });
   });
 
-  it("keeps hosting active for new-cohort paid subscribers even after the free month window", () => {
+  it("puts new publish-cc users on free preview until they add a card", () => {
     expect(
       getAccountAccessState({
-        plan: "pro",
-        billing_cohort: TRIAL_HOSTING_BILLING_COHORT,
-        hosting_trial_started_at: "2026-01-01T00:00:00.000Z",
-        now: "2026-03-20T00:00:00.000Z",
+        plan: "spark",
+        billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
       }),
     ).toMatchObject({
-      isLegacyAccount: false,
-      themeFeaturesUnlocked: true,
-      analyticsAccessAllowed: true,
-      featuresUnlocked: true,
+      publicPlanLabel: "Free",
+      billingCohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
+      analyticsTier: "none",
+      shareCardAllowed: false,
+      variantLimit: 0,
+      publicHostingAllowed: false,
+      requiresCheckoutToPublish: true,
+      hasPaidSubscription: false,
+      parseQuota: {
+        scope: "total",
+        limit: FREE_PARSE_TOTAL_LIMIT,
+        windowMs: null,
+      },
+    });
+  });
+
+  it("grants starter entitlements for publish-cc users with an active starter subscription", () => {
+    expect(
+      getAccountAccessState({
+        plan: "starter",
+        billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
+        stripe_subscription_status: "active",
+      }),
+    ).toMatchObject({
+      publicPlanLabel: "Starter",
+      analyticsTier: "basic",
+      shareCardAllowed: true,
+      variantLimit: 1,
       publicHostingAllowed: true,
-      requiresSubscription: false,
+      requiresCheckoutToPublish: false,
       hasPaidSubscription: true,
+      isTrialingSubscription: false,
+      parseQuota: {
+        scope: "rolling_window",
+        limit: PAID_PARSE_RATE_LIMIT,
+        windowMs: PAID_PARSE_RATE_LIMIT_WINDOW_MS,
+      },
+    });
+  });
+
+  it("grants pro entitlements and exposes the Stripe trial end when trialing", () => {
+    const access = getAccountAccessState({
+      plan: "pro",
+      billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
+      stripe_subscription_status: "trialing",
+      stripe_trial_ends_at: "2026-04-24T00:00:00.000Z",
+    });
+
+    expect(access).toMatchObject({
+      publicPlanLabel: "Pro",
+      analyticsTier: "full",
+      shareCardAllowed: true,
+      variantLimit: 3,
+      publicHostingAllowed: true,
+      requiresCheckoutToPublish: false,
+      hasPaidSubscription: true,
+      isTrialingSubscription: true,
+      trialEndsAt: "2026-04-24T00:00:00.000Z",
     });
   });
 });

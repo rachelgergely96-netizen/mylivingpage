@@ -31,6 +31,59 @@ vi.mock("@/lib/track-event", () => ({
 import { POST } from "@/app/api/generate/parse/route";
 import { getAnthropicClient } from "@/lib/anthropic";
 
+function createServiceRoleClient(options?: {
+  profile?: {
+    plan?: string | null;
+    billing_cohort?: string | null;
+    hosting_trial_started_at?: string | null;
+    stripe_subscription_status?: string | null;
+    stripe_trial_ends_at?: string | null;
+  } | null;
+  parseCount?: number;
+}) {
+  return {
+    from(table: string) {
+      if (table === "profiles") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data:
+                  options?.profile ?? {
+                    plan: "pro",
+                    billing_cohort: "legacy_freemium",
+                    hosting_trial_started_at: null,
+                    stripe_subscription_status: null,
+                    stripe_trial_ends_at: null,
+                  },
+                error: null,
+              }),
+            })),
+          })),
+        };
+      }
+
+      if (table === "events") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                gte: vi.fn().mockResolvedValue({ count: options?.parseCount ?? 0 }),
+                then: undefined,
+                catch: undefined,
+                finally: undefined,
+                count: options?.parseCount ?? 0,
+              })),
+            })),
+          })),
+        };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    },
+  };
+}
+
 describe("POST /api/generate/parse", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,17 +94,7 @@ describe("POST /api/generate/parse", () => {
         },
       },
     });
-    mocks.serviceRoleFactory.mockReturnValue({
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              gte: vi.fn().mockResolvedValue({ count: 0 }),
-            })),
-          })),
-        })),
-      })),
-    });
+    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.trackEvent.mockResolvedValue(undefined);
     mocks.anthropicCreate.mockResolvedValue({
       content: [
@@ -131,6 +174,50 @@ describe("POST /api/generate/parse", () => {
       expect.objectContaining({
         error: "Claude upstream timeout",
         error_code: "model_upstream",
+      }),
+    );
+  });
+
+  it("blocks free-preview users after 2 total parses", async () => {
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        profile: {
+          plan: "spark",
+          billing_cohort: "publish_cc_trial_v1",
+          hosting_trial_started_at: null,
+          stripe_subscription_status: null,
+          stripe_trial_ends_at: null,
+        },
+        parseCount: 2,
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/generate/parse", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeText: "Taylor Reed\nProduct Manager",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "Free preview includes 2 AI parses total. Publish with Starter or Pro to keep parsing.",
+      code: "rate_limited",
+      retryable: false,
+    });
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-1",
+      "resume.parse.rate_limited",
+      expect.objectContaining({
+        billing_cohort: "publish_cc_trial_v1",
+        plan: "Free",
+        quota_scope: "total",
       }),
     );
   });

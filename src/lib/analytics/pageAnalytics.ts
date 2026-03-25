@@ -94,6 +94,16 @@ export interface PageAnalyticsDashboardData {
       sharePct: number;
     }>;
   };
+  followUp: {
+    repeatVisitors: number;
+    recentViews: number;
+    latestViewAt: string | null;
+    latestReferrerLabel: string | null;
+    repeatViewAlert: boolean;
+    suggestedTimingLabel: string;
+    suggestedTimingDetail: string;
+    summary: string;
+  };
   conversion: {
     clickedViews: number;
     totalClicks: number;
@@ -600,6 +610,90 @@ function buildInsights({
   return insights.slice(0, 3);
 }
 
+function buildFollowUpSignals({
+  currentRows,
+  topReferrers,
+  topSection,
+  now,
+}: {
+  currentRows: PageAnalyticsViewRow[];
+  topReferrers: Array<{ label: string; count: number; sharePct: number }>;
+  topSection: { label: string; sharePct: number } | null;
+  now: Date;
+}) {
+  if (!currentRows.length) {
+    return {
+      repeatVisitors: 0,
+      recentViews: 0,
+      latestViewAt: null,
+      latestReferrerLabel: null,
+      repeatViewAlert: false,
+      suggestedTimingLabel: "Share the page once",
+      suggestedTimingDetail:
+        "Start with one real follow-up. Once someone opens the page, timing guidance will update here.",
+      summary:
+        "No outside traffic yet. The next best move is to send the tracked page in one recruiter reply, application follow-up, or referral intro.",
+    };
+  }
+
+  const latestRow = [...currentRows].sort((left, right) =>
+    right.viewed_at.localeCompare(left.viewed_at),
+  )[0];
+  const repeatVisitors = Array.from(
+    currentRows.reduce((counts, row) => {
+      const key = row.viewer_ip ?? `unknown:${row.id}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      return counts;
+    }, new Map<string, number>()).values(),
+  ).filter((count) => count > 1).length;
+  const recentViews = currentRows.filter((row) => {
+    const viewedAt = new Date(row.viewed_at).getTime();
+    return now.getTime() - viewedAt <= 72 * 60 * 60 * 1000;
+  }).length;
+  const latestReferrerLabel = parseReferrerLabel(latestRow?.referrer ?? null);
+  const latestViewAgeHours = latestRow
+    ? Math.max(0, (now.getTime() - new Date(latestRow.viewed_at).getTime()) / (60 * 60 * 1000))
+    : Number.POSITIVE_INFINITY;
+  let suggestedTimingLabel = "Re-share with fresh context";
+  let suggestedTimingDetail =
+    "It has been a while since the latest look. Send the page again with a more specific reason to click.";
+
+  if (repeatVisitors > 0 && latestViewAgeHours <= 24) {
+    suggestedTimingLabel = "Follow up today";
+    suggestedTimingDetail =
+      "Someone has come back more than once recently. This is the strongest signal to send a direct follow-up now.";
+  } else if (latestViewAgeHours <= 24) {
+    suggestedTimingLabel = "Follow up tomorrow";
+    suggestedTimingDetail =
+      "The page was opened recently. Give them a little space, then send one crisp follow-up while you are still fresh in context.";
+  } else if (recentViews > 0) {
+    suggestedTimingLabel = "Nudge this week";
+    suggestedTimingDetail =
+      "There was interest in the last few days, but not today. A short nudge or a more targeted variant is the next best move.";
+  }
+
+  const topReferrer = topReferrers[0];
+  const summary =
+    repeatVisitors > 0
+      ? `There ${repeatVisitors === 1 ? "is" : "are"} ${repeatVisitors} repeat ${repeatVisitors === 1 ? "viewer" : "viewers"} in this range. That usually means real interest, not a stray click.`
+      : topReferrer && topReferrer.label !== "Direct"
+        ? `${Math.round(topReferrer.sharePct)}% of current traffic is coming from ${topReferrer.label}, so that channel is earning the next follow-up.`
+        : topSection
+          ? `${topSection.label} is holding attention best so far, which is a good clue for what to lead with in the next message.`
+          : "Recent traffic is light, so keep the next follow-up simple and give the page a clearer reason to be opened.";
+
+  return {
+    repeatVisitors,
+    recentViews,
+    latestViewAt: latestRow?.viewed_at ?? null,
+    latestReferrerLabel,
+    repeatViewAlert: repeatVisitors > 0,
+    suggestedTimingLabel,
+    suggestedTimingDetail,
+    summary,
+  };
+}
+
 export function buildPageAnalyticsDashboard({
   rangeKey,
   allTimeViews,
@@ -799,6 +893,12 @@ export function buildPageAnalyticsDashboard({
       devices,
       countries,
     },
+    followUp: buildFollowUpSignals({
+      currentRows,
+      topReferrers,
+      topSection,
+      now,
+    }),
     conversion: {
       clickedViews: currentClickedViews,
       totalClicks: currentTotalClicks,

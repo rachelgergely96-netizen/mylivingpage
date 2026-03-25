@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  createEmptyProofItem,
+  createEmptyTestimonialRecord,
+} from "@/lib/job-seeker-starter";
 import type { ResumeData } from "@/types/resume";
 
 interface ResumeEditorFieldsProps {
@@ -28,6 +32,8 @@ export default function ResumeEditorFields({
   mode = "living",
 }: ResumeEditorFieldsProps) {
   const includeStats = mode === "living";
+  const proofs = data.proofs ?? [];
+  const testimonials = data.testimonials ?? [];
 
   const updateField = <K extends keyof ResumeData>(key: K, value: ResumeData[K]) => {
     onChange({ ...data, [key]: value });
@@ -425,6 +431,240 @@ export default function ResumeEditorFields({
           + Add Project
         </button>
       </fieldset>
+
+      {mode === "living" ? (
+        <fieldset className={fieldsetClass}>
+          <legend className={legendClass}>Proof</legend>
+          <p className="text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+            Add proof blocks that show work, outcomes, and artifacts directly on the page.
+          </p>
+          {proofs.map((proof, index) => (
+            <div
+              key={proof.id || `${proof.title}-${index}`}
+              className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+            >
+              <div className="grid gap-2 sm:grid-cols-2">
+                <select
+                  value={proof.type}
+                  onChange={(event) => {
+                    const next = [...proofs];
+                    next[index] = { ...next[index], type: event.target.value as typeof proof.type };
+                    updateField("proofs", next);
+                  }}
+                  className={inputClass}
+                >
+                  <option value="case_study">Case study</option>
+                  <option value="quantified_result">Quantified result</option>
+                  <option value="project_artifact">Project artifact</option>
+                  <option value="writing_sample">Writing sample</option>
+                  <option value="selected_win">Selected win</option>
+                </select>
+                <input
+                  type="text"
+                  value={proof.source_label ?? ""}
+                  onChange={(event) => {
+                    const next = [...proofs];
+                    next[index] = { ...next[index], source_label: event.target.value || null };
+                    updateField("proofs", next);
+                  }}
+                  placeholder="Label (optional)"
+                  className={inputClass}
+                />
+              </div>
+              <input
+                type="text"
+                value={proof.title}
+                onChange={(event) => {
+                  const next = [...proofs];
+                  next[index] = { ...next[index], title: event.target.value };
+                  updateField("proofs", next);
+                }}
+                placeholder="Proof title"
+                className={inputClass}
+              />
+              <textarea
+                value={proof.summary}
+                onChange={(event) => {
+                  const next = [...proofs];
+                  next[index] = { ...next[index], summary: event.target.value };
+                  updateField("proofs", next);
+                }}
+                rows={3}
+                placeholder="What was the work?"
+                className={subtleTextAreaClass}
+              />
+              <textarea
+                value={proof.outcome}
+                onChange={(event) => {
+                  const next = [...proofs];
+                  next[index] = { ...next[index], outcome: event.target.value };
+                  updateField("proofs", next);
+                }}
+                rows={2}
+                placeholder="What changed, improved, or shipped?"
+                className={subtleTextAreaClass}
+              />
+              <input
+                type="text"
+                value={proof.url ?? ""}
+                onChange={(event) => {
+                  const next = [...proofs];
+                  next[index] = { ...next[index], url: event.target.value || null };
+                  updateField("proofs", next);
+                }}
+                placeholder="Supporting URL (optional)"
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => updateField("proofs", proofs.filter((_, itemIndex) => itemIndex !== index))}
+                className={textRemoveButtonClass}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => updateField("proofs", [...proofs, createEmptyProofItem()])}
+            className={addButtonClass}
+          >
+            + Add Proof Block
+          </button>
+        </fieldset>
+      ) : null}
+
+      {mode === "living" ? (
+        <fieldset className={fieldsetClass}>
+          <legend className={legendClass}>Testimonials</legend>
+          <p className="text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+            Collect and approve quotes here. Only approved testimonials appear on the public page.
+          </p>
+          {testimonials.map((testimonial, index) => (
+            <div
+              key={testimonial.id || `${testimonial.name}-${index}`}
+              className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+            >
+              <div className="grid gap-2 sm:grid-cols-3">
+                <input
+                  type="text"
+                  value={testimonial.name}
+                  onChange={(event) => {
+                    const next = [...testimonials];
+                    next[index] = { ...next[index], name: event.target.value };
+                    updateField("testimonials", next);
+                  }}
+                  placeholder="Name"
+                  className={inputClass}
+                />
+                <input
+                  type="text"
+                  value={testimonial.role}
+                  onChange={(event) => {
+                    const next = [...testimonials];
+                    next[index] = { ...next[index], role: event.target.value };
+                    updateField("testimonials", next);
+                  }}
+                  placeholder="Role"
+                  className={inputClass}
+                />
+                <input
+                  type="text"
+                  value={testimonial.company}
+                  onChange={(event) => {
+                    const next = [...testimonials];
+                    next[index] = { ...next[index], company: event.target.value };
+                    updateField("testimonials", next);
+                  }}
+                  placeholder="Company"
+                  className={inputClass}
+                />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <input
+                  type="text"
+                  value={testimonial.relationship ?? ""}
+                  onChange={(event) => {
+                    const next = [...testimonials];
+                    next[index] = { ...next[index], relationship: event.target.value || null };
+                    updateField("testimonials", next);
+                  }}
+                  placeholder="Relationship"
+                  className={inputClass}
+                />
+                <input
+                  type="date"
+                  value={testimonial.requested_at ?? ""}
+                  onChange={(event) => {
+                    const next = [...testimonials];
+                    next[index] = { ...next[index], requested_at: event.target.value || null };
+                    updateField("testimonials", next);
+                  }}
+                  className={inputClass}
+                />
+                <select
+                  value={testimonial.status}
+                  onChange={(event) => {
+                    const next = [...testimonials];
+                    next[index] = { ...next[index], status: event.target.value as typeof testimonial.status };
+                    updateField("testimonials", next);
+                  }}
+                  className={inputClass}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="requested">Requested</option>
+                  <option value="approved">Approved</option>
+                </select>
+              </div>
+              <input
+                type="date"
+                value={testimonial.approved_at ?? ""}
+                onChange={(event) => {
+                  const next = [...testimonials];
+                  next[index] = { ...next[index], approved_at: event.target.value || null };
+                  updateField("testimonials", next);
+                }}
+                className={inputClass}
+              />
+              <textarea
+                value={testimonial.quote}
+                onChange={(event) => {
+                  const next = [...testimonials];
+                  next[index] = { ...next[index], quote: event.target.value };
+                  updateField("testimonials", next);
+                }}
+                rows={3}
+                placeholder="What should appear on the page once approved?"
+                className={subtleTextAreaClass}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  updateField(
+                    "testimonials",
+                    testimonials.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
+                className={textRemoveButtonClass}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              updateField("testimonials", [
+                ...testimonials,
+                createEmptyTestimonialRecord(),
+              ])
+            }
+            className={addButtonClass}
+          >
+            + Add Testimonial
+          </button>
+        </fieldset>
+      ) : null}
 
       <fieldset className={fieldsetClass}>
         <legend className={legendClass}>Certifications</legend>

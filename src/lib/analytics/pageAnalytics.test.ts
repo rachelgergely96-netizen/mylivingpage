@@ -237,6 +237,13 @@ describe("page analytics aggregation", () => {
       label: "Project: TraceBoard",
       count: 2,
     });
+    expect(analytics.followUp).toMatchObject({
+      repeatVisitors: 1,
+      recentViews: 2,
+      latestReferrerLabel: "linkedin.com",
+      repeatViewAlert: true,
+      suggestedTimingLabel: "Follow up today",
+    });
   });
 
   it("uses low-data fallbacks when a period is too sparse to compare cleanly", () => {

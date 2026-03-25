@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import type { Message } from "@anthropic-ai/sdk/resources/messages/messages";
 import { getAnthropicClient } from "@/lib/anthropic";
+import { getAccountAccessState } from "@/lib/account-access";
 import type { CreateFlowFailureCode } from "@/lib/create-flow";
-import { getParseRateLimitWindowStart, isParseRateLimited } from "@/lib/parse-rate-limit";
+import { getRateLimitWindowStart, isParseRateLimited } from "@/lib/parse-rate-limit";
+import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import type { ResumeData } from "@/types/resume";
@@ -452,9 +454,25 @@ export async function POST(request: Request) {
     }
 
     let supabase;
+    let accountAccess;
     try {
       supabase = createServiceRoleSupabaseClient();
       getAnthropicClient();
+      const profileResult = await fetchProfileWithHostingAccess<{
+        plan?: string | null;
+      }>({
+        supabase,
+        select: "plan",
+        matchField: "id",
+        matchValue: user.id,
+      });
+      accountAccess = getAccountAccessState({
+        plan: profileResult.data?.plan ?? "spark",
+        billing_cohort: profileResult.data?.billing_cohort ?? null,
+        hosting_trial_started_at: profileResult.data?.hosting_trial_started_at ?? null,
+        stripe_subscription_status: profileResult.data?.stripe_subscription_status ?? null,
+        stripe_trial_ends_at: profileResult.data?.stripe_trial_ends_at ?? null,
+      });
     } catch (dependencyError) {
       const failure = normalizeParseFailure(dependencyError);
       return NextResponse.json(
@@ -463,32 +481,55 @@ export async function POST(request: Request) {
       );
     }
 
-    const windowStart = getParseRateLimitWindowStart();
-    const { count } = await supabase
+    let countQuery = supabase
       .from("events")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .eq("event_name", "resume.parse")
-      .gte("created_at", windowStart.toISOString());
+      .eq("event_name", "resume.parse");
 
-    if (isParseRateLimited(count ?? 0)) {
+    const windowStart =
+      accountAccess.parseQuota.scope === "rolling_window"
+        ? getRateLimitWindowStart(accountAccess.parseQuota.windowMs!)
+        : null;
+
+    if (windowStart) {
+      countQuery = countQuery.gte("created_at", windowStart.toISOString());
+    }
+
+    const { count } = await countQuery;
+
+    if (isParseRateLimited(count ?? 0, accountAccess.parseQuota.limit)) {
       await trackEvent(user.id, "resume.parse.rate_limited", {
         characters: resumeText.length,
-        attempts_in_window: count ?? 0,
+        attempts: count ?? 0,
+        billing_cohort: accountAccess.billingCohort,
+        plan: accountAccess.publicPlanLabel,
+        quota_scope: accountAccess.parseQuota.scope,
       });
       return NextResponse.json(
-        {
-          error: "Resume parsing limit reached. Try again in about an hour.",
-          code: "rate_limited",
-          retryable: false,
-          resetAt: new Date(windowStart.getTime() + 60 * 60 * 1000).toISOString(),
-        },
+        accountAccess.parseQuota.scope === "total"
+          ? {
+              error:
+                "Free preview includes 2 AI parses total. Publish with Starter or Pro to keep parsing.",
+              code: "rate_limited",
+              retryable: false,
+            }
+          : {
+              error: "Resume parsing limit reached. Try again in about an hour.",
+              code: "rate_limited",
+              retryable: false,
+              resetAt: new Date(
+                windowStart!.getTime() + accountAccess.parseQuota.windowMs!,
+              ).toISOString(),
+            },
         { status: 429 },
       );
     }
 
     await trackEvent(user.id, "resume.parse", {
       characters: resumeText.length,
+      billing_cohort: accountAccess.billingCohort,
+      plan: accountAccess.publicPlanLabel,
     });
 
     const encoder = new TextEncoder();

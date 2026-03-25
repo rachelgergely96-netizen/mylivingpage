@@ -12,6 +12,7 @@ function hasQuantifiedProof(data: ResumeData) {
     ...data.stats.map((stat) => `${stat.value} ${stat.label}`),
     ...data.experience.flatMap((entry) => entry.highlights),
     ...data.projects.map((project) => project.description),
+    ...(data.proofs ?? []).flatMap((proof) => [proof.title, proof.summary, proof.outcome]),
   ];
 
   return texts.some((text) => /\d/.test(text));

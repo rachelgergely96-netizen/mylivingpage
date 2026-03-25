@@ -11,6 +11,7 @@ import {
   createUnavailablePageAnalyticsDashboard,
   fetchPageAnalyticsDashboard,
 } from "@/lib/analytics/pageAnalytics";
+import { getPageVariants } from "@/lib/page-variants";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import {
   createServerSupabaseClient,
@@ -52,6 +53,8 @@ export default async function AnalyticsPage({
   const { data: profile } = await fetchProfileWithHostingAccess<{
     plan?: string | null;
     username?: string | null;
+    stripe_subscription_status?: string | null;
+    stripe_trial_ends_at?: string | null;
   }>({
     supabase,
     select: "plan, username",
@@ -63,10 +66,12 @@ export default async function AnalyticsPage({
     plan: profile?.plan ?? null,
     billing_cohort: profile?.billing_cohort ?? null,
     hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+    stripe_subscription_status: profile?.stripe_subscription_status ?? null,
+    stripe_trial_ends_at: profile?.stripe_trial_ends_at ?? null,
   });
 
-  if (!accountAccess.analyticsAccessAllowed) {
-    redirect("/dashboard/settings");
+  if (accountAccess.analyticsTier !== "full") {
+    redirect("/dashboard");
   }
 
   const { data: page } = await supabase
@@ -81,6 +86,7 @@ export default async function AnalyticsPage({
   const typedPage = page as PageRecord;
   const pageName = typedPage.resume_data?.name ?? "Untitled";
   const publicPath = `/${profile?.username ?? typedPage.slug}`;
+  const variantLabels = getPageVariants(typedPage.page_config ?? null).map((variant) => variant.label);
   let analyticsLoadError: string | null = null;
   let analytics = createUnavailablePageAnalyticsDashboard({
     rangeKey,
@@ -156,6 +162,7 @@ export default async function AnalyticsPage({
         pageId={pageId}
         pageName={pageName}
         publicPath={publicPath}
+        variantLabels={variantLabels}
       />
     </main>
   );

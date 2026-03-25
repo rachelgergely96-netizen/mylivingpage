@@ -29,6 +29,8 @@ function createServiceRoleClient(options?: {
     username?: string | null;
     billing_cohort?: string | null;
     hosting_trial_started_at?: string | null;
+    stripe_subscription_status?: string | null;
+    stripe_trial_ends_at?: string | null;
   } | null;
   existingPageId?: string | null;
   persistedPageId?: string | null;
@@ -53,6 +55,20 @@ function createServiceRoleClient(options?: {
                         username: "rachel",
                         billing_cohort: "legacy_freemium",
                         hosting_trial_started_at: null,
+                        stripe_subscription_status: null,
+                        stripe_trial_ends_at: null,
+                      },
+                    error: null,
+                  }),
+                  single: vi.fn().mockResolvedValue({
+                    data:
+                      options?.profile ?? {
+                        plan: "spark",
+                        username: "rachel",
+                        billing_cohort: "legacy_freemium",
+                        hosting_trial_started_at: null,
+                        stripe_subscription_status: null,
+                        stripe_trial_ends_at: null,
                       },
                     error: null,
                   }),
@@ -128,7 +144,7 @@ describe("POST /api/pages/publish", () => {
     mocks.trackEvent.mockResolvedValue(undefined);
   });
 
-  it("starts the free month on first publish and allows premium themes for new-cohort users", async () => {
+  it("starts the free month on first publish for trial-hosting cohort users", async () => {
     const profileUpdates = vi.fn();
     const pageUpserts = vi.fn();
 
@@ -139,6 +155,8 @@ describe("POST /api/pages/publish", () => {
           username: "rachel",
           billing_cohort: "trial_hosting_v1",
           hosting_trial_started_at: null,
+          stripe_subscription_status: null,
+          stripe_trial_ends_at: null,
         },
         onProfileUpdate: profileUpdates,
         onPageUpsert: pageUpserts,
@@ -179,7 +197,7 @@ describe("POST /api/pages/publish", () => {
     );
   });
 
-  it("blocks expired unpaid new-cohort users from republishing until they subscribe", async () => {
+  it("blocks expired unpaid trial-hosting users from republishing until they subscribe", async () => {
     const pageUpserts = vi.fn();
 
     mocks.createServiceRoleSupabaseClient.mockReturnValue(
@@ -189,6 +207,8 @@ describe("POST /api/pages/publish", () => {
           username: "rachel",
           billing_cohort: "trial_hosting_v1",
           hosting_trial_started_at: "2026-01-01T00:00:00.000Z",
+          stripe_subscription_status: null,
+          stripe_trial_ends_at: null,
         },
         onPageUpsert: pageUpserts,
       }),
@@ -215,6 +235,47 @@ describe("POST /api/pages/publish", () => {
         "Your free month of live hosting has ended. Continue hosting for $9.99/mo from settings to bring the page back online.",
       code: "subscription_required",
       redirectTo: "/dashboard/settings",
+    });
+    expect(pageUpserts).not.toHaveBeenCalled();
+  });
+
+  it("requires checkout before publishing for new publish-cc preview users", async () => {
+    const pageUpserts = vi.fn();
+
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({
+        profile: {
+          plan: "spark",
+          username: "rachel",
+          billing_cohort: "publish_cc_trial_v1",
+          hosting_trial_started_at: null,
+          stripe_subscription_status: null,
+          stripe_trial_ends_at: null,
+        },
+        onPageUpsert: pageUpserts,
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/publish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: "Rachel Gergely",
+          theme_id: "cosmic",
+          resume_data: { name: "Rachel Gergely" },
+          raw_resume: "Rachel Gergely",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(402);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "Choose Starter or Pro and add a payment method to publish this page. Your first 30 days are free.",
+      code: "checkout_required",
     });
     expect(pageUpserts).not.toHaveBeenCalled();
   });

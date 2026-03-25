@@ -1,11 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { getAccountAccessState } from "@/lib/account-access";
+import { getAccountAccessState, type AnalyticsTier } from "@/lib/account-access";
 import {
   buildPageProofSummary,
   SHARE_INTENT_EVENT_NAMES,
 } from "@/lib/analytics/proofSummary";
-import { HOSTING_PLAN_PRICE } from "@/lib/billing";
+import { HOSTING_PLAN_PRICE, PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
@@ -66,7 +66,10 @@ function formatRelativeTime(value: string | null) {
   return `${diffDays}d ago`;
 }
 
-function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
+function buildProofPanelCopy(
+  proof: ReturnType<typeof buildPageProofSummary>,
+  analyticsTier: AnalyticsTier,
+) {
   const avgReading = formatDurationShort(proof.avgEngagedSecondsLast7d);
 
   switch (proof.status) {
@@ -86,9 +89,11 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         eyebrow: "Proof landed",
         title: "Someone looked after you shared it.",
         body:
-          proof.firstViewAfterLatestShareAt
-            ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.`
-            : "Your page is getting attention after a recent share. Use the Page Analytics button on this page card to see what happened after the click.",
+          analyticsTier === "full"
+            ? proof.firstViewAfterLatestShareAt
+              ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.`
+              : "Your page is getting attention after a recent share. Use the Page Analytics button on this page card to see what happened after the click."
+            : "Your page is getting attention after a recent share. Starter keeps view counts here in the dashboard, and Pro adds device mix, referrers, and reading behavior.",
         chips: [
           `${proof.viewsLast7d} looked this week`,
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "Desktop-heavy so far",
@@ -100,9 +105,13 @@ function buildProofPanelCopy(proof: ReturnType<typeof buildPageProofSummary>) {
         eyebrow: "Recent activity",
         title: `${proof.viewsLast7d} people looked at your page in the last 7 days.`,
         body:
-          proof.latestViewAt
-            ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Use the Page Analytics button on this page card to check whether your page is still getting looked at between follow-ups.`
-            : "Your page has started getting outside traffic. Use the Page Analytics button on this page card for the full picture.",
+          analyticsTier === "full"
+            ? proof.latestViewAt
+              ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Use the Page Analytics button on this page card to check whether your page is still getting looked at between follow-ups.`
+              : "Your page has started getting outside traffic. Use the Page Analytics button on this page card for the full picture."
+            : proof.latestViewAt
+              ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Starter keeps the view count visible here, and Pro unlocks the deeper engagement details.`
+              : "Your page has started getting outside traffic. Starter keeps the view count visible here, and Pro unlocks the deeper engagement details.",
         chips: [
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "No mobile views yet",
           avgReading ? `${avgReading} avg reading` : "Reading time fills in automatically",
@@ -137,6 +146,8 @@ export default async function DashboardPage() {
       plan?: string | null;
       billing_cohort?: string | null;
       hosting_trial_started_at?: string | null;
+      stripe_subscription_status?: string | null;
+      stripe_trial_ends_at?: string | null;
     }>({
       supabase,
       select: "full_name, username, plan, billing_cohort, hosting_trial_started_at",
@@ -156,6 +167,8 @@ export default async function DashboardPage() {
     plan: profile?.plan ?? null,
     billing_cohort: profile?.billing_cohort ?? null,
     hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+    stripe_subscription_status: profile?.stripe_subscription_status ?? null,
+    stripe_trial_ends_at: profile?.stripe_trial_ends_at ?? null,
   });
   const list = (pages ?? []) as PageRecord[];
   const pageIds = list.map((page) => page.id);
@@ -170,7 +183,7 @@ export default async function DashboardPage() {
           .from("events")
           .select("event_name, created_at, metadata")
           .eq("user_id", user?.id ?? "")
-          .in("event_name", [...SHARE_INTENT_EVENT_NAMES])
+          .in("event_name", [...SHARE_INTENT_EVENT_NAMES, "page.offline_view_attempted"])
           .order("created_at", { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }];
@@ -192,11 +205,20 @@ export default async function DashboardPage() {
         plan: profile?.plan ?? null,
         billing_cohort: profile?.billing_cohort ?? null,
         hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+        stripe_subscription_status: profile?.stripe_subscription_status ?? null,
+        stripe_trial_ends_at: profile?.stripe_trial_ends_at ?? null,
       });
       return synced.page as PageRecord;
     }),
   );
   const publicSlug = profile?.username ?? list[0]?.slug ?? null;
+  const offlineAttemptEvents = events.filter(
+    (event) => event.event_name === "page.offline_view_attempted",
+  );
+  const activePaidPlanPriceLabel =
+    accountAccess.publicPlanLabel === "Starter"
+      ? STARTER_PLAN_PRICE.displayLabel
+      : PRO_PLAN_PRICE.displayLabel;
   const trialEndsAt = accountAccess.trialEndsAt
     ? new Date(accountAccess.trialEndsAt).toLocaleDateString("en-US", {
         month: "short",
@@ -246,7 +268,21 @@ export default async function DashboardPage() {
           {!accountAccess.isLegacyAccount ? (
             <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.74)]">
               {accountAccess.hasPaidSubscription ? (
-                <>Monthly hosting is active at {HOSTING_PLAN_PRICE.displayLabel}. Manage it from settings anytime.</>
+                <>
+                  {accountAccess.publicPlanLabel} {accountAccess.isTrialingSubscription ? "trial" : "plan"} is active at {activePaidPlanPriceLabel}.{" "}
+                  {accountAccess.analyticsTier === "full"
+                    ? "Full analytics are available on each page."
+                    : "Starter keeps view counts here in the dashboard."}{" "}
+                  Manage billing from settings anytime.
+                </>
+              ) : accountAccess.requiresCheckoutToPublish ? (
+                <>
+                  Free preview is active. Your page is not live until you choose{" "}
+                  <Link href="/dashboard/settings" className="text-[#93C5FD] hover:text-[#BFDBFE]">
+                    Starter or Pro
+                  </Link>
+                  .
+                </>
               ) : accountAccess.requiresSubscription ? (
                 <>
                   Your free hosting month has ended and your public page is offline.{" "}
@@ -260,6 +296,18 @@ export default async function DashboardPage() {
               ) : (
                 <>Your free hosting month starts the first time your page goes live. All features are already unlocked while you build.</>
               )}
+            </div>
+          ) : null}
+          {offlineAttemptEvents.length > 0 ? (
+            <div className="rounded-2xl border border-[rgba(245,158,11,0.24)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
+              Someone tried to open your page while it was offline
+              {formatRelativeTime(offlineAttemptEvents[0]?.created_at)
+                ? ` ${formatRelativeTime(offlineAttemptEvents[0]?.created_at)}`
+                : ""}.{" "}
+              <Link href="/dashboard/settings" className="text-[#FDE68A] hover:text-[#FEF3C7]">
+                Reactivate hosting from settings
+              </Link>
+              .
             </div>
           ) : null}
           <div className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.68)]">
@@ -277,7 +325,7 @@ export default async function DashboardPage() {
               views: [],
               events: [],
             });
-            const proofCopy = buildProofPanelCopy(proof);
+            const proofCopy = buildProofPanelCopy(proof, accountAccess.analyticsTier);
 
             return (
               <article
@@ -317,7 +365,7 @@ export default async function DashboardPage() {
                       href="/dashboard/settings"
                       className="rounded-full border border-[rgba(245,158,11,0.24)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#FCD34D] hover:text-[#FDE68A] sm:px-4 sm:py-2"
                     >
-                      Hosting Inactive
+                      {accountAccess.requiresCheckoutToPublish ? "Preview Only" : "Hosting Inactive"}
                     </Link>
                   )}
                   <Link
@@ -326,12 +374,21 @@ export default async function DashboardPage() {
                   >
                     Edit Page
                   </Link>
-                  <Link
-                    href={`/dashboard/analytics/${page.id}`}
-                    className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
-                  >
-                    Page Analytics
-                  </Link>
+                  {accountAccess.analyticsTier === "full" ? (
+                    <Link
+                      href={`/dashboard/analytics/${page.id}`}
+                      className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
+                    >
+                      Page Analytics
+                    </Link>
+                  ) : accountAccess.analyticsTier === "basic" ? (
+                    <Link
+                      href="/dashboard/settings"
+                      className="rounded-full border border-[rgba(59,130,246,0.24)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
+                    >
+                      Upgrade to Pro
+                    </Link>
+                  ) : null}
                   <DeletePageButton pageId={page.id} />
                 </div>
                 <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 md:col-span-full">

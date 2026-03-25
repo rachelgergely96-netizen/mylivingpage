@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccountAccessState } from "@/lib/account-access";
+import {
+  PUBLISH_CC_TRIAL_BILLING_COHORT,
+  getAccountAccessState,
+} from "@/lib/account-access";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
@@ -40,6 +43,9 @@ function normalizeLegacyResumeData(data: ResumeData) {
     }));
   }
 
+  next.proofs = next.proofs ?? [];
+  next.testimonials = next.testimonials ?? [];
+
   return next;
 }
 
@@ -57,9 +63,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [accountAccess, setAccountAccess] = useState(() =>
-    getAccountAccessState({ plan: "spark" }),
+    getAccountAccessState({
+      plan: "spark",
+      billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
+    }),
   );
-  const themeFeaturesUnlocked = accountAccess.themeFeaturesUnlocked;
 
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(
     `mlp-draft-edit-${pageId}-living-page`,
@@ -128,12 +136,16 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             username?: string;
             billing_cohort?: string | null;
             hosting_trial_started_at?: string | null;
+            stripe_subscription_status?: string | null;
+            stripe_trial_ends_at?: string | null;
           };
           setAccountAccess(
             getAccountAccessState({
               plan: profile.plan ?? "spark",
               billing_cohort: profile.billing_cohort ?? null,
               hosting_trial_started_at: profile.hosting_trial_started_at ?? null,
+              stripe_subscription_status: profile.stripe_subscription_status ?? null,
+              stripe_trial_ends_at: profile.stripe_trial_ends_at ?? null,
             }),
           );
           setPublicSlug(profile.username ?? row.slug);
@@ -147,6 +159,15 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
     void load();
   }, [pageId, router]);
+
+  useEffect(() => {
+    if (
+      accountAccess.allowedThemeIds &&
+      !accountAccess.allowedThemeIds.includes(themeId)
+    ) {
+      setThemeId(accountAccess.allowedThemeIds[0] ?? "cosmic");
+    }
+  }, [accountAccess.allowedThemeIds, themeId]);
 
   const persistPage = useCallback(
     async (nextData: ResumeData, nextThemeId = themeId) => {
@@ -370,7 +391,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           themes={THEME_REGISTRY}
           selectedThemeId={themeId}
           onSelectTheme={setThemeId}
-          premium={themeFeaturesUnlocked}
+          allowedThemeIds={accountAccess.allowedThemeIds}
+          lockedLabel={accountAccess.hasPaidSubscription ? "Pro" : "Starter or Pro"}
           showDescription
         />
 

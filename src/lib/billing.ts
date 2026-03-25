@@ -1,11 +1,14 @@
-import type { StoredPlan } from "@/lib/plans";
+import type { PaidPlan, StoredPlan } from "@/lib/plans";
 
 export type ManagedPlan = StoredPlan;
+export type BillingPlan = PaidPlan;
+export type BillingInterval = "month";
 
 export interface PlanPriceConfig {
+  plan: BillingPlan;
   amountCents: number;
   currency: "usd";
-  interval: "month";
+  interval: BillingInterval;
   intervalCount: 1;
   amountLabel: string;
   intervalLabel: string;
@@ -24,7 +27,24 @@ export interface StripePriceSnapshot {
   productName: string | null;
 }
 
-export const HOSTING_PLAN_PRICE: PlanPriceConfig = {
+export const PUBLISH_TRIAL_DAYS = 30;
+
+export const STARTER_PLAN_PRICE: PlanPriceConfig = {
+  plan: "starter",
+  amountCents: 499,
+  currency: "usd",
+  interval: "month",
+  intervalCount: 1,
+  amountLabel: "$4.99",
+  intervalLabel: "/month",
+  displayLabel: "$4.99/month",
+  productName: "MyLivingPage Starter",
+  productDescription:
+    "$4.99/month subscription for one live MyLivingPage with starter analytics, starter themes, and one targeted version.",
+};
+
+export const PRO_PLAN_PRICE: PlanPriceConfig = {
+  plan: "pro",
   amountCents: 999,
   currency: "usd",
   interval: "month",
@@ -32,32 +52,71 @@ export const HOSTING_PLAN_PRICE: PlanPriceConfig = {
   amountLabel: "$9.99",
   intervalLabel: "/month",
   displayLabel: "$9.99/month",
-  productName: "MyLivingPage Hosting",
+  productName: "MyLivingPage Pro",
   productDescription:
-    "$9.99/month subscription to continue hosting your live MyLivingPage after the first free month.",
+    "$9.99/month subscription for full MyLivingPage hosting, full analytics, all themes, and three targeted versions.",
 };
-export const PRO_PLAN_PRICE = HOSTING_PLAN_PRICE;
+export const HOSTING_PLAN_PRICE = PRO_PLAN_PRICE;
+
+export const PLAN_PRICE_CONFIG: Record<BillingPlan, PlanPriceConfig> = {
+  starter: STARTER_PLAN_PRICE,
+  pro: PRO_PLAN_PRICE,
+};
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 
+function getPriceEnvVar(plan: BillingPlan) {
+  return plan === "starter"
+    ? "STRIPE_STARTER_MONTHLY_PRICE_ID"
+    : "STRIPE_PRO_MONTHLY_PRICE_ID";
+}
+
+export function getPlanPriceConfig(plan: BillingPlan): PlanPriceConfig {
+  return PLAN_PRICE_CONFIG[plan];
+}
+
+export function getConfiguredPriceIdForPlan(plan: BillingPlan): string | null {
+  return process.env[getPriceEnvVar(plan)] ?? null;
+}
+
+export function getConfiguredPlanPriceIds() {
+  return (Object.keys(PLAN_PRICE_CONFIG) as BillingPlan[]).map((plan) => ({
+    plan,
+    priceId: getConfiguredPriceIdForPlan(plan),
+  }));
+}
+
+export function getPlanFromPriceId(priceId: string | null | undefined): BillingPlan | null {
+  if (!priceId) {
+    return null;
+  }
+
+  return (Object.keys(PLAN_PRICE_CONFIG) as BillingPlan[]).find(
+    (plan) => getConfiguredPriceIdForPlan(plan) === priceId,
+  ) ?? null;
+}
+
 export function getStoredPlanForSubscriptionStatus(
   status: string | null | undefined,
+  activePlan: BillingPlan = "pro",
 ): ManagedPlan {
-  return status && ACTIVE_SUBSCRIPTION_STATUSES.has(status) ? "pro" : "spark";
+  return status && ACTIVE_SUBSCRIPTION_STATUSES.has(status) ? activePlan : "spark";
 }
 export const getManagedPlanForSubscriptionStatus = getStoredPlanForSubscriptionStatus;
 
 export function getExpectedHostingPlanStripeSnapshot(
   priceId: string | null | undefined,
+  plan: BillingPlan = "pro",
 ): StripePriceSnapshot {
+  const config = getPlanPriceConfig(plan);
   return {
     id: priceId ?? null,
     active: true,
-    amountCents: HOSTING_PLAN_PRICE.amountCents,
-    currency: HOSTING_PLAN_PRICE.currency,
-    interval: HOSTING_PLAN_PRICE.interval,
-    intervalCount: HOSTING_PLAN_PRICE.intervalCount,
-    productName: HOSTING_PLAN_PRICE.productName,
+    amountCents: config.amountCents,
+    currency: config.currency,
+    interval: config.interval,
+    intervalCount: config.intervalCount,
+    productName: config.productName,
   };
 }
 export const getExpectedProPlanStripeSnapshot = getExpectedHostingPlanStripeSnapshot;

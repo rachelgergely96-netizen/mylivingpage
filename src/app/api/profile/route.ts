@@ -50,6 +50,8 @@ export async function GET() {
         plan: profile.plan,
         billing_cohort: profile.billing_cohort,
         hosting_trial_started_at: profile.hosting_trial_started_at,
+        stripe_subscription_status: profile.stripe_subscription_status,
+        stripe_trial_ends_at: profile.stripe_trial_ends_at,
       })
     : null;
 
@@ -59,6 +61,8 @@ export async function GET() {
       plan: profile.plan,
       billing_cohort: profile.billing_cohort,
       hosting_trial_started_at: profile.hosting_trial_started_at,
+      stripe_subscription_status: profile.stripe_subscription_status,
+      stripe_trial_ends_at: profile.stripe_trial_ends_at,
     }),
     latestPage: syncedPage?.page ?? null,
     signup_referrer:

@@ -85,6 +85,67 @@ const checks = [
       ) as ok
     `,
   },
+  {
+    label: "profiles.billing_cohort column",
+    query: `
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'profiles'
+          and column_name = 'billing_cohort'
+      ) as ok
+    `,
+  },
+  {
+    label: "profiles.stripe_subscription_status column",
+    query: `
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'profiles'
+          and column_name = 'stripe_subscription_status'
+      ) as ok
+    `,
+  },
+  {
+    label: "profiles.stripe_trial_ends_at column",
+    query: `
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'profiles'
+          and column_name = 'stripe_trial_ends_at'
+      ) as ok
+    `,
+  },
+  {
+    label: "profiles billing cohort default",
+    query: `
+      select exists (
+        select 1
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'profiles'
+          and column_name = 'billing_cohort'
+          and column_default like '%publish_cc_trial_v1%'
+      ) as ok
+    `,
+  },
+  {
+    label: "profiles billing cohort constraint includes publish_cc_trial_v1",
+    query: `
+      select exists (
+        select 1
+        from pg_constraint
+        where conname = 'profiles_billing_cohort_check'
+          and conrelid = 'public.profiles'::regclass
+          and pg_get_constraintdef(oid) ilike '%publish_cc_trial_v1%'
+      ) as ok
+    `,
+  },
 ];
 
 const duplicateOwnersQuery = `
@@ -133,6 +194,9 @@ try {
     console.error("");
     console.error("Single-page schema verification failed:");
     failures.forEach((failure) => console.error(`- ${failure}`));
+    console.error(
+      "- Apply and verify supabase/migrations/20260325120000_publish_cc_trial_pricing.sql in the target environment.",
+    );
     process.exit(1);
   }
 

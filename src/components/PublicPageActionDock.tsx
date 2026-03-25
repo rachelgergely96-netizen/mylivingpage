@@ -14,6 +14,8 @@ interface PublicPageActionDockProps {
   variantId?: string | null;
   liveUrl?: string;
   shareCardEnabled?: boolean;
+  analyticsHref?: string;
+  analyticsCtaLabel?: string;
   avoidBadge?: boolean;
 }
 
@@ -26,6 +28,8 @@ export default function PublicPageActionDock({
   variantId = null,
   liveUrl,
   shareCardEnabled = true,
+  analyticsHref,
+  analyticsCtaLabel,
   avoidBadge = false,
 }: PublicPageActionDockProps) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -86,6 +90,8 @@ export default function PublicPageActionDock({
           resumeData={resumeData}
           liveUrl={liveUrl}
           variantId={variantId}
+          analyticsHref={analyticsHref}
+          analyticsCtaLabel={analyticsCtaLabel}
           enabled={shareCardEnabled}
           className="w-full justify-center"
         />

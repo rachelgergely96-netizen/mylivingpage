@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/legal-version";
 import { processStripeWebhookEvent } from "@/lib/billing/stripeWebhook";
@@ -25,12 +25,21 @@ function buildEvent(
   } as unknown as Stripe.Event;
 }
 
+function createRepository(userId: string | null) {
+  return {
+    updateBillingStateByCustomerId: vi.fn().mockResolvedValue(undefined),
+    findUserIdByCustomerId: vi.fn().mockResolvedValue(userId),
+  };
+}
+
 describe("processStripeWebhookEvent", () => {
+  beforeEach(() => {
+    process.env.STRIPE_STARTER_MONTHLY_PRICE_ID = "price_starter_live";
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID = "price_pro_live";
+  });
+
   it("upgrades the profile, records legal acceptance, and tracks checkout completion", async () => {
-    const repository = {
-      updatePlanByCustomerId: vi.fn().mockResolvedValue(undefined),
-      findUserIdByCustomerId: vi.fn().mockResolvedValue("user-123"),
-    };
+    const repository = createRepository("user-123");
     const recordLegalAcceptance = vi.fn().mockResolvedValue(undefined);
     const trackEvent = vi.fn().mockResolvedValue(undefined);
 
@@ -42,6 +51,7 @@ describe("processStripeWebhookEvent", () => {
         customer: "cus_123",
         metadata: {
           supabase_user_id: "user-123",
+          selected_plan: "starter",
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
         },
@@ -52,7 +62,11 @@ describe("processStripeWebhookEvent", () => {
       processedAt: new Date("2026-03-10T12:00:02.000Z"),
     });
 
-    expect(repository.updatePlanByCustomerId).toHaveBeenCalledWith("cus_123", "pro");
+    expect(repository.updateBillingStateByCustomerId).toHaveBeenCalledWith("cus_123", {
+      plan: "starter",
+      stripeSubscriptionStatus: "trialing",
+      stripeTrialEndsAt: "2025-12-08T00:40:00.000Z",
+    });
     expect(recordLegalAcceptance).toHaveBeenCalledWith({
       userId: "user-123",
       source: "checkout",
@@ -65,9 +79,11 @@ describe("processStripeWebhookEvent", () => {
       "user-123",
       "billing.plan.upgraded",
       expect.objectContaining({
-        plan: "pro",
+        plan: "starter",
         customer_id: "cus_123",
         event_type: "checkout.session.completed",
+        subscription_status: "trialing",
+        trial_ends_at: "2025-12-08T00:40:00.000Z",
       }),
     );
     expect(trackEvent).toHaveBeenNthCalledWith(
@@ -77,17 +93,61 @@ describe("processStripeWebhookEvent", () => {
       expect.objectContaining({
         event_type: "checkout.session.completed",
         customer_id: "cus_123",
-        plan: "pro",
+        plan: "starter",
         latency_ms: expect.any(Number),
       }),
     );
   });
 
+  it("maps subscription updates to the selected paid plan from the Stripe price", async () => {
+    const repository = createRepository("user-234");
+    const recordLegalAcceptance = vi.fn().mockResolvedValue(undefined);
+    const trackEvent = vi.fn().mockResolvedValue(undefined);
+
+    await processStripeWebhookEvent({
+      event: buildEvent("customer.subscription.updated", {
+        id: "sub_234",
+        object: "subscription",
+        customer: "cus_234",
+        status: "active",
+        trial_end: null,
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_starter_live",
+              },
+            },
+          ],
+        },
+      }),
+      repository,
+      recordLegalAcceptance,
+      trackEvent,
+      processedAt: new Date("2026-03-10T12:00:02.000Z"),
+    });
+
+    expect(repository.updateBillingStateByCustomerId).toHaveBeenCalledWith("cus_234", {
+      plan: "starter",
+      stripeSubscriptionStatus: "active",
+      stripeTrialEndsAt: null,
+    });
+    expect(trackEvent).toHaveBeenNthCalledWith(
+      1,
+      "user-234",
+      "billing.plan.upgraded",
+      expect.objectContaining({
+        plan: "starter",
+        customer_id: "cus_234",
+        event_type: "customer.subscription.updated",
+        subscription_status: "active",
+        price_id: "price_starter_live",
+      }),
+    );
+  });
+
   it("downgrades deleted subscriptions back to spark", async () => {
-    const repository = {
-      updatePlanByCustomerId: vi.fn().mockResolvedValue(undefined),
-      findUserIdByCustomerId: vi.fn().mockResolvedValue("user-456"),
-    };
+    const repository = createRepository("user-456");
     const recordLegalAcceptance = vi.fn().mockResolvedValue(undefined);
     const trackEvent = vi.fn().mockResolvedValue(undefined);
 
@@ -97,6 +157,16 @@ describe("processStripeWebhookEvent", () => {
         object: "subscription",
         customer: "cus_456",
         status: "canceled",
+        trial_end: null,
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_pro_live",
+              },
+            },
+          ],
+        },
       }),
       repository,
       recordLegalAcceptance,
@@ -104,7 +174,11 @@ describe("processStripeWebhookEvent", () => {
       processedAt: new Date("2026-03-10T12:00:02.000Z"),
     });
 
-    expect(repository.updatePlanByCustomerId).toHaveBeenCalledWith("cus_456", "spark");
+    expect(repository.updateBillingStateByCustomerId).toHaveBeenCalledWith("cus_456", {
+      plan: "spark",
+      stripeSubscriptionStatus: "canceled",
+      stripeTrialEndsAt: null,
+    });
     expect(recordLegalAcceptance).not.toHaveBeenCalled();
     expect(trackEvent).toHaveBeenNthCalledWith(
       1,
@@ -117,24 +191,10 @@ describe("processStripeWebhookEvent", () => {
         subscription_status: "canceled",
       }),
     );
-    expect(trackEvent).toHaveBeenNthCalledWith(
-      2,
-      "user-456",
-      "billing.webhook.processed",
-      expect.objectContaining({
-        plan: "spark",
-        customer_id: "cus_456",
-        event_type: "customer.subscription.deleted",
-        subscription_status: "canceled",
-      }),
-    );
   });
 
   it("does not block plan upgrades when legal acceptance recording fails", async () => {
-    const repository = {
-      updatePlanByCustomerId: vi.fn().mockResolvedValue(undefined),
-      findUserIdByCustomerId: vi.fn().mockResolvedValue("user-789"),
-    };
+    const repository = createRepository("user-789");
     const recordLegalAcceptance = vi
       .fn()
       .mockRejectedValue(new Error("legal_acceptances missing"));
@@ -148,6 +208,7 @@ describe("processStripeWebhookEvent", () => {
         customer: "cus_789",
         metadata: {
           supabase_user_id: "user-789",
+          selected_plan: "pro",
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
         },
@@ -158,7 +219,11 @@ describe("processStripeWebhookEvent", () => {
       processedAt: new Date("2026-03-10T12:00:02.000Z"),
     });
 
-    expect(repository.updatePlanByCustomerId).toHaveBeenCalledWith("cus_789", "pro");
+    expect(repository.updateBillingStateByCustomerId).toHaveBeenCalledWith("cus_789", {
+      plan: "pro",
+      stripeSubscriptionStatus: "trialing",
+      stripeTrialEndsAt: "2025-12-08T00:40:00.000Z",
+    });
     expect(trackEvent).toHaveBeenNthCalledWith(
       1,
       "user-789",
@@ -177,22 +242,10 @@ describe("processStripeWebhookEvent", () => {
         customer_id: "cus_789",
       }),
     );
-    expect(trackEvent).toHaveBeenNthCalledWith(
-      3,
-      "user-789",
-      "billing.webhook.processed",
-      expect.objectContaining({
-        plan: "pro",
-        customer_id: "cus_789",
-      }),
-    );
   });
 
   it("tracks unsupported events as ignored without mutating plans", async () => {
-    const repository = {
-      updatePlanByCustomerId: vi.fn().mockResolvedValue(undefined),
-      findUserIdByCustomerId: vi.fn().mockResolvedValue(null),
-    };
+    const repository = createRepository(null);
     const recordLegalAcceptance = vi.fn().mockResolvedValue(undefined);
     const trackEvent = vi.fn().mockResolvedValue(undefined);
 
@@ -207,7 +260,7 @@ describe("processStripeWebhookEvent", () => {
       processedAt: new Date("2026-03-10T12:00:02.000Z"),
     });
 
-    expect(repository.updatePlanByCustomerId).not.toHaveBeenCalled();
+    expect(repository.updateBillingStateByCustomerId).not.toHaveBeenCalled();
     expect(recordLegalAcceptance).not.toHaveBeenCalled();
     expect(trackEvent).toHaveBeenCalledWith(
       null,

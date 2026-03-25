@@ -1,6 +1,6 @@
 import type { DemoPage } from "@/lib/demo-data";
 import { DEMO_PAGES } from "@/lib/demo-data";
-import { HOSTING_PLAN_PRICE } from "@/lib/billing";
+import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 
 export interface MarketingSample {
   id: string;
@@ -65,7 +65,8 @@ export interface ResolvedMarketingSample extends MarketingSample {
 
 export const CREDIBILITY_POINTS = [
   "Create your page in minutes",
-  "No card required to publish",
+  "Free preview before you publish",
+  "Proof over claims",
   "Know when people open it",
 ];
 
@@ -180,7 +181,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Is it actually free?",
     answer:
-      `Yes, for the first month your page is live. New accounts get one month of free hosting with all features unlocked, then monthly hosting is ${HOSTING_PLAN_PRICE.displayLabel} if you want to keep the page live.`,
+      `Yes for preview and building. You can create and preview your page without a card. When you publish, Starter starts at ${STARTER_PLAN_PRICE.displayLabel} and Pro starts at ${PRO_PLAN_PRICE.displayLabel}, both with a 30-day free trial before billing begins.`,
   },
 ];
 
@@ -191,11 +192,11 @@ export const PROCESS_STEPS = [
   },
   {
     title: "They open it",
-    body: "Your profile loads fast, stays easy to scan, and gives them the context they need in one place.",
+    body: "Your profile loads fast, stays easy to scan, and gives them the proof, context, and contact paths they need in one place.",
   },
   {
     title: "You know it landed",
-    body: "Come back and see that someone looked, how they opened it, and whether they stayed to read before you decide to share it again.",
+    body: "Come back and see that someone looked, how they opened it, and whether the interest looks warm enough for a follow-up.",
   },
 ];
 
@@ -223,18 +224,26 @@ export const COMPARISON_ROWS = [
 ];
 
 export const PRICING_REASSURANCE = {
-  trial: [
-    "One month of free live hosting",
-    "All features unlocked from day one",
-    "One Living Page and Resume PDF from the same saved content",
-    "No card required to publish",
-    "Keep one page link current while the trial is active",
+  free: [
+    "Create and preview your page with no card",
+    "Try AI parsing with a limited free quota",
+    "Use 3 preview themes while you build",
+    "No live hosting until you publish",
+    "Good for testing the flow before you commit",
   ],
-  subscription: [
-    `Continue hosting for ${HOSTING_PLAN_PRICE.displayLabel}`,
-    "Keep the public page live after the free month",
+  starter: [
+    `Publish for ${STARTER_PLAN_PRICE.displayLabel} after a 30-day free trial`,
+    "Keep one page live with share cards and dashboard view counts",
+    "Use the current 9-theme starter set",
+    "Save 1 targeted version",
     "Cancel anytime from billing settings",
-    "All themes, share cards, and exports stay available",
+  ],
+  pro: [
+    `Publish for ${PRO_PLAN_PRICE.displayLabel} after a 30-day free trial`,
+    "Unlock full analytics, all themes, and 3 targeted versions",
+    "Keep one page live with share cards and premium presentation controls",
+    "Best for active job searches and higher-volume outreach",
+    "Cancel anytime from billing settings",
   ],
 };
 

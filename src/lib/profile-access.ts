@@ -3,6 +3,8 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 export interface HostingProfileFields {
   billing_cohort: string | null;
   hosting_trial_started_at: string | null;
+  stripe_subscription_status: string | null;
+  stripe_trial_ends_at: string | null;
 }
 
 export interface FetchProfileWithHostingAccessOptions {
@@ -33,6 +35,14 @@ function withHostingAccessColumns(select: string) {
     fields.push("hosting_trial_started_at");
   }
 
+  if (!fields.includes("stripe_subscription_status")) {
+    fields.push("stripe_subscription_status");
+  }
+
+  if (!fields.includes("stripe_trial_ends_at")) {
+    fields.push("stripe_trial_ends_at");
+  }
+
   return fields.join(", ");
 }
 
@@ -47,6 +57,8 @@ function normalizeLegacyProfile<TProfile>(
     ...(profile as Record<string, unknown>),
     billing_cohort: null,
     hosting_trial_started_at: null,
+    stripe_subscription_status: null,
+    stripe_trial_ends_at: null,
   } as TProfile & HostingProfileFields;
 }
 
@@ -69,7 +81,9 @@ export function isMissingHostingAccessSchemaError(
 
   const mentionsHostingColumns =
     haystack.includes("billing_cohort") ||
-    haystack.includes("hosting_trial_started_at");
+    haystack.includes("hosting_trial_started_at") ||
+    haystack.includes("stripe_subscription_status") ||
+    haystack.includes("stripe_trial_ends_at");
 
   return (
     mentionsHostingColumns &&

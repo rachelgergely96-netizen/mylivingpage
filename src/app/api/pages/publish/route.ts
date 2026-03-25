@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import {
+  PUBLISH_CC_TRIAL_BILLING_COHORT,
   TRIAL_HOSTING_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
+import { sanitizePageVariants } from "@/lib/page-variants";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
-import { FREE_THEMES, isPremiumTheme } from "@/lib/plans";
+import { FREE_PREVIEW_THEMES, STARTER_THEMES, isThemeAllowed } from "@/lib/plans";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { usernameFromEmail } from "@/lib/usernames";
@@ -81,13 +83,51 @@ export async function POST(request: Request) {
       plan: userPlan,
       billing_cohort: profile?.billing_cohort ?? null,
       hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
+      stripe_subscription_status: profile?.stripe_subscription_status ?? null,
+      stripe_trial_ends_at: profile?.stripe_trial_ends_at ?? null,
     });
     const username = profile?.username ?? usernameFromEmail(user.email);
 
-    if (!accountAccess.themeFeaturesUnlocked && isPremiumTheme(body.theme_id)) {
+    if (!isThemeAllowed(body.theme_id, accountAccess.allowedThemeIds)) {
       return NextResponse.json(
-        { error: `The "${body.theme_id}" theme requires hosting access. Core themes: ${FREE_THEMES.join(", ")}.` },
+        {
+          error:
+            accountAccess.allowedThemeIds === FREE_PREVIEW_THEMES
+              ? `The "${body.theme_id}" theme is locked on Free preview. Free preview includes: ${FREE_PREVIEW_THEMES.join(", ")}.`
+              : `The "${body.theme_id}" theme requires Pro. Starter includes: ${STARTER_THEMES.join(", ")}.`,
+        },
         { status: 403 },
+      );
+    }
+
+    const variants = sanitizePageVariants(
+      (body.page_config as { variants?: unknown } | undefined)?.variants ?? [],
+      accountAccess.variantLimit,
+    );
+    const submittedVariants = Array.isArray((body.page_config as { variants?: unknown } | undefined)?.variants)
+      ? ((body.page_config as { variants?: unknown[] } | undefined)?.variants?.length ?? 0)
+      : 0;
+
+    if (submittedVariants > accountAccess.variantLimit) {
+      return NextResponse.json(
+        {
+          error:
+            accountAccess.variantLimit === 0
+              ? "Free preview does not include targeted versions. Choose Starter or Pro to publish with variants."
+              : `Your current plan allows ${accountAccess.variantLimit} targeted version${accountAccess.variantLimit === 1 ? "" : "s"}.`,
+        },
+        { status: 403 },
+      );
+    }
+
+    if (accountAccess.requiresCheckoutToPublish) {
+      return NextResponse.json(
+        {
+          error:
+            "Choose Starter or Pro and add a payment method to publish this page. Your first 30 days are free.",
+          code: "checkout_required",
+        },
+        { status: 402 },
       );
     }
 
@@ -104,7 +144,7 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
     const shouldStartHostingTrial =
-      !accountAccess.isLegacyAccount &&
+      accountAccess.billingCohort === TRIAL_HOSTING_BILLING_COHORT &&
       !accountAccess.hasPaidSubscription &&
       !accountAccess.hasStartedFreeMonth;
 
@@ -118,10 +158,14 @@ export async function POST(request: Request) {
 
       if (profileSchema === "full") {
         profileUpsertFields.billing_cohort =
-          profile?.billing_cohort ?? TRIAL_HOSTING_BILLING_COHORT;
+          profile?.billing_cohort ?? PUBLISH_CC_TRIAL_BILLING_COHORT;
         profileUpsertFields.hosting_trial_started_at = shouldStartHostingTrial
           ? now
           : profile?.hosting_trial_started_at ?? null;
+        profileUpsertFields.stripe_subscription_status =
+          profile?.stripe_subscription_status ?? null;
+        profileUpsertFields.stripe_trial_ends_at =
+          profile?.stripe_trial_ends_at ?? null;
       }
 
       await supabase.from("profiles").upsert(profileUpsertFields, {
@@ -154,7 +198,10 @@ export async function POST(request: Request) {
     };
 
     if (body.page_config !== undefined) {
-      allFields.page_config = body.page_config;
+      allFields.page_config = {
+        ...(body.page_config ?? {}),
+        variants,
+      };
     }
 
     const { error, existingId, pageId } = await persistPageRecord(supabase, user.id, allFields);

@@ -14,6 +14,7 @@ interface PageAnalyticsDashboardProps {
   pageId: string;
   pageName: string;
   publicPath: string;
+  variantLabels?: string[];
 }
 
 function formatInteger(value: number) {
@@ -38,6 +39,27 @@ function formatDuration(seconds: number) {
   }
 
   return `${minutes}m ${remainder}s`;
+}
+
+function formatRelativeTime(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const diffMs = Date.now() - new Date(value).getTime();
+  const diffMinutes = Math.max(1, Math.round(diffMs / (60 * 1000)));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 48) {
+    return `${diffHours}h ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays}d ago`;
 }
 
 function formatPeopleLooked(count: number) {
@@ -365,6 +387,7 @@ export default function PageAnalyticsDashboard({
   pageId,
   pageName,
   publicPath,
+  variantLabels = [],
 }: PageAnalyticsDashboardProps) {
   const isBasic = analytics.state.availability === "basic";
   const isUnavailable = analytics.state.availability === "unavailable";
@@ -464,6 +487,89 @@ export default function PageAnalyticsDashboard({
           description="Share your tracked page URL in follow-up emails, LinkedIn messages, or your email signature. Once people start opening it, this page will show that they looked, where they came from, and what they did next."
         />
       )}
+
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="glass-card rounded-3xl p-5 sm:p-6">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
+            Follow-Up Signals
+          </p>
+          <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+            What to do after the click
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+            {analytics.followUp.summary}
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">Repeat views</p>
+              <p className="mt-2 font-mono text-2xl text-[#F0F4FF]">
+                {analytics.followUp.repeatVisitors}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.52)]">
+                {analytics.followUp.repeatViewAlert
+                  ? "At least one viewer came back more than once."
+                  : "No repeat viewers in this range yet."}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">Latest look</p>
+              <p className="mt-2 font-mono text-2xl text-[#F0F4FF]">
+                {formatRelativeTime(analytics.followUp.latestViewAt) ?? "None"}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.52)]">
+                {analytics.followUp.latestReferrerLabel
+                  ? `Most recent source: ${analytics.followUp.latestReferrerLabel}`
+                  : "Most recent source was a direct share."}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-[#93C5FD]">Suggested timing</p>
+              <p className="mt-2 text-lg font-semibold text-[#F0F4FF]">
+                {analytics.followUp.suggestedTimingLabel}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.66)]">
+                {analytics.followUp.suggestedTimingDetail}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-card rounded-3xl p-5 sm:p-6">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
+            Variants
+          </p>
+          <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+            Target the next send
+          </h2>
+          {variantLabels.length > 0 ? (
+            <>
+              <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+                You already have targeted versions ready. Use the one that matches the audience or moment instead of sending the base page every time.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {variantLabels.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[rgba(240,244,255,0.74)]"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+              No targeted versions yet. Create one for recruiter follow-up, one for hiring-manager context, or one for referral intros so the next link matches the moment.
+            </p>
+          )}
+          <Link
+            href={`/dashboard/edit/${pageId}/living-page`}
+            className="mt-5 inline-flex rounded-full border border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
+          >
+            Edit living page
+          </Link>
+        </div>
+      </section>
 
       {analytics.state.hasTraffic ? (
         <>

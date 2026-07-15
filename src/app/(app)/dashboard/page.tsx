@@ -5,13 +5,14 @@ import {
   buildPageProofSummary,
   SHARE_INTENT_EVENT_NAMES,
 } from "@/lib/analytics/proofSummary";
-import { HOSTING_PLAN_PRICE, PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
+import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 import DeletePageButton from "@/components/DeletePageButton";
+import PublishPageButton from "@/components/PublishPageButton";
 
 interface DashboardPageViewRow {
   page_id: string;
@@ -93,7 +94,7 @@ function buildProofPanelCopy(
             ? proof.firstViewAfterLatestShareAt
               ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.`
               : "Your page is getting attention after a recent share. Use the Page Analytics button on this page card to see what happened after the click."
-            : "Your page is getting attention after a recent share. Starter keeps view counts here in the dashboard, and Pro adds device mix, referrers, and reading behavior.",
+            : "Your page is getting attention after a recent share. Open Page Analytics for device mix, referrers, and reading behavior.",
         chips: [
           `${proof.viewsLast7d} looked this week`,
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "Desktop-heavy so far",
@@ -110,8 +111,8 @@ function buildProofPanelCopy(
               ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Use the Page Analytics button on this page card to check whether your page is still getting looked at between follow-ups.`
               : "Your page has started getting outside traffic. Use the Page Analytics button on this page card for the full picture."
             : proof.latestViewAt
-              ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Starter keeps the view count visible here, and Pro unlocks the deeper engagement details.`
-              : "Your page has started getting outside traffic. Starter keeps the view count visible here, and Pro unlocks the deeper engagement details.",
+              ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Open Page Analytics for the deeper engagement details.`
+              : "Your page has started getting outside traffic. Open Page Analytics for the full picture.",
         chips: [
           proof.mobileViewsLast7d > 0 ? `${proof.mobileViewsLast7d} mobile` : "No mobile views yet",
           avgReading ? `${avgReading} avg reading` : "Reading time fills in automatically",
@@ -219,14 +220,6 @@ export default async function DashboardPage() {
     accountAccess.publicPlanLabel === "Starter"
       ? STARTER_PLAN_PRICE.displayLabel
       : PRO_PLAN_PRICE.displayLabel;
-  const trialEndsAt = accountAccess.trialEndsAt
-    ? new Date(accountAccess.trialEndsAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:mb-8 sm:flex-row sm:items-end sm:gap-4">
@@ -269,32 +262,15 @@ export default async function DashboardPage() {
             <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.74)]">
               {accountAccess.hasPaidSubscription ? (
                 <>
-                  {accountAccess.publicPlanLabel} {accountAccess.isTrialingSubscription ? "trial" : "plan"} is active at {activePaidPlanPriceLabel}.{" "}
-                  {accountAccess.analyticsTier === "full"
-                    ? "Full analytics are available on each page."
-                    : "Starter keeps view counts here in the dashboard."}{" "}
-                  Manage billing from settings anytime.
-                </>
-              ) : accountAccess.requiresCheckoutToPublish ? (
-                <>
-                  Free preview is active. Your page is not live until you choose{" "}
+                  Your living resume is free and remains available regardless of billing. An
+                  existing {accountAccess.publicPlanLabel} subscription at {activePaidPlanPriceLabel} is still on file.{" "}
                   <Link href="/dashboard/settings" className="text-[#93C5FD] hover:text-[#BFDBFE]">
-                    Starter or Pro
+                    Review the subscription
                   </Link>
                   .
                 </>
-              ) : accountAccess.requiresSubscription ? (
-                <>
-                  Your free hosting month has ended and your public page is offline.{" "}
-                  <Link href="/dashboard/settings" className="text-[#93C5FD] hover:text-[#BFDBFE]">
-                    Continue hosting for {HOSTING_PLAN_PRICE.displayLabel}
-                  </Link>
-                  .
-                </>
-              ) : accountAccess.isActiveFreeMonth && trialEndsAt ? (
-                <>Your free hosting month is active until {trialEndsAt}. All features stay unlocked while you build.</>
               ) : (
-                <>Your free hosting month starts the first time your page goes live. All features are already unlocked while you build.</>
+                <>Your living resume, public link, ATS-ready PDF, share card, themes, and analytics are free. No card or subscription is required.</>
               )}
             </div>
           ) : null}
@@ -303,11 +279,8 @@ export default async function DashboardPage() {
               Someone tried to open your page while it was offline
               {formatRelativeTime(offlineAttemptEvents[0]?.created_at)
                 ? ` ${formatRelativeTime(offlineAttemptEvents[0]?.created_at)}`
-                : ""}.{" "}
-              <Link href="/dashboard/settings" className="text-[#FDE68A] hover:text-[#FEF3C7]">
-                Reactivate hosting from settings
-              </Link>
-              .
+                : ""}. Use the Publish button on the page card below when you are ready to
+              restore the link.
             </div>
           ) : null}
           <div className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.68)]">
@@ -360,35 +333,25 @@ export default async function DashboardPage() {
                     >
                       View
                     </Link>
-                  ) : (
-                    <Link
-                      href="/dashboard/settings"
-                      className="rounded-full border border-[rgba(245,158,11,0.24)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#FCD34D] hover:text-[#FDE68A] sm:px-4 sm:py-2"
-                    >
-                      {accountAccess.requiresCheckoutToPublish ? "Preview Only" : "Hosting Inactive"}
-                    </Link>
-                  )}
+                  ) : <PublishPageButton pageId={page.id} />}
                   <Link
                     href={`/dashboard/edit/${page.id}/living-page`}
                     className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
                   >
                     Edit Page
                   </Link>
-                  {accountAccess.analyticsTier === "full" ? (
-                    <Link
-                      href={`/dashboard/analytics/${page.id}`}
-                      className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
-                    >
-                      Page Analytics
-                    </Link>
-                  ) : accountAccess.analyticsTier === "basic" ? (
-                    <Link
-                      href="/dashboard/settings"
-                      className="rounded-full border border-[rgba(59,130,246,0.24)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
-                    >
-                      Upgrade to Pro
-                    </Link>
-                  ) : null}
+                  <Link
+                    href={`/dashboard/edit/${page.id}/living-page#ats-readiness`}
+                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                  >
+                    Check ATS
+                  </Link>
+                  <Link
+                    href={`/dashboard/analytics/${page.id}`}
+                    className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
+                  >
+                    Page Analytics
+                  </Link>
                   <DeletePageButton pageId={page.id} />
                 </div>
                 <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 md:col-span-full">

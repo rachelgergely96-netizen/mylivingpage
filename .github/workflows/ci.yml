@@ -15,15 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Placeholder env keeps build analysis runnable on PRs without exposing secrets.
-      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_APP_URL: https://www.mylivingpage.com
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
       SUPABASE_SECRET_KEY: ci-placeholder-service-role-key
-      ANTHROPIC_API_KEY: ci-placeholder-anthropic-key
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
       STRIPE_SECRET_KEY: sk_test_ci_placeholder
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
-      STRIPE_PRICE_ID: price_ci_placeholder
+      STRIPE_STARTER_MONTHLY_PRICE_ID: price_starter_ci_placeholder
+      STRIPE_PRO_MONTHLY_PRICE_ID: price_pro_ci_placeholder
       CI: "1"
     steps:
       - name: Checkout
@@ -54,7 +54,9 @@ jobs:
         run: npm run build
 
       - name: Production dependency audit
-        run: npm audit --omit=dev
+        # Fail releases on high/critical findings. The current Next.js 15 line
+        # still bundles a moderate PostCSS advisory with no safe in-line fix.
+        run: npm audit --omit=dev --audit-level=high
 
   integration:
     runs-on: ubuntu-latest
@@ -68,12 +70,12 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
       SCHEMA_CHECK_DATABASE_URL: ${{ secrets.STAGING_SCHEMA_CHECK_DATABASE_URL }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STAGING_STRIPE_PUBLISHABLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STAGING_STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STAGING_STRIPE_WEBHOOK_SECRET }}
-      STRIPE_PRICE_ID: ${{ secrets.STAGING_STRIPE_PRICE_ID }}
+      STRIPE_STARTER_MONTHLY_PRICE_ID: ${{ secrets.STAGING_STRIPE_STARTER_MONTHLY_PRICE_ID }}
+      STRIPE_PRO_MONTHLY_PRICE_ID: ${{ secrets.STAGING_STRIPE_PRO_MONTHLY_PRICE_ID }}
       NEXT_PUBLIC_LEGAL_COMPANY_NAME: ${{ secrets.NEXT_PUBLIC_LEGAL_COMPANY_NAME }}
       NEXT_PUBLIC_LEGAL_CONTACT_EMAIL: ${{ secrets.NEXT_PUBLIC_LEGAL_CONTACT_EMAIL }}
       NEXT_PUBLIC_LEGAL_MAILING_ADDRESS: ${{ secrets.NEXT_PUBLIC_LEGAL_MAILING_ADDRESS }}
@@ -115,7 +117,8 @@ jobs:
             DATABASE_URL \
             STRIPE_SECRET_KEY \
             STRIPE_WEBHOOK_SECRET \
-            STRIPE_PRICE_ID \
+            STRIPE_STARTER_MONTHLY_PRICE_ID \
+            STRIPE_PRO_MONTHLY_PRICE_ID \
             PLAYWRIGHT_TEST_EMAIL \
             PLAYWRIGHT_TEST_PASSWORD
           do

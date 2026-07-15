@@ -6,7 +6,6 @@ import {
   getStoredPlanForSubscriptionStatus,
   getStripePriceDriftMessages,
 } from "@/lib/billing";
-import { PRICING_REASSURANCE } from "@/lib/marketing-samples";
 
 describe("billing helpers", () => {
   it("maps active subscription states to the managed plan model", () => {
@@ -62,14 +61,5 @@ describe("billing helpers", () => {
       "Expected interval_count 1, received 12.",
       'Expected product name "MyLivingPage Pro", received "Unexpected Plan".',
     ]);
-  });
-
-  it("keeps the user-facing reassurance copy aligned with the managed price config", () => {
-    expect(PRICING_REASSURANCE.starter).toContain(
-      `Publish for ${STARTER_PLAN_PRICE.displayLabel} after a 30-day free trial`,
-    );
-    expect(PRICING_REASSURANCE.pro).toContain(
-      `Publish for ${PRO_PLAN_PRICE.displayLabel} after a 30-day free trial`,
-    );
   });
 });

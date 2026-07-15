@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import DecisionReadinessCard from "@/components/create/DecisionReadinessCard";
+import AtsReadinessCard from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
 import JobSeekerStarterKit from "@/components/create/JobSeekerStarterKit";
@@ -16,8 +16,6 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
-import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
-import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import {
   buildStarterVariant,
@@ -35,35 +33,21 @@ import type { ThemeId } from "@/themes/types";
 import type { JobSeekerProfile, PageVariant, ResumeData } from "@/types/resume";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 
-type Step = "input" | "processing" | "review" | "success";
-type InputMode = "paste" | "guided";
-type CreateFlowFailure = {
-  stage: "parse";
-  message: string;
-  code: string | null;
-  retryable: boolean;
-};
+type Step = "input" | "review" | "success";
 
 interface CreateDraft {
   resumeText: string;
   guidedData: Partial<ResumeData>;
   parsedData: ResumeData | null;
   selectedTheme: ThemeId;
-  inputMode: InputMode;
   step: Step;
   variants: PageVariant[];
   selectedPreviewVariantId: string | null;
   jobSeekerProfile: JobSeekerProfile;
 }
 
-const PROGRESS_STEPS: Array<Exclude<Step, "processing">> = ["input", "review", "success"];
+const PROGRESS_STEPS: Step[] = ["input", "review", "success"];
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
-const STAGES = [
-  "Reading your information...",
-  "Structuring your experience...",
-  "Building your first page...",
-  "Finalizing your preview...",
-];
 
 const EMPTY_GUIDED_DATA: Partial<ResumeData> = {
   name: "",
@@ -91,35 +75,14 @@ const DEFAULT_JOB_SEEKER_PROFILE: JobSeekerProfile = {
   target_audience: "recruiter",
 };
 
-function formatFriendlyDate(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
-  const [inputMode, setInputMode] = useState<InputMode>("paste");
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>(EMPTY_GUIDED_DATA);
   const [resumeText, setResumeText] = useState("");
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>("cosmic");
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState(STAGES[0]);
   const [error, setError] = useState("");
-  const [createFlowFailure, setCreateFlowFailure] = useState<CreateFlowFailure | null>(null);
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
@@ -137,12 +100,10 @@ export default function CreatePage() {
       billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
     }),
   );
-  const [billingLoadingPlan, setBillingLoadingPlan] = useState<"starter" | "pro" | null>(null);
-  const [showPublishPlanModal, setShowPublishPlanModal] = useState(false);
-  const [autoPublishAfterCheckout, setAutoPublishAfterCheckout] = useState(false);
+  const [publishRestoredDraft, setPublishRestoredDraft] = useState(false);
   const [pageCount, setPageCount] = useState<number>(0);
   const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
-  const checkoutReturnHandledRef = useRef(false);
+  const legacyCheckoutReturnHandledRef = useRef(false);
   const publishingRef = useRef(false);
   const returnedFromPublishCheckout =
     searchParams.get("checkout") === "success" &&
@@ -166,10 +127,10 @@ export default function CreatePage() {
     );
   }, [guidedData.name, jobSeekerProfile, parsedData, resumeText, selectedTheme, step, variants.length]);
 
-  useUnsavedChanges(isDirty && step !== "processing");
+  useUnsavedChanges(isDirty);
 
   useEffect(() => {
-    if (!isDirty || step === "processing" || step === "success") {
+    if (!isDirty || step === "success") {
       return;
     }
 
@@ -178,7 +139,6 @@ export default function CreatePage() {
       guidedData,
       parsedData,
       selectedTheme,
-      inputMode,
       step,
       variants,
       selectedPreviewVariantId,
@@ -186,7 +146,6 @@ export default function CreatePage() {
     });
   }, [
     guidedData,
-    inputMode,
     isDirty,
     jobSeekerProfile,
     parsedData,
@@ -203,39 +162,12 @@ export default function CreatePage() {
     setGuidedData(draft.guidedData ?? EMPTY_GUIDED_DATA);
     setParsedData(draft.parsedData ?? null);
     setSelectedTheme(draft.selectedTheme ?? "cosmic");
-    setInputMode(draft.inputMode ?? "paste");
-    setStep(draft.step === "success" ? "input" : draft.step ?? "input");
+    setStep(draft.step === "review" && draft.parsedData ? "review" : "input");
     setVariants(draft.variants ?? []);
     setSelectedPreviewVariantId(draft.selectedPreviewVariantId ?? null);
     setJobSeekerProfile(draft.jobSeekerProfile ?? DEFAULT_JOB_SEEKER_PROFILE);
-    setCreateFlowFailure(null);
     setError("");
   }, []);
-
-  const persistCurrentDraft = useCallback(() => {
-    saveDraft({
-      resumeText,
-      guidedData,
-      parsedData,
-      selectedTheme,
-      inputMode,
-      step,
-      variants,
-      selectedPreviewVariantId,
-      jobSeekerProfile,
-    });
-  }, [
-    guidedData,
-    inputMode,
-    jobSeekerProfile,
-    parsedData,
-    resumeText,
-    saveDraft,
-    selectedPreviewVariantId,
-    selectedTheme,
-    step,
-    variants,
-  ]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) {
@@ -342,22 +274,22 @@ export default function CreatePage() {
   }, [accountAccess.variantLimit, selectedPreviewVariantId, variants]);
 
   useEffect(() => {
-    if (checkoutReturnHandledRef.current || !returnedFromPublishCheckout) {
+    if (legacyCheckoutReturnHandledRef.current || !returnedFromPublishCheckout) {
       return;
     }
 
-    checkoutReturnHandledRef.current = true;
+    legacyCheckoutReturnHandledRef.current = true;
 
     if (pendingDraft) {
       applyDraft(pendingDraft.data);
       dismissDraft();
-      setAutoPublishAfterCheckout(true);
+      setPublishRestoredDraft(true);
       router.replace("/create", { scroll: false });
       return;
     }
 
     setError(
-      "Your subscription was created, but we couldn't find the page draft to finish publishing. Rebuild or restore your page, then publish again.",
+      "We couldn't find the saved page draft to finish publishing. Rebuild or restore your page, then publish again.",
     );
     router.replace("/create", { scroll: false });
   }, [
@@ -369,15 +301,13 @@ export default function CreatePage() {
   ]);
 
   const beginReviewOutputs = useCallback(
-    async (nextData: ResumeData, mode: InputMode) => {
+    (nextData: ResumeData) => {
       const structuredData = normalizeStructuredResumeData(nextData, jobSeekerProfile);
       const starterVariants = jobSeekerProfile
         ? [buildStarterVariant(structuredData, jobSeekerProfile)]
         : [];
 
       setParsedData(structuredData);
-      setInputMode(mode);
-      setCreateFlowFailure(null);
       setError("");
       setVariants(starterVariants);
       setSelectedPreviewVariantId(starterVariants[0]?.id ?? null);
@@ -386,89 +316,7 @@ export default function CreatePage() {
     [jobSeekerProfile],
   );
 
-  const handleContinueManually = useCallback(() => {
-    setCreateFlowFailure(null);
-    setError("");
-    setInputMode("guided");
-  }, []);
-
-  const startProcessing = async () => {
-    setError("");
-    setCreateFlowFailure(null);
-    setProgress(4);
-    setStage(STAGES[0]);
-    setStep("processing");
-    setParsedData(null);
-
-    try {
-      const response = await fetch("/api/generate/parse", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ resumeText }),
-      });
-
-      if (response.status === 401) {
-        setStep("input");
-        setProgress(0);
-        router.push("/login?next=/create");
-        return;
-      }
-
-      if (!response.ok || !response.body) {
-        const fallback = (await response.json().catch(() => null)) as
-          | { error?: string; code?: string; retryable?: boolean }
-          | null;
-        throw fallback ?? new Error("Could not start processing your information.");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let done = false;
-      let nextData: ResumeData | null = null;
-
-      while (!done) {
-        const { value, done: isDone } = await reader.read();
-        done = isDone;
-        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !isDone });
-        buffer = parseSseChunk(buffer, (payload) => {
-          if (payload.type === "progress") {
-            setProgress(Number(payload.progress ?? progress));
-            setStage(String(payload.stage ?? STAGES[0]));
-            return;
-          }
-
-          if (payload.type === "error") {
-            throw payload;
-          }
-
-          if (payload.type === "result") {
-            nextData = payload.data as ResumeData;
-          }
-        });
-      }
-
-      if (!nextData) {
-        throw new Error("We couldn't build your page from that input right now. Continue manually or try again.");
-      }
-
-      await beginReviewOutputs(nextData, "paste");
-    } catch (streamError) {
-      const failure = normalizeCreateFlowError(streamError);
-      setCreateFlowFailure({ stage: "parse", ...failure });
-      setStep("input");
-      setProgress(0);
-    }
-  };
-
-  const handleRetryParse = () => {
-    void startProcessing();
-  };
-
-  const progressStep = step === "processing" ? "review" : step;
-  const currentProgressIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
+  const currentProgressIndex = PROGRESS_STEPS.indexOf(step);
   const predictedSlug = publishedSlug || publicSlug || "your-username";
   const selectedPreviewVariant =
     variants.find((variant) => variant.id === selectedPreviewVariantId) ?? null;
@@ -478,7 +326,6 @@ export default function CreatePage() {
   const readiness = parsedData
     ? buildDecisionReadinessState(parsedData, variants)
     : null;
-  const publishTrialEndsAtLabel = formatFriendlyDate(accountAccess.trialEndsAt);
   const jobSeekerSummary = describeJobSeekerProfile(jobSeekerProfile);
 
   const publishPage = useCallback(async () => {
@@ -508,7 +355,7 @@ export default function CreatePage() {
           title: parsedData.name || "My Living Page",
           theme_id: selectedTheme,
           resume_data: parsedData,
-          raw_resume: resumeText,
+          raw_resume: "",
           page_config: {
             variants,
             decision_readiness: readiness,
@@ -521,22 +368,9 @@ export default function CreatePage() {
         slug?: string;
         pageId?: string;
         error?: string;
-        code?: string;
-        redirectTo?: string;
       } | null;
 
       if (!response.ok) {
-        if (response.status === 402 && result?.code === "checkout_required") {
-          persistCurrentDraft();
-          setShowPublishPlanModal(true);
-          return;
-        }
-
-        if (response.status === 402 && result?.code === "subscription_required") {
-          router.push(result.redirectTo ?? "/dashboard/settings");
-          return;
-        }
-
         throw new Error(result?.error ?? "Publish failed.");
       }
 
@@ -545,8 +379,7 @@ export default function CreatePage() {
       setPublishedPageId(result?.pageId ?? null);
       setPublicSlug(nextSlug);
       setStep("success");
-      setShowPublishPlanModal(false);
-      setAutoPublishAfterCheckout(false);
+      setPublishRestoredDraft(false);
       clearDraft();
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
@@ -558,150 +391,28 @@ export default function CreatePage() {
     clearDraft,
     jobSeekerProfile,
     parsedData,
-    persistCurrentDraft,
     readiness,
-    resumeText,
     router,
     selectedTheme,
     variants,
   ]);
 
-  const startPublishCheckout = useCallback(
-    async (plan: "starter" | "pro") => {
-      if (!parsedData) {
-        return;
-      }
-
-      setBillingLoadingPlan(plan);
-      setError("");
-      persistCurrentDraft();
-
-      try {
-        const response = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            plan,
-            source: "publish",
-          }),
-        });
-
-        const payload = (await response.json().catch(() => null)) as
-          | { url?: string; error?: string }
-          | null;
-
-        if (!response.ok || !payload?.url) {
-          throw new Error(payload?.error ?? "Could not start checkout.");
-        }
-
-        window.location.href = payload.url;
-      } catch (checkoutError) {
-        setBillingLoadingPlan(null);
-        setError(
-          checkoutError instanceof Error
-            ? checkoutError.message
-            : "Could not start checkout.",
-        );
-      }
-    },
-    [parsedData, persistCurrentDraft],
-  );
-
   const handlePublishClick = useCallback(() => {
-    if (publishing || billingLoadingPlan) {
-      return;
-    }
-
-    if (accountAccess.requiresCheckoutToPublish) {
-      persistCurrentDraft();
-      setShowPublishPlanModal(true);
+    if (publishing) {
       return;
     }
 
     void publishPage();
-  }, [
-    accountAccess.requiresCheckoutToPublish,
-    billingLoadingPlan,
-    persistCurrentDraft,
-    publishPage,
-    publishing,
-  ]);
+  }, [publishPage, publishing]);
 
   useEffect(() => {
-    if (!autoPublishAfterCheckout || !parsedData) {
+    if (!publishRestoredDraft || !parsedData) {
       return;
     }
 
-    let cancelled = false;
-
-    const finalizePublish = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login?next=/create");
-        return;
-      }
-
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        const profileResponse = await fetchProfileWithHostingAccess<{
-          plan?: string | null;
-          username?: string | null;
-          stripe_subscription_status?: string | null;
-          stripe_trial_ends_at?: string | null;
-        }>({
-          supabase,
-          select: "plan, username",
-          matchField: "id",
-          matchValue: user.id,
-        });
-
-        if (cancelled) {
-          return;
-        }
-
-        const nextAccess = getAccountAccessState({
-          plan: profileResponse.data?.plan ?? "spark",
-          billing_cohort: profileResponse.data?.billing_cohort ?? null,
-          hosting_trial_started_at:
-            profileResponse.data?.hosting_trial_started_at ?? null,
-          stripe_subscription_status:
-            profileResponse.data?.stripe_subscription_status ?? null,
-          stripe_trial_ends_at:
-            profileResponse.data?.stripe_trial_ends_at ?? null,
-        });
-
-        setAccountAccess(nextAccess);
-        setPublicSlug(profileResponse.data?.username ?? usernameFromEmail(user.email));
-
-        if (nextAccess.hasPaidSubscription) {
-          await publishPage();
-          return;
-        }
-
-        await new Promise((resolve) => window.setTimeout(resolve, 1500));
-      }
-
-      if (cancelled) {
-        return;
-      }
-
-      setAutoPublishAfterCheckout(false);
-      setError(
-        "Your plan is still activating. Give it another moment, then publish again if it doesn't finish automatically.",
-      );
-    };
-
-    void finalizePublish();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoPublishAfterCheckout, parsedData, publishPage, router]);
+    setPublishRestoredDraft(false);
+    void publishPage();
+  }, [parsedData, publishPage, publishRestoredDraft]);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -729,7 +440,7 @@ export default function CreatePage() {
         </div>
       </div>
 
-      {error && !createFlowFailure ? (
+      {error ? (
         <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
           {error}
         </p>
@@ -757,128 +468,56 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {!atPageLimit && step === "input" && inputMode === "paste" ? (
-        <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
-          <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-            Add your info
-          </h2>
-          <p className="mt-2 text-sm text-[rgba(240,244,255,0.58)]">
-            Paste your resume or add the basics. You can clean it up later.
-          </p>
-          <div className="mt-5">
-            <JobSeekerStarterKit
-              value={jobSeekerProfile}
-              onChange={setJobSeekerProfile}
-              compact
-            />
-          </div>
-          <textarea
-            value={resumeText}
-            onChange={(event) => setResumeText(event.target.value)}
-            placeholder="Paste your info here..."
-            className="mt-5 min-h-[260px] w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] p-4 font-mono text-xs leading-6 text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none sm:min-h-[340px] sm:rounded-2xl sm:p-5 sm:text-sm sm:leading-7"
-          />
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[rgba(240,244,255,0.35)]">
-            <p>
-              {resumeText.length.toLocaleString()} characters · {resumeText.split(/\n/).length} lines
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setCreateFlowFailure(null);
-                setInputMode("guided");
-              }}
-              className="text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-            >
-              Enter manually instead
-            </button>
-          </div>
-
-          {createFlowFailure?.stage === "parse" ? (
-            <div className="mt-4 rounded-xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.08)] p-4">
-              <p className="text-sm text-[#FFD5D5]">{createFlowFailure.message}</p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {createFlowFailure.retryable ? (
-                  <button
-                    type="button"
-                    onClick={handleRetryParse}
-                    className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
-                  >
-                    Try again
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={handleContinueManually}
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                >
-                  Continue manually
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={!resumeText.trim()}
-              onClick={startProcessing}
-              className="gold-pill h-12 px-7 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Create my page
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      {!atPageLimit && step === "input" && inputMode === "guided" ? (
+      {!atPageLimit && step === "input" ? (
         <section className="space-y-4">
           <JobSeekerStarterKit
             value={jobSeekerProfile}
             onChange={setJobSeekerProfile}
             compact
           />
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+          <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Manual entry</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
+                Private guided entry
+              </p>
               <p className="mt-2 text-sm text-[#F0F4FF]">
-                Add the basics section by section, then preview the page before you send it.
+                Add your details section by section, then preview everything before publishing.
+                No AI service reads or rewrites your resume.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setInputMode("paste")}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-            >
-              Back to paste
-            </button>
           </div>
+          {resumeText.trim() ? (
+            <details className="rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.07)] p-4">
+              <summary className="cursor-pointer text-sm font-medium text-[#FDE68A]">
+                Your saved resume text is available as a reference
+              </summary>
+              <p className="mt-3 text-xs leading-5 text-[rgba(240,244,255,0.58)]">
+                This came from an older draft. Copy the details you want into the guided fields
+                below. The text is kept locally and is not sent to an AI provider.
+              </p>
+              <textarea
+                readOnly
+                value={resumeText}
+                aria-label="Saved resume text reference"
+                className="mt-3 min-h-48 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(0,0,0,0.18)] p-4 font-mono text-xs leading-6 text-[rgba(240,244,255,0.72)] focus:border-[#3B82F6] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setResumeText("")}
+                className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.58)] transition-colors hover:text-[#F0F4FF]"
+              >
+                Remove saved reference
+              </button>
+            </details>
+          ) : null}
           <GuidedFlow
             guidedData={guidedData}
             onUpdate={setGuidedData}
             onComplete={(data) => {
-              void beginReviewOutputs(data, "guided");
+              beginReviewOutputs(data);
             }}
-            onBack={() => setInputMode("paste")}
+            onBack={() => router.push("/dashboard")}
           />
-        </section>
-      ) : null}
-
-      {step === "processing" ? (
-        <section className="glass-card mx-auto max-w-xl rounded-2xl p-5 text-center sm:p-8">
-          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-2 border-[rgba(59,130,246,0.2)] border-t-[#3B82F6]" />
-          <h2 className="mt-6 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-            Building your page
-          </h2>
-          <p className="mt-2 text-sm text-[#3B82F6]">{stage}</p>
-          <div className="mt-6 h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#93C5FD] transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-3 font-mono text-xs text-[rgba(240,244,255,0.4)]">{progress}%</p>
         </section>
       ) : null}
 
@@ -908,7 +547,7 @@ export default function CreatePage() {
             </section>
           ) : null}
 
-          <DecisionReadinessCard readiness={readiness} />
+          <AtsReadinessCard resumeData={parsedData} />
 
           {accountAccess.variantLimit > 0 ? (
             <VariantPlanner
@@ -925,22 +564,12 @@ export default function CreatePage() {
                 Targeted versions
               </p>
               <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                Publish first to unlock targeted versions
+                One clear resume, one reliable link
               </h3>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
-                Free preview keeps the build flow lightweight. Starter unlocks 1 targeted version,
-                and Pro unlocks 3 with full analytics.
+                This streamlined version keeps the focus on your main resume. You can still edit
+                it anytime after publishing.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  persistCurrentDraft();
-                  setShowPublishPlanModal(true);
-                }}
-                className="mt-4 rounded-full border border-[rgba(59,130,246,0.35)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
-              >
-                Choose plan to publish
-              </button>
             </section>
           )}
 
@@ -970,20 +599,11 @@ export default function CreatePage() {
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Publish</p>
                   <p className="mt-2 text-sm leading-6 text-[#E8F2FF]">
-                    {accountAccess.isLegacyAccount
-                      ? "Your page goes live and turns on Resume PDF download from the public page."
-                      : accountAccess.requiresCheckoutToPublish
-                        ? "Preview is free. Add a card when you publish to start a 30-day Starter or Pro trial and make the page live."
-                        : accountAccess.isTrialingSubscription
-                          ? `Your ${accountAccess.publicPlanLabel} trial is active${publishTrialEndsAtLabel ? ` until ${publishTrialEndsAtLabel}` : ""}, and publishing will make this page live right away.`
-                          : `Your ${accountAccess.publicPlanLabel} plan keeps this page live and downloadable.`}
+                    Your page goes live with one shareable link and an ATS-ready PDF download.
+                    Publishing is free and does not require a card.
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgba(232,242,255,0.78)]">
-                    {accountAccess.analyticsTier === "full"
-                      ? "When someone opens this, you'll know."
-                      : accountAccess.analyticsTier === "basic"
-                        ? "Starter shows view counts in your dashboard as soon as people land on the page."
-                        : "Publishing is the paywall moment. Pick Starter to keep it live, or Pro for full analytics."}
+                    When someone opens this, you&apos;ll know.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -996,17 +616,11 @@ export default function CreatePage() {
                   </button>
                   <button
                     type="button"
-                    disabled={publishing || billingLoadingPlan !== null}
+                    disabled={publishing}
                     onClick={handlePublishClick}
                     className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
                   >
-                    {billingLoadingPlan
-                      ? "Redirecting..."
-                      : publishing
-                        ? "Publishing..."
-                        : accountAccess.requiresCheckoutToPublish
-                          ? "Choose Plan to Publish"
-                          : "Publish Page"}
+                    {publishing ? "Publishing..." : "Publish Page"}
                   </button>
                 </div>
               </div>
@@ -1042,7 +656,7 @@ export default function CreatePage() {
               selectedThemeId={selectedTheme}
               onSelectTheme={setSelectedTheme}
               allowedThemeIds={accountAccess.allowedThemeIds}
-              lockedLabel={accountAccess.hasPaidSubscription ? "Pro" : "Starter or Pro"}
+              lockedLabel="Not available"
               showDescription
             />
           </section>
@@ -1057,11 +671,8 @@ export default function CreatePage() {
               Your page is live.
             </h2>
             <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              {accountAccess.isLegacyAccount
-                ? "This is what you'll send instead of a PDF."
-                : accountAccess.isTrialingSubscription
-                  ? `This is what you'll send instead of a PDF. Your ${accountAccess.publicPlanLabel} trial is active${publishTrialEndsAtLabel ? ` until ${publishTrialEndsAtLabel}` : ""}.`
-                  : `This is what you'll send instead of a PDF. Your ${accountAccess.publicPlanLabel} plan is active.`}
+              Share this living resume as a link, or download the ATS-ready PDF whenever you
+              need a file.
             </p>
 
             <div className="mt-5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
@@ -1183,99 +794,6 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {showPublishPlanModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(3,7,18,0.75)] p-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(7,17,28,0.96)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="max-w-2xl">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                  Publish your page
-                </p>
-                <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-                  Choose a plan and start your 30-day free trial
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.64)]">
-                  Free is for building and previewing. To make this page live, add a payment
-                  method now. You won&apos;t be charged for 30 days, and you can cancel anytime.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!billingLoadingPlan) {
-                    setShowPublishPlanModal(false);
-                  }
-                }}
-                className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <article className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Starter</p>
-                <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                  {STARTER_PLAN_PRICE.amountLabel}
-                  <span className="ml-2 text-base font-normal text-[rgba(240,244,255,0.52)]">
-                    {STARTER_PLAN_PRICE.intervalLabel}
-                  </span>
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
-                  Keep one page live with the current starter theme set, share cards, and
-                  dashboard view counts.
-                </p>
-                <div className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.78)]">
-                  <p>Unlimited live hosting</p>
-                  <p>9 themes</p>
-                  <p>1 targeted version</p>
-                  <p>Basic analytics in dashboard</p>
-                  <p>Share card downloads</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={billingLoadingPlan !== null}
-                  onClick={() => void startPublishCheckout("starter")}
-                  className="mt-6 w-full rounded-full border border-[rgba(59,130,246,0.3)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:opacity-50"
-                >
-                  {billingLoadingPlan === "starter"
-                    ? "Redirecting..."
-                    : "Start Starter Trial"}
-                </button>
-              </article>
-
-              <article className="rounded-2xl border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] p-5 shadow-[0_16px_48px_rgba(59,130,246,0.12)]">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#BFDBFE]">Pro</p>
-                <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                  {PRO_PLAN_PRICE.amountLabel}
-                  <span className="ml-2 text-base font-normal text-[rgba(240,244,255,0.52)]">
-                    {PRO_PLAN_PRICE.intervalLabel}
-                  </span>
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                  The full version for active job seekers who want deeper analytics, all themes,
-                  and more targeted links.
-                </p>
-                <div className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.86)]">
-                  <p>Unlimited live hosting</p>
-                  <p>All 40+ themes</p>
-                  <p>3 targeted versions</p>
-                  <p>Full analytics, engagement, and device details</p>
-                  <p>Share card downloads</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={billingLoadingPlan !== null}
-                  onClick={() => void startPublishCheckout("pro")}
-                  className="gold-pill mt-6 w-full px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-50"
-                >
-                  {billingLoadingPlan === "pro" ? "Redirecting..." : "Start Pro Trial"}
-                </button>
-              </article>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </main>
   );
 }

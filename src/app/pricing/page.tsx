@@ -1,70 +1,35 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
-import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { GUIDES } from "@/lib/guides";
-import { PRICING_REASSURANCE } from "@/lib/marketing-samples";
-import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
+import {
+  ATS_READINESS_DISCLOSURE,
+  FREE_PRODUCT_FEATURE_GROUPS,
+} from "@/lib/marketing-samples";
+import {
+  getAbsoluteUrl,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+} from "@/lib/site";
 
 const canonicalUrl = getAbsoluteUrl("/pricing");
 
-const PLAN_CARDS = [
-  {
-    name: "Free",
-    priceLabel: "$0",
-    intervalLabel: "/month",
-    eyebrow: "Preview only",
-    body:
-      "Build, preview, and test the flow with no card. Live hosting starts when you publish on a paid plan.",
-    features: PRICING_REASSURANCE.free,
-    ctaHref: "/signup?ref=pricing_free_preview",
-    ctaLabel: "Start Free Preview",
-    featured: false,
-  },
-  {
-    name: "Starter",
-    priceLabel: STARTER_PLAN_PRICE.amountLabel,
-    intervalLabel: STARTER_PLAN_PRICE.intervalLabel,
-    eyebrow: "Best for keeping it live",
-    body:
-      "Publish one page with dashboard view counts, share cards, the current starter theme set, and one targeted version.",
-    features: PRICING_REASSURANCE.starter,
-    ctaHref: "/signup?ref=pricing_starter",
-    ctaLabel: "Choose Starter",
-    featured: false,
-  },
-  {
-    name: "Pro",
-    priceLabel: PRO_PLAN_PRICE.amountLabel,
-    intervalLabel: PRO_PLAN_PRICE.intervalLabel,
-    eyebrow: "Best for active searches",
-    body:
-      "Full analytics, all themes, and up to three targeted versions for higher-stakes outreach and repeat follow-up.",
-    features: PRICING_REASSURANCE.pro,
-    ctaHref: "/signup?ref=pricing_pro",
-    ctaLabel: "Choose Pro",
-    featured: true,
-  },
-] as const;
-
 export const metadata: Metadata = {
-  title: `Pricing | ${SITE_NAME}`,
-  description:
-    "Build and preview for free, then publish on Starter for $4.99/month or Pro for $9.99/month with a 30-day free trial.",
+  title: `Simple Pricing: Free | ${SITE_NAME}`,
+  description: SITE_DESCRIPTION,
   alternates: { canonical: canonicalUrl },
   openGraph: {
-    title: `Pricing | ${SITE_NAME}`,
-    description:
-      "Build and preview for free, then publish on Starter for $4.99/month or Pro for $9.99/month with a 30-day free trial.",
+    title: `Simple Pricing: Free | ${SITE_NAME}`,
+    description: SITE_DESCRIPTION,
     url: canonicalUrl,
     siteName: SITE_NAME,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: `Pricing | ${SITE_NAME}`,
-    description:
-      "Build and preview for free, then publish on Starter for $4.99/month or Pro for $9.99/month with a 30-day free trial.",
+    title: `Simple Pricing: Free | ${SITE_NAME}`,
+    description: SITE_DESCRIPTION,
   },
 };
 
@@ -85,98 +50,98 @@ export default function PricingPage() {
                 Examples
               </Link>
               <Link href="/#pricing" className="transition-colors hover:text-[#93C5FD]">
-                Pricing
+                Free
               </Link>
               <Link href="/pricing" className="text-[#93C5FD]">
-                Full Plans
+                What&apos;s Included
               </Link>
             </div>
             <Link
               href="/signup?ref=pricing_nav"
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
-              Start Free Preview
+              Create Your Resume
             </Link>
           </nav>
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24 md:px-10">
           <section className="text-center">
-            <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Pricing</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Simple pricing: free</p>
             <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              Build free. Publish when the page is ready to help you win the next conversation.
+              {SITE_TAGLINE}.
             </h1>
             <p className="mx-auto mt-5 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.62)]">
-              Free is for discovery and setup. When your page is ready to go live, add a payment
-              method at publish, start a 30-day free trial, and choose the plan that matches how
-              much insight you want after the click.
+              {SITE_DESCRIPTION}
             </p>
           </section>
 
           <section className="mt-10 grid gap-5 lg:grid-cols-3">
-            {PLAN_CARDS.map((plan) => (
-              <article
-                key={plan.name}
-                className={`rounded-3xl border p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-7 ${
-                  plan.featured
-                    ? "border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.12)]"
-                    : "border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.55)]"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                      {plan.eyebrow}
-                    </p>
-                    <h2 className="mt-2 font-heading text-3xl font-bold text-[#F0F4FF]">
-                      {plan.name}
-                    </h2>
-                  </div>
-                  {plan.featured ? (
-                    <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.18)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
-                      Most complete
-                    </span>
-                  ) : null}
-                </div>
+            {FREE_PRODUCT_FEATURE_GROUPS.map((group, index) => {
+              const featured = index === FREE_PRODUCT_FEATURE_GROUPS.length - 1;
 
-                <div className="mt-5 flex items-end gap-1">
-                  <span className="font-heading text-5xl font-bold text-[#F0F4FF]">
-                    {plan.priceLabel}
-                  </span>
-                  <span className="pb-1 text-sm text-[rgba(240,244,255,0.42)]">
-                    {plan.intervalLabel}
-                  </span>
-                </div>
-                <p className="mt-4 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
-                  {plan.body}
-                </p>
-
-                <ul className="mt-6 space-y-3 text-sm text-[rgba(240,244,255,0.78)]">
-                  {plan.features.map((item) => (
-                    <li key={`${plan.name}-${item}`} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  href={plan.ctaHref}
-                  className={`mt-8 block w-full rounded-full py-3 text-center text-sm font-semibold transition-all duration-300 ${
-                    plan.featured
-                      ? "gold-pill hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
-                      : "border border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] text-[#F0F4FF] hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
+              return (
+                <article
+                  key={group.name}
+                  className={`rounded-3xl border p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-7 ${
+                    featured
+                      ? "border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.12)]"
+                      : "border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.55)]"
                   }`}
                 >
-                  {plan.ctaLabel}
-                </Link>
-              </article>
-            ))}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+                        {group.eyebrow}
+                      </p>
+                      <h2 className="mt-2 font-heading text-3xl font-bold text-[#F0F4FF]">
+                        {group.name}
+                      </h2>
+                    </div>
+                    {featured ? (
+                      <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.18)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
+                        Included
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <p className="mt-5 font-heading text-4xl font-bold text-[#F0F4FF]">Free</p>
+                  <p className="mt-4 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+                    {group.body}
+                  </p>
+
+                  <ul className="mt-6 space-y-3 text-sm text-[rgba(240,244,255,0.78)]">
+                    {group.features.map((item) => (
+                      <li key={`${group.name}-${item}`} className="flex items-start gap-2.5">
+                        <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href="/signup?ref=pricing_free&next=/create"
+                    className={`mt-8 block w-full rounded-full py-3 text-center text-sm font-semibold transition-all duration-300 ${
+                      featured
+                        ? "gold-pill hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
+                        : "border border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] text-[#F0F4FF] hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
+                    }`}
+                  >
+                    Create Your Living Resume
+                  </Link>
+                </article>
+              );
+            })}
           </section>
 
           <section className="mt-8 rounded-3xl border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] p-5 text-sm text-[rgba(240,244,255,0.74)] sm:p-6">
-            Publishing is the paywall moment. Free accounts can build and preview without a card,
-            but live hosting starts only after you pick Starter or Pro and begin the 30-day trial.
+            <p>
+              No card. No trial. No paid plan. Build and publish one living resume, then keep the
+              same link, ATS-ready PDF, and share card current as your experience grows.
+            </p>
+            <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.52)]">
+              {ATS_READINESS_DISCLOSURE}
+            </p>
           </section>
 
           <section className="mx-auto mt-16 max-w-5xl sm:mt-20">
@@ -188,9 +153,9 @@ export default function PricingPage() {
                     Learn the mechanics before you publish.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.62)]">
-                    Pricing matters after the fundamentals work. These guides help you tighten the
-                    Resume PDF, sharpen recruiter search language, and understand when a Living Page
-                    adds value beyond an attachment.
+                    The product is free. These guides help you tighten the Resume PDF, sharpen
+                    recruiter search language, and understand when a Living Page adds value beyond
+                    an attachment.
                   </p>
                 </div>
                 <Link

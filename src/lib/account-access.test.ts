@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  FREE_PARSE_TOTAL_LIMIT,
   LEGACY_BILLING_COHORT,
-  PAID_PARSE_RATE_LIMIT,
-  PAID_PARSE_RATE_LIMIT_WINDOW_MS,
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   TRIAL_HOSTING_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
 
 describe("getAccountAccessState", () => {
-  it("keeps legacy free accounts on the old restricted theme model", () => {
+  it("grants universal free product access to legacy free accounts", () => {
     expect(
       getAccountAccessState({
         plan: "spark",
@@ -22,7 +19,7 @@ describe("getAccountAccessState", () => {
       analyticsTier: "full",
       shareCardAllowed: true,
       variantLimit: 3,
-      themeFeaturesUnlocked: false,
+      themeFeaturesUnlocked: true,
       publicHostingAllowed: true,
       requiresSubscription: false,
       hasPaidSubscription: false,
@@ -86,7 +83,7 @@ describe("getAccountAccessState", () => {
     expect(access.trialEndsAt).toBe("2026-03-31T00:00:00.000Z");
   });
 
-  it("requires a subscription after the legacy trial-hosting free month expires", () => {
+  it("keeps hosting free after the historical trial-hosting month expires", () => {
     expect(
       getAccountAccessState({
         plan: "spark",
@@ -95,16 +92,18 @@ describe("getAccountAccessState", () => {
         now: "2026-03-20T00:00:00.000Z",
       }),
     ).toMatchObject({
-      publicHostingAllowed: false,
+      publicHostingAllowed: true,
       hasStartedFreeMonth: true,
       isActiveFreeMonth: false,
       isExpiredFreeMonth: true,
-      requiresSubscription: true,
+      requiresSubscription: false,
+      requiresCheckoutToPublish: false,
+      shareCardAllowed: true,
       hasPaidSubscription: false,
     });
   });
 
-  it("puts new publish-cc users on free preview until they add a card", () => {
+  it("lets new publish-cc users publish and share without adding a card", () => {
     expect(
       getAccountAccessState({
         plan: "spark",
@@ -113,17 +112,13 @@ describe("getAccountAccessState", () => {
     ).toMatchObject({
       publicPlanLabel: "Free",
       billingCohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
-      analyticsTier: "none",
-      shareCardAllowed: false,
-      variantLimit: 0,
-      publicHostingAllowed: false,
-      requiresCheckoutToPublish: true,
+      analyticsTier: "full",
+      shareCardAllowed: true,
+      variantLimit: 3,
+      publicHostingAllowed: true,
+      requiresCheckoutToPublish: false,
+      requiresSubscription: false,
       hasPaidSubscription: false,
-      parseQuota: {
-        scope: "total",
-        limit: FREE_PARSE_TOTAL_LIMIT,
-        windowMs: null,
-      },
     });
   });
 
@@ -136,18 +131,13 @@ describe("getAccountAccessState", () => {
       }),
     ).toMatchObject({
       publicPlanLabel: "Starter",
-      analyticsTier: "basic",
+      analyticsTier: "full",
       shareCardAllowed: true,
-      variantLimit: 1,
+      variantLimit: 3,
       publicHostingAllowed: true,
       requiresCheckoutToPublish: false,
       hasPaidSubscription: true,
       isTrialingSubscription: false,
-      parseQuota: {
-        scope: "rolling_window",
-        limit: PAID_PARSE_RATE_LIMIT,
-        windowMs: PAID_PARSE_RATE_LIMIT_WINDOW_MS,
-      },
     });
   });
 

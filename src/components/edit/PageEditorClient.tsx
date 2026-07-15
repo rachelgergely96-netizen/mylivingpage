@@ -8,6 +8,7 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
+import AtsReadinessCard from "@/components/AtsReadinessCard";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
@@ -323,6 +324,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         </p>
       </div>
 
+      <div className="mb-5">
+        <AtsReadinessCard resumeData={data} />
+        <p className="mt-2 px-1 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
+          The check uses the fields currently in this editor. Save your changes before relying on
+          the public PDF.
+        </p>
+      </div>
+
       <div className="space-y-5">
         <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
           <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Public URL</legend>
@@ -392,7 +401,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           selectedThemeId={themeId}
           onSelectTheme={setThemeId}
           allowedThemeIds={accountAccess.allowedThemeIds}
-          lockedLabel={accountAccess.hasPaidSubscription ? "Pro" : "Starter or Pro"}
+          lockedLabel="Not available"
           showDescription
         />
 

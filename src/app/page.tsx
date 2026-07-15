@@ -5,11 +5,11 @@ import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
 import LandingUnifiedShowcase from "@/components/marketing/LandingUnifiedShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
-import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
+  ATS_READINESS_DISCLOSURE,
   CREDIBILITY_POINTS,
-  PRICING_REASSURANCE,
+  FREE_PRODUCT_FEATURE_GROUPS,
   PROCESS_STEPS,
   TRUST_SIGNALS,
 } from "@/lib/marketing-samples";
@@ -62,14 +62,14 @@ export default async function LandingPage() {
             <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
               <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Living professional page
+                Free living resume
               </p>
               <div className="mt-5 max-w-4xl">
                 <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  Share one page. Know when interest is real. Follow up better.
+                  {SITE_TAGLINE}.
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  Built for active job seekers who need proof, polish, and a cleaner follow-up asset than another static PDF.
+                  {SITE_DESCRIPTION}
                 </p>
               </div>
 
@@ -106,7 +106,7 @@ export default async function LandingPage() {
               </div>
 
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Takes ~2 minutes. Free preview, no card until you publish, and the same saved profile powers your page and resume export.
+                Start in minutes. No card, trial, or subscription required. The same saved information powers your page, PDF, and share card.
               </p>
             </div>
           </section>
@@ -140,95 +140,69 @@ export default async function LandingPage() {
             <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10 sm:py-10">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Free / Starter / Pro</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Simple pricing: free</p>
                   <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                    Build for free. Add a card only when the page is ready to go live.
+                    One living resume. One link. One ATS-ready PDF.
                   </h2>
                   <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                    Free is for discovery and setup. When you click publish, choose Starter or Pro,
-                    save a payment method, and start a 30-day free trial before monthly billing
-                    begins so every live page starts with real follow-up visibility.
+                    Build, publish, and keep your living resume current for free. Download the PDF
+                    when an application needs a file, then use your link and share card everywhere
+                    else.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Link
                       href={getSignupHref("landing_pricing_start")}
                       className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)]"
                     >
-                      Start Free Preview
+                      Create Your Living Resume
                     </Link>
                     <Link
                       href="/pricing"
                       className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
                     >
-                      See full pricing
+                      See everything included
                     </Link>
                   </div>
                 </div>
 
                 <div className="grid gap-4 lg:min-w-[520px] lg:max-w-[560px]">
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Free</p>
-                      <p className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF]">$0</p>
-                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                        Build and preview with no card.
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.72)]">
-                        {PRICING_REASSURANCE.free.slice(0, 3).map((item) => (
-                          <li key={item} className="flex items-start gap-2">
-                            <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Starter</p>
-                      <p className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF]">
-                        {STARTER_PLAN_PRICE.amountLabel}
-                      </p>
-                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                        Live hosting, proof-first sharing, and dashboard view counts.
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.72)]">
-                        {PRICING_REASSURANCE.starter.slice(0, 3).map((item) => (
-                          <li key={item} className="flex items-start gap-2">
-                            <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="rounded-3xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.09)] p-5 shadow-[0_0_40px_rgba(59,130,246,0.08)] ring-1 ring-[rgba(59,130,246,0.16)]">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#BFDBFE]">Pro</p>
-                        <span className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
-                          Most complete
-                        </span>
+                    {FREE_PRODUCT_FEATURE_GROUPS.map((group, index) => (
+                      <div
+                        key={group.name}
+                        className={`rounded-3xl border p-5 ${
+                          index === FREE_PRODUCT_FEATURE_GROUPS.length - 1
+                            ? "border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.09)] shadow-[0_0_40px_rgba(59,130,246,0.08)] ring-1 ring-[rgba(59,130,246,0.16)]"
+                            : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)]"
+                        }`}
+                      >
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
+                          {group.eyebrow}
+                        </p>
+                        <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">
+                          {group.name}
+                        </h3>
+                        <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                          {group.body}
+                        </p>
+                        <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.72)]">
+                          {group.features.map((item) => (
+                            <li key={item} className="flex items-start gap-2">
+                              <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <p className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF]">
-                        {PRO_PLAN_PRICE.amountLabel}
-                      </p>
-                      <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                        Full analytics, all themes, and up to 3 targeted versions for higher-stakes follow-up.
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.76)]">
-                        {PRICING_REASSURANCE.pro.slice(0, 3).map((item) => (
-                          <li key={item} className="flex items-start gap-2">
-                            <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    ))}
                   </div>
                   <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                    Free does not include live hosting. The card gate appears when you publish, so
-                    every live page starts with a payment method on file and a 30-day trial already
-                    running.
+                    Free means free: no credit card, no trial expiration, and no subscription
+                    required to publish or keep your page live.
                   </div>
+                  <p className="text-xs leading-6 text-[rgba(240,244,255,0.48)]">
+                    {ATS_READINESS_DISCLOSURE}
+                  </p>
                 </div>
               </div>
               <p className="mt-8 text-sm leading-7 text-[rgba(240,244,255,0.54)]">
@@ -280,17 +254,17 @@ export default async function LandingPage() {
             <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 text-center sm:px-10 sm:py-12">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                Ready to stop guessing?
+                Build it once. Share it anywhere. Keep it current.
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                Create your page. Send it once. See what happens.
+                {SITE_DESCRIPTION}
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href={getSignupHref("landing_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)] sm:px-8 sm:py-4"
                 >
-                  Create Your Page (Free)
+                  Create Your Living Resume (Free)
                 </Link>
                 <Link
                   href="/examples"

@@ -169,7 +169,7 @@ describe("POST /api/pages/view", () => {
     mocks.trackEvent.mockResolvedValue(undefined);
   });
 
-  it("does not count views for pages whose free hosting has expired", async () => {
+  it("counts views after a historical free-hosting period expires", async () => {
     mocks.createServiceRoleSupabaseClient.mockReturnValue(
       createServiceRoleClient({
         ownerProfile: {
@@ -190,15 +190,13 @@ describe("POST /api/pages/view", () => {
       }),
     );
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      error: "Page not found",
+      ok: true,
+      pageViewId: "view-1",
     });
-    expect(mocks.pageUpdate).toHaveBeenCalledWith({
-      status: "draft",
-      visibility: "private",
-    });
-    expect(mocks.insertPageView).not.toHaveBeenCalled();
-    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.pageUpdate).not.toHaveBeenCalled();
+    expect(mocks.insertPageView).toHaveBeenCalled();
+    expect(mocks.rpc).toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/legal-version";
+import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/site";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -138,12 +139,12 @@ export default function SignupPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-5 py-10 sm:px-6 sm:py-12">
       <div className="glass-card w-full rounded-2xl p-6 md:p-7">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your page</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your free living resume</p>
         <h1 className="mt-2 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-[2.2rem]">
-          Build your job-search page.
+          {SITE_TAGLINE}.
         </h1>
         <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-          Start with a free preview, add proof and follow-up context, then choose Starter or Pro when you&apos;re ready to publish.
+          {SITE_DESCRIPTION}
         </p>
         <label className="mt-4 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
           <input
@@ -228,7 +229,7 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
-          Free preview does not require a card. When you publish, you&apos;ll choose Starter or Pro, add a payment method, and start a 30-day free trial before billing begins.
+          Publishing is free. No card, trial, or subscription is required to build or keep your living resume online.
         </p>
 
         <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">

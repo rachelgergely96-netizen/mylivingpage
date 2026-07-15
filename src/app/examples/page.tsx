@@ -93,7 +93,7 @@ export default function ExamplesPage() {
                 href="/pricing"
                 className="rounded-full border border-[rgba(255,255,255,0.18)] px-6 py-3 text-sm text-[rgba(240,244,255,0.76)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
               >
-                See Pricing
+                See What&apos;s Included
               </Link>
             </div>
           </section>

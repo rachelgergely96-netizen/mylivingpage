@@ -1,6 +1,5 @@
 import type { DemoPage } from "@/lib/demo-data";
 import { DEMO_PAGES } from "@/lib/demo-data";
-import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 
 export interface MarketingSample {
   id: string;
@@ -64,11 +63,14 @@ export interface ResolvedMarketingSample extends MarketingSample {
 }
 
 export const CREDIBILITY_POINTS = [
-  "Create your page in minutes",
-  "Free preview before you publish",
-  "Proof over claims",
-  "Know when people open it",
+  "One free public page",
+  "ATS-ready PDF",
+  "Share card + QR code",
+  "No card required",
 ];
+
+export const ATS_READINESS_DISCLOSURE =
+  "Built for ATS readability with real text, standard sections, and a clear reading order. The free readiness check flags common issues, but no checker can guarantee how an employer's system will score a resume or whether it will lead to an interview.";
 
 export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
   {
@@ -181,7 +183,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Is it actually free?",
     answer:
-      `Yes for preview and building. You can create and preview your page without a card. When you publish, Starter starts at ${STARTER_PLAN_PRICE.displayLabel} and Pro starts at ${PRO_PLAN_PRICE.displayLabel}, both with a 30-day free trial before billing begins.`,
+      "Yes. You can build, publish, and update one living resume, download its ATS-ready PDF, and create a personalized share card without a card, trial, or subscription.",
   },
 ];
 
@@ -223,29 +225,39 @@ export const COMPARISON_ROWS = [
   },
 ];
 
-export const PRICING_REASSURANCE = {
-  free: [
-    "Create and preview your page with no card",
-    "Try AI parsing with a limited free quota",
-    "Use 3 preview themes while you build",
-    "No live hosting until you publish",
-    "Good for testing the flow before you commit",
-  ],
-  starter: [
-    `Publish for ${STARTER_PLAN_PRICE.displayLabel} after a 30-day free trial`,
-    "Keep one page live with share cards and dashboard view counts",
-    "Use the current 9-theme starter set",
-    "Save 1 targeted version",
-    "Cancel anytime from billing settings",
-  ],
-  pro: [
-    `Publish for ${PRO_PLAN_PRICE.displayLabel} after a 30-day free trial`,
-    "Unlock full analytics, all themes, and 3 targeted versions",
-    "Keep one page live with share cards and premium presentation controls",
-    "Best for active job searches and higher-volume outreach",
-    "Cancel anytime from billing settings",
-  ],
-};
+export const FREE_PRODUCT_FEATURE_GROUPS = [
+  {
+    name: "Living Resume",
+    eyebrow: "One link, always current",
+    body: "Publish one polished page at your personal URL and update it whenever your experience changes.",
+    features: [
+      "One public living resume",
+      "A reusable personal link",
+      "Polished, mobile-ready themes",
+    ],
+  },
+  {
+    name: "ATS-Ready PDF",
+    eyebrow: "A clean file when you need one",
+    body: "Download a straightforward resume with real text, standard sections, and a clear reading order.",
+    features: [
+      "Selectable, machine-readable text",
+      "Standard resume sections",
+      "Deterministic ATS readiness check",
+      "A fresh PDF from your saved information",
+    ],
+  },
+  {
+    name: "Share Card + QR",
+    eyebrow: "Built to share anywhere",
+    body: "Create a personalized visual card that sends people directly to your living resume.",
+    features: [
+      "Downloadable PNG share card",
+      "QR code linked to your page",
+      "Copyable link and page-view count",
+    ],
+  },
+] as const;
 
 export const READABILITY_TEST_STEPS = [
   "Open your resume PDF and highlight a few lines with your mouse.",

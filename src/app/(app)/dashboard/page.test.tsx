@@ -1,7 +1,7 @@
 import React from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createServerSupabaseClientMock = vi.fn();
 const createServiceRoleSupabaseClientMock = vi.fn();
@@ -65,8 +65,6 @@ vi.mock("@/components/DeletePageButton", () => ({
 }));
 
 import DashboardPage from "./page";
-
-const NOW = new Date("2026-03-24T12:00:00.000Z").getTime();
 
 function makeServiceRoleClient(overrides?: {
   events?: Array<{
@@ -188,7 +186,10 @@ function makeServiceRoleClient(overrides?: {
 }
 
 describe("dashboard page", () => {
-  const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(NOW);
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-24T12:00:00.000Z"));
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -231,7 +232,7 @@ describe("dashboard page", () => {
   });
 
   afterAll(() => {
-    dateNowSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("uses only the row-level analytics action and keeps proof panels focused on status", async () => {
@@ -242,6 +243,9 @@ describe("dashboard page", () => {
     expect(markup).not.toContain("Open Page Analytics");
     expect(markup).toContain('href="/dashboard/analytics/page-1"');
     expect(markup).toContain('href="/dashboard/analytics/page-2"');
+    expect(markup).toContain('href="/dashboard/edit/page-1/living-page#ats-readiness"');
+    expect(markup).toContain('href="/dashboard/edit/page-2/living-page#ats-readiness"');
+    expect((markup.match(/>Check ATS<\/a>/g) ?? []).length).toBe(2);
     expect((markup.match(/>Page Analytics<\/a>/g) ?? []).length).toBe(2);
     expect(markup).toContain(
       "Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.",
@@ -271,6 +275,6 @@ describe("dashboard page", () => {
 
     expect(markup).toContain("Someone tried to open your page while it was offline");
     expect(markup).toContain('href="/dashboard/settings"');
-    expect(markup).toContain("Reactivate hosting from settings");
+    expect(markup).toContain("Use the Publish button on the page card below");
   });
 });

@@ -50,6 +50,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
     if (key in body) updates[key] = body[key];
   }
 
+  const publishesPage = body.status === "live" && body.visibility === "public";
+  const unpublishesPage = body.status === "draft" && body.visibility === "private";
+  const changesPublicationState = "status" in body || "visibility" in body;
+  if (changesPublicationState && !publishesPage && !unpublishesPage) {
+    return NextResponse.json(
+      {
+        error:
+          "Publication state must be either live and public, or draft and private.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (publishesPage || unpublishesPage) {
+    updates.status = body.status;
+    updates.visibility = body.visibility;
+    updates.published_at = publishesPage ? new Date().toISOString() : page.published_at;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }

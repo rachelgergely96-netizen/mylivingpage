@@ -355,7 +355,6 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Stripe (payments and billing portal)",
               "Supabase (authentication, database, and object storage)",
               "Vercel (application hosting and delivery)",
-              "Anthropic (AI-assisted resume parsing features)",
               "Google OAuth (optional social sign-in)",
             ],
           },
@@ -454,7 +453,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
             type: "list",
             items: [
               "Provide, secure, maintain, and improve the Service.",
-              "Operate reminders, exports, and AI-assisted features.",
+              "Operate resume building, exports, and sharing features.",
               "Process payments and provide customer support.",
               "Detect abuse, fraud, and policy violations.",
               "Comply with legal obligations.",
@@ -474,7 +473,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Payment and billing providers.",
               "Security and fraud prevention providers.",
               "Professional advisors and authorities where legally required.",
-              "Primary providers include Supabase, Vercel, Stripe, Anthropic, and Google OAuth (if you choose Google sign-in).",
+              "Primary providers include Supabase, Vercel, Stripe, and Google OAuth (if you choose Google sign-in).",
             ],
           },
         ],
@@ -856,7 +855,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "Infrastructure and operational services may be provided by vetted third-party vendors, including Supabase, Vercel, Stripe, Anthropic, and Google OAuth (if selected).",
+            text: "Infrastructure and operational services may be provided by vetted third-party vendors, including Supabase, Vercel, Stripe, and Google OAuth (if selected).",
           },
         ],
       },

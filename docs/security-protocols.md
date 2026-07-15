@@ -5,14 +5,14 @@ This repo treats security as an explicit release discipline, not a cleanup task.
 ## 1. Secret Handling
 
 - Only `NEXT_PUBLIC_*` env vars may appear in client modules.
-- Service-role Supabase keys, Stripe secrets, Anthropic keys, and webhook secrets stay server-only.
+- Service-role Supabase keys, Stripe secrets, and webhook secrets stay server-only.
 - CI enforces the client boundary with `npm run check:client-security`.
 - Tests, smoke flows, and integration credentials must point at staging, never production.
 - Rotate a secret immediately if it appears in client code, logs, screenshots, or git history.
 
 Secret rotation checklist:
 
-1. Rotate the provider secret in Supabase, Stripe, Anthropic, or the upstream system.
+1. Rotate the provider secret in Supabase, Stripe, or the upstream system.
 2. Update local env files, deployment env vars, and GitHub Actions secrets.
 3. Redeploy the affected environment.
 4. Audit recent logs, screenshots, and git history for any additional leak surface.
@@ -28,7 +28,6 @@ Secret rotation checklist:
   - verified webhook signature.
 - Shared helpers live in `src/lib/security/route-security.ts`.
 - Public ATS download is page-bound and server-fetched from approved page data.
-- ATS preview and ATS validation stay authenticated-only.
 
 ## 3. Abuse and Rate Limiting
 
@@ -38,9 +37,7 @@ Secret rotation checklist:
   - username availability checks,
   - public page view tracking,
   - public page engagement tracking,
-  - public ATS download,
-  - authenticated ATS preview,
-  - authenticated ATS validation.
+  - public ATS download.
 - Rate limits persist through the existing `events` table so serverless instances share the same window.
 - Blocked attempts are logged as `security.rate_limit.blocked`.
 

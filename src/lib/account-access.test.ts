@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  FREE_PARSE_TOTAL_LIMIT,
   LEGACY_BILLING_COHORT,
-  PAID_PARSE_RATE_LIMIT,
-  PAID_PARSE_RATE_LIMIT_WINDOW_MS,
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   TRIAL_HOSTING_BILLING_COHORT,
   getAccountAccessState,
@@ -122,11 +119,6 @@ describe("getAccountAccessState", () => {
       requiresCheckoutToPublish: false,
       requiresSubscription: false,
       hasPaidSubscription: false,
-      parseQuota: {
-        scope: "total",
-        limit: FREE_PARSE_TOTAL_LIMIT,
-        windowMs: null,
-      },
     });
   });
 
@@ -146,11 +138,6 @@ describe("getAccountAccessState", () => {
       requiresCheckoutToPublish: false,
       hasPaidSubscription: true,
       isTrialingSubscription: false,
-      parseQuota: {
-        scope: "rolling_window",
-        limit: PAID_PARSE_RATE_LIMIT,
-        windowMs: PAID_PARSE_RATE_LIMIT_WINDOW_MS,
-      },
     });
   });
 

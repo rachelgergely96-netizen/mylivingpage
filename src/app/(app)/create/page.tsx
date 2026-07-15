@@ -16,7 +16,6 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
-import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import {
   buildStarterVariant,
@@ -34,35 +33,21 @@ import type { ThemeId } from "@/themes/types";
 import type { JobSeekerProfile, PageVariant, ResumeData } from "@/types/resume";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 
-type Step = "input" | "processing" | "review" | "success";
-type InputMode = "paste" | "guided";
-type CreateFlowFailure = {
-  stage: "parse";
-  message: string;
-  code: string | null;
-  retryable: boolean;
-};
+type Step = "input" | "review" | "success";
 
 interface CreateDraft {
   resumeText: string;
   guidedData: Partial<ResumeData>;
   parsedData: ResumeData | null;
   selectedTheme: ThemeId;
-  inputMode: InputMode;
   step: Step;
   variants: PageVariant[];
   selectedPreviewVariantId: string | null;
   jobSeekerProfile: JobSeekerProfile;
 }
 
-const PROGRESS_STEPS: Array<Exclude<Step, "processing">> = ["input", "review", "success"];
+const PROGRESS_STEPS: Step[] = ["input", "review", "success"];
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
-const STAGES = [
-  "Reading your information...",
-  "Structuring your experience...",
-  "Building your first page...",
-  "Finalizing your preview...",
-];
 
 const EMPTY_GUIDED_DATA: Partial<ResumeData> = {
   name: "",
@@ -94,14 +79,10 @@ export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
-  const [inputMode, setInputMode] = useState<InputMode>("paste");
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>(EMPTY_GUIDED_DATA);
   const [resumeText, setResumeText] = useState("");
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>("cosmic");
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState(STAGES[0]);
   const [error, setError] = useState("");
-  const [createFlowFailure, setCreateFlowFailure] = useState<CreateFlowFailure | null>(null);
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
@@ -146,10 +127,10 @@ export default function CreatePage() {
     );
   }, [guidedData.name, jobSeekerProfile, parsedData, resumeText, selectedTheme, step, variants.length]);
 
-  useUnsavedChanges(isDirty && step !== "processing");
+  useUnsavedChanges(isDirty);
 
   useEffect(() => {
-    if (!isDirty || step === "processing" || step === "success") {
+    if (!isDirty || step === "success") {
       return;
     }
 
@@ -158,7 +139,6 @@ export default function CreatePage() {
       guidedData,
       parsedData,
       selectedTheme,
-      inputMode,
       step,
       variants,
       selectedPreviewVariantId,
@@ -166,7 +146,6 @@ export default function CreatePage() {
     });
   }, [
     guidedData,
-    inputMode,
     isDirty,
     jobSeekerProfile,
     parsedData,
@@ -183,12 +162,10 @@ export default function CreatePage() {
     setGuidedData(draft.guidedData ?? EMPTY_GUIDED_DATA);
     setParsedData(draft.parsedData ?? null);
     setSelectedTheme(draft.selectedTheme ?? "cosmic");
-    setInputMode(draft.inputMode ?? "paste");
-    setStep(draft.step === "success" ? "input" : draft.step ?? "input");
+    setStep(draft.step === "review" && draft.parsedData ? "review" : "input");
     setVariants(draft.variants ?? []);
     setSelectedPreviewVariantId(draft.selectedPreviewVariantId ?? null);
     setJobSeekerProfile(draft.jobSeekerProfile ?? DEFAULT_JOB_SEEKER_PROFILE);
-    setCreateFlowFailure(null);
     setError("");
   }, []);
 
@@ -324,15 +301,13 @@ export default function CreatePage() {
   ]);
 
   const beginReviewOutputs = useCallback(
-    async (nextData: ResumeData, mode: InputMode) => {
+    (nextData: ResumeData) => {
       const structuredData = normalizeStructuredResumeData(nextData, jobSeekerProfile);
       const starterVariants = jobSeekerProfile
         ? [buildStarterVariant(structuredData, jobSeekerProfile)]
         : [];
 
       setParsedData(structuredData);
-      setInputMode(mode);
-      setCreateFlowFailure(null);
       setError("");
       setVariants(starterVariants);
       setSelectedPreviewVariantId(starterVariants[0]?.id ?? null);
@@ -341,89 +316,7 @@ export default function CreatePage() {
     [jobSeekerProfile],
   );
 
-  const handleContinueManually = useCallback(() => {
-    setCreateFlowFailure(null);
-    setError("");
-    setInputMode("guided");
-  }, []);
-
-  const startProcessing = async () => {
-    setError("");
-    setCreateFlowFailure(null);
-    setProgress(4);
-    setStage(STAGES[0]);
-    setStep("processing");
-    setParsedData(null);
-
-    try {
-      const response = await fetch("/api/generate/parse", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ resumeText }),
-      });
-
-      if (response.status === 401) {
-        setStep("input");
-        setProgress(0);
-        router.push("/login?next=/create");
-        return;
-      }
-
-      if (!response.ok || !response.body) {
-        const fallback = (await response.json().catch(() => null)) as
-          | { error?: string; code?: string; retryable?: boolean }
-          | null;
-        throw fallback ?? new Error("Could not start processing your information.");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let done = false;
-      let nextData: ResumeData | null = null;
-
-      while (!done) {
-        const { value, done: isDone } = await reader.read();
-        done = isDone;
-        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !isDone });
-        buffer = parseSseChunk(buffer, (payload) => {
-          if (payload.type === "progress") {
-            setProgress(Number(payload.progress ?? progress));
-            setStage(String(payload.stage ?? STAGES[0]));
-            return;
-          }
-
-          if (payload.type === "error") {
-            throw payload;
-          }
-
-          if (payload.type === "result") {
-            nextData = payload.data as ResumeData;
-          }
-        });
-      }
-
-      if (!nextData) {
-        throw new Error("We couldn't build your page from that input right now. Continue manually or try again.");
-      }
-
-      await beginReviewOutputs(nextData, "paste");
-    } catch (streamError) {
-      const failure = normalizeCreateFlowError(streamError);
-      setCreateFlowFailure({ stage: "parse", ...failure });
-      setStep("input");
-      setProgress(0);
-    }
-  };
-
-  const handleRetryParse = () => {
-    void startProcessing();
-  };
-
-  const progressStep = step === "processing" ? "review" : step;
-  const currentProgressIndex = PROGRESS_STEPS.indexOf(progressStep as Exclude<Step, "processing">);
+  const currentProgressIndex = PROGRESS_STEPS.indexOf(step);
   const predictedSlug = publishedSlug || publicSlug || "your-username";
   const selectedPreviewVariant =
     variants.find((variant) => variant.id === selectedPreviewVariantId) ?? null;
@@ -462,7 +355,7 @@ export default function CreatePage() {
           title: parsedData.name || "My Living Page",
           theme_id: selectedTheme,
           resume_data: parsedData,
-          raw_resume: resumeText,
+          raw_resume: "",
           page_config: {
             variants,
             decision_readiness: readiness,
@@ -499,7 +392,6 @@ export default function CreatePage() {
     jobSeekerProfile,
     parsedData,
     readiness,
-    resumeText,
     router,
     selectedTheme,
     variants,
@@ -548,7 +440,7 @@ export default function CreatePage() {
         </div>
       </div>
 
-      {error && !createFlowFailure ? (
+      {error ? (
         <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
           {error}
         </p>
@@ -576,128 +468,56 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {!atPageLimit && step === "input" && inputMode === "paste" ? (
-        <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1</p>
-          <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-            Add your info
-          </h2>
-          <p className="mt-2 text-sm text-[rgba(240,244,255,0.58)]">
-            Paste your resume or add the basics. You can clean it up later.
-          </p>
-          <div className="mt-5">
-            <JobSeekerStarterKit
-              value={jobSeekerProfile}
-              onChange={setJobSeekerProfile}
-              compact
-            />
-          </div>
-          <textarea
-            value={resumeText}
-            onChange={(event) => setResumeText(event.target.value)}
-            placeholder="Paste your info here..."
-            className="mt-5 min-h-[260px] w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] p-4 font-mono text-xs leading-6 text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none sm:min-h-[340px] sm:rounded-2xl sm:p-5 sm:text-sm sm:leading-7"
-          />
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[rgba(240,244,255,0.35)]">
-            <p>
-              {resumeText.length.toLocaleString()} characters · {resumeText.split(/\n/).length} lines
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setCreateFlowFailure(null);
-                setInputMode("guided");
-              }}
-              className="text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-            >
-              Enter manually instead
-            </button>
-          </div>
-
-          {createFlowFailure?.stage === "parse" ? (
-            <div className="mt-4 rounded-xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.08)] p-4">
-              <p className="text-sm text-[#FFD5D5]">{createFlowFailure.message}</p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {createFlowFailure.retryable ? (
-                  <button
-                    type="button"
-                    onClick={handleRetryParse}
-                    className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE]"
-                  >
-                    Try again
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={handleContinueManually}
-                  className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                >
-                  Continue manually
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={!resumeText.trim()}
-              onClick={startProcessing}
-              className="gold-pill h-12 px-7 text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Create my page
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      {!atPageLimit && step === "input" && inputMode === "guided" ? (
+      {!atPageLimit && step === "input" ? (
         <section className="space-y-4">
           <JobSeekerStarterKit
             value={jobSeekerProfile}
             onChange={setJobSeekerProfile}
             compact
           />
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+          <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Manual entry</p>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
+                Private guided entry
+              </p>
               <p className="mt-2 text-sm text-[#F0F4FF]">
-                Add the basics section by section, then preview the page before you send it.
+                Add your details section by section, then preview everything before publishing.
+                No AI service reads or rewrites your resume.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setInputMode("paste")}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-            >
-              Back to paste
-            </button>
           </div>
+          {resumeText.trim() ? (
+            <details className="rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.07)] p-4">
+              <summary className="cursor-pointer text-sm font-medium text-[#FDE68A]">
+                Your saved resume text is available as a reference
+              </summary>
+              <p className="mt-3 text-xs leading-5 text-[rgba(240,244,255,0.58)]">
+                This came from an older draft. Copy the details you want into the guided fields
+                below. The text is kept locally and is not sent to an AI provider.
+              </p>
+              <textarea
+                readOnly
+                value={resumeText}
+                aria-label="Saved resume text reference"
+                className="mt-3 min-h-48 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(0,0,0,0.18)] p-4 font-mono text-xs leading-6 text-[rgba(240,244,255,0.72)] focus:border-[#3B82F6] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setResumeText("")}
+                className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.58)] transition-colors hover:text-[#F0F4FF]"
+              >
+                Remove saved reference
+              </button>
+            </details>
+          ) : null}
           <GuidedFlow
             guidedData={guidedData}
             onUpdate={setGuidedData}
             onComplete={(data) => {
-              void beginReviewOutputs(data, "guided");
+              beginReviewOutputs(data);
             }}
-            onBack={() => setInputMode("paste")}
+            onBack={() => router.push("/dashboard")}
           />
-        </section>
-      ) : null}
-
-      {step === "processing" ? (
-        <section className="glass-card mx-auto max-w-xl rounded-2xl p-5 text-center sm:p-8">
-          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-2 border-[rgba(59,130,246,0.2)] border-t-[#3B82F6]" />
-          <h2 className="mt-6 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-            Building your page
-          </h2>
-          <p className="mt-2 text-sm text-[#3B82F6]">{stage}</p>
-          <div className="mt-6 h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#93C5FD] transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-3 font-mono text-xs text-[rgba(240,244,255,0.4)]">{progress}%</p>
         </section>
       ) : null}
 

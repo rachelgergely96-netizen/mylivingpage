@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import type { PageVariant } from "../../src/types/resume";
 import {
   canRunAdminFixtureFlows,
@@ -27,50 +27,87 @@ import {
 
 const hasTurnstileConfigured = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
-const CREATE_FLOW_RESUME_TEXT = `RAY
-Attorney & Technology Entrepreneur
-New York, NY | ray@email.com | linkedin.com/in/ray | github.com/ray-dev
 
-SUMMARY
-Licensed attorney in New York building at the intersection of law and technology.
+function trackParsePosts(page: Page) {
+  const parseRequests: string[] = [];
 
-EXPERIENCE
-Founder & CEO - BarPrepPlay
-2024 - Present
-- Built legal education product for bar exam prep.`;
+  page.on("request", (request) => {
+    if (
+      request.url().includes("/api/generate/parse") &&
+      request.method() === "POST"
+    ) {
+      parseRequests.push(request.url());
+    }
+  });
 
-const PARSED_RESUME_FIXTURE = {
-  name: "Ray",
-  headline: "Attorney & Technology Entrepreneur",
-  location: "New York, NY",
-  email: "ray@email.com",
-  linkedin: "linkedin.com/in/ray",
-  github: "github.com/ray-dev",
-  website: null,
-  avatar_url: null,
-  summary: "Licensed attorney in New York building at the intersection of law and technology.",
-  experience: [
-    {
-      title: "Founder & CEO",
-      company: "BarPrepPlay",
-      dates: "2024 - Present",
-      highlights: ["Built legal education product for bar exam prep."],
-      url: null,
-    },
-  ],
-  education: [],
-  projects: [],
-  skills: [{ category: "Core", items: ["Legal Research", "Product Strategy"] }],
-  certifications: [],
-  stats: [],
-};
+  return parseRequests;
+}
 
-function buildParseSseBody() {
-  return [
-    'data: {"type":"progress","progress":25,"stage":"Analyzing resume structure..."}',
-    `data: ${JSON.stringify({ type: "result", data: PARSED_RESUME_FIXTURE })}`,
-    "",
-  ].join("\n\n");
+async function completeGuidedResumeEntry(page: Page) {
+  await expect(
+    page.getByRole("heading", { name: "Let's start with who you are" }),
+  ).toBeVisible();
+  await page.getByPlaceholder("Jane Smith").fill("Ray");
+  await page
+    .getByPlaceholder("Senior Software Engineer")
+    .fill("Attorney & Technology Entrepreneur");
+  await page.getByPlaceholder("San Francisco, CA").fill("New York, NY");
+  await page.getByPlaceholder("jane@example.com").fill("ray@email.com");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Where can people find you?" }),
+  ).toBeVisible();
+  await page
+    .getByPlaceholder("linkedin.com/in/janesmith")
+    .fill("linkedin.com/in/ray");
+  await page.getByPlaceholder("janesmith").fill("ray-dev");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Tell me about your experience" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "+ Add a role" }).click();
+  await page.getByPlaceholder("Job Title").fill("Founder & CEO");
+  await page.getByPlaceholder("Company").fill("BarPrepPlay");
+  await page
+    .getByPlaceholder(/Led migration to microservices/)
+    .fill("Built legal education product for bar exam prep.");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Education and credentials" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Skills and projects" }),
+  ).toBeVisible();
+  await page
+    .getByPlaceholder("Category (e.g. Languages, Tools)")
+    .fill("Core");
+  await page
+    .getByPlaceholder("TypeScript, React, Node.js")
+    .fill("Legal Research, Product Strategy");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "The finishing touches" }),
+  ).toBeVisible();
+  await page
+    .getByPlaceholder(/Full-stack engineer with 8 years/)
+    .fill(
+      "Licensed attorney in New York building at the intersection of law and technology.",
+    );
+  await page
+    .getByRole("button", { name: "Continue to Theme Selection" })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "This is what someone will see when you send it.",
+    }),
+  ).toBeVisible({ timeout: 45_000 });
 }
 
 test("email signup shows a pending-confirmation message", async ({ page }) => {
@@ -89,7 +126,7 @@ test("email signup shows a pending-confirmation message", async ({ page }) => {
   await page.getByRole("checkbox").check();
   await page.getByPlaceholder("Email address").fill(uniqueEmail);
   await page.getByPlaceholder("Create password").fill("PlaywrightPass123!");
-  await page.getByRole("button", { name: "Start From My Resume" }).click();
+  await page.getByRole("button", { name: "Create My Page" }).click();
 
   await expect(page.getByText("Check your email to confirm your account")).toBeVisible();
 });
@@ -101,28 +138,20 @@ test.describe.serial("authenticated user journeys", () => {
       "Set Playwright auth and Supabase service-role env vars to run deterministic create coverage.",
     );
 
-    await page.route("**/api/generate/parse", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: buildParseSseBody(),
-      });
-    });
-
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
     await clearPagesForProfile(profile.id);
     await setPlanForProfile(profile.id, "spark");
+    const parseRequests = trackParsePosts(page);
 
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Create Your Page" }).click();
-    await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Create my page" }).click();
-    await expect(page.getByRole("heading", { name: "This is what someone will see when you send it." })).toBeVisible({ timeout: 45_000 });
+    await completeGuidedResumeEntry(page);
     await expect(page.getByText("Resume PDF")).toBeVisible();
     await expect(page.getByRole("button", { name: "Publish Page" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish Page" }).click();
     await expect(page.getByRole("heading", { name: "Your page is live." })).toBeVisible({ timeout: 45_000 });
+    expect(parseRequests).toEqual([]);
 
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Edit Page" }).click();
@@ -145,14 +174,6 @@ test.describe.serial("authenticated user journeys", () => {
       "Set Playwright auth and Supabase service-role env vars to run free publish coverage.",
     );
 
-    await page.route("**/api/generate/parse", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: buildParseSseBody(),
-      });
-    });
-
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
     await clearPagesForProfile(profile.id);
@@ -163,6 +184,7 @@ test.describe.serial("authenticated user journeys", () => {
       stripeTrialEndsAt: null,
     });
 
+    const parseRequests = trackParsePosts(page);
     const checkoutRequests: string[] = [];
     page.on("request", (request) => {
       if (
@@ -174,8 +196,7 @@ test.describe.serial("authenticated user journeys", () => {
     });
 
     await page.goto("/create");
-    await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Create my page" }).click();
+    await completeGuidedResumeEntry(page);
 
     const publishButton = page.getByRole("button", { name: "Publish Page" });
     await expect(publishButton).toBeVisible({ timeout: 45_000 });
@@ -189,6 +210,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("No card or subscription required")).toBeVisible();
     await expect(page.getByRole("button", { name: /Start (Starter|Pro) Trial/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toHaveCount(0);
+    expect(parseRequests).toEqual([]);
     expect(checkoutRequests).toEqual([]);
   });
 
@@ -219,11 +241,13 @@ test.describe.serial("authenticated user journeys", () => {
       LEGACY_CREATE_DRAFT_KEY,
       JSON.stringify({
         data: {
-          resumeText: "Legacy draft text",
-          guidedData: { name: "Legacy User" },
+          resumeText: "",
+          guidedData: {
+            name: "Legacy User",
+            headline: "Legacy Headline",
+          },
           parsedData: null,
           selectedTheme: "cosmic",
-          inputMode: "paste",
           step: "input",
         },
         savedAt: Date.now(),
@@ -247,11 +271,13 @@ test.describe.serial("authenticated user journeys", () => {
       `mlp-draft-create-${profile.id}`,
       JSON.stringify({
         data: {
-          resumeText: "Scoped draft text",
-          guidedData: { name: "Scoped User" },
+          resumeText: "",
+          guidedData: {
+            name: "Scoped User",
+            headline: "Scoped Headline",
+          },
           parsedData: null,
           selectedTheme: "cosmic",
-          inputMode: "paste",
           step: "input",
         },
         savedAt: Date.now(),
@@ -267,31 +293,27 @@ test.describe.serial("authenticated user journeys", () => {
 
     await signIn(page);
     await page.goto("/create");
-    await page.getByPlaceholder("Paste your info here...").fill("Fresh scoped draft");
+    await page.getByPlaceholder("Jane Smith").fill("Fresh Scoped User");
+    await page
+      .getByPlaceholder("Senior Software Engineer")
+      .fill("Product Counsel");
     await page.waitForTimeout(1200);
 
     await page.reload();
     await expect(page.getByText("You have an unsaved draft")).toBeVisible();
   });
 
-  test("paste resume flow removes the sample shortcut and falls back cleanly when parsing fails", async ({ page }) => {
+  test("guided entry reaches review without calling the retired parsing provider", async ({ page }) => {
     test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
 
     await signIn(page);
-    await page.route("**/api/generate/parse", async (route) => {
-      await route.abort();
-    });
+    const parseRequests = trackParsePosts(page);
 
     await page.goto("/create");
+    await expect(page.getByPlaceholder("Paste your info here...")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Load Sample" })).toHaveCount(0);
-
-    await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
-    await page.getByRole("button", { name: "Create my page" }).click();
-
-    await expect(page.getByText("We couldn't reach page creation right now. Continue manually or try again in a moment.")).toBeVisible();
-    await expect(page.getByText("Failed to fetch")).toHaveCount(0);
-    await page.getByRole("button", { name: "Continue manually" }).click();
-    await expect(page.getByText("Let's start with who you are")).toBeVisible();
+    await completeGuidedResumeEntry(page);
+    expect(parseRequests).toEqual([]);
   });
 
   test("public Resume PDF download appears on live pages for owners and viewers", async ({ page, browser }) => {

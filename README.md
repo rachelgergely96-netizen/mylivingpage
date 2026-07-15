@@ -6,8 +6,7 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 
 - Next.js 15.5 + React 18 + TypeScript + Tailwind CSS
 - Supabase (`@supabase/ssr` and `@supabase/supabase-js`) for auth, DB, and storage
-- Stripe for checkout, portal, and webhooks
-- Anthropic SDK for server-side resume parsing and ATS review flows
+- Stripe for legacy subscription management and webhooks
 - React PDF and Three.js for export and living theme rendering
 
 ## Quick Start
@@ -70,5 +69,5 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 - `/signup`, `/login`, `/callback`
 - `/create`, `/dashboard`, `/admin` for authenticated flows
 - `/{username}` for the public living page
-- `/api/generate/parse` for SSE resume parsing
+- `/api/generate/parse` is a temporary authenticated compatibility route that permanently refuses legacy AI parsing requests
 - `/api/resume/export` for ATS-safe PDF export

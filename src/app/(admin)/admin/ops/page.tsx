@@ -187,8 +187,6 @@ export default async function AdminOpsPage() {
     { count: authGoogleStartFailureCount },
     { count: authCallbackSuccessCount },
     { count: authCallbackFailureCount },
-    { count: parseFailureCount },
-    { count: parseRateLimitCount },
     { count: rateLimitBlockedCount },
     { data: processedWebhookRows },
     { data: authCallbackFailureRows },
@@ -234,16 +232,6 @@ export default async function AdminOpsPage() {
       .from("events")
       .select("*", { count: "exact", head: true })
       .eq("event_name", "auth.callback.failed")
-      .gte("created_at", sevenDayCutoff),
-    supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("event_name", "resume.parse.failed")
-      .gte("created_at", sevenDayCutoff),
-    supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("event_name", "resume.parse.rate_limited")
       .gte("created_at", sevenDayCutoff),
     supabase
       .from("events")
@@ -298,7 +286,6 @@ export default async function AdminOpsPage() {
         "page.publish.failed",
         "auth.google.start.failed",
         "auth.callback.failed",
-        "resume.parse.failed",
       ])
       .order("created_at", { ascending: false })
       .limit(16),
@@ -399,7 +386,7 @@ export default async function AdminOpsPage() {
         </div>
       ) : null}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-10 sm:gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 sm:gap-4">
         <StatCard
           label="Webhook Failures (7d)"
           value={webhookFailureCount ?? 0}
@@ -419,16 +406,6 @@ export default async function AdminOpsPage() {
           label="Auth Callback Failures (7d)"
           value={authCallbackFailureCount ?? 0}
           tone={(authCallbackFailureCount ?? 0) > 0 ? "warning" : "success"}
-        />
-        <StatCard
-          label="Parse Failures (7d)"
-          value={parseFailureCount ?? 0}
-          tone={(parseFailureCount ?? 0) > 0 ? "warning" : "success"}
-        />
-        <StatCard
-          label="Parse Rate Limited (7d)"
-          value={parseRateLimitCount ?? 0}
-          tone={parseRateLimitCount ? "default" : "success"}
         />
         <StatCard
           label="Suspicious Signups (7d)"

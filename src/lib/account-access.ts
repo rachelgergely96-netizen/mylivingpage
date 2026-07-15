@@ -11,9 +11,6 @@ export const LEGACY_BILLING_COHORT = "legacy_freemium";
 export const TRIAL_HOSTING_BILLING_COHORT = "trial_hosting_v1";
 export const PUBLISH_CC_TRIAL_BILLING_COHORT = "publish_cc_trial_v1";
 export const FREE_HOSTING_TRIAL_DAYS = 30;
-export const FREE_PARSE_TOTAL_LIMIT = 2;
-export const PAID_PARSE_RATE_LIMIT = 5;
-export const PAID_PARSE_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 export type BillingCohort =
   | typeof LEGACY_BILLING_COHORT
@@ -21,7 +18,6 @@ export type BillingCohort =
   | typeof PUBLISH_CC_TRIAL_BILLING_COHORT;
 
 export type AnalyticsTier = "none" | "basic" | "full";
-export type ParseQuotaScope = "total" | "rolling_window";
 
 export interface AccountAccessInput {
   plan?: string | null;
@@ -38,11 +34,6 @@ export interface AccountAccessState {
   analyticsTier: AnalyticsTier;
   shareCardAllowed: boolean;
   variantLimit: 0 | 1 | 3;
-  parseQuota: {
-    scope: ParseQuotaScope;
-    limit: number;
-    windowMs: number | null;
-  };
   themeFeaturesUnlocked: boolean;
   analyticsAccessAllowed: boolean;
   billingCohort: BillingCohort;
@@ -129,11 +120,6 @@ export function getAccountAccessState(
       analyticsTier: "full",
       shareCardAllowed: true,
       variantLimit: 3,
-      parseQuota: {
-        scope: "rolling_window",
-        limit: PAID_PARSE_RATE_LIMIT,
-        windowMs: PAID_PARSE_RATE_LIMIT_WINDOW_MS,
-      },
       themeFeaturesUnlocked,
       analyticsAccessAllowed: true,
       billingCohort,
@@ -175,17 +161,6 @@ export function getAccountAccessState(
       analyticsTier,
       shareCardAllowed,
       variantLimit,
-      parseQuota: hasPaidSubscription
-        ? {
-            scope: "rolling_window",
-            limit: PAID_PARSE_RATE_LIMIT,
-            windowMs: PAID_PARSE_RATE_LIMIT_WINDOW_MS,
-          }
-        : {
-            scope: "total",
-            limit: FREE_PARSE_TOTAL_LIMIT,
-            windowMs: null,
-          },
       themeFeaturesUnlocked: allowedThemeIds === null,
       analyticsAccessAllowed: analyticsTier === "full",
       billingCohort,
@@ -228,11 +203,6 @@ export function getAccountAccessState(
     analyticsTier: "full",
     shareCardAllowed: true,
     variantLimit: 3,
-    parseQuota: {
-      scope: "rolling_window",
-      limit: PAID_PARSE_RATE_LIMIT,
-      windowMs: PAID_PARSE_RATE_LIMIT_WINDOW_MS,
-    },
     themeFeaturesUnlocked,
     analyticsAccessAllowed: true,
     billingCohort,

@@ -89,7 +89,7 @@ describe("profile access helpers", () => {
 
     expect(result.schema).toBe("legacy_fallback");
     expect(selects).toEqual([
-      "id, username, plan, billing_cohort, hosting_trial_started_at",
+      "id, username, plan, billing_cohort, hosting_trial_started_at, stripe_subscription_status, stripe_trial_ends_at",
       "id, username, plan",
     ]);
     expect(result.data).toEqual({
@@ -98,6 +98,8 @@ describe("profile access helpers", () => {
       plan: "spark",
       billing_cohort: null,
       hosting_trial_started_at: null,
+      stripe_subscription_status: null,
+      stripe_trial_ends_at: null,
     });
   });
 });

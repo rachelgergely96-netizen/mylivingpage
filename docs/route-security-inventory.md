@@ -19,6 +19,7 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/pages/view` | `POST` | `public_write` | Public Analytics | Medium | Shared rate limit, public page check, owner ignore, IP dedupe |
 | `/api/profile` | `GET`, `PATCH` | `authenticated_user` | Profile | Medium | Authenticated user session |
 | `/api/resume/export` | `POST` | `public_read` | Public ATS Export | High | Shared rate limit, page-bound request, server-fetched saved page data |
+| `/api/resume/readiness` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit, bounded request text, deterministic checks only, no persistence |
 | `/api/stripe/checkout` | `POST` | `authenticated_user` | Billing | Low | Authenticated user session, permanently disabled response, no checkout creation |
 | `/api/stripe/portal` | `POST` | `authenticated_user` | Billing | Medium | Authenticated user session |
 | `/api/username` | `GET`, `PATCH` | `GET public_read`, `PATCH authenticated_user` | Username/Pages | Medium | Shared rate limit on `GET`, authenticated user on `PATCH` |

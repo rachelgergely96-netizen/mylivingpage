@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import DecisionReadinessCard from "@/components/create/DecisionReadinessCard";
+import AtsReadinessCard from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
 import JobSeekerStarterKit from "@/components/create/JobSeekerStarterKit";
@@ -547,7 +547,7 @@ export default function CreatePage() {
             </section>
           ) : null}
 
-          <DecisionReadinessCard readiness={readiness} />
+          <AtsReadinessCard resumeData={parsedData} />
 
           {accountAccess.variantLimit > 0 ? (
             <VariantPlanner

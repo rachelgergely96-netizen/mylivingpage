@@ -7,6 +7,7 @@ import LandingUnifiedShowcase from "@/components/marketing/LandingUnifiedShowcas
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
+  ATS_READINESS_DISCLOSURE,
   CREDIBILITY_POINTS,
   FREE_PRODUCT_FEATURE_GROUPS,
   PROCESS_STEPS,
@@ -199,6 +200,9 @@ export default async function LandingPage() {
                     Free means free: no credit card, no trial expiration, and no subscription
                     required to publish or keep your page live.
                   </div>
+                  <p className="text-xs leading-6 text-[rgba(240,244,255,0.48)]">
+                    {ATS_READINESS_DISCLOSURE}
+                  </p>
                 </div>
               </div>
               <p className="mt-8 text-sm leading-7 text-[rgba(240,244,255,0.54)]">

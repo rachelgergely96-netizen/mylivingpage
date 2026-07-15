@@ -341,6 +341,12 @@ export default async function DashboardPage() {
                     Edit Page
                   </Link>
                   <Link
+                    href={`/dashboard/edit/${page.id}/living-page#ats-readiness`}
+                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                  >
+                    Check ATS
+                  </Link>
+                  <Link
                     href={`/dashboard/analytics/${page.id}`}
                     className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
                   >

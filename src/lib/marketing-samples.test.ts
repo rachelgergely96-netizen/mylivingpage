@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ATS_READINESS_DISCLOSURE,
   FREE_PRODUCT_FEATURE_GROUPS,
   LANDING_FAQS,
 } from "@/lib/marketing-samples";
@@ -13,8 +14,10 @@ describe("public free-product copy", () => {
 
     expect(featureCopy).toContain("Living Resume");
     expect(featureCopy).toContain("ATS-Ready PDF");
+    expect(featureCopy).toContain("Deterministic ATS readiness check");
     expect(featureCopy).toContain("Share Card + QR");
     expect(freeAnswer).toContain("without a card, trial, or subscription");
+    expect(ATS_READINESS_DISCLOSURE).toContain("no checker can guarantee");
   });
 
   it("does not present a paid publishing tier in the free-product copy", () => {

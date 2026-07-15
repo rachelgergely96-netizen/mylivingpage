@@ -69,6 +69,9 @@ export const CREDIBILITY_POINTS = [
   "No card required",
 ];
 
+export const ATS_READINESS_DISCLOSURE =
+  "Built for ATS readability with real text, standard sections, and a clear reading order. The free readiness check flags common issues, but no checker can guarantee how an employer's system will score a resume or whether it will lead to an interview.";
+
 export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
   {
     title: "Headline lands immediately",
@@ -240,6 +243,7 @@ export const FREE_PRODUCT_FEATURE_GROUPS = [
     features: [
       "Selectable, machine-readable text",
       "Standard resume sections",
+      "Deterministic ATS readiness check",
       "A fresh PDF from your saved information",
     ],
   },

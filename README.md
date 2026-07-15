@@ -65,6 +65,8 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 
 ## Key Routes
 
+The authenticated `/api/resume/readiness` route runs the provider-free ATS check described in [docs/ats-readiness.md](./docs/ats-readiness.md).
+
 - `/` landing page and waitlist
 - `/signup`, `/login`, `/callback`
 - `/create`, `/dashboard`, `/admin` for authenticated flows

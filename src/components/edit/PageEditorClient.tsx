@@ -8,6 +8,7 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
+import AtsReadinessCard from "@/components/AtsReadinessCard";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
@@ -320,6 +321,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Resume PDF</p>
         <p className="mt-2 text-sm text-[#F0F4FF]">
           The public page always uses this saved information for the downloadable Resume PDF.
+        </p>
+      </div>
+
+      <div className="mb-5">
+        <AtsReadinessCard resumeData={data} />
+        <p className="mt-2 px-1 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
+          The check uses the fields currently in this editor. Save your changes before relying on
+          the public PDF.
         </p>
       </div>
 

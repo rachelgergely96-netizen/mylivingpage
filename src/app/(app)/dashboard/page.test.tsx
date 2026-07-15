@@ -243,6 +243,9 @@ describe("dashboard page", () => {
     expect(markup).not.toContain("Open Page Analytics");
     expect(markup).toContain('href="/dashboard/analytics/page-1"');
     expect(markup).toContain('href="/dashboard/analytics/page-2"');
+    expect(markup).toContain('href="/dashboard/edit/page-1/living-page#ats-readiness"');
+    expect(markup).toContain('href="/dashboard/edit/page-2/living-page#ats-readiness"');
+    expect((markup.match(/>Check ATS<\/a>/g) ?? []).length).toBe(2);
     expect((markup.match(/>Page Analytics<\/a>/g) ?? []).length).toBe(2);
     expect(markup).toContain(
       "Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.",

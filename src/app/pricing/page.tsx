@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import { GUIDES } from "@/lib/guides";
-import { FREE_PRODUCT_FEATURE_GROUPS } from "@/lib/marketing-samples";
+import {
+  ATS_READINESS_DISCLOSURE,
+  FREE_PRODUCT_FEATURE_GROUPS,
+} from "@/lib/marketing-samples";
 import {
   getAbsoluteUrl,
   SITE_DESCRIPTION,
@@ -132,8 +135,13 @@ export default function PricingPage() {
           </section>
 
           <section className="mt-8 rounded-3xl border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] p-5 text-sm text-[rgba(240,244,255,0.74)] sm:p-6">
-            No card. No trial. No paid plan. Build and publish one living resume, then keep the
-            same link, ATS-ready PDF, and share card current as your experience grows.
+            <p>
+              No card. No trial. No paid plan. Build and publish one living resume, then keep the
+              same link, ATS-ready PDF, and share card current as your experience grows.
+            </p>
+            <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.52)]">
+              {ATS_READINESS_DISCLOSURE}
+            </p>
           </section>
 
           <section className="mx-auto mt-16 max-w-5xl sm:mt-20">

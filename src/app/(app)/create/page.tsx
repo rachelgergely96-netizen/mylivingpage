@@ -16,7 +16,6 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
-import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { normalizeCreateFlowError, parseSseChunk } from "@/lib/create-flow";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import {
@@ -91,23 +90,6 @@ const DEFAULT_JOB_SEEKER_PROFILE: JobSeekerProfile = {
   target_audience: "recruiter",
 };
 
-function formatFriendlyDate(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -137,12 +119,10 @@ export default function CreatePage() {
       billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
     }),
   );
-  const [billingLoadingPlan, setBillingLoadingPlan] = useState<"starter" | "pro" | null>(null);
-  const [showPublishPlanModal, setShowPublishPlanModal] = useState(false);
-  const [autoPublishAfterCheckout, setAutoPublishAfterCheckout] = useState(false);
+  const [publishRestoredDraft, setPublishRestoredDraft] = useState(false);
   const [pageCount, setPageCount] = useState<number>(0);
   const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
-  const checkoutReturnHandledRef = useRef(false);
+  const legacyCheckoutReturnHandledRef = useRef(false);
   const publishingRef = useRef(false);
   const returnedFromPublishCheckout =
     searchParams.get("checkout") === "success" &&
@@ -211,31 +191,6 @@ export default function CreatePage() {
     setCreateFlowFailure(null);
     setError("");
   }, []);
-
-  const persistCurrentDraft = useCallback(() => {
-    saveDraft({
-      resumeText,
-      guidedData,
-      parsedData,
-      selectedTheme,
-      inputMode,
-      step,
-      variants,
-      selectedPreviewVariantId,
-      jobSeekerProfile,
-    });
-  }, [
-    guidedData,
-    inputMode,
-    jobSeekerProfile,
-    parsedData,
-    resumeText,
-    saveDraft,
-    selectedPreviewVariantId,
-    selectedTheme,
-    step,
-    variants,
-  ]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) {
@@ -342,22 +297,22 @@ export default function CreatePage() {
   }, [accountAccess.variantLimit, selectedPreviewVariantId, variants]);
 
   useEffect(() => {
-    if (checkoutReturnHandledRef.current || !returnedFromPublishCheckout) {
+    if (legacyCheckoutReturnHandledRef.current || !returnedFromPublishCheckout) {
       return;
     }
 
-    checkoutReturnHandledRef.current = true;
+    legacyCheckoutReturnHandledRef.current = true;
 
     if (pendingDraft) {
       applyDraft(pendingDraft.data);
       dismissDraft();
-      setAutoPublishAfterCheckout(true);
+      setPublishRestoredDraft(true);
       router.replace("/create", { scroll: false });
       return;
     }
 
     setError(
-      "Your subscription was created, but we couldn't find the page draft to finish publishing. Rebuild or restore your page, then publish again.",
+      "We couldn't find the saved page draft to finish publishing. Rebuild or restore your page, then publish again.",
     );
     router.replace("/create", { scroll: false });
   }, [
@@ -478,7 +433,6 @@ export default function CreatePage() {
   const readiness = parsedData
     ? buildDecisionReadinessState(parsedData, variants)
     : null;
-  const publishTrialEndsAtLabel = formatFriendlyDate(accountAccess.trialEndsAt);
   const jobSeekerSummary = describeJobSeekerProfile(jobSeekerProfile);
 
   const publishPage = useCallback(async () => {
@@ -521,22 +475,9 @@ export default function CreatePage() {
         slug?: string;
         pageId?: string;
         error?: string;
-        code?: string;
-        redirectTo?: string;
       } | null;
 
       if (!response.ok) {
-        if (response.status === 402 && result?.code === "checkout_required") {
-          persistCurrentDraft();
-          setShowPublishPlanModal(true);
-          return;
-        }
-
-        if (response.status === 402 && result?.code === "subscription_required") {
-          router.push(result.redirectTo ?? "/dashboard/settings");
-          return;
-        }
-
         throw new Error(result?.error ?? "Publish failed.");
       }
 
@@ -545,8 +486,7 @@ export default function CreatePage() {
       setPublishedPageId(result?.pageId ?? null);
       setPublicSlug(nextSlug);
       setStep("success");
-      setShowPublishPlanModal(false);
-      setAutoPublishAfterCheckout(false);
+      setPublishRestoredDraft(false);
       clearDraft();
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
@@ -558,7 +498,6 @@ export default function CreatePage() {
     clearDraft,
     jobSeekerProfile,
     parsedData,
-    persistCurrentDraft,
     readiness,
     resumeText,
     router,
@@ -566,142 +505,22 @@ export default function CreatePage() {
     variants,
   ]);
 
-  const startPublishCheckout = useCallback(
-    async (plan: "starter" | "pro") => {
-      if (!parsedData) {
-        return;
-      }
-
-      setBillingLoadingPlan(plan);
-      setError("");
-      persistCurrentDraft();
-
-      try {
-        const response = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            plan,
-            source: "publish",
-          }),
-        });
-
-        const payload = (await response.json().catch(() => null)) as
-          | { url?: string; error?: string }
-          | null;
-
-        if (!response.ok || !payload?.url) {
-          throw new Error(payload?.error ?? "Could not start checkout.");
-        }
-
-        window.location.href = payload.url;
-      } catch (checkoutError) {
-        setBillingLoadingPlan(null);
-        setError(
-          checkoutError instanceof Error
-            ? checkoutError.message
-            : "Could not start checkout.",
-        );
-      }
-    },
-    [parsedData, persistCurrentDraft],
-  );
-
   const handlePublishClick = useCallback(() => {
-    if (publishing || billingLoadingPlan) {
-      return;
-    }
-
-    if (accountAccess.requiresCheckoutToPublish) {
-      persistCurrentDraft();
-      setShowPublishPlanModal(true);
+    if (publishing) {
       return;
     }
 
     void publishPage();
-  }, [
-    accountAccess.requiresCheckoutToPublish,
-    billingLoadingPlan,
-    persistCurrentDraft,
-    publishPage,
-    publishing,
-  ]);
+  }, [publishPage, publishing]);
 
   useEffect(() => {
-    if (!autoPublishAfterCheckout || !parsedData) {
+    if (!publishRestoredDraft || !parsedData) {
       return;
     }
 
-    let cancelled = false;
-
-    const finalizePublish = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login?next=/create");
-        return;
-      }
-
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        const profileResponse = await fetchProfileWithHostingAccess<{
-          plan?: string | null;
-          username?: string | null;
-          stripe_subscription_status?: string | null;
-          stripe_trial_ends_at?: string | null;
-        }>({
-          supabase,
-          select: "plan, username",
-          matchField: "id",
-          matchValue: user.id,
-        });
-
-        if (cancelled) {
-          return;
-        }
-
-        const nextAccess = getAccountAccessState({
-          plan: profileResponse.data?.plan ?? "spark",
-          billing_cohort: profileResponse.data?.billing_cohort ?? null,
-          hosting_trial_started_at:
-            profileResponse.data?.hosting_trial_started_at ?? null,
-          stripe_subscription_status:
-            profileResponse.data?.stripe_subscription_status ?? null,
-          stripe_trial_ends_at:
-            profileResponse.data?.stripe_trial_ends_at ?? null,
-        });
-
-        setAccountAccess(nextAccess);
-        setPublicSlug(profileResponse.data?.username ?? usernameFromEmail(user.email));
-
-        if (nextAccess.hasPaidSubscription) {
-          await publishPage();
-          return;
-        }
-
-        await new Promise((resolve) => window.setTimeout(resolve, 1500));
-      }
-
-      if (cancelled) {
-        return;
-      }
-
-      setAutoPublishAfterCheckout(false);
-      setError(
-        "Your plan is still activating. Give it another moment, then publish again if it doesn't finish automatically.",
-      );
-    };
-
-    void finalizePublish();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoPublishAfterCheckout, parsedData, publishPage, router]);
+    setPublishRestoredDraft(false);
+    void publishPage();
+  }, [parsedData, publishPage, publishRestoredDraft]);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -925,22 +744,12 @@ export default function CreatePage() {
                 Targeted versions
               </p>
               <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                Publish first to unlock targeted versions
+                One clear resume, one reliable link
               </h3>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
-                Free preview keeps the build flow lightweight. Starter unlocks 1 targeted version,
-                and Pro unlocks 3 with full analytics.
+                This streamlined version keeps the focus on your main resume. You can still edit
+                it anytime after publishing.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  persistCurrentDraft();
-                  setShowPublishPlanModal(true);
-                }}
-                className="mt-4 rounded-full border border-[rgba(59,130,246,0.35)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
-              >
-                Choose plan to publish
-              </button>
             </section>
           )}
 
@@ -970,20 +779,11 @@ export default function CreatePage() {
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Publish</p>
                   <p className="mt-2 text-sm leading-6 text-[#E8F2FF]">
-                    {accountAccess.isLegacyAccount
-                      ? "Your page goes live and turns on Resume PDF download from the public page."
-                      : accountAccess.requiresCheckoutToPublish
-                        ? "Preview is free. Add a card when you publish to start a 30-day Starter or Pro trial and make the page live."
-                        : accountAccess.isTrialingSubscription
-                          ? `Your ${accountAccess.publicPlanLabel} trial is active${publishTrialEndsAtLabel ? ` until ${publishTrialEndsAtLabel}` : ""}, and publishing will make this page live right away.`
-                          : `Your ${accountAccess.publicPlanLabel} plan keeps this page live and downloadable.`}
+                    Your page goes live with one shareable link and an ATS-ready PDF download.
+                    Publishing is free and does not require a card.
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgba(232,242,255,0.78)]">
-                    {accountAccess.analyticsTier === "full"
-                      ? "When someone opens this, you'll know."
-                      : accountAccess.analyticsTier === "basic"
-                        ? "Starter shows view counts in your dashboard as soon as people land on the page."
-                        : "Publishing is the paywall moment. Pick Starter to keep it live, or Pro for full analytics."}
+                    When someone opens this, you&apos;ll know.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -996,17 +796,11 @@ export default function CreatePage() {
                   </button>
                   <button
                     type="button"
-                    disabled={publishing || billingLoadingPlan !== null}
+                    disabled={publishing}
                     onClick={handlePublishClick}
                     className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
                   >
-                    {billingLoadingPlan
-                      ? "Redirecting..."
-                      : publishing
-                        ? "Publishing..."
-                        : accountAccess.requiresCheckoutToPublish
-                          ? "Choose Plan to Publish"
-                          : "Publish Page"}
+                    {publishing ? "Publishing..." : "Publish Page"}
                   </button>
                 </div>
               </div>
@@ -1042,7 +836,7 @@ export default function CreatePage() {
               selectedThemeId={selectedTheme}
               onSelectTheme={setSelectedTheme}
               allowedThemeIds={accountAccess.allowedThemeIds}
-              lockedLabel={accountAccess.hasPaidSubscription ? "Pro" : "Starter or Pro"}
+              lockedLabel="Not available"
               showDescription
             />
           </section>
@@ -1057,11 +851,8 @@ export default function CreatePage() {
               Your page is live.
             </h2>
             <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              {accountAccess.isLegacyAccount
-                ? "This is what you'll send instead of a PDF."
-                : accountAccess.isTrialingSubscription
-                  ? `This is what you'll send instead of a PDF. Your ${accountAccess.publicPlanLabel} trial is active${publishTrialEndsAtLabel ? ` until ${publishTrialEndsAtLabel}` : ""}.`
-                  : `This is what you'll send instead of a PDF. Your ${accountAccess.publicPlanLabel} plan is active.`}
+              Share this living resume as a link, or download the ATS-ready PDF whenever you
+              need a file.
             </p>
 
             <div className="mt-5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
@@ -1183,99 +974,6 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {showPublishPlanModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(3,7,18,0.75)] p-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(7,17,28,0.96)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="max-w-2xl">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                  Publish your page
-                </p>
-                <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-                  Choose a plan and start your 30-day free trial
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.64)]">
-                  Free is for building and previewing. To make this page live, add a payment
-                  method now. You won&apos;t be charged for 30 days, and you can cancel anytime.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!billingLoadingPlan) {
-                    setShowPublishPlanModal(false);
-                  }
-                }}
-                className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <article className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Starter</p>
-                <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                  {STARTER_PLAN_PRICE.amountLabel}
-                  <span className="ml-2 text-base font-normal text-[rgba(240,244,255,0.52)]">
-                    {STARTER_PLAN_PRICE.intervalLabel}
-                  </span>
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
-                  Keep one page live with the current starter theme set, share cards, and
-                  dashboard view counts.
-                </p>
-                <div className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.78)]">
-                  <p>Unlimited live hosting</p>
-                  <p>9 themes</p>
-                  <p>1 targeted version</p>
-                  <p>Basic analytics in dashboard</p>
-                  <p>Share card downloads</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={billingLoadingPlan !== null}
-                  onClick={() => void startPublishCheckout("starter")}
-                  className="mt-6 w-full rounded-full border border-[rgba(59,130,246,0.3)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] disabled:opacity-50"
-                >
-                  {billingLoadingPlan === "starter"
-                    ? "Redirecting..."
-                    : "Start Starter Trial"}
-                </button>
-              </article>
-
-              <article className="rounded-2xl border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] p-5 shadow-[0_16px_48px_rgba(59,130,246,0.12)]">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#BFDBFE]">Pro</p>
-                <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                  {PRO_PLAN_PRICE.amountLabel}
-                  <span className="ml-2 text-base font-normal text-[rgba(240,244,255,0.52)]">
-                    {PRO_PLAN_PRICE.intervalLabel}
-                  </span>
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                  The full version for active job seekers who want deeper analytics, all themes,
-                  and more targeted links.
-                </p>
-                <div className="mt-4 space-y-2 text-sm text-[rgba(240,244,255,0.86)]">
-                  <p>Unlimited live hosting</p>
-                  <p>All 40+ themes</p>
-                  <p>3 targeted versions</p>
-                  <p>Full analytics, engagement, and device details</p>
-                  <p>Share card downloads</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={billingLoadingPlan !== null}
-                  onClick={() => void startPublishCheckout("pro")}
-                  className="gold-pill mt-6 w-full px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-50"
-                >
-                  {billingLoadingPlan === "pro" ? "Redirecting..." : "Start Pro Trial"}
-                </button>
-              </article>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </main>
   );
 }

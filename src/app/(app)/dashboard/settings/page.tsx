@@ -1,17 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   getAccountAccessState,
   type AccountAccessState,
 } from "@/lib/account-access";
-import { HOSTING_PLAN_PRICE, PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
+import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
-import { getAccountTierLabel } from "@/lib/plans";
 
 interface Profile {
   id: string;
@@ -35,29 +33,6 @@ interface Profile {
   hasPassword: boolean;
 }
 
-function formatFriendlyDate(value: string | null | undefined) {
-  if (!value) return null;
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDaysRemaining(value: string | null | undefined) {
-  if (!value) return null;
-
-  const diff = new Date(value).getTime() - Date.now();
-  if (Number.isNaN(diff)) return null;
-
-  const days = Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
-  return `${days} day${days === 1 ? "" : "s"} left`;
-}
-
 function isLivePublicPage(
   page:
     | {
@@ -78,7 +53,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [billingAction, setBillingAction] = useState<"starter" | "pro" | "portal" | null>(null);
+  const [billingAction, setBillingAction] = useState<"portal" | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,7 +89,6 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const legacyPlanLabel = profile ? getAccountTierLabel(profile.plan) : "basic access";
   const billingLoading = billingAction !== null;
 
   // Load profile (with polling retry after upgrade to handle webhook race condition)
@@ -361,8 +335,6 @@ export default function SettingsPage() {
       stripe_subscription_status: profile.stripe_subscription_status ?? null,
       stripe_trial_ends_at: profile.stripe_trial_ends_at ?? null,
     });
-  const trialEndsAtLabel = formatFriendlyDate(accountAccess.trialEndsAt);
-  const trialDaysRemaining = formatDaysRemaining(accountAccess.trialEndsAt);
   const livePageActive = isLivePublicPage(profile.latestPage);
   const activePlanPrice =
     profile.plan === "starter" ? STARTER_PLAN_PRICE : PRO_PLAN_PRICE;
@@ -381,31 +353,6 @@ export default function SettingsPage() {
       setBillingAction(null);
     } catch {
       showToast("Could not open billing portal.");
-      setBillingAction(null);
-    }
-  };
-
-  const startCheckout = async (plan: "starter" | "pro") => {
-    setBillingAction(plan);
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan,
-          source: "settings",
-        }),
-      });
-      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-
-      showToast(data?.error ?? "Could not start checkout.");
-      setBillingAction(null);
-    } catch {
-      showToast("Could not start checkout.");
       setBillingAction(null);
     }
   };
@@ -580,170 +527,47 @@ export default function SettingsPage() {
         </section>
       )}
 
-      {/* ── Plan Section ── */}
-      <section className="glass-card rounded-2xl p-5 sm:p-7 mb-5">
-        <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-3">
-          {accountAccess.isLegacyAccount ? "Plan" : "Hosting"}
+      {/* Universal free access with transitional subscription management. */}
+      <section className="glass-card mb-5 rounded-2xl p-5 sm:p-7">
+        <h2 className="mb-3 font-heading text-lg font-semibold text-[#F0F4FF]">
+          Access
         </h2>
-        {!accountAccess.isLegacyAccount ? (
-          <>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${accountAccess.hasPaidSubscription ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : accountAccess.requiresCheckoutToPublish ? "border-[rgba(59,130,246,0.35)] text-[#3B82F6]" : accountAccess.requiresSubscription ? "border-[rgba(245,158,11,0.35)] text-[#FCD34D]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
-                {accountAccess.hasPaidSubscription
-                  ? `${accountAccess.publicPlanLabel} ${accountAccess.isTrialingSubscription ? "trial active" : "active"}`
-                  : accountAccess.requiresCheckoutToPublish
-                    ? "preview only"
-                  : accountAccess.requiresSubscription
-                    ? "hosting inactive"
-                    : accountAccess.isActiveFreeMonth
-                      ? "free month active"
-                      : "free month ready"}
-              </span>
-              {accountAccess.hasPaidSubscription ? (
-                <>
-                  <span className="text-xs text-[rgba(240,244,255,0.5)]">{activePlanPrice.displayLabel}</span>
-                  {profile.plan === "starter" ? (
-                    <button
-                      type="button"
-                      disabled={billingLoading}
-                      onClick={() => void startCheckout("pro")}
-                      className="rounded-full border border-[rgba(59,130,246,0.35)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:text-[#BFDBFE] disabled:opacity-50"
-                    >
-                      {billingAction === "pro" ? "Loading..." : "Upgrade to Pro"}
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={billingLoading}
-                    onClick={() => void openBillingPortal()}
-                    className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#F0F4FF] disabled:opacity-50"
-                  >
-                    {billingAction === "portal" ? "Loading..." : "Manage Subscription"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled={billingLoading}
-                    onClick={() => void startCheckout("starter")}
-                    className="rounded-full border border-[rgba(59,130,246,0.35)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:text-[#BFDBFE] disabled:opacity-50"
-                  >
-                    {billingAction === "starter"
-                      ? "Loading..."
-                      : `Start Starter Trial - ${STARTER_PLAN_PRICE.amountLabel}/mo`}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={billingLoading}
-                    onClick={() => void startCheckout("pro")}
-                    className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
-                  >
-                    {billingAction === "pro"
-                      ? "Loading..."
-                      : `Start Pro Trial - ${PRO_PLAN_PRICE.amountLabel}/mo`}
-                  </button>
-                </>
-              )}
-            </div>
-            {accountAccess.requiresCheckoutToPublish ? (
-              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
-                Free preview lets you build without a card, but your page stays off the public web until you pick Starter or Pro. Checkout saves a payment method now, starts a 30-day free trial, and auto-renews monthly after that unless you cancel.
-              </p>
-            ) : null}
-            {accountAccess.hasPaidSubscription && accountAccess.publicPlanLabel === "Starter" ? (
-              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
-                Starter keeps your page live with dashboard view counts, 9 themes, share cards, and 1 targeted version. Upgrade to Pro anytime for full analytics, all themes, and 3 targeted versions.
-              </p>
-            ) : null}
-            {accountAccess.hasPaidSubscription && accountAccess.publicPlanLabel === "Pro" ? (
-              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
-                Pro keeps your page live with full analytics, all themes, share cards, and up to 3 targeted versions.
-              </p>
-            ) : null}
-            {accountAccess.isTrialingSubscription && trialEndsAtLabel ? (
-              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
-                Your {accountAccess.publicPlanLabel} trial is active until <span className="text-[#F0F4FF]">{trialEndsAtLabel}</span>{trialDaysRemaining ? ` (${trialDaysRemaining})` : ""}. Unless you cancel from the billing portal, it will continue at {activePlanPrice.displayLabel}.
-              </p>
-            ) : null}
-            {!accountAccess.isTrialingSubscription && accountAccess.hasPaidSubscription ? (
-              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
-                Monthly billing is active at {activePlanPrice.displayLabel}. Your page can stay live while the subscription remains active.
-              </p>
-            ) : null}
-            {accountAccess.requiresSubscription ? (
-              <p className="mt-3 text-sm text-[rgba(240,244,255,0.58)]">
-                Your free hosting month ended{trialEndsAtLabel ? ` on ${trialEndsAtLabel}` : ""}, so your public page is now offline. Continue hosting to bring the page back live.
-              </p>
-            ) : null}
-            <div className="mt-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
-              {livePageActive
-                ? "Your public page is currently live."
-                : accountAccess.requiresCheckoutToPublish
-                  ? "Your page is still in preview and is not live yet."
-                : accountAccess.requiresSubscription
-                  ? "Your public page is currently offline until hosting resumes."
-                  : "Your page is not live yet. Publish it when you are ready to start the free hosting month."}
-            </div>
-            <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
-              Trials convert to monthly billing unless canceled. By subscribing, you agree to our{" "}
-              <Link href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
-                Terms
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
-                Privacy Policy
-              </Link>
-              . Cancel anytime from the billing portal. No refunds except where required by law.
-            </p>
-          </>
-        ) : null}
-        {accountAccess.isLegacyAccount ? (
-          <>
         <div className="flex flex-wrap items-center gap-3">
-          <span className={`rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.14em] ${accountAccess.hasPaidSubscription ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]" : "border-[rgba(59,130,246,0.35)] text-[#3B82F6]"}`}>
-            {legacyPlanLabel}
+          <span className="rounded-full border border-[rgba(74,222,128,0.35)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#4ade80]">
+            Free access
           </span>
-          {accountAccess.hasPaidSubscription ? (
-            <>
-              <span className="text-xs text-[rgba(240,244,255,0.5)]">{HOSTING_PLAN_PRICE.displayLabel}</span>
-              <button
-                type="button"
-                disabled={billingLoading}
-                onClick={() => void openBillingPortal()}
-                className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#F0F4FF] disabled:opacity-50"
-              >
-                {billingAction === "portal" ? "Loading..." : "Manage Subscription"}
-              </button>
-            </>
-          ) : (
+          <span className="text-xs text-[rgba(240,244,255,0.5)]">
+            No card or subscription required
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+          Your living resume, public link, ATS-ready PDF, share card, themes, and page
+          analytics are available free.
+        </p>
+        <div className="mt-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
+          {livePageActive
+            ? "Your public page is currently live."
+            : "Your page is not live yet. Publish it whenever you are ready."}
+        </div>
+        {accountAccess.hasPaidSubscription ? (
+          <div className="mt-5 rounded-xl border border-[rgba(245,158,11,0.24)] bg-[rgba(245,158,11,0.08)] p-4">
+            <p className="text-sm font-medium text-[#FDE68A]">
+              Existing {accountAccess.publicPlanLabel} subscription detected
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+              Publishing is now free, so this subscription is no longer required for your
+              page to stay live. It may continue at {activePlanPrice.displayLabel} until you
+              cancel it in the billing portal.
+            </p>
             <button
               type="button"
               disabled={billingLoading}
-              onClick={() => void startCheckout("pro")}
-              className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] disabled:opacity-50"
+              onClick={() => void openBillingPortal()}
+              className="mt-3 rounded-full border border-[rgba(255,255,255,0.16)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.72)] hover:text-[#F0F4FF] disabled:opacity-50"
             >
-              {billingAction === "pro" ? "Loading..." : `Start Hosting - ${HOSTING_PLAN_PRICE.amountLabel}/mo`}
+              {billingAction === "portal" ? "Loading..." : "Manage Subscription"}
             </button>
-          )}
-        </div>
-        {!accountAccess.hasPaidSubscription && (
-          <p className="mt-3 text-xs text-[rgba(240,244,255,0.4)]">
-            Unlock additional themes, PNG share cards, and remove the badge. Page Analytics are already included.
-          </p>
-        )}
-        <p className="mt-3 text-[11px] leading-5 text-[rgba(240,244,255,0.44)]">
-          Monthly hosting auto-renews until canceled. By subscribing, you agree to our{" "}
-          <Link href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
-            Terms
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
-            Privacy Policy
-          </Link>
-          . Cancel anytime from the billing portal. No refunds except where required by law.
-        </p>
-          </>
+          </div>
         ) : null}
       </section>
 

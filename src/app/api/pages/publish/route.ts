@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
-  TRIAL_HOSTING_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
 import { sanitizePageVariants } from "@/lib/page-variants";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
-import { FREE_PREVIEW_THEMES, STARTER_THEMES, isThemeAllowed } from "@/lib/plans";
+import { isThemeAllowed } from "@/lib/plans";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { usernameFromEmail } from "@/lib/usernames";
@@ -91,10 +90,7 @@ export async function POST(request: Request) {
     if (!isThemeAllowed(body.theme_id, accountAccess.allowedThemeIds)) {
       return NextResponse.json(
         {
-          error:
-            accountAccess.allowedThemeIds === FREE_PREVIEW_THEMES
-              ? `The "${body.theme_id}" theme is locked on Free preview. Free preview includes: ${FREE_PREVIEW_THEMES.join(", ")}.`
-              : `The "${body.theme_id}" theme requires Pro. Starter includes: ${STARTER_THEMES.join(", ")}.`,
+          error: `The "${body.theme_id}" theme is not available for this account.`,
         },
         { status: 403 },
       );
@@ -113,40 +109,14 @@ export async function POST(request: Request) {
         {
           error:
             accountAccess.variantLimit === 0
-              ? "Free preview does not include targeted versions. Choose Starter or Pro to publish with variants."
-              : `Your current plan allows ${accountAccess.variantLimit} targeted version${accountAccess.variantLimit === 1 ? "" : "s"}.`,
+              ? "This streamlined resume does not include targeted versions."
+              : `This account supports ${accountAccess.variantLimit} targeted version${accountAccess.variantLimit === 1 ? "" : "s"}.`,
         },
         { status: 403 },
       );
     }
 
-    if (accountAccess.requiresCheckoutToPublish) {
-      return NextResponse.json(
-        {
-          error:
-            "Choose Starter or Pro and add a payment method to publish this page. Your first 30 days are free.",
-          code: "checkout_required",
-        },
-        { status: 402 },
-      );
-    }
-
-    if (accountAccess.requiresSubscription) {
-      return NextResponse.json(
-        {
-          error: "Your free month of live hosting has ended. Continue hosting for $9.99/mo from settings to bring the page back online.",
-          code: "subscription_required",
-          redirectTo: "/dashboard/settings",
-        },
-        { status: 402 },
-      );
-    }
-
     const now = new Date().toISOString();
-    const shouldStartHostingTrial =
-      accountAccess.billingCohort === TRIAL_HOSTING_BILLING_COHORT &&
-      !accountAccess.hasPaidSubscription &&
-      !accountAccess.hasStartedFreeMonth;
 
     if (!profile?.username) {
       const profileUpsertFields: Record<string, unknown> = {
@@ -159,9 +129,8 @@ export async function POST(request: Request) {
       if (profileSchema === "full") {
         profileUpsertFields.billing_cohort =
           profile?.billing_cohort ?? PUBLISH_CC_TRIAL_BILLING_COHORT;
-        profileUpsertFields.hosting_trial_started_at = shouldStartHostingTrial
-          ? now
-          : profile?.hosting_trial_started_at ?? null;
+        profileUpsertFields.hosting_trial_started_at =
+          profile?.hosting_trial_started_at ?? null;
         profileUpsertFields.stripe_subscription_status =
           profile?.stripe_subscription_status ?? null;
         profileUpsertFields.stripe_trial_ends_at =
@@ -171,17 +140,6 @@ export async function POST(request: Request) {
       await supabase.from("profiles").upsert(profileUpsertFields, {
         onConflict: "id",
       });
-    } else if (shouldStartHostingTrial) {
-      if (profileSchema === "full") {
-        const { error: trialStartError } = await supabase
-          .from("profiles")
-          .update({ hosting_trial_started_at: now })
-          .eq("id", user.id);
-
-        if (trialStartError) {
-          throw new Error(trialStartError.message);
-        }
-      }
     }
 
     const allFields: Record<string, unknown> = {

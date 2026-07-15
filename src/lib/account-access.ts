@@ -61,6 +61,24 @@ export interface AccountAccessState {
   stripeSubscriptionStatus: string | null;
 }
 
+function grantUniversalFreeAccess(
+  state: AccountAccessState,
+): AccountAccessState {
+  return {
+    ...state,
+    allowedThemeIds: null,
+    analyticsTier: "full",
+    shareCardAllowed: true,
+    variantLimit: 3,
+    themeFeaturesUnlocked: true,
+    analyticsAccessAllowed: true,
+    featuresUnlocked: true,
+    publicHostingAllowed: true,
+    requiresSubscription: false,
+    requiresCheckoutToPublish: false,
+  };
+}
+
 function toDate(value: Date | string | number | null | undefined): Date | null {
   if (!value) {
     return null;
@@ -105,7 +123,7 @@ export function getAccountAccessState(
     const allowedThemeIds = hasPaidSubscription ? null : STARTER_THEMES;
     const themeFeaturesUnlocked = allowedThemeIds === null;
 
-    return {
+    return grantUniversalFreeAccess({
       publicPlanLabel,
       allowedThemeIds,
       analyticsTier: "full",
@@ -132,7 +150,7 @@ export function getAccountAccessState(
       requiresCheckoutToPublish: false,
       isTrialingSubscription: false,
       stripeSubscriptionStatus,
-    };
+    });
   }
 
   if (billingCohort === PUBLISH_CC_TRIAL_BILLING_COHORT) {
@@ -151,7 +169,7 @@ export function getAccountAccessState(
     const shareCardAllowed = hasPaidSubscription;
     const publicHostingAllowed = hasPaidSubscription;
 
-    return {
+    return grantUniversalFreeAccess({
       publicPlanLabel,
       allowedThemeIds,
       analyticsTier,
@@ -184,7 +202,7 @@ export function getAccountAccessState(
       requiresCheckoutToPublish: !hasPaidSubscription,
       isTrialingSubscription,
       stripeSubscriptionStatus,
-    };
+    });
   }
 
   const hasStartedFreeMonth = Boolean(trialStartedAtDate);
@@ -204,7 +222,7 @@ export function getAccountAccessState(
     hasPaidSubscription || !hasStartedFreeMonth || isActiveFreeMonth;
   const themeFeaturesUnlocked = true;
 
-  return {
+  return grantUniversalFreeAccess({
     publicPlanLabel,
     allowedThemeIds: null,
     analyticsTier: "full",
@@ -231,5 +249,5 @@ export function getAccountAccessState(
     requiresCheckoutToPublish: false,
     isTrialingSubscription,
     stripeSubscriptionStatus,
-  };
+  });
 }

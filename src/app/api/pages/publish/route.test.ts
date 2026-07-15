@@ -144,7 +144,7 @@ describe("POST /api/pages/publish", () => {
     mocks.trackEvent.mockResolvedValue(undefined);
   });
 
-  it("starts the free month on first publish for trial-hosting cohort users", async () => {
+  it("publishes for trial-hosting cohort users without starting a hosting timer", async () => {
     const profileUpdates = vi.fn();
     const pageUpserts = vi.fn();
 
@@ -183,11 +183,7 @@ describe("POST /api/pages/publish", () => {
       slug: "rachel",
       pageId: "page-1",
     });
-    expect(profileUpdates).toHaveBeenCalledWith(
-      expect.objectContaining({
-        hosting_trial_started_at: expect.any(String),
-      }),
-    );
+    expect(profileUpdates).not.toHaveBeenCalled();
     expect(pageUpserts).toHaveBeenCalledWith(
       expect.objectContaining({
         theme_id: "matrix",
@@ -197,7 +193,7 @@ describe("POST /api/pages/publish", () => {
     );
   });
 
-  it("blocks expired unpaid trial-hosting users from republishing until they subscribe", async () => {
+  it("lets expired trial-hosting users republish for free", async () => {
     const pageUpserts = vi.fn();
 
     mocks.createServiceRoleSupabaseClient.mockReturnValue(
@@ -229,17 +225,17 @@ describe("POST /api/pages/publish", () => {
       }),
     );
 
-    expect(response.status).toBe(402);
+    expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      error:
-        "Your free month of live hosting has ended. Continue hosting for $9.99/mo from settings to bring the page back online.",
-      code: "subscription_required",
-      redirectTo: "/dashboard/settings",
+      slug: "rachel",
+      pageId: "page-1",
     });
-    expect(pageUpserts).not.toHaveBeenCalled();
+    expect(pageUpserts).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "live", visibility: "public" }),
+    );
   });
 
-  it("requires checkout before publishing for new publish-cc preview users", async () => {
+  it("lets new publish-cc users publish without checkout", async () => {
     const pageUpserts = vi.fn();
 
     mocks.createServiceRoleSupabaseClient.mockReturnValue(
@@ -271,12 +267,13 @@ describe("POST /api/pages/publish", () => {
       }),
     );
 
-    expect(response.status).toBe(402);
+    expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      error:
-        "Choose Starter or Pro and add a payment method to publish this page. Your first 30 days are free.",
-      code: "checkout_required",
+      slug: "rachel",
+      pageId: "page-1",
     });
-    expect(pageUpserts).not.toHaveBeenCalled();
+    expect(pageUpserts).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "live", visibility: "public" }),
+    );
   });
 });

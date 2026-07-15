@@ -162,7 +162,7 @@ describe("fetchPublicLivePage", () => {
     await expect(fetchPublicLivePage(supabase, "ray")).resolves.toEqual(legacyPage);
   });
 
-  it("returns null and unpublishes expired new-cohort pages", async () => {
+  it("keeps expired historical trial pages public under universal free access", async () => {
     const updates = vi.fn();
     const supabase = createSupabaseMock({
       profile: {
@@ -175,10 +175,9 @@ describe("fetchPublicLivePage", () => {
       onPageUpdate: updates,
     });
 
-    await expect(fetchPublicLivePage(supabase, "ray")).resolves.toBeNull();
-    expect(updates).toHaveBeenCalledWith({
-      status: "draft",
-      visibility: "private",
-    });
+    await expect(fetchPublicLivePage(supabase, "ray")).resolves.toEqual(
+      buildPageRecord("page-1", "ray"),
+    );
+    expect(updates).not.toHaveBeenCalled();
   });
 });

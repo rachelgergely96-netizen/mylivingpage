@@ -214,7 +214,7 @@ describe("POST /api/resume/export", () => {
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 
-  it("blocks Resume PDF downloads once hosting is inactive for an expired new-cohort page", async () => {
+  it("allows Resume PDF downloads after a historical hosting period expires", async () => {
     const pageUpdateValues = vi.fn();
 
     mocks.serviceRoleFactory.mockReturnValue(
@@ -237,15 +237,9 @@ describe("POST /api/resume/export", () => {
       }),
     );
 
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      error: "Page not found.",
-    });
-    expect(pageUpdateValues).toHaveBeenCalledWith({
-      status: "draft",
-      visibility: "private",
-    });
-    expect(mocks.renderPdf).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(pageUpdateValues).not.toHaveBeenCalled();
+    expect(mocks.renderPdf).toHaveBeenCalled();
   });
 
   it("renders the saved living-page resume and ignores any extra browser payload", async () => {

@@ -392,7 +392,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           selectedThemeId={themeId}
           onSelectTheme={setThemeId}
           allowedThemeIds={accountAccess.allowedThemeIds}
-          lockedLabel={accountAccess.hasPaidSubscription ? "Pro" : "Starter or Pro"}
+          lockedLabel="Not available"
           showDescription
         />
 

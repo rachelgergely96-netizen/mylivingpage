@@ -1,12 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { PageVariant } from "../../src/types/resume";
 import {
-  buildCheckoutCompletedEventForPlan,
-  buildSubscriptionUpdatedEvent,
-  buildSubscriptionDeletedEvent,
   canRunAdminFixtureFlows,
   canRunAuthenticatedFlows,
-  canRunBillingFlows,
   canRunFailureInjectionFlows,
   canRunGoogleOAuthFlows,
   canRunSignupConfirmation,
@@ -21,7 +17,6 @@ import {
   getProfileFixtureByEmail,
   getSignupEmailDomain,
   removeAvatarViaApi,
-  sendStripeWebhook,
   seedPageAnalyticsHistory,
   setBillingStateForProfile,
   setPageConfigForPage,
@@ -117,7 +112,7 @@ test.describe.serial("authenticated user journeys", () => {
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
     await clearPagesForProfile(profile.id);
-    await setPlanForProfile(profile.id, "pro");
+    await setPlanForProfile(profile.id, "spark");
 
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Create Your Page" }).click();
@@ -144,10 +139,10 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("Username updated")).toBeVisible();
   });
 
-  test("publish-preview users must choose Starter or Pro before the page can go live", async ({ page }) => {
+  test("free users can publish without checkout or a payment method", async ({ page }) => {
     test.skip(
-      !canRunBillingFlows,
-      "Set Playwright Supabase and Stripe env vars to run publish checkout coverage.",
+      !canRunAdminFixtureFlows,
+      "Set Playwright auth and Supabase service-role env vars to run free publish coverage.",
     );
 
     await page.route("**/api/generate/parse", async (route) => {
@@ -159,7 +154,7 @@ test.describe.serial("authenticated user journeys", () => {
     });
 
     await signIn(page);
-    let profile = await getProfileFixtureByEmail();
+    const profile = await getProfileFixtureByEmail();
     await clearPagesForProfile(profile.id);
     await setBillingStateForProfile(profile.id, {
       plan: "spark",
@@ -168,42 +163,33 @@ test.describe.serial("authenticated user journeys", () => {
       stripeTrialEndsAt: null,
     });
 
+    const checkoutRequests: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.url().includes("/api/stripe/checkout") &&
+        request.method() === "POST"
+      ) {
+        checkoutRequests.push(request.url());
+      }
+    });
+
     await page.goto("/create");
     await page.getByPlaceholder("Paste your info here...").fill(CREATE_FLOW_RESUME_TEXT);
     await page.getByRole("button", { name: "Create my page" }).click();
 
-    await expect(
-      page.getByRole("button", { name: "Choose Plan to Publish" }),
-    ).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Choose Plan to Publish" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Choose a plan and start your 30-day free trial" }),
-    ).toBeVisible();
-
-    const checkoutResponsePromise = page.waitForResponse((response) =>
-      response.url().includes("/api/stripe/checkout") && response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Start Starter Trial" }).click();
-    const checkoutResponse = await checkoutResponsePromise;
-    expect(checkoutResponse.ok()).toBeTruthy();
-    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
-
-    profile = await getProfileFixtureByEmail();
-    expect(profile.stripe_customer_id).toBeTruthy();
-
-    await sendStripeWebhook(
-      page.context().request,
-      await buildCheckoutCompletedEventForPlan(profile, "starter"),
-    );
-
-    await page.goto("/create?checkout=success&source=publish&plan=starter");
+    const publishButton = page.getByRole("button", { name: "Publish Page" });
+    await expect(publishButton).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Choose Plan to Publish" })).toHaveCount(0);
+    await publishButton.click();
     await expect(
       page.getByRole("heading", { name: "Your page is live." }),
     ).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/dashboard/settings");
-    await expect(page.getByText(/Starter trial/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toBeVisible();
+    await expect(page.getByText("No card or subscription required")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start (Starter|Pro) Trial/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toHaveCount(0);
+    expect(checkoutRequests).toEqual([]);
   });
 
   test("signup intent can carry a create ref into the flow for existing users", async ({ page }) => {
@@ -316,7 +302,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
-    await setPlanForProfile(profile.id, "pro");
+    await setPlanForProfile(profile.id, "spark");
     await ensureLivePageForProfile(profile);
 
     await page.goto(`/${profile.username}`);
@@ -436,7 +422,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
-    await setPlanForProfile(profile.id, "pro");
+    await setPlanForProfile(profile.id, "spark");
     await ensureLivePageForProfile(profile);
 
     const assertStackedDock = async () => {
@@ -506,7 +492,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await signIn(page);
     const profile = await getProfileFixtureByEmail();
-    await setPlanForProfile(profile.id, "pro");
+    await setPlanForProfile(profile.id, "spark");
     await ensureLivePageForProfile(profile);
 
     await page.route("**/api/resume/export", async (route) => {
@@ -543,14 +529,14 @@ test.describe.serial("authenticated user journeys", () => {
     expect((errorBox?.y ?? 0) + (errorBox?.height ?? 0) <= (shareBox?.y ?? 0)).toBe(true);
   });
 
-  test("Starter and Pro billing states expose the correct settings, dashboard, and downgrade behavior", async ({ page, browser }) => {
+  test("free access remains available across historical subscription states", async ({ page, browser }) => {
     test.skip(
-      !canRunBillingFlows,
-      "Set Playwright Supabase and Stripe env vars to run billing release coverage.",
+      !canRunAdminFixtureFlows,
+      "Set Playwright auth and Supabase service-role env vars to run subscription transition coverage.",
     );
 
     await signIn(page);
-    let profile = await getProfileFixtureByEmail();
+    const profile = await getProfileFixtureByEmail();
     await setBillingStateForProfile(profile.id, {
       plan: "spark",
       billingCohort: "publish_cc_trial_v1",
@@ -560,91 +546,41 @@ test.describe.serial("authenticated user journeys", () => {
     await ensureLivePageForProfile(profile);
 
     await page.goto("/dashboard/settings");
-    const checkoutResponsePromise = page.waitForResponse((response) =>
-      response.url().includes("/api/stripe/checkout") && response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: /Start Starter Trial/ }).click();
-    const checkoutResponse = await checkoutResponsePromise;
-    expect(checkoutResponse.ok()).toBeTruthy();
-    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
+    await expect(page.getByText("Free access")).toBeVisible();
+    await expect(page.getByText("No card or subscription required")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Start (Starter|Pro) Trial/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Manage Subscription" })).toHaveCount(0);
 
-    profile = await getProfileFixtureByEmail();
-    expect(profile.stripe_customer_id).toBeTruthy();
-
-    await sendStripeWebhook(
-      page.context().request,
-      await buildCheckoutCompletedEventForPlan(profile, "starter"),
-    );
-
-    await page.goto("/dashboard/settings?upgraded=true");
-    await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
-    await expect(page.getByText(/Starter/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toBeVisible();
-
-    await page.goto("/dashboard");
-    await expect(page.getByRole("link", { name: /Upgrade to Pro/ }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /Page Analytics/ })).toHaveCount(0);
-
+    await setBillingStateForProfile(profile.id, {
+      plan: "starter",
+      billingCohort: "publish_cc_trial_v1",
+      stripeSubscriptionStatus: "active",
+      stripeTrialEndsAt: null,
+    });
     await page.goto("/dashboard/settings");
-    const proCheckoutResponsePromise = page.waitForResponse((response) =>
-      response.url().includes("/api/stripe/checkout") && response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Upgrade to Pro" }).click();
-    const proCheckoutResponse = await proCheckoutResponsePromise;
-    expect(proCheckoutResponse.ok()).toBeTruthy();
-    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30_000 });
-
-    profile = await getProfileFixtureByEmail();
-    await sendStripeWebhook(
-      page.context().request,
-      await buildCheckoutCompletedEventForPlan(profile, "pro"),
-    );
-    await sendStripeWebhook(
-      page.context().request,
-      await buildSubscriptionUpdatedEvent(profile, {
-        plan: "pro",
-        status: "active",
-      }),
-    );
-
-    await page.goto("/dashboard/settings?upgraded=true&plan=pro");
+    await expect(page.getByText("Existing Starter subscription detected")).toBeVisible();
     await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
-    await expect(page.getByText(/Pro/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toHaveCount(0);
 
-    await page.goto("/dashboard/settings");
-    const portalResponsePromise = page.waitForResponse((response) =>
-      response.url().includes("/api/stripe/portal") && response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Manage Subscription" }).click();
-    const portalResponse = await portalResponsePromise;
-    expect(portalResponse.ok()).toBeTruthy();
-    await page.waitForURL(/billing\.stripe\.com/, { timeout: 30_000 });
-
-    await page.goto("/dashboard");
-    await expect(page.getByRole("link", { name: /Page Analytics/ }).first()).toBeVisible();
-
-    profile = await getProfileFixtureByEmail();
-    await ensureLivePageForProfile(profile);
-    await sendStripeWebhook(
-      page.context().request,
-      await buildSubscriptionDeletedEvent(profile, "pro"),
-    );
+    await setBillingStateForProfile(profile.id, {
+      plan: "spark",
+      billingCohort: "publish_cc_trial_v1",
+      stripeSubscriptionStatus: "canceled",
+      stripeTrialEndsAt: null,
+    });
 
     const viewerContext = await browser.newContext();
     const viewerPage = await viewerContext.newPage();
     await viewerPage.goto(`/${profile.username}`);
-    await expect(viewerPage.getByText("Page unavailable")).toBeVisible();
-    await expect(viewerPage.getByText("page is being updated")).toBeVisible();
+    await expect(viewerPage.getByText("Page unavailable")).toHaveCount(0);
+    await expect(viewerPage.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
     await viewerContext.close();
 
-    await page.goto("/dashboard");
-    await expect(
-      page.getByText("Someone tried to open your page while it was offline"),
-    ).toBeVisible();
-
     await page.goto("/dashboard/settings");
-    await expect(page.getByRole("button", { name: /Start Starter Trial/ })).toBeVisible();
+    await expect(page.getByText("Free access")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Manage Subscription" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Start (Starter|Pro) Trial/ })).toHaveCount(0);
   });
 
   test("avatar replacement failures preserve the current avatar", async ({ page }) => {

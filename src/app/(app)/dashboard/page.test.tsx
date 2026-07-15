@@ -272,6 +272,6 @@ describe("dashboard page", () => {
 
     expect(markup).toContain("Someone tried to open your page while it was offline");
     expect(markup).toContain('href="/dashboard/settings"');
-    expect(markup).toContain("Reactivate hosting from settings");
+    expect(markup).toContain("Use the Publish button on the page card below");
   });
 });

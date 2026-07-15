@@ -7,7 +7,7 @@ const NAV_LINKS = [
   { href: "#demo-section", label: "Demo", external: false },
   { href: "#how", label: "How It Works", external: false },
   { href: "/examples", label: "Examples", external: true },
-  { href: "#pricing", label: "Pricing", external: false },
+  { href: "#pricing", label: "Free", external: false },
 ];
 
 const LOGIN_HREF = "/login?next=/dashboard";

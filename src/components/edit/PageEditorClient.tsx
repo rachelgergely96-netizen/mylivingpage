@@ -449,7 +449,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         >
           <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">
             <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
-              <ResumeLayout data={data} />
+              <ResumeLayout data={data} profileSlug={publicSlug || page?.slug} />
             </div>
           </ThemeCanvas>
         </ProfileWindow>

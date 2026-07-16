@@ -701,7 +701,7 @@ export default function CreatePage() {
               </div>
               <ThemeCanvas themeId={selectedTheme} height="min(540px, calc(100dvh - 280px))" className="rounded-none">
                 <div className="h-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.55)_100%)]">
-                  <ResumeLayout data={previewData} />
+                  <ResumeLayout data={previewData} profileSlug={predictedSlug} />
                 </div>
               </ThemeCanvas>
             </ProfileWindow>

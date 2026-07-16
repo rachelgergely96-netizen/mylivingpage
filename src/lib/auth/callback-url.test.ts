@@ -16,6 +16,10 @@ describe("sanitizeAuthRedirectPath", () => {
     "https://evil.example/steal",
     "//evil.example/steal",
     "/\\evil.example/steal",
+    "/.//evil.example/steal",
+    "/a/..//evil.example/steal",
+    "/%2e%2e//evil.example/steal",
+    "/a/..\\evil.example/steal",
     "javascript:alert(1)",
     "dashboard",
   ])("rejects unsafe auth destination %s", (value) => {

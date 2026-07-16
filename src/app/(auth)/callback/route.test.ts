@@ -66,9 +66,15 @@ describe("GET /callback", () => {
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
-  it("rejects protocol-relative callback destinations", async () => {
+  it.each([
+    "//evil.example/steal",
+    "/.//evil.example/steal",
+    "/%2e%2e//evil.example/steal",
+  ])("rejects unsafe callback destination %s", async (next) => {
+    const requestUrl = new URL("https://www.mylivingpage.com/callback");
+    requestUrl.searchParams.set("next", next);
     const response = await GET(
-      new NextRequest("https://www.mylivingpage.com/callback?next=%2F%2Fevil.example%2Fsteal"),
+      new NextRequest(requestUrl),
     );
 
     expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");

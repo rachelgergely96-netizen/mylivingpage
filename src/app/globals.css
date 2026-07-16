@@ -96,6 +96,7 @@ a {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 4px 4px 0 rgba(2, 6, 23, 0.34);
 }
 
+@layer components {
 .profile-shell {
   --profile-panel: #0a1a30;
   --profile-panel-deep: #061225;
@@ -277,6 +278,7 @@ a {
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(147, 197, 253, 0.56);
   color: #eff6ff;
+}
 }
 
 :where(a, button, input, textarea, select, summary):focus-visible {

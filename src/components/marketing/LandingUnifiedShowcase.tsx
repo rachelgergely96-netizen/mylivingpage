@@ -237,7 +237,13 @@ export default function LandingUnifiedShowcase() {
                 <ThemeCanvas themeId={themeId} height={640} className="rounded-none" interactive>
                   <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.48)_100%)] p-2 sm:p-3">
                     <div className="h-full overflow-hidden rounded-md border border-[rgba(255,255,255,0.12)] bg-[rgba(8,14,28,0.22)]">
-                      <ResumeLayout data={SHOWCASE_RESUME} compact headingLevel="h2" disableExternalLinks />
+                      <ResumeLayout
+                        data={SHOWCASE_RESUME}
+                        profileSlug={slug}
+                        compact
+                        headingLevel="h2"
+                        disableExternalLinks
+                      />
                     </div>
                   </div>
                 </ThemeCanvas>

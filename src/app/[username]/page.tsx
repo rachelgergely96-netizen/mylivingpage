@@ -236,6 +236,7 @@ export default async function PublicLivingPage({
               ) : null}
               <ResumeLayout
                 data={variantResumeData}
+                profileSlug={username}
                 useExternalScrollRoot
               />
             </div>

@@ -1,3 +1,4 @@
+import React from "react";
 import Image from "next/image";
 import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import type { ResumeData } from "@/types/resume";
@@ -8,6 +9,7 @@ interface ResumeLayoutProps {
   headingLevel?: "h1" | "h2";
   disableExternalLinks?: boolean;
   useExternalScrollRoot?: boolean;
+  profileSlug?: string;
 }
 
 /** Old pages stored skills as string[]; new pages use {category,items}[]. */
@@ -68,7 +70,16 @@ function formatProofTypeLabel(value: string) {
     .join(" ");
 }
 
-function buildProfileHandle(name: string) {
+function buildProfileHandle(name: string, profileSlug?: string) {
+  const normalizedSlug = profileSlug
+    ?.trim()
+    .replace(/^@/, "")
+    .replace(/^\/+|\/+$/g, "");
+
+  if (normalizedSlug) {
+    return `@${normalizedSlug}`;
+  }
+
   const normalized = name
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -89,6 +100,7 @@ export default function ResumeLayout({
   headingLevel = "h1",
   disableExternalLinks = false,
   useExternalScrollRoot = false,
+  profileSlug,
 }: ResumeLayoutProps) {
   const NameHeading = headingLevel;
   const SectionHeading = headingLevel === "h1" ? "h2" : "h3";
@@ -105,7 +117,7 @@ export default function ResumeLayout({
     ? normalizeTestimonials(data.testimonials).slice(0, 1)
     : normalizeTestimonials(data.testimonials).slice(0, 3);
   const hasContact = Boolean(data.email || data.linkedin || data.github || data.website);
-  const handle = buildProfileHandle(data.name);
+  const handle = buildProfileHandle(data.name, profileSlug);
   const firstName = data.name.trim().split(/\s+/)[0] || "This member";
   const initial = (data.name || "?").slice(0, 1).toUpperCase();
 

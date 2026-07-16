@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FREE_THEMES } from "@/lib/plans";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
@@ -37,9 +37,21 @@ export default function ThemePicker({
   showFilters = true,
 }: ThemePickerProps) {
   const selectedTheme = themes.find((theme) => theme.id === selectedThemeId);
+  const selectedThemeCollection = selectedTheme?.collection;
   const [activeCollection, setActiveCollection] = useState<ThemeCollectionFilterId>(() =>
-    showFilters ? (selectedTheme?.collection ?? "cinematic") : "all",
+    showFilters ? (selectedThemeCollection ?? "cinematic") : "all",
   );
+
+  useEffect(() => {
+    if (!showFilters || !selectedThemeCollection) return;
+
+    setActiveCollection((currentCollection) =>
+      currentCollection === "all" || currentCollection === selectedThemeCollection
+        ? currentCollection
+        : selectedThemeCollection,
+    );
+  }, [selectedThemeCollection, showFilters]);
+
   const selectableThemeIds =
     allowedThemeIds === undefined
       ? premium

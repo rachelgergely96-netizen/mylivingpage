@@ -21,7 +21,12 @@ export function sanitizeAuthRedirectPath(
   value: string | null | undefined,
   fallback = "/dashboard",
 ): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  ) {
     return fallback;
   }
 
@@ -31,7 +36,20 @@ export function sanitizeAuthRedirectPath(
       return fallback;
     }
 
-    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+    const normalizedPath = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+    const normalizedDestination = new URL(
+      normalizedPath,
+      REDIRECT_VALIDATION_ORIGIN,
+    );
+
+    // Dot segments can normalize an apparently relative path into a
+    // protocol-relative URL (for example, `/.//evil.example`). Validate the
+    // serialized result again before it is used to construct a redirect.
+    if (normalizedDestination.origin !== REDIRECT_VALIDATION_ORIGIN.origin) {
+      return fallback;
+    }
+
+    return `${normalizedDestination.pathname}${normalizedDestination.search}${normalizedDestination.hash}`;
   } catch {
     return fallback;
   }

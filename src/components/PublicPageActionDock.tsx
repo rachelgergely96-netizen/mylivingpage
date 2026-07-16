@@ -35,7 +35,7 @@ export default function PublicPageActionDock({
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const clearTimerRef = useRef<number | null>(null);
   const dockBottomClass = avoidBadge
-    ? "bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] sm:bottom-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]"
+    ? "bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] lg:bottom-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]"
     : "bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:bottom-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]";
 
   const handleDownloadErrorChange = useCallback((message: string | null) => {
@@ -64,11 +64,18 @@ export default function PublicPageActionDock({
 
   return (
     <div className={`fixed right-4 z-40 w-72 max-w-[calc(100vw-2rem)] ${dockBottomClass} sm:right-5`}>
-      <div className="flex w-full flex-col items-stretch gap-2">
+      <div className="profile-window w-full">
+        <div className="profile-titlebar">
+          <span>Profile actions</span>
+          <span>Share or save</span>
+        </div>
+        <div className="flex flex-col items-stretch gap-2 p-2.5">
         {downloadError ? (
           <p
             data-testid="public-action-dock-error"
-            className="w-full rounded-2xl border border-[rgba(255,142,142,0.18)] bg-[rgba(10,22,40,0.94)] px-3.5 py-2 text-left text-xs leading-5 text-[#ff8e8e] shadow-[0_6px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+            role="alert"
+            aria-live="polite"
+            className="w-full border border-[rgba(255,142,142,0.18)] bg-[rgba(255,120,120,0.06)] px-3.5 py-2 text-left text-xs leading-5 text-[#ff9f9f]"
           >
             {downloadError}
           </p>
@@ -95,6 +102,7 @@ export default function PublicPageActionDock({
           enabled={shareCardEnabled}
           className="w-full justify-center"
         />
+        </div>
       </div>
     </div>
   );

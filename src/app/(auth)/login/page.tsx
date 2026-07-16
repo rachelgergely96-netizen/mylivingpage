@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { buildGoogleAuthStartUrl, sanitizeAuthRedirectPath } from "@/lib/auth/callback-url";
 import { getAuthErrorMessage, getPasswordAuthErrorMessage } from "@/lib/auth/auth-error";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -43,9 +44,7 @@ export default function LoginPage() {
     const url = new URL(window.location.href);
     const params = url.searchParams;
     const next = params.get("next");
-    if (next && next.startsWith("/")) {
-      setNextPath(next);
-    }
+    setNextPath(sanitizeAuthRedirectPath(next));
 
     const error = params.get("error");
     if (error) {
@@ -111,17 +110,19 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
-      <div className="glass-card w-full rounded-2xl p-7 md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Welcome Back</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Sign in to MyLivingPage</h1>
+  const signupHref = `/signup?next=${encodeURIComponent(nextPath === "/dashboard" ? "/create" : nextPath)}`;
 
+  return (
+    <AuthShell
+      eyebrow="Welcome back"
+      title="Keep your resume current."
+      description="Sign in to update your page, download a fresh PDF, or create your next share card."
+    >
         <button
           type="button"
           onClick={onGoogleLogin}
           disabled={status === "loading"}
-          className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.025)] px-5 text-sm font-medium text-[rgba(240,244,255,0.82)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:bg-[rgba(59,130,246,0.07)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {status === "loading" ? "Redirecting to Google..." : "Continue with Google"}
         </button>
@@ -132,53 +133,69 @@ export default function LoginPage() {
           <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
         </div>
 
-        <form className="space-y-3" onSubmit={onLogin}>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => {
-              clearErrorState();
-              setEmail(event.target.value);
-            }}
-            required
-            placeholder="Email address"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => {
-              clearErrorState();
-              setPassword(event.target.value);
-            }}
-            required
-            placeholder="Password"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
+        <form className="space-y-4" onSubmit={onLogin}>
+          <div>
+            <label htmlFor="login-email" className="mb-2 block text-xs font-medium text-[rgba(240,244,255,0.72)]">
+              Email address
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(event) => {
+                clearErrorState();
+                setEmail(event.target.value);
+              }}
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.32)] focus:border-[#60A5FA] focus:outline-none"
+            />
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="login-password" className="text-xs font-medium text-[rgba(240,244,255,0.72)]">
+                Password
+              </label>
+              <Link href="/forgot-password" className="text-xs text-[rgba(240,244,255,0.45)] hover:text-[#93C5FD]">
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(event) => {
+                clearErrorState();
+                setPassword(event.target.value);
+              }}
+              required
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.32)] focus:border-[#60A5FA] focus:outline-none"
+            />
+          </div>
           <button
             type="submit"
             disabled={status === "loading"}
-            className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
+            className="gold-pill mt-1 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70 disabled:hover:translate-y-0"
           >
-            {status === "loading" ? "Signing in..." : "Sign In"}
+            {status === "loading" ? "Signing in..." : "Sign In and Keep Building"}
           </button>
         </form>
 
-        {message ? <p className="mt-4 text-sm text-[#ff8e8e]">{message}</p> : null}
+        {message ? (
+          <p role="alert" className="mt-4 rounded-xl border border-[rgba(255,142,142,0.2)] bg-[rgba(255,142,142,0.07)] px-4 py-3 text-sm text-[#ffb4b4]">
+            {message}
+          </p>
+        ) : null}
 
-        <div className="mt-3 text-right">
-          <Link href="/forgot-password" className="text-xs text-[rgba(240,244,255,0.4)] hover:text-[#3B82F6]">
-            Forgot password?
-          </Link>
-        </div>
-
-        <p className="mt-3 text-sm text-[rgba(240,244,255,0.45)]">
+        <p className="mt-5 text-sm text-[rgba(240,244,255,0.5)]">
           New here?{" "}
-          <Link href="/signup" className="text-[#3B82F6] hover:text-[#93C5FD]">
-            Create an account
+          <Link href={signupHref} className="font-semibold text-[#60A5FA] hover:text-[#BFDBFE]">
+            Create your free resume
           </Link>
         </p>
-      </div>
-    </main>
+    </AuthShell>
   );
 }

@@ -31,7 +31,8 @@ export default function CosmicBackground() {
       };
       window.addEventListener("mousemove", handleMouseMove);
 
-      const particleCount = 960;
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const particleCount = 560;
       const particleGeometry = new THREE.BufferGeometry();
       const particlePositions = new Float32Array(particleCount * 3);
       const particleColors = new Float32Array(particleCount * 3);
@@ -58,10 +59,10 @@ export default function CosmicBackground() {
       particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
 
       const particleMaterial = new THREE.PointsMaterial({
-        size: 1.2,
+        size: 0.72,
         vertexColors: true,
         transparent: true,
-        opacity: 0.42,
+        opacity: 0.18,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         sizeAttenuation: true,
@@ -166,12 +167,16 @@ export default function CosmicBackground() {
         camera.position.x = Math.sin(elapsed * 0.08) * 1.5 + mouse.x * 2;
         camera.position.y = Math.cos(elapsed * 0.06) * 1 + mouse.y * 1.5;
         camera.lookAt(0, 0, 0);
-        particleMaterial.opacity = 0.2 + Math.sin(elapsed * 0.4) * 0.05;
+        particleMaterial.opacity = 0.12 + Math.sin(elapsed * 0.4) * 0.025;
 
         renderer.render(scene, camera);
         animationId = window.requestAnimationFrame(animate);
       };
-      animate();
+      if (prefersReducedMotion) {
+        renderer.render(scene, camera);
+      } else {
+        animate();
+      }
 
       const handleResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;

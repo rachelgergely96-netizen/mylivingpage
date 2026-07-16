@@ -82,9 +82,9 @@ export default function MobileStickyCta({
       aria-hidden={!visible}
       data-testid="mobile-sticky-cta"
     >
-      <div className="mx-auto flex max-w-lg items-center gap-2 rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(8,14,28,0.94)] px-3 py-2 shadow-[0_-10px_40px_rgba(2,6,23,0.4)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-lg items-center gap-2 rounded-full border border-[rgba(96,165,250,0.24)] bg-[rgba(8,14,28,0.94)] px-3 py-2 shadow-[0_-10px_40px_rgba(2,6,23,0.4)] backdrop-blur-xl">
         <p className="min-w-0 flex-1 truncate text-xs font-medium text-[rgba(247,241,232,0.78)]">
-          Know when someone looks.
+          One resume. Three useful outputs.
         </p>
         <Link href={href} className="gold-pill shrink-0 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
           {label}
@@ -92,7 +92,7 @@ export default function MobileStickyCta({
         <button
           type="button"
           onClick={dismiss}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.6)] transition-colors hover:border-[rgba(229,183,107,0.4)] hover:text-[#FFF3DE]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.6)] transition-colors hover:border-[rgba(96,165,250,0.4)] hover:text-[#BFDBFE]"
           aria-label="Dismiss sticky call to action"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

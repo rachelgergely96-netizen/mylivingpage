@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evaluateAtsReadiness } from "../../src/lib/ats-readiness";
 import type { PageVariant } from "../../src/types/resume";
 import {
   canRunAdminFixtureFlows,
@@ -100,12 +101,12 @@ async function completeGuidedResumeEntry(page: Page) {
       "Licensed attorney in New York building at the intersection of law and technology.",
     );
   await page
-    .getByRole("button", { name: "Continue to Theme Selection" })
+    .getByRole("button", { name: "Review My Resume" })
     .click();
 
   await expect(
     page.getByRole("heading", {
-      name: "This is what someone will see when you send it.",
+      name: "Make it feel like you, then check the essentials.",
     }),
   ).toBeVisible({ timeout: 45_000 });
 }
@@ -124,11 +125,12 @@ test("email signup shows a pending-confirmation message", async ({ page }) => {
 
   await page.goto("/signup");
   await page.getByRole("checkbox").check();
-  await page.getByPlaceholder("Email address").fill(uniqueEmail);
-  await page.getByPlaceholder("Create password").fill("PlaywrightPass123!");
-  await page.getByRole("button", { name: "Create My Page" }).click();
+  await page.getByLabel("Email address").fill(uniqueEmail);
+  await page.getByLabel("Create password").fill("PlaywrightPass123!");
+  await page.getByRole("button", { name: "Create My Free Resume" }).click();
 
-  await expect(page.getByText("Check your email to confirm your account")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your inbox." })).toBeVisible();
+  await expect(page.getByText(uniqueEmail)).toBeVisible();
 });
 
 test.describe.serial("authenticated user journeys", () => {
@@ -150,7 +152,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByText("Resume PDF")).toBeVisible();
     await expect(page.getByRole("button", { name: "Publish Page" })).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Publish Page" }).click();
-    await expect(page.getByRole("heading", { name: "Your page is live." })).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("heading", { name: "Your living resume is live." })).toBeVisible({ timeout: 45_000 });
     expect(parseRequests).toEqual([]);
 
     await page.goto("/dashboard");
@@ -203,7 +205,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByRole("button", { name: "Choose Plan to Publish" })).toHaveCount(0);
     await publishButton.click();
     await expect(
-      page.getByRole("heading", { name: "Your page is live." }),
+      page.getByRole("heading", { name: "Your living resume is live." }),
     ).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/dashboard/settings");
@@ -221,12 +223,12 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/login\?next=%2Fcreate%3Fref%3Dlanding_self_test/);
 
-    await page.getByPlaceholder("Email address").fill(process.env.PLAYWRIGHT_TEST_EMAIL ?? "");
-    await page.getByPlaceholder("Password").fill(process.env.PLAYWRIGHT_TEST_PASSWORD ?? "");
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.getByLabel("Email address").fill(process.env.PLAYWRIGHT_TEST_EMAIL ?? "");
+    await page.getByLabel("Password").fill(process.env.PLAYWRIGHT_TEST_PASSWORD ?? "");
+    await page.getByRole("button", { name: "Sign In and Keep Building" }).click();
 
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
-    await expect(page.getByRole("heading", { name: "Add your info" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add it once. Use it everywhere." })).toBeVisible();
   });
 
   test("legacy global create drafts are ignored for the signed-in user", async ({ page }) => {
@@ -276,6 +278,7 @@ test.describe.serial("authenticated user journeys", () => {
             name: "Scoped User",
             headline: "Scoped Headline",
           },
+          guidedStep: 2,
           parsedData: null,
           selectedTheme: "cosmic",
           step: "input",
@@ -286,6 +289,8 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.goto("/create");
     await expect(page.getByText("You have an unsaved draft")).toBeVisible();
+    await page.getByRole("button", { name: "Restore" }).click();
+    await expect(page.getByRole("heading", { name: "Tell me about your experience" })).toBeVisible();
   });
 
   test("create drafts persist only for the same signed-in user after they start typing", async ({ page }) => {
@@ -314,6 +319,57 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByRole("button", { name: "Load Sample" })).toHaveCount(0);
     await completeGuidedResumeEntry(page);
     expect(parseRequests).toEqual([]);
+  });
+
+  test("resume check sends users to the exact fix and returns them to their checklist", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    const profile = await fetchCurrentProfile(page);
+    await page.evaluate((draftKey) => window.localStorage.removeItem(draftKey), `mlp-draft-create-${profile.id}`);
+    await page.route("**/api/resume/readiness", async (route) => {
+      const payload = route.request().postDataJSON() as {
+        resumeData: Parameters<typeof evaluateAtsReadiness>[0]["data"];
+        targetTitle?: string;
+        jobDescription?: string;
+      };
+      const readiness = evaluateAtsReadiness({
+        data: payload.resumeData,
+        targetTitle: payload.targetTitle,
+        jobDescription: payload.jobDescription,
+        exportCheck: {
+          renderable: true,
+          renderFailureReason: null,
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      });
+      await route.fulfill({ json: { readiness } });
+    });
+
+    await page.goto("/create");
+    await completeGuidedResumeEntry(page);
+    await page.getByText("Tailoring this for a job? Compare a posting").click();
+    await page.getByLabel("Target job title").fill("Technology Counsel");
+    await page.getByLabel("Job posting").fill("Technology counsel contracts privacy product advice");
+    await page.getByRole("button", { name: "Check my resume" }).click();
+
+    await expect(page.getByRole("heading", { name: /essential.*to finish/ })).toBeVisible();
+    await page.getByRole("button", { name: "Complete role details" }).click();
+    await expect(page.getByRole("heading", { name: "Tell me about your experience" })).toBeVisible();
+    await expect(page.getByLabel("Role 1 dates")).toBeFocused();
+    await page.getByLabel("Role 1 dates").fill("2022 - Present");
+    await page.getByRole("button", { name: "Save and return to resume check" }).click();
+
+    await expect(page.getByText("You’ve made changes. Keep using the checklist below")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recheck my changes" })).toBeVisible();
+    await page.getByText("Tailoring this for a job? Compare a posting").click();
+    await expect(page.getByLabel("Target job title")).toHaveValue("Technology Counsel");
+    await expect(page.getByLabel("Job posting")).toHaveValue(
+      "Technology counsel contracts privacy product advice",
+    );
   });
 
   test("public Resume PDF download appears on live pages for owners and viewers", async ({ page, browser }) => {

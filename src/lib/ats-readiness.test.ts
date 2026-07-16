@@ -317,7 +317,11 @@ describe("deterministic ATS readiness", () => {
     expect(withWhitespaceOnly.score).toBe(withoutDescription.score);
   });
 
-  it("compares role-specific job terms only when a job description is supplied", () => {
+  it("keeps role-specific job terms advisory and separate from core readiness", () => {
+    const baseline = evaluateAtsReadiness({
+      data: buildResume(),
+      exportCheck: passingExportCheck,
+    });
     const result = evaluateAtsReadiness({
       data: buildResume(),
       exportCheck: passingExportCheck,
@@ -333,7 +337,10 @@ describe("deterministic ATS readiness", () => {
       expect.arrayContaining(["python", "kubernetes", "terraform", "rust", "aws"]),
     );
     expect(findCheck(result, "job-keyword-coverage")?.passed).toBe(false);
-    expect(result.status).toBe("needs_attention");
+    expect(findCheck(result, "job-keyword-coverage")?.outcome).toBe("info");
+    expect(result.tailoringChecks.map((check) => check.id)).toContain("job-keyword-coverage");
+    expect(result.status).toBe("ready");
+    expect(result.score).toBe(baseline.score);
   });
 
   it("passes keyword coverage when the selected terms are truthfully represented", () => {
@@ -366,7 +373,28 @@ describe("deterministic ATS readiness", () => {
     expect(findCheck(present, "target-title-present")?.passed).toBe(true);
     expect(present.status).toBe("ready");
     expect(findCheck(missing, "target-title-present")?.passed).toBe(false);
-    expect(missing.status).toBe("needs_attention");
+    expect(findCheck(missing, "target-title-present")?.outcome).toBe("info");
+    expect(missing.status).toBe("ready");
+  });
+
+  it("uses action-oriented failure titles and excludes non-applicable checks from progress", () => {
+    const result = evaluateAtsReadiness({
+      data: buildResume({
+        name: "",
+        experience: [],
+      }),
+      exportCheck: passingExportCheck,
+    });
+
+    expect(findCheck(result, "name-present")?.title).toBe("Add your name");
+    expect(findCheck(result, "direct-bullet-language")?.outcome).toBe("not_applicable");
+    expect(result.passedChecks.map((check) => check.id)).not.toContain("direct-bullet-language");
+    expect(result.summary.requiredFixCount).toBe(result.criticalFixes.length);
+    expect(result.summary.applicableCheckCount).toBe(
+      result.summary.requiredFixCount +
+        result.summary.recommendationCount +
+        result.summary.passedCount,
+    );
   });
 
   it("is deterministic unless the caller explicitly supplies an evaluation time", () => {

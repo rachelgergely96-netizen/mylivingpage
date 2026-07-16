@@ -5,6 +5,8 @@ import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
 import LandingUnifiedShowcase from "@/components/marketing/LandingUnifiedShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
+import { ProductJourneyPreview } from "@/components/marketing/ProductJourneyPreview";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   ATS_READINESS_DISCLOSURE,
@@ -47,10 +49,10 @@ export default async function LandingPage() {
   const site = await getRequestLegalSite();
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-hidden">
+    <div className="profile-shell relative isolate min-h-screen overflow-x-hidden">
       <CosmicBackground />
       <div className="relative z-10">
-        <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
+        <header className="sticky top-0 z-50 border-b border-[rgba(147,197,253,0.2)] bg-[rgba(5,16,34,0.9)] shadow-[0_4px_18px_rgba(2,6,23,0.3)] backdrop-blur-xl">
           <LandingNav />
         </header>
 
@@ -59,85 +61,96 @@ export default async function LandingPage() {
             id="hero-section"
             className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-start px-4 pb-10 pt-6 sm:px-6 sm:pb-14 sm:pt-8 md:min-h-[calc(100vh-5rem)] md:items-center md:px-10 md:pb-16 md:pt-10"
           >
-            <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
-              <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Free living resume
-              </p>
-              <div className="mt-5 max-w-4xl">
-                <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  {SITE_TAGLINE}.
-                </h1>
-                <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  {SITE_DESCRIPTION}
-                </p>
-              </div>
+            <ProfileWindow
+              title="MyLivingPage // free profile builder"
+              status={<span className="profile-status text-[#86EFAC]">open</span>}
+              className="relative w-full"
+              contentClassName="px-5 py-6 sm:px-8 sm:py-8 md:px-10 md:py-10"
+            >
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] lg:items-center lg:gap-10">
+                <div>
+                  <p className="inline-flex border border-[rgba(96,165,250,0.3)] bg-[rgba(59,130,246,0.11)] px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
+                    Your professional corner of the internet
+                  </p>
+                  <div className="mt-5 max-w-4xl">
+                    <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.15rem]">
+                      {SITE_TAGLINE}.
+                    </h1>
+                    <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
+                      {SITE_DESCRIPTION}
+                    </p>
+                  </div>
 
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {CREDIBILITY_POINTS.map((point) => (
-                  <span
-                    key={point}
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] sm:px-4"
-                  >
-                    {point}
-                  </span>
-                ))}
-              </div>
+                  <div className="mt-6 flex flex-wrap gap-2.5">
+                    {CREDIBILITY_POINTS.map((point) => (
+                      <span
+                        key={point}
+                      className="border border-[rgba(147,197,253,0.16)] bg-[rgba(255,255,255,0.025)] px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[rgba(240,244,255,0.7)]"
+                      >
+                        {point}
+                      </span>
+                    ))}
+                  </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  href={getSignupHref("landing_start_free")}
-                  className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
-                >
-                  Create Your Page (Free)
-                </Link>
-                <Link
-                  href={getLoginHref()}
-                  className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
-                >
-                  Log In
-                </Link>
-                <a
-                  href="#demo-section"
-                  className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-                >
-                  See the Demo
-                </a>
-              </div>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <Link
+                      href={getSignupHref("landing_start_free")}
+                      className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.3)] sm:px-7 sm:py-4"
+                    >
+                      Build My Free Resume
+                    </Link>
+                    <Link
+                      href={getLoginHref()}
+                      className="profile-action px-5 py-3 text-sm sm:px-7 sm:py-4"
+                    >
+                      Log In
+                    </Link>
+                    <a
+                      href="#demo-section"
+                      className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                    >
+                      See It in Action
+                    </a>
+                  </div>
 
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Start in minutes. No card, trial, or subscription required. The same saved information powers your page, PDF, and share card.
-              </p>
-            </div>
+                  <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.56)]">
+                    Start in minutes. No card, trial, or subscription. Nothing goes live until you choose Publish.
+                  </p>
+                </div>
+
+                <ProductJourneyPreview />
+              </div>
+            </ProfileWindow>
           </section>
 
           <LandingUnifiedShowcase />
 
           <section id="how" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
-            <div className="mb-8 max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">What happens after you send it</p>
-              <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                Create, share, notice, repeat.
-              </h2>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {PROCESS_STEPS.map((step, index) => (
-                <article
-                  key={step.title}
-                  className="glass-card rounded-3xl border border-[rgba(255,255,255,0.08)] p-6 sm:p-8"
-                >
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(59,130,246,0.45)] font-mono text-base text-[#93C5FD]">
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-                  <h3 className="font-heading text-2xl font-bold text-[#F0F4FF]">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.64)]">{step.body}</p>
-                </article>
-              ))}
-            </div>
+            <ProfileWindow title="Profile setup // how it works" status="3 simple steps" contentClassName="p-4 sm:p-6">
+              <div className="mb-6 max-w-3xl">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#60A5FA]">How it works</p>
+                <h2 className="mt-2 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
+                  Build, preview, share.
+                </h2>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {PROCESS_STEPS.map((step, index) => (
+                  <ProfilePanel
+                    key={step.title}
+                    title={`${String(index + 1).padStart(2, "0")} // setup step`}
+                    as="article"
+                    contentClassName="p-5 sm:p-6"
+                  >
+                    <h3 className="font-heading text-2xl font-bold text-[#F0F4FF]">{step.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.64)]">{step.body}</p>
+                  </ProfilePanel>
+                ))}
+              </div>
+            </ProfileWindow>
           </section>
 
           <section id="pricing" className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
-            <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10 sm:py-10">
+            <ProfileWindow title="Account details // $0 forever" status="no credit card" contentClassName="px-5 py-7 sm:px-8 sm:py-9">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Simple pricing: free</p>
@@ -168,18 +181,17 @@ export default async function LandingPage() {
                 <div className="grid gap-4 lg:min-w-[520px] lg:max-w-[560px]">
                   <div className="grid gap-4 sm:grid-cols-3">
                     {FREE_PRODUCT_FEATURE_GROUPS.map((group, index) => (
-                      <div
+                      <ProfilePanel
                         key={group.name}
-                        className={`rounded-3xl border p-5 ${
+                        title={group.eyebrow}
+                        className={`h-full ${
                           index === FREE_PRODUCT_FEATURE_GROUPS.length - 1
-                            ? "border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.09)] shadow-[0_0_40px_rgba(59,130,246,0.08)] ring-1 ring-[rgba(59,130,246,0.16)]"
-                            : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)]"
+                            ? "border-[rgba(96,165,250,0.44)] shadow-[0_0_32px_rgba(59,130,246,0.1)]"
+                            : ""
                         }`}
+                        contentClassName="p-5"
                       >
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
-                          {group.eyebrow}
-                        </p>
-                        <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">
+                        <h3 className="font-heading text-2xl font-bold text-[#F0F4FF]">
                           {group.name}
                         </h3>
                         <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
@@ -193,10 +205,10 @@ export default async function LandingPage() {
                             </li>
                           ))}
                         </ul>
-                      </div>
+                      </ProfilePanel>
                     ))}
                   </div>
-                  <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+                  <div className="border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
                     Free means free: no credit card, no trial expiration, and no subscription
                     required to publish or keep your page live.
                   </div>
@@ -216,11 +228,11 @@ export default async function LandingPage() {
                 </Link>
                 .
               </p>
-            </div>
+            </ProfileWindow>
           </section>
 
           <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
-            <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10 sm:py-10">
+            <ProfileWindow title="About this site // why it exists" status="built for real job searches" contentClassName="px-5 py-7 sm:px-8 sm:py-9">
               <div className="max-w-3xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Why this exists</p>
                 <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
@@ -232,9 +244,11 @@ export default async function LandingPage() {
               </div>
               <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {TRUST_SIGNALS.map((signal) => (
-                  <article
+                  <ProfilePanel
                     key={signal.title}
-                    className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5"
+                    title="Site details"
+                    as="article"
+                    contentClassName="p-5"
                   >
                     <p className="font-heading text-xl font-bold text-[#F0F4FF]">{signal.title}</p>
                     <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">{signal.body}</p>
@@ -244,14 +258,14 @@ export default async function LandingPage() {
                     >
                       {signal.linkLabel}
                     </Link>
-                  </article>
+                  </ProfilePanel>
                 ))}
               </div>
-            </div>
+            </ProfileWindow>
           </section>
 
           <section id="final-cta" className="mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24 md:px-10">
-            <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 text-center sm:px-10 sm:py-12">
+            <ProfileWindow title="Create your profile // ready when you are" status={<span className="profile-status text-[#86EFAC]">free</span>} contentClassName="px-6 py-10 text-center sm:px-10 sm:py-12">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
                 Build it once. Share it anywhere. Keep it current.
@@ -268,12 +282,12 @@ export default async function LandingPage() {
                 </Link>
                 <Link
                   href="/examples"
-                  className="rounded-full border border-[rgba(255,255,255,0.18)] px-6 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-8 sm:py-4"
+                  className="profile-action px-6 py-3 text-sm sm:px-8 sm:py-4"
                 >
                   Browse Sample Pages
                 </Link>
               </div>
-            </div>
+            </ProfileWindow>
           </section>
         </main>
 

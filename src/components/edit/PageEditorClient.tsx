@@ -8,12 +8,15 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
+import { getAtsFixFieldKey, type AtsFixTarget } from "@/lib/ats-fix-target";
+import type { AtsReadinessCheck } from "@/lib/ats-readiness";
 import AtsReadinessCard from "@/components/AtsReadinessCard";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { ProfileWindow } from "@/components/ui/ProfilePanel";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { THEME_REGISTRY } from "@/themes/registry";
@@ -62,6 +65,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
   const [publicSlug, setPublicSlug] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [activeAtsFix, setActiveAtsFix] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({
@@ -247,6 +251,30 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     setData((prev) => (prev ? { ...prev, avatar_url: null } : prev));
   };
 
+  const handleAtsFix = useCallback(
+    (target: AtsFixTarget, check: AtsReadinessCheck) => {
+      setActiveAtsFix(check.title);
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.requestAnimationFrame(() => {
+        const field = document.getElementById(`editor-ats-${getAtsFixFieldKey(target)}`);
+        field?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+        if (field instanceof HTMLElement) {
+          field.focus({ preventScroll: true });
+        }
+      });
+    },
+    [],
+  );
+
+  const returnToAtsCheck = useCallback(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("ats-readiness")?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    setActiveAtsFix(null);
+  }, []);
+
   if (loading) {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:px-10">
@@ -267,6 +295,13 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       </main>
     );
   }
+
+  const publicProfileStatus =
+    page?.status === "live" || (!page?.status && page?.published_at)
+      ? "Live profile"
+      : page?.status === "archived"
+        ? "Archived profile"
+        : "Draft profile";
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
@@ -325,7 +360,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       </div>
 
       <div className="mb-5">
-        <AtsReadinessCard resumeData={data} />
+        <AtsReadinessCard resumeData={data} onFixRequested={handleAtsFix} />
         <p className="mt-2 px-1 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
           The check uses the fields currently in this editor. Save your changes before relying on
           the public PDF.
@@ -405,22 +440,38 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           showDescription
         />
 
-        <div className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.18)]">
-          <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-            <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-              mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || page?.slug}</span>
-            </div>
-          </div>
+        <ProfileWindow
+          title={`mylivingpage.com/${publicSlug || page?.slug || "your-username"}`}
+          status={<span className="profile-status">{publicProfileStatus}</span>}
+          className="[&_.profile-titlebar>span:first-child]:min-w-0 [&_.profile-titlebar>span:first-child]:truncate [&_.profile-titlebar>span:first-child]:normal-case [&_.profile-titlebar>span:first-child]:tracking-normal [&_.profile-titlebar>span:last-child]:shrink-0"
+          contentClassName="p-0"
+          as="div"
+        >
           <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">
             <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
-              <ResumeLayout data={data} />
+              <ResumeLayout data={data} profileSlug={publicSlug || page?.slug} />
             </div>
           </ThemeCanvas>
-        </div>
+        </ProfileWindow>
       </div>
+
+      {activeAtsFix ? (
+        <div className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-xl flex-col gap-3 rounded-2xl border border-[rgba(96,165,250,0.3)] bg-[rgba(6,16,30,0.96)] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD]">
+              Editing a recommendation
+            </p>
+            <p className="mt-1 text-sm text-[#F0F4FF]">{activeAtsFix}</p>
+          </div>
+          <button
+            type="button"
+            onClick={returnToAtsCheck}
+            className="shrink-0 rounded-full border border-[rgba(96,165,250,0.32)] bg-[rgba(59,130,246,0.12)] px-4 py-2 text-xs font-semibold text-[#BFDBFE]"
+          >
+            Return to resume check
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

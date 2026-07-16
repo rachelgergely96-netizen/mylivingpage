@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
@@ -28,34 +29,38 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
-      <div className="glass-card w-full rounded-2xl p-7 md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Password Reset</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Forgot Password</h1>
-        <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.55)]">
-          Enter your email address and we&apos;ll send you a link to reset your password.
-        </p>
-
+    <AuthShell
+      eyebrow="Password reset"
+      title="Forgot Password"
+      description="Enter your email address and we’ll send you a secure link to reset your password."
+    >
         {status === "sent" ? (
-          <div className="mt-6">
-            <p className="text-sm text-[#3B82F6]">{message}</p>
+          <div className="profile-panel p-4">
+            <p role="status" className="text-sm text-[#86EFAC]">{message}</p>
             <Link
               href="/login"
-              className="mt-6 inline-block text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.5)] hover:text-[#3B82F6]"
+              className="profile-link mt-4 inline-block text-xs font-semibold"
             >
               Back to Sign In
             </Link>
           </div>
         ) : (
-          <form className="mt-6 space-y-3" onSubmit={onSubmit}>
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <div>
+              <label htmlFor="reset-email" className="mb-2 block text-xs font-medium text-[rgba(240,244,255,0.72)]">
+                Email address
+              </label>
             <input
+              id="reset-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
               placeholder="Email address"
-              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
+              className="h-12 w-full rounded-md border border-[rgba(147,197,253,0.2)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#60A5FA] focus:outline-none"
             />
+            </div>
             <button
               type="submit"
               disabled={status === "loading"}
@@ -63,17 +68,16 @@ export default function ForgotPasswordPage() {
             >
               {status === "loading" ? "Sending..." : "Send Reset Link"}
             </button>
-            {status === "error" && <p className="text-sm text-[#ff8e8e]">{message}</p>}
+            {status === "error" && <p role="alert" className="border border-[rgba(255,142,142,0.2)] bg-[rgba(255,142,142,0.07)] px-3 py-2 text-sm text-[#ffb4b4]">{message}</p>}
           </form>
         )}
 
         <p className="mt-5 text-sm text-[rgba(240,244,255,0.45)]">
           Remember your password?{" "}
-          <Link href="/login" className="text-[#3B82F6] hover:text-[#93C5FD]">
+          <Link href="/login" className="profile-link">
             Sign in
           </Link>
         </p>
-      </div>
-    </main>
+    </AuthShell>
   );
 }

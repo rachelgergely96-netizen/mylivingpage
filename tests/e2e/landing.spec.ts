@@ -1,18 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-test("landing page is simplified around hero, showcase, how-it-works, pricing, and final CTA", async ({ page }) => {
+test("landing page explains the free living-resume journey and its three outputs", async ({ page }) => {
   await page.goto("/");
 
   const header = page.locator("header");
   await expect(
-    page.getByRole("heading", { name: "Know when someone actually looks at your profile." }),
+    page.getByRole("heading", { name: "Your resume should be more than a file." }),
   ).toBeVisible();
-  await expect(page.getByText("Stop sending PDFs into the void.")).toBeVisible();
-  await expect(page.getByText("Takes ~2 minutes. No card required.")).toBeVisible();
+  await expect(page.getByTestId("product-journey-preview")).toBeVisible();
+  await expect(page.getByText("Enter it once. Use it three ways.")).toBeVisible();
+  await expect(page.getByText("Nothing goes live until you choose Publish.")).toBeVisible();
 
   const hero = page.locator("#hero-section");
-  await expect(hero.getByRole("link", { name: "See the Demo" })).toHaveAttribute("href", "#demo-section");
-  await expect(hero.getByRole("link", { name: "Create Your Page (Free)" })).toHaveAttribute(
+  await expect(hero.getByRole("link", { name: "See It in Action" })).toHaveAttribute("href", "#demo-section");
+  await expect(hero.getByRole("link", { name: "Build My Free Resume" })).toHaveAttribute(
     "href",
     "/signup?ref=landing_start_free&next=/create",
   );
@@ -23,10 +24,10 @@ test("landing page is simplified around hero, showcase, how-it-works, pricing, a
   await expect(page.locator("#how")).toBeVisible();
   await expect(page.locator("#pricing")).toBeVisible();
   await expect(page.locator("#final-cta")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Build, preview, share." })).toBeVisible();
 
   await expect(page.getByPlaceholder("Email for updates")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Answer the high-stakes questions before you sign up." })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "A few questions people ask before they trust a new career tool." })).toHaveCount(0);
+  await expect(page.getByText(/\$\d+\/month/i)).toHaveCount(0);
 });
 
 test("landing showcase switches themes and previews share card plus QR without extra pricing tags", async ({ page }) => {
@@ -34,7 +35,7 @@ test("landing showcase switches themes and previews share card plus QR without e
 
   const demoSection = page.locator("#demo-section");
 
-  await expect(page.getByRole("heading", { name: "One page. Always up to date." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One story. Three useful outputs." })).toBeVisible();
 
   const emberTab = page.getByRole("tab", { name: "Ember" });
   const auroraTab = page.getByRole("tab", { name: "Aurora" });

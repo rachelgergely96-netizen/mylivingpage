@@ -45,6 +45,8 @@ export default function ResumeEditorFields({
         <legend className={legendClass}>Profile</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <input
+            id="editor-ats-name"
+            aria-label="Full name"
             type="text"
             value={data.name}
             onChange={(event) => updateField("name", event.target.value)}
@@ -52,6 +54,8 @@ export default function ResumeEditorFields({
             className={inputClass}
           />
           <input
+            id="editor-ats-headline"
+            aria-label="Professional headline"
             type="text"
             value={data.headline}
             onChange={(event) => updateField("headline", event.target.value)}
@@ -66,6 +70,8 @@ export default function ResumeEditorFields({
             className={inputClass}
           />
           <input
+            id="editor-ats-email"
+            aria-label="Email address"
             type="email"
             value={data.email ?? ""}
             onChange={(event) => updateField("email", event.target.value || null)}
@@ -73,6 +79,8 @@ export default function ResumeEditorFields({
             className={inputClass}
           />
           <input
+            id="editor-ats-linkedin"
+            aria-label="LinkedIn URL"
             type="text"
             value={data.linkedin ?? ""}
             onChange={(event) => updateField("linkedin", event.target.value || null)}
@@ -80,6 +88,8 @@ export default function ResumeEditorFields({
             className={inputClass}
           />
           <input
+            id="editor-ats-github"
+            aria-label="GitHub URL or username"
             type="text"
             value={data.github ?? ""}
             onChange={(event) => updateField("github", event.target.value || null)}
@@ -87,6 +97,8 @@ export default function ResumeEditorFields({
             className={inputClass}
           />
           <input
+            id="editor-ats-website"
+            aria-label="Personal website"
             type="text"
             value={data.website ?? ""}
             onChange={(event) => updateField("website", event.target.value || null)}
@@ -99,6 +111,8 @@ export default function ResumeEditorFields({
       <fieldset className={fieldsetClass}>
         <legend className={legendClass}>Summary</legend>
         <textarea
+          id="editor-ats-summary"
+          aria-label="Professional summary"
           value={data.summary}
           onChange={(event) => updateField("summary", event.target.value)}
           rows={mode === "living" ? 4 : 5}
@@ -158,11 +172,13 @@ export default function ResumeEditorFields({
         <legend className={legendClass}>Experience</legend>
         {data.experience.map((experience, index) => (
           <div
-            key={`${experience.title}-${experience.company}-${index}`}
+            key={`experience-${index}`}
             className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
           >
             <div className="grid gap-2 sm:grid-cols-3">
               <input
+                id={`editor-ats-experience-title-${index}`}
+                aria-label={`Experience ${index + 1} title`}
                 type="text"
                 value={experience.title}
                 onChange={(event) => {
@@ -174,6 +190,8 @@ export default function ResumeEditorFields({
                 className={inputClass}
               />
               <input
+                id={`editor-ats-experience-company-${index}`}
+                aria-label={`Experience ${index + 1} company or organization`}
                 type="text"
                 value={experience.company}
                 onChange={(event) => {
@@ -185,6 +203,8 @@ export default function ResumeEditorFields({
                 className={inputClass}
               />
               <input
+                id={`editor-ats-experience-dates-${index}`}
+                aria-label={`Experience ${index + 1} dates`}
                 type="text"
                 value={experience.dates}
                 onChange={(event) => {
@@ -208,6 +228,8 @@ export default function ResumeEditorFields({
               className={inputClass}
             />
             <textarea
+              id={`editor-ats-experience-highlights-${index}`}
+              aria-label={`Experience ${index + 1} highlights`}
               value={experience.highlights.join("\n")}
               onChange={(event) => {
                 const next = [...data.experience];
@@ -231,6 +253,7 @@ export default function ResumeEditorFields({
           </div>
         ))}
         <button
+          id="editor-ats-experience-add"
           type="button"
           onClick={() =>
             updateField("experience", [
@@ -318,6 +341,8 @@ export default function ResumeEditorFields({
               className={inputClass}
             />
             <input
+              id={`editor-ats-skills-items-${index}`}
+              aria-label={`Skills in category ${index + 1}`}
               type="text"
               value={group.items.join(", ")}
               onChange={(event) => {
@@ -344,6 +369,7 @@ export default function ResumeEditorFields({
           </div>
         ))}
         <button
+          id="editor-ats-skills-add"
           type="button"
           onClick={() => updateField("skills", [...data.skills, { category: "", items: [] }])}
           className={addButtonClass}

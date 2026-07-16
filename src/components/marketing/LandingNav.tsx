@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const NAV_LINKS = [
-  { href: "#demo-section", label: "Demo", external: false },
-  { href: "#how", label: "How It Works", external: false },
-  { href: "/examples", label: "Examples", external: true },
-  { href: "#pricing", label: "Free", external: false },
+  { href: "/#demo-section", label: "Demo" },
+  { href: "/#how", label: "How It Works" },
+  { href: "/examples", label: "Examples" },
+  { href: "/pricing", label: "Free" },
 ];
 
 const LOGIN_HREF = "/login?next=/dashboard";
@@ -16,116 +16,133 @@ const MOBILE_SIGNUP_HREF = "/signup?ref=landing_apply_nav_mobile&next=/create";
 
 export default function LandingNav() {
   const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
 
   return (
-    <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:h-20 sm:px-6 md:px-10">
-      <Link href="/" className="font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">
-        my<span className="text-[#3B82F6]">living</span>page
-      </Link>
-
-      {/* Desktop links */}
-      <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.6)] md:flex">
-        {NAV_LINKS.map((link) =>
-          link.external ? (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-[#93C5FD]">
-              {link.label}
-            </Link>
-          ) : (
-            <a key={link.href} href={link.href} className="transition-colors hover:text-[#93C5FD]">
-              {link.label}
-            </a>
-          )
-        )}
+    <nav className="relative mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 md:px-10">
+      <div className="flex min-w-0 items-center gap-3">
+        <Link
+          href="/"
+          className="shrink-0 font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl"
+        >
+          my<span className="text-[#60A5FA]">living</span>page
+        </Link>
+        <span className="profile-status !hidden border-l border-[rgba(147,197,253,0.2)] pl-3 lg:!inline-flex">
+          free profiles
+        </span>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="hidden items-stretch overflow-hidden rounded-md border border-[rgba(147,197,253,0.2)] bg-[rgba(6,18,37,0.68)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[rgba(240,244,255,0.7)] md:flex">
+        {NAV_LINKS.map((link, index) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`flex min-h-10 items-center px-4 transition-colors hover:bg-[rgba(59,130,246,0.16)] hover:text-[#DBEAFE] ${
+              index > 0 ? "border-l border-[rgba(147,197,253,0.16)]" : ""
+            }`}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2">
         <Link
           href={LOGIN_HREF}
-          className="hidden rounded-full border border-[rgba(255,255,255,0.16)] px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.72)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:inline-flex sm:px-5 sm:text-xs sm:tracking-[0.16em]"
+          className="profile-action hidden min-h-10 px-4 sm:inline-flex"
         >
           Log In
         </Link>
         <Link
           href={SIGNUP_HREF}
-          className="gold-pill px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] sm:px-5 sm:text-xs sm:tracking-[0.16em]"
+          className="gold-pill px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] sm:px-5"
         >
           <span className="sm:hidden">Create</span>
           <span className="hidden sm:inline">Create Your Page (Free)</span>
         </Link>
 
-        {/* Hamburger - mobile only */}
         <button
+          ref={menuButtonRef}
           type="button"
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
           aria-controls="landing-mobile-nav"
-          onClick={() => setOpen((v) => !v)}
-          className="flex h-9 w-9 flex-col items-center justify-center gap-1.5 md:hidden"
+          onClick={() => setOpen((current) => !current)}
+          className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-md border border-[rgba(147,197,253,0.24)] bg-[rgba(6,18,37,0.72)] md:hidden"
         >
           {open ? (
-            <svg className="h-5 w-5 text-[#F0F4FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="h-5 w-5 text-[#F0F4FF]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
             <>
-              <span className="h-px w-5 bg-[rgba(240,244,255,0.7)]" />
-              <span className="h-px w-5 bg-[rgba(240,244,255,0.7)]" />
-              <span className="h-px w-5 bg-[rgba(240,244,255,0.7)]" />
+              <span className="h-px w-5 bg-[rgba(240,244,255,0.82)]" />
+              <span className="h-px w-5 bg-[rgba(240,244,255,0.82)]" />
+              <span className="h-px w-5 bg-[rgba(240,244,255,0.82)]" />
             </>
           )}
         </button>
       </div>
 
-      {/* Mobile menu */}
-      {open && (
+      {open ? (
         <div
           id="landing-mobile-nav"
-          className="absolute left-0 top-full z-50 w-full border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.95)] px-4 py-4 backdrop-blur-xl md:hidden"
+          className="profile-window absolute left-4 right-4 top-[calc(100%+0.5rem)] z-50 md:hidden"
         >
-          <ul className="flex flex-col gap-1">
+          <div className="profile-titlebar">
+            <span>Browse MyLivingPage</span>
+            <span>Menu</span>
+          </div>
+          <ul className="grid p-2">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
-                {link.external ? (
-                  <Link
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block rounded-xl px-4 py-3 text-sm uppercase tracking-[0.18em] text-[rgba(240,244,255,0.7)] transition-colors hover:bg-[rgba(255,255,255,0.04)] hover:text-[#93C5FD]"
-                  >
-                    {link.label}
-                  </Link>
-                ) : (
-                  <a
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block rounded-xl px-4 py-3 text-sm uppercase tracking-[0.18em] text-[rgba(240,244,255,0.7)] transition-colors hover:bg-[rgba(255,255,255,0.04)] hover:text-[#93C5FD]"
-                  >
-                    {link.label}
-                  </a>
-                )}
+                <Link
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="block min-h-11 border-b border-[rgba(147,197,253,0.12)] px-3 py-3 text-sm text-[rgba(240,244,255,0.78)] transition-colors last:border-b-0 hover:bg-[rgba(59,130,246,0.12)] hover:text-[#DBEAFE]"
+                >
+                  {link.label}
+                </Link>
               </li>
             ))}
-            <li className="mt-2 border-t border-[rgba(255,255,255,0.08)] pt-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Link
-                  href={LOGIN_HREF}
-                  onClick={() => setOpen(false)}
-                  className="block w-full rounded-full border border-[rgba(255,255,255,0.16)] py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                >
-                  Log In
-                </Link>
-                <Link
-                  href={MOBILE_SIGNUP_HREF}
-                  onClick={() => setOpen(false)}
-                  className="gold-pill block w-full py-3 text-center text-sm font-semibold"
-                >
-                  Create Your Page (Free)
-                </Link>
-              </div>
+            <li className="grid gap-2 px-2 pb-2 pt-4 sm:grid-cols-2">
+              <Link
+                href={LOGIN_HREF}
+                onClick={() => setOpen(false)}
+                className="profile-action w-full"
+              >
+                Log In
+              </Link>
+              <Link
+                href={MOBILE_SIGNUP_HREF}
+                onClick={() => setOpen(false)}
+                className="gold-pill block w-full py-3 text-center text-sm font-semibold"
+              >
+                Create Your Page (Free)
+              </Link>
             </li>
           </ul>
         </div>
-      )}
+      ) : null}
     </nav>
   );
 }
-

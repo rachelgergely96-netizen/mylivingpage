@@ -189,16 +189,16 @@ export const LANDING_FAQS: LandingFaq[] = [
 
 export const PROCESS_STEPS = [
   {
-    title: "You send your page",
-    body: "Drop one clean link into a follow-up, recruiter reply, or referral message instead of attaching another PDF.",
+    title: "Add your details",
+    body: "Work through six short sections with clear prompts. Skip what does not apply and come back whenever you want.",
   },
   {
-    title: "They open it",
-    body: "Your profile loads fast, stays easy to scan, and gives them the proof, context, and contact paths they need in one place.",
+    title: "Preview and check",
+    body: "Choose a polished look, review your living resume, and catch common ATS-readiness issues before publishing.",
   },
   {
-    title: "You know it landed",
-    body: "Come back and see that someone looked, how they opened it, and whether the interest looks warm enough for a follow-up.",
+    title: "Publish and share",
+    body: "Copy your permanent link, download the ATS-ready PDF, or create a share card with its own QR code.",
   },
 ];
 

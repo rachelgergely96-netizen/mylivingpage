@@ -141,9 +141,9 @@ export async function signIn(page: Page) {
   }
 
   await page.goto("/login");
-  await page.getByPlaceholder("Email address").fill(appAuthEmail);
-  await page.getByPlaceholder("Password").fill(appAuthPassword);
-  await page.getByRole("button", { name: "Sign In" }).click();
+  await page.getByLabel("Email address").fill(appAuthEmail);
+  await page.getByLabel("Password").fill(appAuthPassword);
+  await page.getByRole("button", { name: "Sign In and Keep Building" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 }
 

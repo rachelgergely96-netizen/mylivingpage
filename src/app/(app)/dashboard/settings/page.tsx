@@ -10,6 +10,7 @@ import {
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 
 interface Profile {
   id: string;
@@ -366,24 +367,47 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Settings</p>
-        <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">Account Settings</h1>
-      </div>
+      <ProfileWindow
+        title="Member settings"
+        status={
+          livePageActive ? (
+            <span className="profile-status">Profile live</span>
+          ) : (
+            <span>Private profile</span>
+          )
+        }
+        className="mb-5"
+        contentClassName="p-5 sm:p-6"
+      >
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+          Profile and account controls
+        </p>
+        <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
+          Account Settings
+        </h1>
+        <p className="mt-3 break-all font-mono text-xs text-[rgba(191,219,254,0.58)] sm:text-sm">
+          mylivingpage.com/{profile.username}
+        </p>
+      </ProfileWindow>
 
       {/* ── Profile Section ── */}
-      <section className="glass-card rounded-2xl p-5 sm:p-7 mb-5">
-        <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-5">Profile</h2>
+      <ProfileWindow
+        title="Profile identity"
+        status="Public-facing details"
+        className="mb-5"
+        contentClassName="p-5 sm:p-7"
+      >
+        <h2 className="sr-only">Profile</h2>
 
         {/* Avatar */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)]">
+          <div className="profile-avatar-frame relative h-20 w-20 shrink-0 bg-[rgba(3,10,23,0.64)]">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
                 alt="Avatar"
                 fill
-                sizes="64px"
+                sizes="80px"
                 className="object-cover"
               />
             ) : (
@@ -397,7 +421,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="rounded-full border border-[rgba(59,130,246,0.35)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] disabled:opacity-50"
+              className="profile-action uppercase tracking-[0.14em] disabled:opacity-50"
             >
               {uploadingAvatar ? "Uploading..." : "Upload"}
             </button>
@@ -482,7 +506,7 @@ export default function SettingsPage() {
           />
           <p className="mt-1 text-[10px] text-[rgba(240,244,255,0.3)]">Email changes are not yet supported.</p>
         </div>
-      </section>
+      </ProfileWindow>
 
       {/* ── Account Section (Password) ── */}
       {profile.hasPassword && (
@@ -528,10 +552,8 @@ export default function SettingsPage() {
       )}
 
       {/* Universal free access with transitional subscription management. */}
-      <section className="glass-card mb-5 rounded-2xl p-5 sm:p-7">
-        <h2 className="mb-3 font-heading text-lg font-semibold text-[#F0F4FF]">
-          Access
-        </h2>
+      <ProfilePanel title="Profile access" meta="Free" className="mb-5" contentClassName="p-5 sm:p-7">
+        <h2 className="sr-only">Access</h2>
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-[rgba(74,222,128,0.35)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#4ade80]">
             Free access
@@ -569,7 +591,7 @@ export default function SettingsPage() {
             </button>
           </div>
         ) : null}
-      </section>
+      </ProfilePanel>
 
       {/* ── Danger Zone ── */}
       <section className="rounded-2xl border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.04)] p-5 sm:p-7">

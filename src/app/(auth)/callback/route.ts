@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCallbackAuthErrorCode } from "@/lib/auth/auth-error";
+import { sanitizeAuthRedirectPath } from "@/lib/auth/callback-url";
 import { getAppOrigin } from "@/lib/site";
 import {
   getClientIp,
@@ -14,13 +15,6 @@ import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
-function safeRedirectPath(value: string | null): string {
-  if (!value || !value.startsWith("/")) {
-    return "/dashboard";
-  }
-  return value;
-}
-
 function applyNoStoreHeaders(response: NextResponse) {
   response.headers.set("Cache-Control", "no-store, max-age=0");
   response.headers.set("Pragma", "no-cache");
@@ -32,7 +26,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const appOrigin = getAppOrigin();
   const code = requestUrl.searchParams.get("code");
-  const next = safeRedirectPath(requestUrl.searchParams.get("next"));
+  const next = sanitizeAuthRedirectPath(requestUrl.searchParams.get("next"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSourceParam = requestUrl.searchParams.get("legal_source");
   const legalSource: LegalAcceptanceSource =

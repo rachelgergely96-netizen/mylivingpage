@@ -83,6 +83,21 @@ describe("GET /api/auth/google", () => {
     );
   });
 
+  it("rejects protocol-relative destinations before starting OAuth", async () => {
+    await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/api/auth/google?next=%2F%2Fevil.example%2Fsteal&screen=login",
+      ),
+    );
+
+    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+      },
+    });
+  });
+
   it("preserves signup callback metadata for legal acceptance", async () => {
     await GET(
       new NextRequest(

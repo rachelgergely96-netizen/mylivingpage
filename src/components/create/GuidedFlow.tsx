@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ResumeData } from "@/types/resume";
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -10,6 +9,8 @@ interface GuidedFlowProps {
   onUpdate: (data: Partial<ResumeData>) => void;
   onComplete: (data: ResumeData) => void;
   onBack: () => void;
+  step: number;
+  onStepChange: (step: number) => void;
 }
 
 interface ExperienceEntry {
@@ -72,8 +73,14 @@ const removeBtnClass =
 
 /* ── Component ──────────────────────────────────────────── */
 
-export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }: GuidedFlowProps) {
-  const [step, setStep] = useState(0);
+export default function GuidedFlow({
+  guidedData,
+  onUpdate,
+  onComplete,
+  onBack,
+  step,
+  onStepChange,
+}: GuidedFlowProps) {
 
   /* ── Local field state derived from guidedData ──────── */
   const name = guidedData.name ?? "";
@@ -101,7 +108,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
 
   const goNext = () => {
     if (step < TOTAL_STEPS - 1) {
-      setStep(step + 1);
+      onStepChange(step + 1);
     } else {
       // Final step — assemble and complete
       const assembled: ResumeData = {
@@ -128,13 +135,20 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
   };
 
   const goBack = () => {
-    if (step > 0) setStep(step - 1);
+    if (step > 0) onStepChange(step - 1);
     else onBack();
   };
 
   /* ── Progress dots ──────────────────────────────────── */
   const progressDots = (
-    <div className="mb-6 flex items-center justify-center gap-2">
+    <div
+      className="mb-6 flex items-center justify-center gap-2"
+      role="progressbar"
+      aria-label="Resume details progress"
+      aria-valuemin={1}
+      aria-valuemax={TOTAL_STEPS}
+      aria-valuenow={step + 1}
+    >
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <span
           key={i}
@@ -552,7 +566,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
   return (
     <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
       {progressDots}
-      <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 1 · {step + 1} of {TOTAL_STEPS}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60A5FA]">Details · Section {step + 1} of {TOTAL_STEPS}</p>
       <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">{STEP_PROMPTS[step].heading}</h2>
       <p className="mt-2 mb-6 text-xs sm:text-sm text-[rgba(240,244,255,0.55)]">{STEP_PROMPTS[step].sub}</p>
 
@@ -564,7 +578,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
           onClick={goBack}
           className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
         >
-          Back
+          {step > 0 ? "Previous" : "Back to dashboard"}
         </button>
         <button
           type="button"
@@ -572,7 +586,7 @@ export default function GuidedFlow({ guidedData, onUpdate, onComplete, onBack }:
           onClick={goNext}
           className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {step < TOTAL_STEPS - 1 ? "Continue" : "Continue to Theme Selection"}
+          {step < TOTAL_STEPS - 1 ? "Continue" : "Review My Resume"}
         </button>
       </div>
     </section>

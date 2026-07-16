@@ -1,5 +1,31 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
+import {
+  buildAuthCallbackUrl,
+  buildGoogleAuthStartUrl,
+  sanitizeAuthRedirectPath,
+} from "@/lib/auth/callback-url";
+
+describe("sanitizeAuthRedirectPath", () => {
+  it("keeps same-site paths, queries, and hashes", () => {
+    expect(sanitizeAuthRedirectPath("/create?ref=landing#details")).toBe(
+      "/create?ref=landing#details",
+    );
+  });
+
+  it.each([
+    "https://evil.example/steal",
+    "//evil.example/steal",
+    "/\\evil.example/steal",
+    "javascript:alert(1)",
+    "dashboard",
+  ])("rejects unsafe auth destination %s", (value) => {
+    expect(sanitizeAuthRedirectPath(value)).toBe("/dashboard");
+  });
+
+  it("supports a route-specific fallback", () => {
+    expect(sanitizeAuthRedirectPath("//evil.example", "/create")).toBe("/create");
+  });
+});
 
 describe("buildAuthCallbackUrl", () => {
   const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;

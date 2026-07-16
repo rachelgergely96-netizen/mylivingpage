@@ -22,6 +22,7 @@ interface ThemePickerProps {
   allowedThemeIds?: ThemeId[] | null;
   lockedLabel?: string;
   showDescription?: boolean;
+  showFilters?: boolean;
 }
 
 export default function ThemePicker({
@@ -32,6 +33,7 @@ export default function ThemePicker({
   allowedThemeIds,
   lockedLabel = "Locked",
   showDescription = false,
+  showFilters = true,
 }: ThemePickerProps) {
   const [activeCollection, setActiveCollection] = useState<ThemeCollectionFilterId>("all");
   const selectableThemeIds =
@@ -55,13 +57,14 @@ export default function ThemePicker({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      {showFilters ? <div className="flex gap-2 overflow-x-auto pb-1">
         {THEME_COLLECTION_FILTER_IDS.map((collection) => {
           const active = activeCollection === collection;
           return (
             <button
               key={collection}
               type="button"
+              aria-pressed={active}
               onClick={() => setActiveCollection(collection)}
               className="shrink-0 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300"
               style={{
@@ -74,7 +77,7 @@ export default function ThemePicker({
             </button>
           );
         })}
-      </div>
+      </div> : null}
 
       <div className="space-y-8">
         {sections.map((section) => (
@@ -98,6 +101,8 @@ export default function ThemePicker({
                   <button
                     key={theme.id}
                     type="button"
+                    aria-pressed={selectedThemeId === theme.id}
+                    aria-label={`${theme.name} theme${locked ? `, ${lockedLabel.toLowerCase()}` : ""}`}
                     onClick={() => {
                       if (!locked) {
                         onSelectTheme(theme.id);

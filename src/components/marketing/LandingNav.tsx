@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 const NAV_LINKS = [
-  { href: "#demo-section", label: "Demo", external: false },
-  { href: "#how", label: "How It Works", external: false },
-  { href: "/examples", label: "Examples", external: true },
-  { href: "#pricing", label: "Free", external: false },
+  { href: "/#demo-section", label: "Demo" },
+  { href: "/#how", label: "How It Works" },
+  { href: "/examples", label: "Examples" },
+  { href: "/pricing", label: "Free" },
 ];
 
 const LOGIN_HREF = "/login?next=/dashboard";
@@ -25,17 +25,11 @@ export default function LandingNav() {
 
       {/* Desktop links */}
       <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.6)] md:flex">
-        {NAV_LINKS.map((link) =>
-          link.external ? (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-[#93C5FD]">
-              {link.label}
-            </Link>
-          ) : (
-            <a key={link.href} href={link.href} className="transition-colors hover:text-[#93C5FD]">
-              {link.label}
-            </a>
-          )
-        )}
+        {NAV_LINKS.map((link) => (
+          <Link key={link.href} href={link.href} className="transition-colors hover:text-[#93C5FD]">
+            {link.label}
+          </Link>
+        ))}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
@@ -85,23 +79,13 @@ export default function LandingNav() {
           <ul className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
-                {link.external ? (
-                  <Link
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block rounded-xl px-4 py-3 text-sm uppercase tracking-[0.18em] text-[rgba(240,244,255,0.7)] transition-colors hover:bg-[rgba(255,255,255,0.04)] hover:text-[#93C5FD]"
-                  >
-                    {link.label}
-                  </Link>
-                ) : (
-                  <a
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block rounded-xl px-4 py-3 text-sm uppercase tracking-[0.18em] text-[rgba(240,244,255,0.7)] transition-colors hover:bg-[rgba(255,255,255,0.04)] hover:text-[#93C5FD]"
-                  >
-                    {link.label}
-                  </a>
-                )}
+                <Link
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="block rounded-xl px-4 py-3 text-sm uppercase tracking-[0.18em] text-[rgba(240,244,255,0.7)] transition-colors hover:bg-[rgba(255,255,255,0.04)] hover:text-[#93C5FD]"
+                >
+                  {link.label}
+                </Link>
               </li>
             ))}
             <li className="mt-2 border-t border-[rgba(255,255,255,0.08)] pt-3">

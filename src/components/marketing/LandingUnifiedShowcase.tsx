@@ -24,14 +24,14 @@ import type { ThemeId } from "@/themes/types";
 const SHOWCASE_RESUME = DEMO_PAGES[0]?.data;
 
 const SHOWCASE_THEMES = [
-  { id: "ember", label: "Ember", premium: false },
-  { id: "aurora", label: "Aurora", premium: false },
-  { id: "matrix", label: "Matrix", premium: true },
-] as const satisfies ReadonlyArray<{ id: ThemeId; label: string; premium: boolean }>;
+  { id: "ember", label: "Ember" },
+  { id: "aurora", label: "Aurora" },
+  { id: "matrix", label: "Matrix" },
+] as const satisfies ReadonlyArray<{ id: ThemeId; label: string }>;
 
 const SHOWCASE_VIEWS = [
-  { id: "living-page", label: "Living Page", premium: false },
-  { id: "share-card-qr", label: "Share Card + QR", premium: true },
+  { id: "living-page", label: "Living Page" },
+  { id: "share-card-qr", label: "Share Card + QR" },
 ] as const;
 
 type ShowcaseThemeId = (typeof SHOWCASE_THEMES)[number]["id"];
@@ -162,25 +162,25 @@ export default function LandingUnifiedShowcase() {
     <section id="demo-section" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
         <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] p-6 sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#E5B76B]">Unified demo</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#60A5FA]">See it in action</p>
           <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.02] tracking-[-0.03em] text-[#F7F1E8] sm:text-4xl">
-            One page. Always up to date.
+            One story. Three useful outputs.
           </h2>
           <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-            This uses one representative profile so the differences stay easy to scan. Preview the page, the share card, and the proof moment without leaving the homepage.
+            See how the same saved details become a polished living resume and a QR-ready share card. Your ATS-ready PDF stays aligned with them automatically.
           </p>
 
           <div className="mt-6 grid gap-3">
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
               <p className="text-sm font-semibold text-[#F0F4FF]">Start with what you already have</p>
               <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Bring in your resume once and shape the same story into something easier to send and easier to read.
+                Add your details once, then keep one consistent story across your page, PDF, and share card.
               </p>
             </div>
             <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-sm font-semibold text-[#F0F4FF]">Know what happened after you shared it</p>
+              <p className="text-sm font-semibold text-[#F0F4FF]">Share it in the format that fits</p>
               <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Switch between the page view and the QR-ready share card to see how one profile stays consistent across follow-up moments.
+                Use the living page for quick context, the PDF for applications, and the share card for networking or follow-up.
               </p>
             </div>
           </div>
@@ -221,8 +221,8 @@ export default function LandingUnifiedShowcase() {
                       onClick={() => setThemeId(themeOption.id)}
                       className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all ${
                         isActive
-                          ? "border-[rgba(229,183,107,0.4)] bg-[rgba(229,183,107,0.12)] text-[#F7F1E8]"
-                          : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.58)] hover:border-[rgba(229,183,107,0.24)] hover:text-[#F7F1E8]"
+                          ? "border-[rgba(96,165,250,0.4)] bg-[rgba(59,130,246,0.12)] text-[#DBEAFE]"
+                          : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.58)] hover:border-[rgba(96,165,250,0.24)] hover:text-[#DBEAFE]"
                       }`}
                     >
                       <span>{themeOption.label}</span>

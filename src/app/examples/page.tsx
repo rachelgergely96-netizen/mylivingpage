@@ -77,7 +77,7 @@ export default function ExamplesPage() {
           <section className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-10 sm:px-10 sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Sample pages</p>
             <h1 className="mt-3 max-w-4xl font-heading text-4xl font-bold leading-[1.04] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              See what the decision page can look like once someone is considering you.
+              See how a living resume can look when it becomes more than a file.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.64)] sm:text-lg">
               These are scenario demos, not customer testimonials. Use them to see how different follow-up moments can be framed once someone opens your link and wants faster context.
@@ -163,7 +163,7 @@ export default function ExamplesPage() {
                 Ready to create one page you can actually send?
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[rgba(240,244,255,0.6)]">
-                Upload your info once. Then publish one page that is easier for people to scan in follow-ups, referrals, recruiter outreach, and any other moment someone is deciding whether to move forward.
+                Add your details once. Then publish one page that is easier to scan in follow-ups, referrals, recruiter outreach, and every other moment when a clean link is more useful than another attachment.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link

@@ -1,19 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { AuthShell } from "@/components/auth/AuthShell";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
-import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
+import {
+  buildAuthCallbackUrl,
+  buildGoogleAuthStartUrl,
+  sanitizeAuthRedirectPath,
+} from "@/lib/auth/callback-url";
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/legal-version";
-import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/site";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
-  const router = useRouter();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
   const requiresCaptcha = Boolean(turnstileSiteKey);
   const [email, setEmail] = useState("");
@@ -29,9 +31,7 @@ export default function SignupPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const next = params.get("next");
-    if (next && next.startsWith("/")) {
-      setNextPath(next);
-    }
+    setNextPath(sanitizeAuthRedirectPath(next, "/create"));
     const ref = params.get("ref") || params.get("utm_source") || null;
     if (ref) setSignupReferrer(ref);
   }, []);
@@ -136,21 +136,70 @@ export default function SignupPage() {
     }
   };
 
+  if (status === "success") {
+    return (
+      <AuthShell
+        eyebrow="Account created"
+        title="Check your inbox."
+        description="Confirm your email, then you will return to the guided builder to add your resume details."
+      >
+        <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.09)] p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">
+            Confirmation sent to
+          </p>
+          <p className="mt-2 break-all text-base font-semibold text-[#F0F4FF]">{email}</p>
+          <ol className="mt-5 space-y-3 text-sm leading-6 text-[rgba(240,244,255,0.68)]">
+            <li className="flex gap-3">
+              <span className="font-mono text-[#93C5FD]">1.</span>
+              Open the confirmation email from MyLivingPage.
+            </li>
+            <li className="flex gap-3">
+              <span className="font-mono text-[#93C5FD]">2.</span>
+              Confirm your account to return to your private draft.
+            </li>
+            <li className="flex gap-3">
+              <span className="font-mono text-[#93C5FD]">3.</span>
+              Add your details, preview, and publish only when you are ready.
+            </li>
+          </ol>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("idle");
+              setMessage("");
+            }}
+            className="rounded-full border border-[rgba(255,255,255,0.15)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.7)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
+          >
+            Use a different email
+          </button>
+          <Link href={signInHref} className="text-sm font-semibold text-[#93C5FD] hover:text-[#BFDBFE]">
+            Already confirmed? Sign in
+          </Link>
+        </div>
+      </AuthShell>
+    );
+  }
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-5 py-10 sm:px-6 sm:py-12">
-      <div className="glass-card w-full rounded-2xl p-6 md:p-7">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your free living resume</p>
-        <h1 className="mt-2 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-[2.2rem]">
-          {SITE_TAGLINE}.
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-          {SITE_DESCRIPTION}
-        </p>
-        <label className="mt-4 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+    <AuthShell
+      eyebrow="Step 1 of 2"
+      title="Create your living resume."
+      description="Create your free account now. Next, you will add your details in a private guided builder."
+    >
+        <label className="flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.025)] p-3.5 text-xs leading-5 text-[rgba(240,244,255,0.66)]">
           <input
+            id="signup-legal"
             type="checkbox"
             checked={acceptedLegal}
-            onChange={(event) => setAcceptedLegal(event.target.checked)}
+            onChange={(event) => {
+              setAcceptedLegal(event.target.checked);
+              if (event.target.checked && status === "error") {
+                setStatus("idle");
+                setMessage("");
+              }
+            }}
             className="mt-1 h-4 w-4 accent-[#3B82F6]"
           />
           <span>
@@ -165,17 +214,13 @@ export default function SignupPage() {
           </span>
         </label>
 
-        {!acceptedLegal && (
-          <p className="mt-2 text-xs text-[#FCD34D]">Check the box above to continue.</p>
-        )}
-
           <button
             type="button"
             onClick={onGoogleSignup}
             disabled={status === "loading"}
-            className="mt-4 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 h-12 w-full rounded-xl border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.025)] px-5 text-sm font-medium text-[rgba(240,244,255,0.82)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:bg-[rgba(59,130,246,0.07)] hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-50"
           >
-          Create Your Page with Google
+          Continue with Google
           </button>
 
         <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
@@ -184,24 +229,41 @@ export default function SignupPage() {
           <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
         </div>
 
-        <form className="space-y-3" onSubmit={onSignup}>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            placeholder="Email address"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            minLength={8}
-            placeholder="Create password"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
+        <form className="space-y-4" onSubmit={onSignup}>
+          <div>
+            <label htmlFor="signup-email" className="mb-2 block text-xs font-medium text-[rgba(240,244,255,0.72)]">
+              Email address
+            </label>
+            <input
+              id="signup-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.32)] focus:border-[#60A5FA] focus:outline-none"
+            />
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="signup-password" className="text-xs font-medium text-[rgba(240,244,255,0.72)]">
+                Create password
+              </label>
+              <span className="text-[10px] text-[rgba(240,244,255,0.4)]">8 characters minimum</span>
+            </div>
+            <input
+              id="signup-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              placeholder="Choose a secure password"
+              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.32)] focus:border-[#60A5FA] focus:outline-none"
+            />
+          </div>
           {requiresCaptcha ? (
             <TurnstileWidget
               siteKey={turnstileSiteKey}
@@ -212,9 +274,9 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
+            className="gold-pill mt-1 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70 disabled:hover:translate-y-0"
           >
-            {status === "loading" ? "Starting..." : "Create My Page"}
+            {status === "loading" ? "Creating your account..." : "Create My Free Resume"}
           </button>
         </form>
 
@@ -225,11 +287,11 @@ export default function SignupPage() {
         ) : null}
 
         {message ? (
-          <p className={`mt-4 text-sm ${status === "error" ? "text-[#ff8e8e]" : "text-[#3B82F6]"}`}>{message}</p>
+          <p role="alert" className={`mt-4 rounded-xl border px-4 py-3 text-sm ${status === "error" ? "border-[rgba(255,142,142,0.2)] bg-[rgba(255,142,142,0.07)] text-[#ffb4b4]" : "border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] text-[#93C5FD]"}`}>{message}</p>
         ) : null}
 
-        <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
-          Publishing is free. No card, trial, or subscription is required to build or keep your living resume online.
+        <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.5)]">
+          Free means free: no card, trial, or subscription. Your draft stays private until you publish it.
         </p>
 
         <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">
@@ -238,15 +300,6 @@ export default function SignupPage() {
             Sign in
           </Link>
         </p>
-
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="mt-4 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.35)] hover:text-[#3B82F6]"
-        >
-          Back to Home
-        </button>
-      </div>
-    </main>
+    </AuthShell>
   );
 }

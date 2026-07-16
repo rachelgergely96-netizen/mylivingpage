@@ -253,8 +253,40 @@ export default async function DashboardPage() {
       </div>
 
       {!list.length ? (
-        <section className="glass-card rounded-2xl p-5 text-center sm:p-8">
-          <p className="text-sm text-[rgba(240,244,255,0.6)]">No pages yet. Start by creating your first living page.</p>
+        <section className="glass-card overflow-hidden rounded-[2rem] p-5 sm:p-8">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#93C5FD]">
+              Start here
+            </p>
+            <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+              Your first living resume is three simple stages away.
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
+              Your work stays private while you build. Add what matters, preview every output, and publish only when you are ready.
+            </p>
+          </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {[
+              ["01", "Add details", "Six short sections with clear prompts and local draft saving."],
+              ["02", "Design and check", "Choose a polished theme and review your ATS readiness."],
+              ["03", "Publish and share", "Use your live link, PDF, and QR-ready share card."],
+            ].map(([number, title, body]) => (
+              <div
+                key={number}
+                className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4"
+              >
+                <p className="font-mono text-[10px] text-[#93C5FD]">{number}</p>
+                <p className="mt-2 font-semibold text-[#F0F4FF]">{title}</p>
+                <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.55)]">{body}</p>
+              </div>
+            ))}
+          </div>
+          <Link
+            href="/create"
+            className="gold-pill mt-6 inline-flex px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_34px_rgba(59,130,246,0.3)]"
+          >
+            Build My Resume
+          </Link>
         </section>
       ) : (
         <section className="grid gap-3">

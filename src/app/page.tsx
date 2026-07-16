@@ -5,6 +5,7 @@ import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
 import LandingUnifiedShowcase from "@/components/marketing/LandingUnifiedShowcase";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
+import { ProductJourneyPreview } from "@/components/marketing/ProductJourneyPreview";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   ATS_READINESS_DISCLOSURE,
@@ -61,53 +62,59 @@ export default async function LandingPage() {
           >
             <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
-              <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Free living resume
-              </p>
-              <div className="mt-5 max-w-4xl">
-                <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  {SITE_TAGLINE}.
-                </h1>
-                <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  {SITE_DESCRIPTION}
-                </p>
-              </div>
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] lg:items-center lg:gap-10">
+                <div>
+                  <p className="inline-flex rounded-full border border-[rgba(96,165,250,0.28)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BFDBFE] sm:text-xs sm:tracking-[0.22em]">
+                    Free living resume
+                  </p>
+                  <div className="mt-5 max-w-4xl">
+                    <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.15rem]">
+                      {SITE_TAGLINE}.
+                    </h1>
+                    <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
+                      {SITE_DESCRIPTION}
+                    </p>
+                  </div>
 
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {CREDIBILITY_POINTS.map((point) => (
-                  <span
-                    key={point}
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] sm:px-4"
-                  >
-                    {point}
-                  </span>
-                ))}
-              </div>
+                  <div className="mt-6 flex flex-wrap gap-2.5">
+                    {CREDIBILITY_POINTS.map((point) => (
+                      <span
+                        key={point}
+                        className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] sm:px-4"
+                      >
+                        {point}
+                      </span>
+                    ))}
+                  </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  href={getSignupHref("landing_start_free")}
-                  className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
-                >
-                  Create Your Page (Free)
-                </Link>
-                <Link
-                  href={getLoginHref()}
-                  className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
-                >
-                  Log In
-                </Link>
-                <a
-                  href="#demo-section"
-                  className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-                >
-                  See the Demo
-                </a>
-              </div>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <Link
+                      href={getSignupHref("landing_start_free")}
+                      className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.3)] sm:px-7 sm:py-4"
+                    >
+                      Build My Free Resume
+                    </Link>
+                    <Link
+                      href={getLoginHref()}
+                      className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
+                    >
+                      Log In
+                    </Link>
+                    <a
+                      href="#demo-section"
+                      className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                    >
+                      See It in Action
+                    </a>
+                  </div>
 
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Start in minutes. No card, trial, or subscription required. The same saved information powers your page, PDF, and share card.
-              </p>
+                  <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.56)]">
+                    Start in minutes. No card, trial, or subscription. Nothing goes live until you choose Publish.
+                  </p>
+                </div>
+
+                <ProductJourneyPreview />
+              </div>
             </div>
           </section>
 
@@ -115,9 +122,9 @@ export default async function LandingPage() {
 
           <section id="how" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
             <div className="mb-8 max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">What happens after you send it</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#60A5FA]">How it works</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                Create, share, notice, repeat.
+                Build, preview, share.
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">

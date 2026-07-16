@@ -5,11 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AtsReadinessCard from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
-import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
-import JobSeekerStarterKit from "@/components/create/JobSeekerStarterKit";
-import VariantPlanner from "@/components/create/VariantPlanner";
+import DownloadResumeButton from "@/components/DownloadResumeButton";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
+import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import {
@@ -17,11 +16,7 @@ import {
   getAccountAccessState,
 } from "@/lib/account-access";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
-import {
-  buildStarterVariant,
-  describeJobSeekerProfile,
-  normalizeStructuredResumeData,
-} from "@/lib/job-seeker-starter";
+import { normalizeStructuredResumeData } from "@/lib/job-seeker-starter";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { applyPageVariant, sanitizePageVariants } from "@/lib/page-variants";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
@@ -38,15 +33,24 @@ type Step = "input" | "review" | "success";
 interface CreateDraft {
   resumeText: string;
   guidedData: Partial<ResumeData>;
+  guidedStep?: number;
   parsedData: ResumeData | null;
   selectedTheme: ThemeId;
   step: Step;
   variants: PageVariant[];
   selectedPreviewVariantId: string | null;
-  jobSeekerProfile: JobSeekerProfile;
+  jobSeekerProfile: JobSeekerProfile | null;
 }
 
-const PROGRESS_STEPS: Step[] = ["input", "review", "success"];
+const PROGRESS_STEPS = [
+  { id: "input", label: "Details" },
+  { id: "review", label: "Design & check" },
+  { id: "success", label: "Share" },
+] as const satisfies ReadonlyArray<{ id: Step; label: string }>;
+const ONBOARDING_THEME_IDS = ["cosmic", "ember", "aurora", "prism", "tempest", "obsidian"] as const;
+const ONBOARDING_THEMES = THEME_REGISTRY.filter((theme) =>
+  ONBOARDING_THEME_IDS.includes(theme.id as (typeof ONBOARDING_THEME_IDS)[number]),
+);
 const LEGACY_CREATE_DRAFT_KEY = "mlp-draft-create";
 
 const EMPTY_GUIDED_DATA: Partial<ResumeData> = {
@@ -69,16 +73,11 @@ const EMPTY_GUIDED_DATA: Partial<ResumeData> = {
   testimonials: [],
 };
 
-const DEFAULT_JOB_SEEKER_PROFILE: JobSeekerProfile = {
-  role_track: "engineering",
-  primary_goal: "land_interviews",
-  target_audience: "recruiter",
-};
-
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
+  const [guidedStep, setGuidedStep] = useState(0);
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>(EMPTY_GUIDED_DATA);
   const [resumeText, setResumeText] = useState("");
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>("cosmic");
@@ -90,9 +89,9 @@ export default function CreatePage() {
   const [publishedPageId, setPublishedPageId] = useState<string | null>(null);
   const [variants, setVariants] = useState<PageVariant[]>([]);
   const [selectedPreviewVariantId, setSelectedPreviewVariantId] = useState<string | null>(null);
-  const [jobSeekerProfile, setJobSeekerProfile] = useState<JobSeekerProfile>(
-    DEFAULT_JOB_SEEKER_PROFILE,
-  );
+  const [jobSeekerProfile] = useState<JobSeekerProfile | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({
@@ -122,10 +121,9 @@ export default function CreatePage() {
         (guidedData.name ?? "").trim() ||
       parsedData ||
         variants.length > 0 ||
-        selectedTheme !== "cosmic" ||
-        JSON.stringify(jobSeekerProfile) !== JSON.stringify(DEFAULT_JOB_SEEKER_PROFILE),
+        selectedTheme !== "cosmic",
     );
-  }, [guidedData.name, jobSeekerProfile, parsedData, resumeText, selectedTheme, step, variants.length]);
+  }, [guidedData.name, parsedData, resumeText, selectedTheme, step, variants.length]);
 
   useUnsavedChanges(isDirty);
 
@@ -137,6 +135,7 @@ export default function CreatePage() {
     saveDraft({
       resumeText,
       guidedData,
+      guidedStep,
       parsedData,
       selectedTheme,
       step,
@@ -146,6 +145,7 @@ export default function CreatePage() {
     });
   }, [
     guidedData,
+    guidedStep,
     isDirty,
     jobSeekerProfile,
     parsedData,
@@ -160,12 +160,16 @@ export default function CreatePage() {
   const applyDraft = useCallback((draft: CreateDraft) => {
     setResumeText(draft.resumeText ?? "");
     setGuidedData(draft.guidedData ?? EMPTY_GUIDED_DATA);
+    setGuidedStep(
+      typeof draft.guidedStep === "number"
+        ? Math.min(Math.max(Math.round(draft.guidedStep), 0), 5)
+        : 0,
+    );
     setParsedData(draft.parsedData ?? null);
     setSelectedTheme(draft.selectedTheme ?? "cosmic");
     setStep(draft.step === "review" && draft.parsedData ? "review" : "input");
     setVariants(draft.variants ?? []);
     setSelectedPreviewVariantId(draft.selectedPreviewVariantId ?? null);
-    setJobSeekerProfile(draft.jobSeekerProfile ?? DEFAULT_JOB_SEEKER_PROFILE);
     setError("");
   }, []);
 
@@ -303,20 +307,19 @@ export default function CreatePage() {
   const beginReviewOutputs = useCallback(
     (nextData: ResumeData) => {
       const structuredData = normalizeStructuredResumeData(nextData, jobSeekerProfile);
-      const starterVariants = jobSeekerProfile
-        ? [buildStarterVariant(structuredData, jobSeekerProfile)]
-        : [];
 
       setParsedData(structuredData);
       setError("");
-      setVariants(starterVariants);
-      setSelectedPreviewVariantId(starterVariants[0]?.id ?? null);
+      setVariants([]);
+      setSelectedPreviewVariantId(null);
       setStep("review");
     },
     [jobSeekerProfile],
   );
 
-  const currentProgressIndex = PROGRESS_STEPS.indexOf(step);
+  const currentProgressIndex = PROGRESS_STEPS.findIndex(
+    (progressStep) => progressStep.id === step,
+  );
   const predictedSlug = publishedSlug || publicSlug || "your-username";
   const selectedPreviewVariant =
     variants.find((variant) => variant.id === selectedPreviewVariantId) ?? null;
@@ -326,7 +329,6 @@ export default function CreatePage() {
   const readiness = parsedData
     ? buildDecisionReadinessState(parsedData, variants)
     : null;
-  const jobSeekerSummary = describeJobSeekerProfile(jobSeekerProfile);
 
   const publishPage = useCallback(async () => {
     if (!parsedData || publishingRef.current || !readiness) {
@@ -414,30 +416,51 @@ export default function CreatePage() {
     void publishPage();
   }, [parsedData, publishPage, publishRestoredDraft]);
 
+  const copyPublishedLink = useCallback(async () => {
+    try {
+      const liveUrl = new URL(`/${predictedSlug}`, window.location.origin).toString();
+      await navigator.clipboard.writeText(liveUrl);
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2400);
+    } catch {
+      setError("We could not copy the link automatically. Open your page and copy the URL from your browser.");
+    }
+  }, [predictedSlug]);
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
-      <div className="mb-5 flex items-center justify-between sm:mb-7">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your page</p>
+      <div className="mb-6 grid gap-5 sm:mb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60A5FA]">Build your living resume</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
-            Build your page - send it - know when they open it
+            Add it once. Use it everywhere.
           </h1>
+          <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+            Your draft saves as you go and stays private until you choose Publish.
+          </p>
         </div>
-        <div className="hidden gap-2 md:flex">
-          {PROGRESS_STEPS.map((progressId, index) => (
-            <span
-              key={progressId}
-              className="h-1.5 rounded-full transition-all"
-              style={{
-                width: currentProgressIndex >= index ? 34 : 24,
-                background:
-                  currentProgressIndex >= index
-                    ? "linear-gradient(90deg, #3B82F6, #93C5FD)"
-                    : "rgba(255,255,255,0.12)",
-              }}
-            />
+        <ol className="grid grid-cols-3 gap-2" aria-label="Resume setup progress">
+          {PROGRESS_STEPS.map((progressStep, index) => (
+            <li
+              key={progressStep.id}
+              aria-current={step === progressStep.id ? "step" : undefined}
+              className={`min-w-0 rounded-xl border px-3 py-2.5 ${
+                currentProgressIndex >= index
+                  ? "border-[rgba(59,130,246,0.28)] bg-[rgba(59,130,246,0.1)]"
+                  : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]"
+              }`}
+            >
+              <p className="font-mono text-[9px] text-[rgba(147,197,253,0.68)]">
+                {String(index + 1).padStart(2, "0")}
+              </p>
+              <p className={`mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.1em] ${
+                currentProgressIndex >= index ? "text-[#BFDBFE]" : "text-[rgba(240,244,255,0.38)]"
+              }`}>
+                {progressStep.label}
+              </p>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
 
       {error ? (
@@ -470,21 +493,17 @@ export default function CreatePage() {
 
       {!atPageLimit && step === "input" ? (
         <section className="space-y-4">
-          <JobSeekerStarterKit
-            value={jobSeekerProfile}
-            onChange={setJobSeekerProfile}
-            compact
-          />
-          <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
-                Private guided entry
-              </p>
-              <p className="mt-2 text-sm text-[#F0F4FF]">
-                Add your details section by section, then preview everything before publishing.
-                No AI service reads or rewrites your resume.
-              </p>
-            </div>
+          <div className="grid gap-3 rounded-2xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4 sm:grid-cols-3 sm:p-5">
+            {[
+              ["Private by default", "Nothing goes live until you publish."],
+              ["Saved as you go", "Your draft stays on this browser."],
+              ["No AI processing", "Your details are never sent to a model."],
+            ].map(([title, body]) => (
+              <div key={title}>
+                <p className="text-xs font-semibold text-[#BFDBFE]">{title}</p>
+                <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.55)]">{body}</p>
+              </div>
+            ))}
           </div>
           {resumeText.trim() ? (
             <details className="rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.07)] p-4">
@@ -513,6 +532,8 @@ export default function CreatePage() {
           <GuidedFlow
             guidedData={guidedData}
             onUpdate={setGuidedData}
+            step={guidedStep}
+            onStepChange={setGuidedStep}
             onComplete={(data) => {
               beginReviewOutputs(data);
             }}
@@ -524,54 +545,38 @@ export default function CreatePage() {
       {step === "review" && parsedData && previewData && readiness ? (
         <section className="space-y-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 2</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60A5FA]">Design & check</p>
             <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-              This is what someone will see when you send it.
+              Make it feel like you, then check the essentials.
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Your information is ready as a professional decision page. Tighten the parts that help someone decide faster, then publish it with the same Resume PDF and tracked link.
+              Choose a style, review the page, and use the ATS check to catch common issues. You can edit everything later.
             </p>
           </div>
 
-          {jobSeekerSummary ? (
-            <section className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                Starter setup
+          <section data-testid="create-theme-section" className="space-y-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4 sm:p-5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Choose a look</p>
+              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Start with a polished theme</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
+                Pick what feels right now. You can change it anytime without rebuilding your resume.
               </p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                Built for {jobSeekerSummary.role.toLowerCase()} outreach
-              </h3>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
-                This page is being framed to {jobSeekerSummary.goal.toLowerCase()} with {jobSeekerSummary.audience.toLowerCase()} as the first audience. We also seeded {previewData.proofs?.length ?? 0} structured proof {previewData.proofs?.length === 1 ? "block" : "blocks"} from your existing content so the page starts with evidence, not just claims.
-              </p>
-            </section>
-          ) : null}
+            </div>
+            <ThemePicker
+              themes={ONBOARDING_THEMES}
+              selectedThemeId={selectedTheme}
+              onSelectTheme={setSelectedTheme}
+              allowedThemeIds={accountAccess.allowedThemeIds}
+              lockedLabel="Not available"
+              showDescription
+              showFilters={false}
+            />
+            <p className="text-xs leading-6 text-[rgba(240,244,255,0.46)]">
+              More themes are available from the editor after you publish.
+            </p>
+          </section>
 
           <AtsReadinessCard resumeData={parsedData} />
-
-          {accountAccess.variantLimit > 0 ? (
-            <VariantPlanner
-              baseData={parsedData}
-              variants={variants}
-              selectedVariantId={selectedPreviewVariantId}
-              onSelectVariant={setSelectedPreviewVariantId}
-              onChange={setVariants}
-              maxVariants={accountAccess.variantLimit}
-            />
-          ) : (
-            <section className="rounded-2xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                Targeted versions
-              </p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-                One clear resume, one reliable link
-              </h3>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
-                This streamlined version keeps the focus on your main resume. You can still edit
-                it anytime after publishing.
-              </p>
-            </section>
-          )}
 
           <div className="space-y-5">
             <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">
@@ -582,7 +587,7 @@ export default function CreatePage() {
               <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
                 {selectedPreviewVariant
                   ? `You are previewing "${selectedPreviewVariant.label}". Targeted links will open this version first.`
-                  : "You are previewing the base page. Add a targeted version above if you want a sharper send for a recruiter, follow-up, or referral."}
+                  : "This preview uses the same saved details that will power your live page, PDF, and share card."}
               </p>
               <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
@@ -603,7 +608,7 @@ export default function CreatePage() {
                     Publishing is free and does not require a card.
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgba(232,242,255,0.78)]">
-                    When someone opens this, you&apos;ll know.
+                    You can edit the page, PDF, and share card from the same saved details anytime.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -643,154 +648,113 @@ export default function CreatePage() {
             </div>
           </div>
 
-          <section data-testid="create-theme-section" className="space-y-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Theme</p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Make it feel like you</h3>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
-                Pick a clean style. Don&apos;t overthink it.
-              </p>
-            </div>
-            <ThemePicker
-              themes={THEME_REGISTRY}
-              selectedThemeId={selectedTheme}
-              onSelectTheme={setSelectedTheme}
-              allowedThemeIds={accountAccess.allowedThemeIds}
-              lockedLabel="Not available"
-              showDescription
-            />
-          </section>
         </section>
       ) : null}
 
       {step === "success" ? (
         <section className="space-y-5">
-          <div className="glass-card rounded-2xl p-5 sm:p-8">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 3</p>
-            <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-              Your page is live.
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
-              Share this living resume as a link, or download the ATS-ready PDF whenever you
-              need a file.
-            </p>
-
-            <div className="mt-5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
-              <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
-                mylivingpage.com/{predictedSlug}
+          <div className="glass-card overflow-hidden rounded-[2rem] p-5 sm:p-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-3xl">
+                <p className="inline-flex rounded-full border border-[rgba(74,222,128,0.22)] bg-[rgba(74,222,128,0.08)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#86EFAC]">
+                  Published
+                </p>
+                <h2 className="mt-4 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
+                  Your living resume is live.
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
+                  Choose what you need next: copy the link, open the page, download the PDF, or create your share card.
+                </p>
               </div>
-              <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                When someone opens this, you&apos;ll know.
+              <span className="font-mono text-xs text-[rgba(147,197,253,0.72)]">03 / 03</span>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-4 sm:p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD]">Your permanent link</p>
+              <p className="mt-2 break-all font-mono text-sm text-[#DBEAFE] sm:text-base">
+                mylivingpage.com/{predictedSlug}
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 text-[#E8F2FF]">
-                <p className="text-[10px] uppercase tracking-[0.16em]">Page</p>
-                <h3 className="mt-2 font-heading text-xl font-semibold">Live now</h3>
-                <p className="mt-2 text-sm leading-6">
-                  Your public page is live at mylivingpage.com/{predictedSlug}.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 text-[#E8F2FF]">
-                <p className="text-[10px] uppercase tracking-[0.16em]">Resume PDF</p>
-                <h3 className="mt-2 font-heading text-xl font-semibold">Ready from the live page</h3>
-                <p className="mt-2 text-sm leading-6">
-                  Anyone viewing your page can download the Resume PDF directly from the same saved content, including any targeted version you share.
-                </p>
-              </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => void copyPublishedLink()}
+                className="gold-pill flex min-h-12 items-center justify-center px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5"
+              >
+                {linkCopied ? "Link copied" : "Copy My Link"}
+              </button>
+              <Link
+                href={`/${predictedSlug}`}
+                className="flex min-h-12 items-center justify-center rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.025)] px-5 py-3 text-center text-sm font-semibold text-[rgba(240,244,255,0.78)] transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
+              >
+                Open My Page
+              </Link>
+              {publishedPageId && parsedData ? (
+                <DownloadResumeButton
+                  data={parsedData}
+                  pageId={publishedPageId}
+                  onErrorChange={setDownloadError}
+                  className="min-h-12 w-full justify-center"
+                />
+              ) : null}
+              {publishedPageId && parsedData && currentUserId ? (
+                <ShareCardDownload
+                  pageId={publishedPageId}
+                  pageUserId={currentUserId}
+                  slug={predictedSlug}
+                  themeId={selectedTheme}
+                  resumeData={parsedData}
+                  analyticsHref={`/dashboard/analytics/${publishedPageId}`}
+                  className="min-h-12 w-full justify-center"
+                />
+              ) : null}
             </div>
-          </div>
 
-          <section className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5 sm:p-6">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">
-              First week plan
-            </p>
-            <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
-              Use the page like a follow-up asset, not a profile dump.
-            </h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">1. Send it</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                  Use the tracked link in a recruiter reply, application follow-up, or referral handoff instead of attaching another file.
-                </p>
-              </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">2. Watch proof</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                  Start with the proof section and use the first-view loop below to see when interest is real.
-                </p>
-              </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">3. Tighten variants</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
-                  {variants.length > 0
-                    ? `You already have ${variants.length} targeted ${variants.length === 1 ? "version" : "versions"} ready. Use the one that matches the next conversation.`
-                    : "Add a targeted version after your first send so your next outreach matches the exact audience."}
-                </p>
-              </div>
-            </div>
-            {jobSeekerSummary ? (
-              <p className="mt-4 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-                Current setup: {jobSeekerSummary.role} page tuned to {jobSeekerSummary.goal.toLowerCase()} for {jobSeekerSummary.audience.toLowerCase()}.
+            {downloadError ? (
+              <p role="alert" className="mt-4 rounded-xl border border-[rgba(255,142,142,0.2)] bg-[rgba(255,142,142,0.07)] px-4 py-3 text-sm text-[#ffb4b4]">
+                {downloadError}
               </p>
             ) : null}
-          </section>
 
-          {publishedPageId ? (
-            <FirstViewActivationHub
-              pageId={publishedPageId}
-              livePath={`/${predictedSlug}`}
-              analyticsHref={
-                accountAccess.analyticsTier === "full"
-                  ? `/dashboard/analytics/${publishedPageId}`
-                  : "/dashboard"
-              }
-              analyticsCtaLabel={
-                accountAccess.analyticsTier === "full"
-                  ? "Open page analytics"
-                  : "Open dashboard"
-              }
-              variants={variants}
-              defaultVariantId={selectedPreviewVariantId}
-            />
-          ) : null}
+            <p className="mt-5 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
+              Your PDF and share card use the same saved information as your page, so all three stay consistent when you make an update.
+            </p>
+          </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/${predictedSlug}`}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-            >
-              Open Your Page
-            </Link>
+          <section className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Keep it current</p>
+              <h3 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+                Update once and every output stays aligned.
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+                Edit your details, customize your public URL, or check page activity from your dashboard.
+              </p>
+            </div>
             {publishedPageId ? (
-              <>
-                {accountAccess.analyticsTier === "full" ? (
-                  <Link
-                    href={`/dashboard/analytics/${publishedPageId}`}
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                  >
-                    Open Page Analytics
-                  </Link>
-                ) : (
-                  <Link
-                    href="/dashboard"
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                  >
-                    Open Dashboard
-                  </Link>
-                )}
+              <div className="mt-5 flex flex-wrap gap-2 sm:mt-0 sm:shrink-0 sm:justify-end">
                 <Link
                   href={`/dashboard/edit/${publishedPageId}/living-page`}
-                  className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
+                  className="gold-pill px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em]"
                 >
-                  Edit Page
+                  Edit Resume
                 </Link>
-              </>
+                <Link
+                  href="/dashboard/settings"
+                  className="rounded-full border border-[rgba(255,255,255,0.14)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.72)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
+                >
+                  Customize URL
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="rounded-full border border-[rgba(255,255,255,0.14)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.72)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#BFDBFE]"
+                >
+                  Dashboard
+                </Link>
+              </div>
             ) : null}
-          </div>
+          </section>
         </section>
       ) : null}
 

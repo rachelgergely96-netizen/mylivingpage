@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { evaluateAtsReadiness } from "../../src/lib/ats-readiness";
 import type { PageVariant } from "../../src/types/resume";
 import {
   canRunAdminFixtureFlows,
@@ -318,6 +319,57 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(page.getByRole("button", { name: "Load Sample" })).toHaveCount(0);
     await completeGuidedResumeEntry(page);
     expect(parseRequests).toEqual([]);
+  });
+
+  test("resume check sends users to the exact fix and returns them to their checklist", async ({ page }) => {
+    test.skip(!canRunAuthenticatedFlows, "Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD to run authenticated browser flows.");
+
+    await signIn(page);
+    const profile = await fetchCurrentProfile(page);
+    await page.evaluate((draftKey) => window.localStorage.removeItem(draftKey), `mlp-draft-create-${profile.id}`);
+    await page.route("**/api/resume/readiness", async (route) => {
+      const payload = route.request().postDataJSON() as {
+        resumeData: Parameters<typeof evaluateAtsReadiness>[0]["data"];
+        targetTitle?: string;
+        jobDescription?: string;
+      };
+      const readiness = evaluateAtsReadiness({
+        data: payload.resumeData,
+        targetTitle: payload.targetTitle,
+        jobDescription: payload.jobDescription,
+        exportCheck: {
+          renderable: true,
+          renderFailureReason: null,
+          pageCount: 1,
+          fitsOnOnePage: true,
+          overflowReasons: [],
+          recommendedFixes: [],
+        },
+      });
+      await route.fulfill({ json: { readiness } });
+    });
+
+    await page.goto("/create");
+    await completeGuidedResumeEntry(page);
+    await page.getByText("Tailoring this for a job? Compare a posting").click();
+    await page.getByLabel("Target job title").fill("Technology Counsel");
+    await page.getByLabel("Job posting").fill("Technology counsel contracts privacy product advice");
+    await page.getByRole("button", { name: "Check my resume" }).click();
+
+    await expect(page.getByRole("heading", { name: /essential.*to finish/ })).toBeVisible();
+    await page.getByRole("button", { name: "Complete role details" }).click();
+    await expect(page.getByRole("heading", { name: "Tell me about your experience" })).toBeVisible();
+    await expect(page.getByLabel("Role 1 dates")).toBeFocused();
+    await page.getByLabel("Role 1 dates").fill("2022 - Present");
+    await page.getByRole("button", { name: "Save and return to resume check" }).click();
+
+    await expect(page.getByText("You’ve made changes. Keep using the checklist below")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recheck my changes" })).toBeVisible();
+    await page.getByText("Tailoring this for a job? Compare a posting").click();
+    await expect(page.getByLabel("Target job title")).toHaveValue("Technology Counsel");
+    await expect(page.getByLabel("Job posting")).toHaveValue(
+      "Technology counsel contracts privacy product advice",
+    );
   });
 
   test("public Resume PDF download appears on live pages for owners and viewers", async ({ page, browser }) => {

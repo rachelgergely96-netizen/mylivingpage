@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import AtsReadinessCard from "@/components/AtsReadinessCard";
+import AtsReadinessCard, {
+  type AtsReadinessReviewState,
+} from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
 import DraftBanner from "@/components/DraftBanner";
@@ -16,6 +18,11 @@ import {
   getAccountAccessState,
 } from "@/lib/account-access";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
+import {
+  getGuidedStepForAtsFix,
+  type AtsFixTarget,
+} from "@/lib/ats-fix-target";
+import type { AtsReadinessCheck } from "@/lib/ats-readiness";
 import { normalizeStructuredResumeData } from "@/lib/job-seeker-starter";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { applyPageVariant, sanitizePageVariants } from "@/lib/page-variants";
@@ -89,6 +96,15 @@ export default function CreatePage() {
   const [publishedPageId, setPublishedPageId] = useState<string | null>(null);
   const [variants, setVariants] = useState<PageVariant[]>([]);
   const [selectedPreviewVariantId, setSelectedPreviewVariantId] = useState<string | null>(null);
+  const [atsReviewState, setAtsReviewState] = useState<AtsReadinessReviewState>({
+    targetTitle: "",
+    jobDescription: "",
+    completedCheck: null,
+  });
+  const [activeAtsFix, setActiveAtsFix] = useState<{
+    target: AtsFixTarget;
+    title: string;
+  } | null>(null);
   const [jobSeekerProfile] = useState<JobSeekerProfile | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -307,14 +323,33 @@ export default function CreatePage() {
   const beginReviewOutputs = useCallback(
     (nextData: ResumeData) => {
       const structuredData = normalizeStructuredResumeData(nextData, jobSeekerProfile);
+      const returningFromAtsFix = activeAtsFix !== null;
 
       setParsedData(structuredData);
+      setGuidedData(structuredData);
+      setActiveAtsFix(null);
       setError("");
-      setVariants([]);
-      setSelectedPreviewVariantId(null);
+      if (!returningFromAtsFix) {
+        setVariants([]);
+        setSelectedPreviewVariantId(null);
+      }
       setStep("review");
     },
-    [jobSeekerProfile],
+    [activeAtsFix, jobSeekerProfile],
+  );
+
+  const beginAtsFix = useCallback(
+    (target: AtsFixTarget, check: AtsReadinessCheck) => {
+      if (!parsedData) {
+        return;
+      }
+
+      setGuidedData(parsedData);
+      setGuidedStep(getGuidedStepForAtsFix(target.section));
+      setActiveAtsFix({ target, title: check.title });
+      setStep("input");
+    },
+    [parsedData],
   );
 
   const currentProgressIndex = PROGRESS_STEPS.findIndex(
@@ -534,6 +569,7 @@ export default function CreatePage() {
             onUpdate={setGuidedData}
             step={guidedStep}
             onStepChange={setGuidedStep}
+            atsFix={activeAtsFix}
             onComplete={(data) => {
               beginReviewOutputs(data);
             }}
@@ -576,7 +612,12 @@ export default function CreatePage() {
             </p>
           </section>
 
-          <AtsReadinessCard resumeData={parsedData} />
+          <AtsReadinessCard
+            resumeData={parsedData}
+            reviewState={atsReviewState}
+            onReviewStateChange={setAtsReviewState}
+            onFixRequested={beginAtsFix}
+          />
 
           <div className="space-y-5">
             <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">

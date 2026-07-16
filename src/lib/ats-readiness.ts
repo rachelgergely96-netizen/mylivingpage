@@ -8,7 +8,14 @@ import type { AtsExportCheck, ResumeData } from "@/types/resume";
 
 export type AtsReadinessStatus = "ready" | "needs_attention" | "not_ready";
 export type AtsReadinessCategory = "essentials" | "content" | "searchability" | "pdf";
-export type AtsReadinessSeverity = "pass" | "info" | "warning" | "critical";
+export type AtsReadinessSeverity = "pass" | "info" | "warning" | "critical" | "not_applicable";
+export type AtsReadinessOutcome =
+  | "required"
+  | "recommended"
+  | "pass"
+  | "info"
+  | "not_applicable";
+export type AtsFixSection = "profile" | "links" | "experience" | "skills" | "summary";
 
 export interface AtsReadinessCheck {
   id: string;
@@ -16,9 +23,13 @@ export interface AtsReadinessCheck {
   title: string;
   detail: string;
   severity: AtsReadinessSeverity;
+  outcome: AtsReadinessOutcome;
   passed: boolean;
   pointsDeducted: number;
   suggestedFix?: string;
+  fixSection?: AtsFixSection;
+  actionLabel?: string;
+  example?: string;
 }
 
 export interface AtsKeywordCoverage {
@@ -36,6 +47,13 @@ export interface AtsReadinessResult {
   criticalFixes: AtsReadinessCheck[];
   improvements: AtsReadinessCheck[];
   passedChecks: AtsReadinessCheck[];
+  tailoringChecks: AtsReadinessCheck[];
+  summary: {
+    requiredFixCount: number;
+    recommendationCount: number;
+    passedCount: number;
+    applicableCheckCount: number;
+  };
   pdf: {
     renderable: boolean;
     pageCount: number | null;
@@ -228,22 +246,70 @@ function clampScore(value: number) {
 function makeCheck(input: {
   id: string;
   category: AtsReadinessCategory;
-  title: string;
+  passTitle: string;
+  failureTitle: string;
   detail: string;
   passed: boolean;
+  applicable?: boolean;
   failureSeverity: Extract<AtsReadinessSeverity, "warning" | "critical">;
   deduction: number;
   suggestedFix?: string;
+  fixSection?: AtsFixSection;
+  actionLabel?: string;
+  example?: string;
+}): AtsReadinessCheck {
+  const applicable = input.applicable ?? true;
+  const severity = !applicable
+    ? "not_applicable"
+    : input.passed
+      ? "pass"
+      : input.failureSeverity;
+  const outcome: AtsReadinessOutcome = !applicable
+    ? "not_applicable"
+    : input.passed
+      ? "pass"
+      : input.failureSeverity === "critical"
+        ? "required"
+        : "recommended";
+
+  return {
+    id: input.id,
+    category: input.category,
+    title: input.passed ? input.passTitle : input.failureTitle,
+    detail: input.detail,
+    severity,
+    outcome,
+    passed: applicable && input.passed,
+    pointsDeducted: applicable && !input.passed ? input.deduction : 0,
+    ...(input.suggestedFix ? { suggestedFix: input.suggestedFix } : {}),
+    ...(input.fixSection ? { fixSection: input.fixSection } : {}),
+    ...(input.actionLabel ? { actionLabel: input.actionLabel } : {}),
+    ...(input.example ? { example: input.example } : {}),
+  };
+}
+
+function makeInfoCheck(input: {
+  id: string;
+  category: AtsReadinessCategory;
+  title: string;
+  detail: string;
+  passed: boolean;
+  suggestedFix?: string;
+  fixSection?: AtsFixSection;
+  actionLabel?: string;
 }): AtsReadinessCheck {
   return {
     id: input.id,
     category: input.category,
     title: input.title,
     detail: input.detail,
-    severity: input.passed ? "pass" : input.failureSeverity,
+    severity: "info",
+    outcome: "info",
     passed: input.passed,
-    pointsDeducted: input.passed ? 0 : input.deduction,
+    pointsDeducted: 0,
     ...(input.suggestedFix ? { suggestedFix: input.suggestedFix } : {}),
+    ...(input.fixSection ? { fixSection: input.fixSection } : {}),
+    ...(input.actionLabel ? { actionLabel: input.actionLabel } : {}),
   };
 }
 
@@ -259,8 +325,12 @@ function listExamples(values: string[], fallback: string) {
   return values.slice(0, 3).map((value) => `“${value}”`).join(", ");
 }
 
-function getOpeningWord(value: string) {
+export function getAtsHighlightOpening(value: string) {
   return value.toLowerCase().match(/[a-z][a-z'-]*/)?.[0] ?? "";
+}
+
+export function hasRecognizedAtsActionOpening(value: string) {
+  return ACTION_VERBS.has(getAtsHighlightOpening(value));
 }
 
 function hasUsableEmail(value: string | null) {
@@ -282,7 +352,7 @@ function hasUsableContactLink(value: string | null) {
   }
 }
 
-function classifyDateStyle(value: string) {
+export function getAtsDateStyle(value: string) {
   if (/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i.test(value)) {
     return "month-year";
   }
@@ -410,7 +480,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
     ),
   );
   const weakActionOpenings = highlights.filter(
-    (highlight) => !ACTION_VERBS.has(getOpeningWord(highlight)),
+    (highlight) => !hasRecognizedAtsActionOpening(highlight),
   );
   const lengthProblems = highlights.filter((highlight) => {
     const count = wordCount(highlight);
@@ -418,7 +488,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
   });
   const openingCounts = new Map<string, number>();
   highlights.forEach((highlight) => {
-    const opening = getOpeningWord(highlight);
+    const opening = getAtsHighlightOpening(highlight);
     if (opening) {
       openingCounts.set(opening, (openingCounts.get(opening) ?? 0) + 1);
     }
@@ -431,7 +501,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
       highlight,
     ),
   );
-  const dateStyles = data.experience.map((entry) => classifyDateStyle(entry.dates));
+  const dateStyles = data.experience.map((entry) => getAtsDateStyle(entry.dates));
   const recognizedDateStyles = new Set(dateStyles.filter((style) => style !== "unknown"));
   const datesAreConsistent = !dateStyles.includes("unknown") && recognizedDateStyles.size <= 1;
   const uniqueSkills = new Set(
@@ -444,80 +514,101 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
       makeCheck({
         id: "name-present",
         category: "essentials",
-        title: "Your name is present",
+        passTitle: "Your name is included",
+        failureTitle: "Add your name",
         detail: data.name ? "Your resume includes a clear candidate name." : "Your resume does not include a candidate name.",
         passed: Boolean(data.name),
         failureSeverity: "critical",
         deduction: 25,
         suggestedFix: "Add your full professional name at the top of the resume.",
+        fixSection: "profile",
+        actionLabel: "Add my name",
       }),
       makeCheck({
         id: "usable-contact",
         category: "essentials",
-        title: "A usable contact method is present",
+        passTitle: "A usable contact method is included",
+        failureTitle: "Add a way to contact you",
         detail: contactIsUsable
           ? "Recruiters have at least one usable email address or professional link."
-          : "No valid email address or professional web link was found.",
+          : "Employers need a valid email address or professional link to reach you.",
         passed: contactIsUsable,
         failureSeverity: "critical",
         deduction: 25,
         suggestedFix: "Add a valid email address or a full LinkedIn, GitHub, or portfolio link.",
+        fixSection: "profile",
+        actionLabel: "Add contact details",
       }),
       makeCheck({
         id: "contact-values-valid",
         category: "essentials",
-        title: "Contact details use valid formats",
+        passTitle: "Contact details are formatted correctly",
+        failureTitle: "Fix your contact details",
         detail:
           invalidContactLabels.length === 0
             ? "Every contact detail you supplied uses a valid email or web-address format."
-            : `Check the format of your ${invalidContactLabels.join(", ")}${invalidContactLabels.length > 1 ? " fields" : " field"}.`,
+            : `Your ${invalidContactLabels.join(", ")}${invalidContactLabels.length > 1 ? " entries do" : " entry does"} not look complete.`,
         passed: invalidContactLabels.length === 0,
         failureSeverity: "warning",
         deduction: 10,
         suggestedFix: "Correct or remove malformed contact details so recruiters do not hit a dead end.",
+        fixSection: invalidContactLabels.some((label) => label !== "email") ? "links" : "profile",
+        actionLabel: "Review contact details",
       }),
       makeCheck({
         id: "experience-present",
         category: "essentials",
-        title: "Experience is included",
+        passTitle: "Relevant experience is included",
+        failureTitle: "Add relevant experience",
         detail: data.experience.length > 0
           ? `Your resume includes ${data.experience.length} experience ${data.experience.length === 1 ? "entry" : "entries"}.`
-          : "Your resume does not include any experience entries.",
+          : "We could not find a job, internship, volunteer role, or independent engagement.",
         passed: data.experience.length > 0,
         failureSeverity: "critical",
         deduction: 25,
         suggestedFix: "Add at least one relevant job, internship, volunteer role, or substantial independent engagement.",
+        fixSection: "experience",
+        actionLabel: "Add experience",
       }),
       makeCheck({
         id: "role-basics-complete",
         category: "essentials",
-        title: "Every role has the basics",
+        passTitle: "Every role has the basics",
+        failureTitle: "Complete each role",
         detail: incompleteRoles.length === 0
           ? "Every experience entry includes a title, organization, and dates."
           : `${incompleteRoles.length} experience ${incompleteRoles.length === 1 ? "entry is" : "entries are"} missing a title, organization, or dates.`,
         passed: incompleteRoles.length === 0,
+        applicable: data.experience.length > 0,
         failureSeverity: "critical",
         deduction: 15,
         suggestedFix: "Complete the title, organization, and dates for every experience entry.",
+        fixSection: "experience",
+        actionLabel: "Complete role details",
       }),
       makeCheck({
         id: "experience-highlights-present",
         category: "essentials",
-        title: "Every role explains your work",
+        passTitle: "Every role explains your work",
+        failureTitle: "Explain what you did in each role",
         detail: rolesWithoutHighlights.length === 0
           ? "Every experience entry includes at least one accomplishment or responsibility."
           : `${rolesWithoutHighlights.length} experience ${rolesWithoutHighlights.length === 1 ? "entry has" : "entries have"} no highlights.`,
         passed: rolesWithoutHighlights.length === 0,
+        applicable: data.experience.length > 0,
         failureSeverity: "critical",
         deduction: 10,
-        suggestedFix: "Add at least one specific accomplishment or responsibility to every role.",
+        suggestedFix: "Add one to three lines about the work, its result, or its scope for every role.",
+        fixSection: "experience",
+        actionLabel: "Add role highlights",
       }),
     ],
     content: [
       makeCheck({
         id: "summary-focused",
         category: "content",
-        title: "The summary is focused",
+        passTitle: "Your summary is focused",
+        failureTitle: summaryLength > 650 ? "Shorten your summary" : "Add a focused summary",
         detail:
           summaryLength === 0
             ? "Your resume does not include a professional summary."
@@ -530,77 +621,106 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         failureSeverity: "warning",
         deduction: 15,
         suggestedFix: "Use two or three concise sentences to name your focus, strongest skills, and the value you deliver.",
+        fixSection: "summary",
+        actionLabel: "Edit my summary",
+        example: "A useful structure is: role or specialty + strongest relevant skills + the kind of result you deliver.",
       }),
       makeCheck({
         id: "direct-bullet-language",
         category: "content",
-        title: "Experience highlights use direct language",
+        passTitle: "Experience highlights use direct language",
+        failureTitle: "Rewrite indirect experience highlights",
         detail: directLanguageProblems.length === 0
           ? "Your highlights avoid first-person wording and passive phrases such as 'responsible for.'"
           : `Rewrite passive or first-person wording in ${listExamples(directLanguageProblems, "the flagged highlights")}.`,
         passed: directLanguageProblems.length === 0,
+        applicable: highlights.length > 0,
         failureSeverity: "warning",
         deduction: 15,
+        fixSection: "experience",
+        actionLabel: "Improve experience highlights",
+        example: "Instead of “Responsible for onboarding,” use a truthful structure such as “Redesigned onboarding, reducing setup time by 30%.”",
         suggestedFix: "Start with what you did, then describe the scope or result. For example: ‘Led ...’ or ‘Improved ...’. ",
       }),
       makeCheck({
         id: "strong-action-openings",
         category: "content",
-        title: "Experience highlights open with strong actions",
+        passTitle: "Experience highlights open with clear actions",
+        failureTitle: "Review how your highlights begin",
         detail: weakActionOpenings.length === 0
           ? "Your experience highlights begin with clear action verbs."
           : `${weakActionOpenings.length} ${weakActionOpenings.length === 1 ? "highlight starts" : "highlights start"} without a clear action verb: ${listExamples(weakActionOpenings, "review the flagged highlights")}.`,
         passed: weakActionOpenings.length === 0,
+        applicable: highlights.length > 0,
         failureSeverity: "warning",
         deduction: 20,
         suggestedFix: "Open each highlight with a specific action such as led, built, improved, launched, analyzed, or delivered.",
+        fixSection: "experience",
+        actionLabel: "Review experience highlights",
       }),
       makeCheck({
         id: "bullet-length",
         category: "content",
-        title: "Experience highlights are easy to scan",
+        passTitle: "Experience highlights are easy to scan",
+        failureTitle: "Adjust the length of some highlights",
         detail: lengthProblems.length === 0
           ? "Your experience highlights are a practical length for scanning."
           : `${lengthProblems.length} ${lengthProblems.length === 1 ? "highlight is" : "highlights are"} very short or longer than 45 words.`,
         passed: lengthProblems.length === 0,
+        applicable: highlights.length > 0,
         failureSeverity: "warning",
         deduction: 15,
         suggestedFix: "Aim for roughly 6 to 45 words per highlight, with one action and one result or useful detail.",
+        fixSection: "experience",
+        actionLabel: "Edit experience highlights",
       }),
       makeCheck({
         id: "varied-opening-verbs",
         category: "content",
-        title: "Opening verbs are varied",
+        passTitle: "Opening verbs are varied",
+        failureTitle: "Vary repeated opening words",
         detail: repeatedOpenings.length === 0
           ? "No opening verb is repeated three or more times."
           : `Vary these opening verbs, which appear three or more times: ${repeatedOpenings.join(", ")}.`,
         passed: repeatedOpenings.length === 0,
+        applicable: highlights.length >= 3,
         failureSeverity: "warning",
         deduction: 10,
         suggestedFix: "Replace repeated opening verbs with precise alternatives that describe the work you actually did.",
+        fixSection: "experience",
+        actionLabel: "Review opening words",
       }),
       makeCheck({
         id: "quantified-evidence",
         category: "content",
-        title: "Experience includes measurable evidence",
+        passTitle: "Experience includes measurable evidence",
+        failureTitle: "Add concrete scope where truthful",
         detail: hasQuantifiedEvidence
           ? "At least one experience highlight includes a number, percentage, amount, or scale."
           : "No experience highlight includes measurable scope or results.",
         passed: hasQuantifiedEvidence,
+        applicable: highlights.length > 0,
         failureSeverity: "warning",
         deduction: 15,
         suggestedFix: "Where accurate, add a number, percentage, dollar amount, team size, volume, timeframe, or other concrete scale.",
+        fixSection: "experience",
+        actionLabel: "Review experience highlights",
+        example: "Useful evidence can be a result, but it can also be scope: “Supported 40 clients,” “Led a team of 6,” or “Delivered in 3 weeks.”",
       }),
       makeCheck({
         id: "date-format-consistency",
         category: "content",
-        title: "Experience dates are consistent",
+        passTitle: "Experience dates are consistent",
+        failureTitle: "Use one date style",
         detail: datesAreConsistent
           ? "Experience dates use one recognizable level of detail."
           : "Experience dates mix year-only, month-and-year, or unrecognized formats.",
         passed: datesAreConsistent,
+        applicable: data.experience.length > 0,
         failureSeverity: "warning",
         deduction: 10,
+        fixSection: "experience",
+        actionLabel: "Review role dates",
         suggestedFix: "Use the same date style for every role, such as ‘Jan 2022 - Present’ or ‘2022 - Present.’",
       }),
     ],
@@ -608,7 +728,8 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
       makeCheck({
         id: "headline-present",
         category: "searchability",
-        title: "A professional headline is present",
+        passTitle: "A professional headline is included",
+        failureTitle: "Add the role or specialty you want",
         detail: data.headline
           ? "Your headline gives search systems and recruiters a clear professional signal."
           : "Your resume does not include a professional headline.",
@@ -616,11 +737,14 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         failureSeverity: "warning",
         deduction: 25,
         suggestedFix: "Add a concise headline using the role or professional specialty you want to be found for.",
+        fixSection: "profile",
+        actionLabel: "Add my headline",
       }),
       makeCheck({
         id: "skills-present",
         category: "searchability",
-        title: "A useful skills section is present",
+        passTitle: "A useful skills section is included",
+        failureTitle: `Add ${Math.max(0, 5 - uniqueSkills.size)} more relevant ${5 - uniqueSkills.size === 1 ? "skill" : "skills"}`,
         detail: uniqueSkills.size >= 5
           ? `Your skills section includes ${uniqueSkills.size} distinct skills.`
           : `Your skills section includes ${uniqueSkills.size} distinct ${uniqueSkills.size === 1 ? "skill" : "skills"}; five or more is a more useful starting point.`,
@@ -628,25 +752,30 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         failureSeverity: "warning",
         deduction: 30,
         suggestedFix: "Add at least five truthful, role-relevant tools, methods, or subject-matter skills.",
+        fixSection: "skills",
+        actionLabel: "Edit my skills",
       }),
     ],
     pdf: [
       makeCheck({
         id: "pdf-renderable",
         category: "pdf",
-        title: "The ATS PDF can be generated",
+        passTitle: "Your ATS PDF can be generated",
+        failureTitle: "Try generating the PDF again",
         detail: exportCheck.renderable
           ? "The PDF renderer produced a readable resume file."
           : exportCheck.renderFailureReason ?? "The PDF renderer could not produce a readable resume file.",
         passed: exportCheck.renderable === true,
         failureSeverity: "critical",
         deduction: 100,
-        suggestedFix: "Review the resume content for unsupported or unusually long text, save your changes, and try the PDF again.",
+        suggestedFix: "Your resume information is still safe. Review unusually long text, save your changes, and run this check again.",
       }),
       {
         id: "pdf-page-count",
         category: "pdf",
-        title: "PDF length is reported",
+        title: exportCheck.pageCount === null
+          ? "PDF page count is unavailable"
+          : `PDF created: ${exportCheck.pageCount} ${exportCheck.pageCount === 1 ? "page" : "pages"}`,
         detail:
           exportCheck.pageCount === null
             ? "The PDF page count is not available. This does not prevent the readiness check."
@@ -654,6 +783,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
               ? "The generated PDF fits on one page."
               : `The generated PDF is ${exportCheck.pageCount} pages. Multiple pages do not make a resume ATS-unreadable.`,
         severity: exportCheck.pageCount === 1 ? "pass" : "info",
+        outcome: exportCheck.pageCount === 1 ? "pass" : "info",
         passed: true,
         pointsDeducted: 0,
       },
@@ -665,17 +795,17 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
   if (normalizedTargetTitle) {
     const targetTitleIsPresent = includesExactSearchTerm(corpus, normalizedTargetTitle);
     checks.searchability.push(
-      makeCheck({
+      makeInfoCheck({
         id: "target-title-present",
         category: "searchability",
-        title: "The target title appears in the resume",
+        title: targetTitleIsPresent ? "Target title is represented" : "Review your target title",
         detail: targetTitleIsPresent
           ? `"${normalizedTargetTitle}" appears in the resume.`
           : `"${normalizedTargetTitle}" does not appear as an exact phrase in the resume.`,
         passed: targetTitleIsPresent,
-        failureSeverity: "warning",
-        deduction: 20,
         suggestedFix: "If it is accurate, use the target title in your headline, summary, or experience title without keyword stuffing.",
+        fixSection: "profile",
+        actionLabel: "Review my headline",
       }),
     );
   }
@@ -686,20 +816,20 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
     const keywordCoverageIsUseful =
       keywordCoverage.keywords.length === 0 || keywordCoverage.coveragePercent >= 70;
     checks.searchability.push(
-      makeCheck({
+      makeInfoCheck({
         id: "job-keyword-coverage",
         category: "searchability",
-        title: "Relevant job-description terms are represented",
+        title: keywordCoverageIsUseful
+          ? "Role language is well represented"
+          : "Review terms from this posting",
         detail:
           keywordCoverage.keywords.length === 0
             ? "The job description did not contain enough specific terms to compare."
             : `${keywordCoverage.coveragePercent}% of the selected job-description terms appear in the resume.`,
         passed: keywordCoverageIsUseful,
-        failureSeverity: "warning",
-        deduction: 25,
         suggestedFix:
           keywordCoverage.missingKeywords.length > 0
-            ? `Add only the missing terms that truthfully describe you: ${keywordCoverage.missingKeywords.join(", ")}.`
+            ? `Review these terms and add only those that truthfully describe you: ${keywordCoverage.missingKeywords.join(", ")}.`
             : "Keep the role-relevant terms that accurately describe your experience.",
       }),
     );
@@ -718,7 +848,13 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
   );
   const criticalFixes = allChecks.filter((check) => check.severity === "critical");
   const improvements = allChecks.filter((check) => check.severity === "warning");
-  const passedChecks = allChecks.filter((check) => check.passed);
+  const passedChecks = allChecks.filter((check) => check.outcome === "pass");
+  const tailoringChecks = allChecks.filter((check) =>
+    ["target-title-present", "job-keyword-coverage"].includes(check.id),
+  );
+  const applicableChecks = allChecks.filter((check) =>
+    ["required", "recommended", "pass"].includes(check.outcome),
+  );
   const score = clampScore(
     (Object.keys(categoryScores) as AtsReadinessCategory[]).reduce(
       (total, category) => total + categoryScores[category] * CATEGORY_WEIGHTS[category],
@@ -740,6 +876,13 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
     criticalFixes,
     improvements,
     passedChecks,
+    tailoringChecks,
+    summary: {
+      requiredFixCount: criticalFixes.length,
+      recommendationCount: improvements.length,
+      passedCount: passedChecks.length,
+      applicableCheckCount: applicableChecks.length,
+    },
     pdf: {
       renderable: exportCheck.renderable === true,
       pageCount: exportCheck.pageCount,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { getAtsFixFieldKey, type AtsFixTarget } from "@/lib/ats-fix-target";
 import type { ResumeData } from "@/types/resume";
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -11,6 +13,10 @@ interface GuidedFlowProps {
   onBack: () => void;
   step: number;
   onStepChange: (step: number) => void;
+  atsFix?: {
+    target: AtsFixTarget;
+    title: string;
+  } | null;
 }
 
 interface ExperienceEntry {
@@ -80,6 +86,7 @@ export default function GuidedFlow({
   onBack,
   step,
   onStepChange,
+  atsFix,
 }: GuidedFlowProps) {
 
   /* ── Local field state derived from guidedData ──────── */
@@ -100,37 +107,74 @@ export default function GuidedFlow({
 
   const set = (patch: Partial<ResumeData>) => onUpdate({ ...guidedData, ...patch });
 
+  useEffect(() => {
+    if (!atsFix) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const target = document.getElementById(
+        `guided-ats-${getAtsFixFieldKey(atsFix.target)}`,
+      );
+      target?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      if (target instanceof HTMLElement) {
+        target.focus({ preventScroll: true });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [atsFix, step]);
+
   /* ── Navigation ─────────────────────────────────────── */
   const canContinue = () => {
     if (step === 0) return name.trim().length > 0 && headline.trim().length > 0;
     return true; // all other steps are skippable
   };
 
+  const assembleData = (): ResumeData => ({
+    name: name.trim(),
+    headline: headline.trim(),
+    location: location.trim(),
+    email: email.trim() || null,
+    linkedin: linkedin.trim() || null,
+    github: github.trim() || null,
+    website: website.trim() || null,
+    avatar_url: guidedData.avatar_url ?? null,
+    summary: summary.trim(),
+    experience: experience.filter((entry) =>
+      Boolean(
+        entry.title.trim() ||
+          entry.company.trim() ||
+          entry.dates.trim() ||
+          entry.highlights.some((highlight) => highlight.trim()),
+      ),
+    ),
+    education: education.filter((entry) => entry.degree.trim() && entry.school.trim()),
+    projects: projects.filter((project) => project.name.trim()),
+    skills: skills
+      .map((group) => ({
+        category: group.category.trim() || "General",
+        items: group.items.filter((item) => item.trim()),
+      }))
+      .filter((group) => group.items.length > 0),
+    certifications: certifications.filter((certification) => certification.name.trim()),
+    stats: stats.filter((stat) => stat.value.trim() && stat.label.trim()),
+    proofs: guidedData.proofs ?? [],
+    testimonials: guidedData.testimonials ?? [],
+  });
+
   const goNext = () => {
+    if (atsFix) {
+      onComplete(assembleData());
+      return;
+    }
+
     if (step < TOTAL_STEPS - 1) {
       onStepChange(step + 1);
     } else {
       // Final step — assemble and complete
-      const assembled: ResumeData = {
-        name: name.trim(),
-        headline: headline.trim(),
-        location: location.trim(),
-        email: email.trim() || null,
-        linkedin: linkedin.trim() || null,
-        github: github.trim() || null,
-        website: website.trim() || null,
-        avatar_url: guidedData.avatar_url ?? null,
-        summary: summary.trim(),
-        experience: experience.filter((e) => e.title.trim() && e.company.trim()),
-        education: education.filter((e) => e.degree.trim() && e.school.trim()),
-        projects: projects.filter((p) => p.name.trim()),
-        skills: skills
-          .map((g) => ({ category: g.category.trim() || "General", items: g.items.filter((i) => i.trim()) }))
-          .filter((g) => g.items.length > 0),
-        certifications: certifications.filter((c) => c.name.trim()),
-        stats: stats.filter((s) => s.value.trim() && s.label.trim()),
-      };
-      onComplete(assembled);
+      onComplete(assembleData());
     }
   };
 
@@ -166,8 +210,9 @@ export default function GuidedFlow({
   const renderBasics = () => (
     <div className="space-y-4">
       <div>
-        <label className={labelClass}>Full Name *</label>
+        <label htmlFor="guided-ats-name" className={labelClass}>Full Name *</label>
         <input
+          id="guided-ats-name"
           type="text"
           value={name}
           onChange={(e) => set({ name: e.target.value })}
@@ -176,8 +221,9 @@ export default function GuidedFlow({
         />
       </div>
       <div>
-        <label className={labelClass}>Professional Headline *</label>
+        <label htmlFor="guided-ats-headline" className={labelClass}>Professional Headline *</label>
         <input
+          id="guided-ats-headline"
           type="text"
           value={headline}
           onChange={(e) => set({ headline: e.target.value })}
@@ -196,8 +242,9 @@ export default function GuidedFlow({
         />
       </div>
       <div>
-        <label className={labelClass}>Email</label>
+        <label htmlFor="guided-ats-email" className={labelClass}>Email</label>
         <input
+          id="guided-ats-email"
           type="email"
           value={email}
           onChange={(e) => set({ email: e.target.value })}
@@ -212,8 +259,9 @@ export default function GuidedFlow({
   const renderLinks = () => (
     <div className="space-y-4">
       <div>
-        <label className={labelClass}>LinkedIn</label>
+        <label htmlFor="guided-ats-linkedin" className={labelClass}>LinkedIn</label>
         <input
+          id="guided-ats-linkedin"
           type="text"
           value={linkedin}
           onChange={(e) => set({ linkedin: e.target.value })}
@@ -222,8 +270,9 @@ export default function GuidedFlow({
         />
       </div>
       <div>
-        <label className={labelClass}>GitHub</label>
+        <label htmlFor="guided-ats-github" className={labelClass}>GitHub</label>
         <input
+          id="guided-ats-github"
           type="text"
           value={github}
           onChange={(e) => set({ github: e.target.value })}
@@ -232,8 +281,9 @@ export default function GuidedFlow({
         />
       </div>
       <div>
-        <label className={labelClass}>Website</label>
+        <label htmlFor="guided-ats-website" className={labelClass}>Website</label>
         <input
+          id="guided-ats-website"
           type="text"
           value={website}
           onChange={(e) => set({ website: e.target.value })}
@@ -265,6 +315,8 @@ export default function GuidedFlow({
             <button type="button" onClick={() => removeExp(i)} className={removeBtnClass}>Remove</button>
           </div>
           <input
+            id={`guided-ats-experience-title-${i}`}
+            aria-label={`Role ${i + 1} job title`}
             type="text"
             value={exp.title}
             onChange={(e) => updateExp(i, { title: e.target.value })}
@@ -273,6 +325,8 @@ export default function GuidedFlow({
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
+              id={`guided-ats-experience-company-${i}`}
+              aria-label={`Role ${i + 1} company or organization`}
               type="text"
               value={exp.company}
               onChange={(e) => updateExp(i, { company: e.target.value })}
@@ -280,6 +334,8 @@ export default function GuidedFlow({
               className={inputClass}
             />
             <input
+              id={`guided-ats-experience-dates-${i}`}
+              aria-label={`Role ${i + 1} dates`}
               type="text"
               value={exp.dates}
               onChange={(e) => updateExp(i, { dates: e.target.value })}
@@ -295,8 +351,9 @@ export default function GuidedFlow({
             className={inputClass}
           />
           <div>
-            <label className={labelClass}>Key highlights (one per line)</label>
+            <label htmlFor={`guided-ats-experience-highlights-${i}`} className={labelClass}>Key highlights (one per line)</label>
             <textarea
+              id={`guided-ats-experience-highlights-${i}`}
               value={exp.highlights.join("\n")}
               onChange={(e) => updateExp(i, { highlights: e.target.value.split("\n") })}
               placeholder={"Led migration to microservices\nReduced API latency by 40%"}
@@ -306,7 +363,7 @@ export default function GuidedFlow({
           </div>
         </div>
       ))}
-      <button type="button" onClick={addExp} className={addBtnClass}>+ Add a role</button>
+      <button id="guided-ats-experience-add" type="button" onClick={addExp} className={addBtnClass}>+ Add a role</button>
       {experience.length === 0 && (
         <p className="text-xs text-[rgba(240,244,255,0.35)]">No experience yet? You can skip this step.</p>
       )}
@@ -446,6 +503,8 @@ export default function GuidedFlow({
               )}
             </div>
             <input
+              id={`guided-ats-skills-items-${i}`}
+              aria-label={`Skills in category ${i + 1}`}
               type="text"
               value={group.items.join(", ")}
               onChange={(e) => updateSkill(i, { items: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
@@ -455,7 +514,7 @@ export default function GuidedFlow({
             <p className="text-[10px] text-[rgba(240,244,255,0.25)]">Separate skills with commas</p>
           </div>
         ))}
-        <button type="button" onClick={addSkillGroup} className={addBtnClass}>+ Add skill category</button>
+        <button id="guided-ats-skills-add" type="button" onClick={addSkillGroup} className={addBtnClass}>+ Add skill category</button>
       </div>
 
       <div className="space-y-4">
@@ -518,9 +577,10 @@ export default function GuidedFlow({
   const renderSummaryStats = () => (
     <div className="space-y-6">
       <div>
-        <label className={labelClass}>Professional Summary</label>
+        <label htmlFor="guided-ats-summary" className={labelClass}>Professional Summary</label>
         <p className="mb-2 text-xs text-[rgba(240,244,255,0.35)]">In 2-3 sentences, what makes you great at what you do?</p>
         <textarea
+          id="guided-ats-summary"
           value={summary}
           onChange={(e) => set({ summary: e.target.value })}
           placeholder="Full-stack engineer with 8 years of experience building scalable web applications..."
@@ -565,6 +625,17 @@ export default function GuidedFlow({
 
   return (
     <section className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
+      {atsFix ? (
+        <div className="mb-5 rounded-xl border border-[rgba(96,165,250,0.25)] bg-[rgba(59,130,246,0.08)] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD]">
+            Making a recommended update
+          </p>
+          <p className="mt-1.5 text-sm font-medium text-[#F0F4FF]">{atsFix.title}</p>
+          <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.56)]">
+            Update this section, then return directly to your resume check.
+          </p>
+        </div>
+      ) : null}
       {progressDots}
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60A5FA]">Details · Section {step + 1} of {TOTAL_STEPS}</p>
       <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">{STEP_PROMPTS[step].heading}</h2>
@@ -573,20 +644,26 @@ export default function GuidedFlow({
       {stepRenderers[step]()}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={goBack}
-          className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-        >
-          {step > 0 ? "Previous" : "Back to dashboard"}
-        </button>
+        {!atsFix ? (
+          <button
+            type="button"
+            onClick={goBack}
+            className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+          >
+            {step > 0 ? "Previous" : "Back to dashboard"}
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={!canContinue()}
           onClick={goNext}
           className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {step < TOTAL_STEPS - 1 ? "Continue" : "Review My Resume"}
+          {atsFix
+            ? "Save and return to resume check"
+            : step < TOTAL_STEPS - 1
+              ? "Continue"
+              : "Review My Resume"}
         </button>
       </div>
     </section>

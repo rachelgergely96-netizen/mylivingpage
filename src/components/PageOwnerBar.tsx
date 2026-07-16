@@ -56,28 +56,31 @@ export default function PageOwnerBar({ pageId, pageUserId, children }: PageOwner
             <div className="h-16 sm:h-[4.5rem]" />
           </div>
           <div className="fixed left-0 right-0 top-0 z-50" style={ownerBarSafeAreaStyle}>
-            <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:min-h-[4.5rem] sm:gap-3 sm:px-4 md:px-8">
-              <Link
-                href="/dashboard"
-                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                </svg>
-                Your Page
-              </Link>
+            <div className="profile-window mx-2 mt-2 flex min-h-14 max-w-6xl items-center justify-between gap-2 px-2.5 sm:mx-4 sm:gap-3 sm:px-3 lg:mx-auto">
+              <div className="flex min-w-0 items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-2 text-xs font-semibold text-[#BFDBFE] transition-colors hover:text-white"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                  </svg>
+                  Profile home
+                </Link>
+                <span className="profile-status !hidden text-[#86EFAC] sm:!inline-flex">owner preview</span>
+              </div>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <Link
                   href={`/dashboard/edit/${pageId}/living-page`}
-                  className="whitespace-nowrap rounded-full border border-[rgba(59,130,246,0.3)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[#3B82F6] transition-colors hover:bg-[rgba(59,130,246,0.08)] hover:text-[#93C5FD]"
+                  className="profile-action min-h-9 whitespace-nowrap px-3 py-1 text-[11px] uppercase tracking-[0.1em] sm:px-4"
                 >
-                  Edit
+                  Edit profile
                 </Link>
                 <button
                   type="button"
                   disabled={deleting}
                   onClick={handleDelete}
-                  className="whitespace-nowrap rounded-full border border-[rgba(255,120,120,0.25)] px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.14em] text-[rgba(255,120,120,0.6)] transition-colors hover:border-[rgba(255,120,120,0.4)] hover:text-[#ff8e8e] disabled:opacity-50"
+                  className="min-h-9 whitespace-nowrap rounded-md border border-[rgba(255,120,120,0.25)] px-3 py-1 text-[11px] uppercase tracking-[0.1em] text-[rgba(255,142,142,0.72)] transition-colors hover:border-[rgba(255,120,120,0.5)] hover:bg-[rgba(255,120,120,0.08)] hover:text-[#ffb4b4] disabled:opacity-50 sm:px-4"
                 >
                   {deleting ? "Deleting..." : "Delete"}
                 </button>

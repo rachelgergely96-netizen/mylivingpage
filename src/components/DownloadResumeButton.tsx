@@ -76,7 +76,7 @@ export default function DownloadResumeButton({
       type="button"
       onClick={handleDownload}
       disabled={generating}
-      className={`flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] disabled:opacity-60 disabled:hover:translate-y-0 sm:text-sm ${className ?? ""}`}
+      className={`profile-action flex items-center gap-2 px-4 py-2.5 text-[13px] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm ${className ?? ""}`}
     >
       {generating ? (
         <svg

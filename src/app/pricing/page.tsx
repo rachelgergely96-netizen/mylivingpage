@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import LandingNav from "@/components/marketing/LandingNav";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import { GUIDES } from "@/lib/guides";
+import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
   ATS_READINESS_DISCLOSURE,
   FREE_PRODUCT_FEATURE_GROUPS,
@@ -34,138 +37,201 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
   const seoGuides = GUIDES.slice(0, 3);
+  const site = await getRequestLegalSite();
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-hidden">
+    <div className="profile-shell relative isolate min-h-screen overflow-x-hidden">
       <CosmicBackground />
+
       <div className="relative z-10">
-        <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
+        <header className="sticky top-0 z-50 border-b border-[rgba(147,197,253,0.2)] bg-[rgba(5,16,34,0.9)] shadow-[0_4px_18px_rgba(2,6,23,0.3)] backdrop-blur-xl">
           <LandingNav />
         </header>
 
-        <main className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24 md:px-10">
-          <section className="text-center">
-            <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Simple pricing: free</p>
-            <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl md:text-6xl">
-              {SITE_TAGLINE}.
-            </h1>
-            <p className="mx-auto mt-5 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.62)]">
-              {SITE_DESCRIPTION}
-            </p>
-          </section>
-
-          <section className="glass-card mt-10 overflow-hidden rounded-[2rem] border border-[rgba(96,165,250,0.18)] p-5 shadow-[0_30px_100px_rgba(2,6,23,0.36)] sm:p-8 lg:p-10">
-            <div className="flex flex-col gap-6 border-b border-[rgba(255,255,255,0.08)] pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
+          <ProfileWindow
+            title="account://free-plan"
+            status={<span className="profile-status">Available now</span>}
+            contentClassName="p-5 sm:p-7 md:p-8"
+          >
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] lg:items-start">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#93C5FD]">
-                  Everything included
+                <p className="font-mono text-xs uppercase tracking-[0.15em] text-[#93C5FD]">
+                  Simple pricing: free
                 </p>
-                <h2 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
-                  One complete living-resume toolkit.
-                </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[rgba(240,244,255,0.64)]">
-                  No tiers to compare and no features held back. Build once, then use the format that fits the moment.
+                <h1 className="mt-3 font-heading text-4xl font-bold leading-[1.04] tracking-[-0.035em] text-[#F0F4FF] sm:text-5xl">
+                  {SITE_TAGLINE}.
+                </h1>
+                <p className="mt-5 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.7)]">
+                  {SITE_DESCRIPTION}
                 </p>
+                <div className="mt-7 flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/signup?ref=pricing_free&next=/create"
+                    className="gold-pill px-6 py-3 text-sm font-semibold"
+                  >
+                    Build My Free Resume
+                  </Link>
+                  <Link href="/examples" className="profile-action">
+                    See Sample Pages
+                  </Link>
+                </div>
               </div>
-              <div className="sm:text-right">
-                <p className="font-heading text-5xl font-bold text-[#F0F4FF]">$0</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.46)]">
-                  Forever
-                </p>
-              </div>
+
+              <ProfilePanel
+                title="Account details"
+                meta="No tier selection"
+                contentClassName="p-0"
+                as="aside"
+              >
+                <div className="border-b border-[rgba(125,170,255,0.14)] px-4 py-5 text-center">
+                  <p className="font-heading text-6xl font-bold text-[#F0F4FF]">$0</p>
+                  <p className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-[#93C5FD]">
+                    Forever
+                  </p>
+                </div>
+                <dl className="profile-meta-grid">
+                  <dt className="profile-meta-label">Credit card</dt>
+                  <dd className="profile-meta-value">Not required</dd>
+                  <dt className="profile-meta-label">Trial</dt>
+                  <dd className="profile-meta-value">None</dd>
+                  <dt className="profile-meta-label">Paid plan</dt>
+                  <dd className="profile-meta-value">None</dd>
+                  <dt className="profile-meta-label">Publishing</dt>
+                  <dd className="profile-meta-value">You choose when it goes live</dd>
+                </dl>
+              </ProfilePanel>
+            </div>
+          </ProfileWindow>
+
+          <ProfileWindow
+            title="membership://everything-included"
+            status="All features unlocked"
+            className="mt-10"
+            contentClassName="p-5 sm:p-6 md:p-7"
+          >
+            <div className="border-b border-[rgba(125,170,255,0.14)] pb-6">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD]">
+                Everything included
+              </p>
+              <h2 className="mt-2 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
+                One complete living-resume toolkit.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[rgba(240,244,255,0.68)]">
+                No tiers to compare and no features held back. Build once, then use the format that
+                fits the moment.
+              </p>
             </div>
 
-            <div className="mt-7 grid gap-4 lg:grid-cols-3">
+            <div className="mt-6 grid gap-4 lg:grid-cols-3">
               {FREE_PRODUCT_FEATURE_GROUPS.map((group) => (
-                <article
+                <ProfilePanel
                   key={group.name}
-                  className="rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-5 sm:p-6"
+                  title={group.name}
+                  meta="Included"
+                  contentClassName="flex h-full flex-col p-4 sm:p-5"
+                  as="article"
                 >
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                    {group.eyebrow}
-                  </p>
-                  <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">
-                    {group.name}
-                  </h3>
-                  <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
-                    {group.body}
-                  </p>
-                  <ul className="mt-5 space-y-2.5 text-sm text-[rgba(240,244,255,0.76)]">
+                  <p className="text-sm leading-7 text-[rgba(240,244,255,0.68)]">{group.body}</p>
+                  <ul className="mt-4 space-y-2.5 border-t border-[rgba(125,170,255,0.12)] pt-4 text-sm text-[rgba(240,244,255,0.8)]">
                     {group.features.map((item) => (
                       <li key={`${group.name}-${item}`} className="flex items-start gap-2.5">
-                        <span className="mt-0.5 text-[#93C5FD]">&#10003;</span>
-                        {item}
+                        <span className="mt-0.5 text-[#86EFAC]" aria-hidden="true">
+                          &#10003;
+                        </span>
+                        <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                </article>
+                </ProfilePanel>
               ))}
             </div>
 
-            <div className="mt-7 flex flex-col gap-4 rounded-3xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <ProfilePanel
+              title="Account promise"
+              meta="$0 means $0"
+              className="mt-6"
+              contentClassName="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+              as="div"
+            >
               <div>
                 <p className="font-semibold text-[#F0F4FF]">No card. No trial. No paid plan.</p>
-                <p className="mt-1 text-sm text-[rgba(240,244,255,0.58)]">
-                  Nothing publishes until you choose, and you can update your page whenever you want.
+                <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+                  Nothing publishes until you choose, and you can update your page whenever you
+                  want.
                 </p>
               </div>
               <Link
                 href="/signup?ref=pricing_free&next=/create"
-                className="gold-pill shrink-0 px-6 py-3 text-center text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_34px_rgba(59,130,246,0.3)]"
+                className="gold-pill shrink-0 px-6 py-3 text-center text-sm font-semibold"
               >
                 Build My Free Resume
               </Link>
-            </div>
+            </ProfilePanel>
 
-            <p className="mt-5 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
+            <p className="mt-5 text-xs leading-6 text-[rgba(240,244,255,0.58)]">
               {ATS_READINESS_DISCLOSURE}
             </p>
-          </section>
+          </ProfileWindow>
 
-          <section className="mx-auto mt-16 max-w-5xl sm:mt-20">
-            <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-10">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <section className="mt-10 pb-12 sm:pb-16" aria-labelledby="pricing-guides-heading">
+            <ProfileWindow
+              title="bulletins://learn-before-you-publish"
+              status={`${seoGuides.length} posts`}
+              contentClassName="p-5 sm:p-6"
+            >
+              <div className="flex flex-col gap-4 border-b border-[rgba(125,170,255,0.14)] pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div className="max-w-3xl">
-                  <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Guides</p>
-                  <h2 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">
+                  <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#93C5FD]">
+                    Guides
+                  </p>
+                  <h2
+                    id="pricing-guides-heading"
+                    className="mt-2 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl"
+                  >
                     Learn the mechanics before you publish.
                   </h2>
-                  <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.62)]">
+                  <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.68)]">
                     The product is free. These guides help you tighten the Resume PDF, sharpen
                     recruiter search language, and understand when a Living Page adds value beyond
                     an attachment.
                   </p>
                 </div>
-                <Link
-                  href="/guides"
-                  className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-                >
+                <Link href="/guides" className="profile-link shrink-0 text-sm font-semibold">
                   Browse all guides
                 </Link>
               </div>
 
-              <div className="mt-6 grid gap-4 lg:grid-cols-3">
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
                 {seoGuides.map((guide) => (
-                  <Link
+                  <ProfilePanel
                     key={guide.slug}
-                    href={`/guides/${guide.slug}`}
-                    className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-5 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.28)]"
+                    title={guide.decisionStage}
+                    meta={guide.readTime}
+                    contentClassName="p-4"
+                    as="article"
                   >
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Guide</p>
-                    <h3 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">
-                      {guide.title}
+                    <h3>
+                      <Link
+                        href={`/guides/${guide.slug}`}
+                        className="profile-link font-heading text-2xl font-bold leading-tight"
+                      >
+                        {guide.title}
+                      </Link>
                     </h3>
-                    <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
+                    <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.68)]">
                       {guide.hubSummary}
                     </p>
-                  </Link>
+                  </ProfilePanel>
                 ))}
               </div>
-            </div>
+            </ProfileWindow>
           </section>
         </main>
+
+        <SiteLegalFooter siteId={site.id} />
       </div>
     </div>
   );

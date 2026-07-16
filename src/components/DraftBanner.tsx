@@ -1,5 +1,7 @@
 "use client";
 
+import { ProfilePanel } from "@/components/ui/ProfilePanel";
+
 interface DraftBannerProps {
   savedAt: number;
   onRestore: () => void;
@@ -10,23 +12,33 @@ export default function DraftBanner({ savedAt, onRestore, onDiscard }: DraftBann
   const timeAgo = getTimeAgo(savedAt);
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[rgba(59,130,246,0.25)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.8)]">
-      <span className="flex-1">You have an unsaved draft from {timeAgo}.</span>
-      <button
-        type="button"
-        onClick={onRestore}
-        className="rounded-lg bg-[#3B82F6] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#2563EB]"
-      >
-        Restore
-      </button>
-      <button
-        type="button"
-        onClick={onDiscard}
-        className="rounded-lg border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[rgba(240,244,255,0.8)]"
-      >
-        Discard
-      </button>
-    </div>
+    <ProfilePanel
+      title="Draft recovery"
+      meta={<span className="profile-status !text-[#FBBF24]">Unsaved draft</span>}
+      className="mb-4"
+      contentClassName="p-3 sm:p-4"
+      as="aside"
+    >
+      <div className="flex flex-col gap-3 text-sm text-[rgba(240,244,255,0.82)] sm:flex-row sm:items-center">
+        <span className="flex-1 leading-6">You have an unsaved draft from {timeAgo}.</span>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onRestore}
+            className="profile-action !min-h-0 border-[rgba(147,197,253,0.5)] bg-[rgba(59,130,246,0.24)] px-3 py-1.5 text-xs font-semibold text-[#EFF6FF]"
+          >
+            Restore
+          </button>
+          <button
+            type="button"
+            onClick={onDiscard}
+            className="profile-action !min-h-0 border-[rgba(125,170,255,0.16)] bg-[rgba(3,10,23,0.24)] px-3 py-1.5 text-xs text-[rgba(240,244,255,0.58)]"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </ProfilePanel>
   );
 }
 

@@ -13,6 +13,7 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
@@ -464,9 +465,16 @@ export default function CreatePage() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
-      <div className="mb-6 grid gap-5 sm:mb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <ProfileWindow
+        title="Set up your profile"
+        status={`${currentProgressIndex + 1} / ${PROGRESS_STEPS.length}`}
+        className="mb-6 sm:mb-8"
+        contentClassName="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
+      >
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60A5FA]">Build your living resume</p>
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">
+            Your living resume profile
+          </p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
             Add it once. Use it everywhere.
           </h1>
@@ -479,10 +487,10 @@ export default function CreatePage() {
             <li
               key={progressStep.id}
               aria-current={step === progressStep.id ? "step" : undefined}
-              className={`min-w-0 rounded-xl border px-3 py-2.5 ${
+              className={`min-w-0 border px-3 py-2.5 ${
                 currentProgressIndex >= index
-                  ? "border-[rgba(59,130,246,0.28)] bg-[rgba(59,130,246,0.1)]"
-                  : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]"
+                  ? "border-[rgba(96,165,250,0.38)] bg-[rgba(59,130,246,0.14)]"
+                  : "border-[rgba(255,255,255,0.08)] bg-[rgba(3,10,23,0.28)]"
               }`}
             >
               <p className="font-mono text-[9px] text-[rgba(147,197,253,0.68)]">
@@ -496,7 +504,7 @@ export default function CreatePage() {
             </li>
           ))}
         </ol>
-      </div>
+      </ProfileWindow>
 
       {error ? (
         <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
@@ -509,7 +517,7 @@ export default function CreatePage() {
       ) : null}
 
       {atPageLimit ? (
-        <section className="glass-card rounded-2xl p-5 text-center sm:p-8">
+        <ProfileWindow title="Profile limit" status="Action needed" contentClassName="p-5 text-center sm:p-8">
           <p className="mb-3 text-2xl">&#x1F512;</p>
           <h2 className="font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">Page limit reached</h2>
           <p className="mt-2 text-sm text-[rgba(240,244,255,0.55)]">
@@ -523,23 +531,25 @@ export default function CreatePage() {
           >
             Go to Your Page
           </button>
-        </section>
+        </ProfileWindow>
       ) : null}
 
       {!atPageLimit && step === "input" ? (
         <section className="space-y-4">
-          <div className="grid gap-3 rounded-2xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4 sm:grid-cols-3 sm:p-5">
-            {[
-              ["Private by default", "Nothing goes live until you publish."],
-              ["Saved as you go", "Your draft stays on this browser."],
-              ["No AI processing", "Your details are never sent to a model."],
-            ].map(([title, body]) => (
-              <div key={title}>
-                <p className="text-xs font-semibold text-[#BFDBFE]">{title}</p>
-                <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.55)]">{body}</p>
-              </div>
-            ))}
-          </div>
+          <ProfilePanel title="Private profile workspace" meta="Saved on this browser" contentClassName="p-0">
+            <div className="grid sm:grid-cols-3 sm:divide-x sm:divide-[rgba(255,255,255,0.07)]">
+              {[
+                ["Private by default", "Nothing goes live until you publish."],
+                ["Saved as you go", "Your draft stays on this browser."],
+                ["No AI processing", "Your details are never sent to a model."],
+              ].map(([title, body]) => (
+                <div key={title} className="border-b border-[rgba(255,255,255,0.07)] p-4 last:border-b-0 sm:border-b-0">
+                  <p className="text-xs font-semibold text-[#BFDBFE]">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.55)]">{body}</p>
+                </div>
+              ))}
+            </div>
+          </ProfilePanel>
           {resumeText.trim() ? (
             <details className="rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.07)] p-4">
               <summary className="cursor-pointer text-sm font-medium text-[#FDE68A]">
@@ -581,7 +591,7 @@ export default function CreatePage() {
       {step === "review" && parsedData && previewData && readiness ? (
         <section className="space-y-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#60A5FA]">Design & check</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Profile design & check</p>
             <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
               Make it feel like you, then check the essentials.
             </h2>
@@ -590,26 +600,31 @@ export default function CreatePage() {
             </p>
           </div>
 
-          <section data-testid="create-theme-section" className="space-y-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4 sm:p-5">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Choose a look</p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Start with a polished theme</h3>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
-                Pick what feels right now. You can change it anytime without rebuilding your resume.
+          <section data-testid="create-theme-section">
+            <ProfilePanel
+              title="Choose your profile look"
+              meta="Change anytime"
+              contentClassName="space-y-4 p-4 sm:p-5"
+            >
+              <div>
+                <h3 className="font-heading text-2xl font-semibold text-[#F0F4FF]">Start with a polished theme</h3>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
+                  Pick what feels right now. You can change it anytime without rebuilding your resume.
+                </p>
+              </div>
+              <ThemePicker
+                themes={ONBOARDING_THEMES}
+                selectedThemeId={selectedTheme}
+                onSelectTheme={setSelectedTheme}
+                allowedThemeIds={accountAccess.allowedThemeIds}
+                lockedLabel="Not available"
+                showDescription
+                showFilters={false}
+              />
+              <p className="text-xs leading-6 text-[rgba(240,244,255,0.46)]">
+                More themes are available from the editor after you publish.
               </p>
-            </div>
-            <ThemePicker
-              themes={ONBOARDING_THEMES}
-              selectedThemeId={selectedTheme}
-              onSelectTheme={setSelectedTheme}
-              allowedThemeIds={accountAccess.allowedThemeIds}
-              lockedLabel="Not available"
-              showDescription
-              showFilters={false}
-            />
-            <p className="text-xs leading-6 text-[rgba(240,244,255,0.46)]">
-              More themes are available from the editor after you publish.
-            </p>
+            </ProfilePanel>
           </section>
 
           <AtsReadinessCard
@@ -620,9 +635,8 @@ export default function CreatePage() {
           />
 
           <div className="space-y-5">
-            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Preview</p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+            <ProfilePanel title="Preview and publish" meta="Private preview" contentClassName="p-4 sm:p-5">
+              <h3 className="font-heading text-2xl font-semibold text-[#F0F4FF]">
                 This is what someone will see when you send it
               </h3>
               <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
@@ -641,9 +655,13 @@ export default function CreatePage() {
                   </p>
                 ) : null}
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Publish</p>
+              <ProfilePanel
+                title="Ready to publish"
+                meta="Free"
+                className="mt-4"
+                contentClassName="flex flex-wrap items-center justify-between gap-4 p-4"
+              >
+                <div className="max-w-3xl">
                   <p className="mt-2 text-sm leading-6 text-[#E8F2FF]">
                     Your page goes live with one shareable link and an ATS-ready PDF download.
                     Publishing is free and does not require a card.
@@ -669,24 +687,24 @@ export default function CreatePage() {
                     {publishing ? "Publishing..." : "Publish Page"}
                   </button>
                 </div>
-              </div>
-            </div>
+              </ProfilePanel>
+            </ProfilePanel>
 
-            <div className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.18)]">
-              <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-                <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-                  mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || "your-username"}</span>
+            <ProfileWindow title="Public profile preview" status="Not published yet" contentClassName="p-0">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(125,170,255,0.18)] bg-[rgba(3,10,23,0.58)] px-4 py-3">
+                <div className="min-w-0 truncate font-mono text-[11px] text-[rgba(240,244,255,0.58)] sm:text-xs">
+                  mylivingpage.com/<span className="text-[#BFDBFE]">{publicSlug || "your-username"}</span>
                 </div>
+                <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.13em] text-[rgba(191,219,254,0.48)]">
+                  Private preview
+                </span>
               </div>
               <ThemeCanvas themeId={selectedTheme} height="min(540px, calc(100dvh - 280px))" className="rounded-none">
                 <div className="h-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.55)_100%)]">
                   <ResumeLayout data={previewData} />
                 </div>
               </ThemeCanvas>
-            </div>
+            </ProfileWindow>
           </div>
 
         </section>
@@ -694,7 +712,11 @@ export default function CreatePage() {
 
       {step === "success" ? (
         <section className="space-y-5">
-          <div className="glass-card overflow-hidden rounded-[2rem] p-5 sm:p-8">
+          <ProfileWindow
+            title="Profile published"
+            status={<span className="profile-status">Live</span>}
+            contentClassName="p-5 sm:p-7"
+          >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div className="max-w-3xl">
                 <p className="inline-flex rounded-full border border-[rgba(74,222,128,0.22)] bg-[rgba(74,222,128,0.08)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#86EFAC]">
@@ -710,12 +732,11 @@ export default function CreatePage() {
               <span className="font-mono text-xs text-[rgba(147,197,253,0.72)]">03 / 03</span>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-4 sm:p-5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#93C5FD]">Your permanent link</p>
-              <p className="mt-2 break-all font-mono text-sm text-[#DBEAFE] sm:text-base">
+            <ProfilePanel title="Your permanent link" meta="Keep this URL" className="mt-6" contentClassName="p-4 sm:p-5">
+              <p className="break-all font-mono text-sm text-[#DBEAFE] sm:text-base">
                 mylivingpage.com/{predictedSlug}
               </p>
-            </div>
+            </ProfilePanel>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <button
@@ -761,12 +782,15 @@ export default function CreatePage() {
             <p className="mt-5 text-xs leading-6 text-[rgba(240,244,255,0.5)]">
               Your PDF and share card use the same saved information as your page, so all three stay consistent when you make an update.
             </p>
-          </div>
+          </ProfileWindow>
 
-          <section className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
+          <ProfilePanel
+            title="Keep it current"
+            meta="One profile, every output"
+            contentClassName="p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6"
+          >
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Keep it current</p>
-              <h3 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+              <h3 className="font-heading text-xl font-semibold text-[#F0F4FF]">
                 Update once and every output stays aligned.
               </h3>
               <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
@@ -795,7 +819,7 @@ export default function CreatePage() {
                 </Link>
               </div>
             ) : null}
-          </section>
+          </ProfilePanel>
         </section>
       ) : null}
 

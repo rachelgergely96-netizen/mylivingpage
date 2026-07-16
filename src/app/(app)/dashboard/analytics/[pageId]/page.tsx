@@ -135,10 +135,10 @@ export default async function AnalyticsPage({
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
-      <div className="mb-6 sm:mb-8">
+      <nav aria-label="Analytics navigation" className="mb-6 sm:mb-8">
         <Link
           href="/dashboard"
-          className="mb-3 inline-flex items-center gap-1.5 text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
+          className="profile-action gap-1.5"
         >
           <svg
             className="h-3.5 w-3.5"
@@ -155,7 +155,7 @@ export default async function AnalyticsPage({
           </svg>
           Back to Your Page
         </Link>
-      </div>
+      </nav>
 
       <PageAnalyticsDashboard
         analytics={analytics}

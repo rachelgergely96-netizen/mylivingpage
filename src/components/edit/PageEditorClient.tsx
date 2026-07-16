@@ -16,6 +16,7 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { ProfileWindow } from "@/components/ui/ProfilePanel";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { THEME_REGISTRY } from "@/themes/registry";
@@ -295,6 +296,13 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     );
   }
 
+  const publicProfileStatus =
+    page?.status === "live" || (!page?.status && page?.published_at)
+      ? "Live profile"
+      : page?.status === "archived"
+        ? "Archived profile"
+        : "Draft profile";
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
       <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-end sm:gap-4">
@@ -432,21 +440,19 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           showDescription
         />
 
-        <div className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.18)]">
-          <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-            <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-              mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || page?.slug}</span>
-            </div>
-          </div>
+        <ProfileWindow
+          title={`mylivingpage.com/${publicSlug || page?.slug || "your-username"}`}
+          status={<span className="profile-status">{publicProfileStatus}</span>}
+          className="[&_.profile-titlebar>span:first-child]:min-w-0 [&_.profile-titlebar>span:first-child]:truncate [&_.profile-titlebar>span:first-child]:normal-case [&_.profile-titlebar>span:first-child]:tracking-normal [&_.profile-titlebar>span:last-child]:shrink-0"
+          contentClassName="p-0"
+          as="div"
+        >
           <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">
             <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
               <ResumeLayout data={data} />
             </div>
           </ThemeCanvas>
-        </div>
+        </ProfileWindow>
       </div>
 
       {activeAtsFix ? (

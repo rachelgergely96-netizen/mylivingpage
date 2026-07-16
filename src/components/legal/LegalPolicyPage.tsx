@@ -4,6 +4,7 @@ import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import { getPolicyDocument, type LegalBlock } from "@/lib/legal/policy-content";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getLegalNavItems, isPolicyAvailableOnSite, type LegalPolicyId } from "@/lib/legal/site-config";
+import { ProfileWindow } from "@/components/ui/ProfilePanel";
 
 function renderBlock(block: LegalBlock, key: string) {
   if (block.type === "paragraph") {
@@ -39,8 +40,8 @@ export default async function LegalPolicyPage({ policyId }: { policyId: LegalPol
   const policyLinks = getLegalNavItems(site.id, false);
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
+    <div className="profile-shell min-h-screen">
+      <header className="relative z-10 border-b border-[rgba(147,197,253,0.18)] bg-[rgba(5,16,34,0.9)] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link href="/" className="font-heading text-xl text-[#F0F4FF]">
@@ -61,7 +62,7 @@ export default async function LegalPolicyPage({ policyId }: { policyId: LegalPol
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
                   link.href === `/${policyId}`
                     ? "border-[rgba(59,130,246,0.45)] text-[#93C5FD]"
                     : "border-[rgba(255,255,255,0.16)] text-[rgba(240,244,255,0.58)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
@@ -74,8 +75,8 @@ export default async function LegalPolicyPage({ policyId }: { policyId: LegalPol
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-        <article className="glass-card rounded-2xl p-5 sm:p-8 md:p-10">
+      <main className="relative z-10 mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+        <ProfileWindow as="article" title="Site policy // reference document" status={`Updated ${policy.lastUpdated}`} contentClassName="p-5 sm:p-8 md:p-10">
           <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Last updated: {policy.lastUpdated}</p>
           <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">{policy.title}</h1>
           <p className="mt-4 text-sm leading-7 text-[rgba(240,244,255,0.7)] sm:text-base">{policy.summary}</p>
@@ -85,7 +86,7 @@ export default async function LegalPolicyPage({ policyId }: { policyId: LegalPol
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                className="rounded-full border border-[rgba(255,255,255,0.14)] px-3 py-1 text-xs text-[rgba(240,244,255,0.58)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                className="rounded-md border border-[rgba(147,197,253,0.2)] bg-[rgba(255,255,255,0.02)] px-3 py-1 text-xs text-[rgba(240,244,255,0.64)] transition-colors hover:border-[rgba(59,130,246,0.45)] hover:text-[#BFDBFE]"
               >
                 {section.heading}
               </a>
@@ -94,13 +95,13 @@ export default async function LegalPolicyPage({ policyId }: { policyId: LegalPol
 
           <div className="mt-8 space-y-8">
             {policy.sections.map((section) => (
-              <section key={section.id} id={section.id} className="scroll-mt-24">
+              <section key={section.id} id={section.id} className="scroll-mt-24 border-t border-[rgba(147,197,253,0.14)] pt-6 first:border-t-0 first:pt-0">
                 <h2 className="font-heading text-2xl text-[#F0F4FF]">{section.heading}</h2>
                 {section.blocks.map((block, index) => renderBlock(block, `${section.id}-${index}`))}
               </section>
             ))}
           </div>
-        </article>
+        </ProfileWindow>
       </main>
 
       <SiteLegalFooter siteId={site.id} />

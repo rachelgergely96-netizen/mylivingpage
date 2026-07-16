@@ -13,6 +13,7 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import type { PageRecord } from "@/types/resume";
 import DeletePageButton from "@/components/DeletePageButton";
 import PublishPageButton from "@/components/PublishPageButton";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 
 interface DashboardPageViewRow {
   page_id: string;
@@ -220,44 +221,65 @@ export default async function DashboardPage() {
     accountAccess.publicPlanLabel === "Starter"
       ? STARTER_PLAN_PRICE.displayLabel
       : PRO_PLAN_PRICE.displayLabel;
+  const hasPublicProfile = syncedList.some((page) => isPubliclyAvailablePage(page));
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
-      <div className="mb-6 flex flex-col justify-between gap-3 sm:mb-8 sm:flex-row sm:items-end sm:gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Your page</p>
-          <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
+      <ProfileWindow
+        title="My profile home"
+        status={
+          hasPublicProfile ? (
+            <span className="profile-status">Profile live</span>
+          ) : (
+            <span>{list.length ? "Private workspace" : "Setup mode"}</span>
+          )
+        }
+        className="mb-6 sm:mb-8"
+        contentClassName="grid gap-5 p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-5"
+      >
+        <div className="profile-avatar-frame flex h-16 w-16 items-center justify-center bg-[linear-gradient(145deg,#1d4ed8,#071427)] sm:h-20 sm:w-20">
+          <span className="font-heading text-2xl font-bold text-[#EFF6FF] sm:text-3xl">
+            {(displayName || "M").slice(0, 1).toUpperCase()}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
+            Your personal profile
+          </p>
+          <h1 className="mt-1.5 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
             {displayName ? (
               <>
-                Welcome back, <span className="text-[#3B82F6]">{displayName}</span>
+                Welcome back, <span className="text-[#60A5FA]">{displayName}</span>
               </>
             ) : (
               "Your Living Page"
             )}
           </h1>
+          <p className="mt-2 truncate font-mono text-xs text-[rgba(191,219,254,0.62)] sm:text-sm">
+            {publicSlug ? `mylivingpage.com/${publicSlug}` : "Your public link appears when you publish"}
+          </p>
         </div>
         {!list.length ? (
           <Link
             href="/create"
-            className="gold-pill self-start px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] sm:self-auto sm:px-6 sm:py-3"
+            className="gold-pill inline-flex min-h-11 items-center justify-center self-start px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] sm:self-auto sm:px-6 sm:py-3"
           >
             Create Your Page
           </Link>
         ) : (
-          <Link
-            href="/dashboard/settings"
-            className="self-start rounded-full border border-[rgba(255,255,255,0.15)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.5)] sm:self-auto sm:px-6 sm:py-3"
-          >
+          <Link href="/dashboard/settings" className="profile-action self-start sm:self-auto">
             Manage Public URL
           </Link>
         )}
-      </div>
+      </ProfileWindow>
 
       {!list.length ? (
-        <section className="glass-card overflow-hidden rounded-[2rem] p-5 sm:p-8">
+        <ProfileWindow
+          title="Profile setup"
+          status="Private until you publish"
+          contentClassName="p-5 sm:p-7"
+        >
           <div className="max-w-3xl">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#93C5FD]">
-              Start here
-            </p>
             <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
               Your first living resume is three simple stages away.
             </h2>
@@ -265,29 +287,28 @@ export default async function DashboardPage() {
               Your work stays private while you build. Add what matters, preview every output, and publish only when you are ready.
             </p>
           </div>
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            {[
-              ["01", "Add details", "Six short sections with clear prompts and local draft saving."],
-              ["02", "Design and check", "Choose a polished theme and review your ATS readiness."],
-              ["03", "Publish and share", "Use your live link, PDF, and QR-ready share card."],
-            ].map(([number, title, body]) => (
-              <div
-                key={number}
-                className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4"
-              >
-                <p className="font-mono text-[10px] text-[#93C5FD]">{number}</p>
-                <p className="mt-2 font-semibold text-[#F0F4FF]">{title}</p>
-                <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.55)]">{body}</p>
-              </div>
-            ))}
-          </div>
+          <ProfilePanel title="Your setup checklist" meta="3 stages" className="mt-6" contentClassName="p-0">
+            <ol className="grid md:grid-cols-3 md:divide-x md:divide-[rgba(255,255,255,0.07)]">
+              {[
+                ["01", "Add details", "Six short sections with clear prompts and local draft saving."],
+                ["02", "Design and check", "Choose a polished theme and review your ATS readiness."],
+                ["03", "Publish and share", "Use your live link, PDF, and QR-ready share card."],
+              ].map(([number, title, body]) => (
+                <li key={number} className="border-b border-[rgba(255,255,255,0.07)] p-4 last:border-b-0 md:border-b-0">
+                  <p className="font-mono text-[10px] text-[#93C5FD]">{number}</p>
+                  <p className="mt-2 font-semibold text-[#F0F4FF]">{title}</p>
+                  <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.55)]">{body}</p>
+                </li>
+              ))}
+            </ol>
+          </ProfilePanel>
           <Link
             href="/create"
             className="gold-pill mt-6 inline-flex px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_34px_rgba(59,130,246,0.3)]"
           >
             Build My Resume
           </Link>
-        </section>
+        </ProfileWindow>
       ) : (
         <section className="grid gap-3">
           {!accountAccess.isLegacyAccount ? (
@@ -333,9 +354,18 @@ export default async function DashboardPage() {
             const proofCopy = buildProofPanelCopy(proof, accountAccess.analyticsTier);
 
             return (
-              <article
+              <ProfileWindow
                 key={page.id}
-                className="glass-card grid gap-3 rounded-2xl p-4 sm:gap-4 sm:p-5 md:grid-cols-[2fr_1fr_1fr_1fr_auto] md:items-center"
+                as="article"
+                title="Your living profile"
+                status={
+                  publicViewAvailable ? (
+                    <span className="profile-status">Live</span>
+                  ) : (
+                    <span>{page.status ?? page.visibility ?? "Private"}</span>
+                  )
+                }
+                contentClassName="grid gap-3 p-4 sm:gap-4 sm:p-5 md:grid-cols-[2fr_1fr_1fr_1fr_auto] md:items-center"
               >
                 <div>
                   <p className="font-heading text-lg text-[#F0F4FF] sm:text-2xl">{page.resume_data?.name ?? "Untitled"}</p>
@@ -386,12 +416,14 @@ export default async function DashboardPage() {
                   </Link>
                   <DeletePageButton pageId={page.id} />
                 </div>
-                <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 md:col-span-full">
+                <ProfilePanel
+                  title={proofCopy.eyebrow}
+                  meta="Visitor activity"
+                  className="md:col-span-full"
+                  contentClassName="p-4"
+                >
                   <div className="max-w-3xl">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
-                      {proofCopy.eyebrow}
-                    </p>
-                    <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
+                    <h2 className="font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
                       {proofCopy.title}
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
@@ -408,8 +440,8 @@ export default async function DashboardPage() {
                       </span>
                     ))}
                   </div>
-                </div>
-              </article>
+                </ProfilePanel>
+              </ProfileWindow>
             );
           })}
         </section>

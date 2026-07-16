@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import type { ResumeData } from "@/types/resume";
 
 interface RecruiterSkimPanelProps {
@@ -49,19 +50,21 @@ export default function RecruiterSkimPanel({
       data-testid="recruiter-skim-panel"
       className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 md:px-8"
     >
-      <div className="rounded-[2rem] border border-[rgba(59,130,246,0.2)] bg-[rgba(10,22,40,0.6)] px-4 py-4 shadow-[0_24px_70px_rgba(2,6,23,0.3)] backdrop-blur-xl sm:px-5 sm:py-4">
+      <ProfileWindow
+        title="Recruiter version"
+        status={<span className="profile-status">{expanded ? "Expanded" : "Collapsed"}</span>}
+        as="div"
+        contentClassName="p-3 sm:p-4"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
-              Recruiter version
-            </p>
-            <p className="mt-1 text-sm text-[rgba(240,244,255,0.58)]">{variantLabel}</p>
+            <p className="font-heading text-lg font-semibold text-[#F0F4FF]">{variantLabel}</p>
             {visibleChips.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {visibleChips.map((point) => (
                   <span
                     key={`collapsed-${point}`}
-                    className="rounded-full border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-xs text-[#BFDBFE]"
+                    className="rounded-md border border-[rgba(125,170,255,0.2)] bg-[rgba(59,130,246,0.1)] px-2.5 py-1.5 font-mono text-[11px] leading-5 text-[#BFDBFE]"
                   >
                     {point}
                   </span>
@@ -74,7 +77,7 @@ export default function RecruiterSkimPanel({
             aria-expanded={expanded}
             aria-controls={contentId}
             onClick={() => setExpanded((current) => !current)}
-            className="inline-flex items-center gap-2 self-start rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(10,22,40,0.82)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.76)] transition-colors hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD] sm:self-center"
+            className="profile-action inline-flex shrink-0 items-center gap-2 self-start px-4 py-2 text-xs uppercase tracking-[0.12em] sm:self-center"
           >
             <span>{expanded ? "Collapse recruiter skim" : "Expand recruiter skim"}</span>
             <svg
@@ -94,7 +97,7 @@ export default function RecruiterSkimPanel({
           <div
             id={contentId}
             data-testid="recruiter-skim-content"
-            className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4"
+            className="mt-4 border-t border-[rgba(125,170,255,0.14)] pt-4"
           >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl space-y-4">
@@ -119,7 +122,7 @@ export default function RecruiterSkimPanel({
                   </div>
                 ) : null}
                 {ctaEmphasis ? (
-                  <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(229,183,107,0.08)] px-3 py-1.5 text-xs text-[#F5D7A2]">
+                  <p className="inline-flex rounded-md border border-[rgba(147,197,253,0.26)] bg-[rgba(59,130,246,0.1)] px-3 py-2 text-xs leading-5 text-[#BFDBFE]">
                     {ctaEmphasis}
                   </p>
                 ) : null}
@@ -135,7 +138,7 @@ export default function RecruiterSkimPanel({
                 {resumeData.email ? (
                   <a
                     href={`mailto:${resumeData.email}`}
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm"
+                    className="profile-action px-4 py-2.5 text-[13px] sm:text-sm"
                   >
                     Email
                   </a>
@@ -145,14 +148,14 @@ export default function RecruiterSkimPanel({
                     href={toHref(resumeData.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm"
+                    className="profile-action px-4 py-2.5 text-[13px] sm:text-sm"
                   >
                     LinkedIn
                   </a>
                 ) : null}
                 <a
                   href={publicPath}
-                  className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm"
+                  className="profile-action px-4 py-2.5 text-[13px] sm:text-sm"
                 >
                   Open current page
                 </a>
@@ -160,11 +163,13 @@ export default function RecruiterSkimPanel({
             </div>
 
             {featuredProject ? (
-              <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
-                  Featured work sample
-                </p>
-                <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <ProfilePanel
+                title="Featured work sample"
+                className="mt-5"
+                contentClassName="p-4"
+                as="div"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="max-w-2xl">
                     <p className="font-heading text-xl text-[#F0F4FF]">{featuredProject.name}</p>
                     <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
@@ -175,7 +180,7 @@ export default function RecruiterSkimPanel({
                         {featuredProject.tech.slice(0, 4).map((tech) => (
                           <span
                             key={tech}
-                            className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(6,14,28,0.4)] px-3 py-1 text-xs text-[rgba(240,244,255,0.7)]"
+                            className="rounded-md border border-[rgba(125,170,255,0.14)] bg-[rgba(3,10,23,0.4)] px-2.5 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.7)]"
                           >
                             {tech}
                           </span>
@@ -188,19 +193,19 @@ export default function RecruiterSkimPanel({
                       href={toHref(featuredProject.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-full border border-[rgba(59,130,246,0.28)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                      className="profile-action shrink-0 px-4 py-2 text-xs uppercase tracking-[0.12em]"
                     >
                       Open project
                     </a>
                   ) : null}
                 </div>
-              </div>
+              </ProfilePanel>
             ) : null}
           </div>
         ) : (
           <div id={contentId} className="sr-only" />
         )}
-      </div>
+      </ProfileWindow>
     </section>
   );
 }

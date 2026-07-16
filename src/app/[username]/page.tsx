@@ -8,6 +8,7 @@ import RecruiterSkimPanel from "@/components/public/RecruiterSkimPanel";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import { getAccountAccessState } from "@/lib/account-access";
 import {
   applyPageVariant,
@@ -152,8 +153,8 @@ export default async function PublicLivingPage({
     const pageName = offlineContext.page.resume_data?.name?.trim() || username;
 
     return (
-      <main className="min-h-screen bg-[#08111C] px-4 py-12 text-[#F0F4FF] sm:px-6 sm:py-16">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-[rgba(59,130,246,0.2)] bg-[rgba(10,22,40,0.76)] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-10">
+      <main className="profile-shell min-h-screen bg-[#08111C] px-4 py-12 text-[#F0F4FF] sm:px-6 sm:py-16">
+        <ProfileWindow title="Public profile // temporarily offline" status="URL reserved" className="relative z-10 mx-auto max-w-3xl" contentClassName="p-6 sm:p-10">
           <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Page unavailable</p>
           <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl">
             {pageName}&rsquo;s page is being updated.
@@ -162,10 +163,10 @@ export default async function PublicLivingPage({
             This link was live before and can be reactivated anytime. The owner can turn hosting
             back on from their MyLivingPage settings when they are ready to share it again.
           </p>
-          <div className="mt-6 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+          <ProfilePanel title="Profile status" contentClassName="p-4" className="mt-6 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
             The URL stays reserved so the page can come back without changing the link.
-          </div>
-        </div>
+          </ProfilePanel>
+        </ProfileWindow>
       </main>
     );
   }

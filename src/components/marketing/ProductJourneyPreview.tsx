@@ -1,76 +1,62 @@
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
+
 const JOURNEY_OUTPUTS = [
-  {
-    number: "01",
-    title: "Living resume",
-    body: "A polished page at one link you can keep current.",
-  },
-  {
-    number: "02",
-    title: "ATS-ready PDF",
-    body: "A clean, machine-readable file for formal applications.",
-  },
-  {
-    number: "03",
-    title: "Share card + QR",
-    body: "A visual card that sends people straight to your page.",
-  },
+  { number: "01", title: "Living resume", detail: "One link that stays current" },
+  { number: "02", title: "ATS-ready PDF", detail: "Built for formal applications" },
+  { number: "03", title: "Share card + QR", detail: "Made for introductions" },
 ] as const;
 
 export function ProductJourneyPreview() {
   return (
-    <div
-      data-testid="product-journey-preview"
-      className="relative overflow-hidden rounded-[1.75rem] border border-[rgba(147,197,253,0.18)] bg-[rgba(5,13,26,0.72)] p-4 shadow-[0_28px_90px_rgba(2,6,23,0.48)] sm:p-5"
+    <ProfileWindow
+      title="Sample profile // private draft"
+      status={<span className="profile-status text-[#86EFAC]">ready</span>}
+      contentClassName="p-3 sm:p-4"
     >
-      <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.24),transparent_68%)]" />
-      <div className="relative flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-4">
+      <div data-testid="product-journey-preview" className="grid gap-3 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#93C5FD]">
-            Your career story
-          </p>
-          <p className="mt-1 font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">
-            Enter it once. Use it three ways.
+          <div className="profile-avatar-frame aspect-square bg-[radial-gradient(circle_at_32%_22%,#F9A8D4_0%,#818CF8_38%,#172554_100%)] p-3">
+            <div className="flex h-full items-end rounded-sm border border-white/20 bg-[linear-gradient(155deg,rgba(255,255,255,0.2),rgba(2,6,23,0.28))] p-3">
+              <span className="font-heading text-4xl font-bold text-white drop-shadow-lg">MC</span>
+            </div>
+          </div>
+          <p className="mt-3 break-all font-mono text-[11px] text-[#93C5FD]">@maya-chen</p>
+          <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+            Product designer<br />Brooklyn, NY
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-[rgba(74,222,128,0.22)] bg-[rgba(74,222,128,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#86EFAC]">
-          Private draft
-        </span>
+
+        <div className="min-w-0 space-y-3">
+          <ProfilePanel title="About me" contentClassName="p-3">
+            <p className="font-heading text-xl font-bold text-[#F0F4FF]">
+              Enter it once. Use it three ways.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.67)]">
+              A personal corner of the internet for the work, proof, and contact details a resume
+              cannot show on its own.
+            </p>
+          </ProfilePanel>
+
+          <ProfilePanel title="From one profile" meta="3 outputs" contentClassName="divide-y divide-[rgba(147,197,253,0.12)]">
+            {JOURNEY_OUTPUTS.map((output) => (
+              <div key={output.title} className="grid grid-cols-[1.8rem_minmax(0,1fr)] gap-2 px-3 py-2.5">
+                <span className="font-mono text-[10px] text-[#60A5FA]">{output.number}</span>
+                <div>
+                  <p className="text-xs font-semibold text-[#F0F4FF]">{output.title}</p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-[rgba(240,244,255,0.52)]">
+                    {output.detail}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </ProfilePanel>
+        </div>
       </div>
 
-      <div className="relative mt-4 space-y-3">
-        {JOURNEY_OUTPUTS.map((output, index) => (
-          <div
-            key={output.title}
-            className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border px-4 py-3.5 transition-transform duration-300 ease-soft hover:translate-x-1 ${
-              index === 0
-                ? "border-[rgba(59,130,246,0.28)] bg-[rgba(59,130,246,0.12)]"
-                : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)]"
-            }`}
-          >
-            <span className="font-mono text-[10px] text-[rgba(147,197,253,0.72)]">
-              {output.number}
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#F0F4FF]">{output.title}</p>
-              <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.58)]">
-                {output.body}
-              </p>
-            </div>
-            <span
-              aria-hidden="true"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(147,197,253,0.18)] text-sm text-[#93C5FD]"
-            >
-              &#10003;
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-3 text-[11px] text-[rgba(240,244,255,0.5)]">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[rgba(147,197,253,0.14)] pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(240,244,255,0.58)]">
         <span>No AI required</span>
-        <span className="hidden h-1 w-1 rounded-full bg-[rgba(147,197,253,0.5)] sm:block" />
-        <span>Nothing publishes until you choose</span>
+        <span>Private until you choose Publish.</span>
       </div>
-    </div>
+    </ProfileWindow>
   );
 }

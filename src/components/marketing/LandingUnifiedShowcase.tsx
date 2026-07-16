@@ -1,15 +1,14 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import ResumeLayout from "@/components/ResumeLayout";
+import { ShareCardArtwork } from "@/components/ShareCardArtwork";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 import { DEMO_PAGES } from "@/lib/demo-data";
 import {
   buildQrDataUrl,
-  getFirstName,
   getShareCardTags,
   getShareCardVisual,
   normalizeAppUrl,
@@ -41,12 +40,33 @@ function getSignupHref(ref: string) {
   return `/signup?ref=${ref}&next=/create`;
 }
 
+function moveTabSelection<T extends string>(
+  event: KeyboardEvent<HTMLButtonElement>,
+  options: ReadonlyArray<{ id: T }>,
+  currentId: T,
+  setCurrentId: (id: T) => void,
+  idPrefix: string,
+) {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+
+  event.preventDefault();
+  const currentIndex = options.findIndex((option) => option.id === currentId);
+  let nextIndex = currentIndex;
+
+  if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % options.length;
+  if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + options.length) % options.length;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = options.length - 1;
+
+  const next = options[nextIndex];
+  if (!next) return;
+  setCurrentId(next.id);
+  requestAnimationFrame(() => document.getElementById(`${idPrefix}-${next.id}`)?.focus());
+}
+
 function ShareCardPreview({ themeId }: { themeId: ShowcaseThemeId }) {
   const resume = SHOWCASE_RESUME;
-
-  if (!resume) {
-    return null;
-  }
+  if (!resume) return null;
 
   const slug = slugifyUsername(resume.name || "member");
   const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
@@ -57,86 +77,32 @@ function ShareCardPreview({ themeId }: { themeId: ShowcaseThemeId }) {
   const qrDataUrl = buildQrDataUrl(livePageUrl);
   const safeName = truncate(resume.name || "MyLivingPage User", 34);
   const safeHeadline = truncate(resume.headline || "Professional profile", 60);
-  const firstName = getFirstName(safeName);
-  const initial = safeName.slice(0, 1).toUpperCase() || "?";
 
   return (
-    <div
-      data-testid="landing-share-card-preview"
-      className="relative overflow-hidden rounded-[1.5rem] border border-[rgba(255,255,255,0.1)] p-5 sm:p-6"
-      style={{
-        background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 70px ${visual.glow}`,
-      }}
-    >
-      <div
-        className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full"
-        style={{ background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)` }}
-      />
-
-      <div className="relative flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-[26rem]">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[rgba(240,244,255,0.58)]">
-            PNG Share Card Preview
-          </p>
-          <h3 className="mt-3 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-4xl">
-            {safeName}
-          </h3>
-          <p className="mt-2 text-sm text-[rgba(240,244,255,0.82)] sm:text-base">{safeHeadline}</p>
-          <div className="mt-4 inline-flex rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(10,22,40,0.38)] px-3 py-1 text-xs text-[#93C5FD]">
-            @{slug}
-          </div>
+    <div data-testid="landing-share-card-preview">
+      <ProfileWindow
+        title="Share card output // fictional sample"
+        status={<span>{THEME_MAP[themeId].name} skin</span>}
+        contentClassName="p-3 sm:p-4"
+      >
+        <ShareCardArtwork
+          avatarUrl={resume.avatar_url}
+          displayUrl={displayUrl}
+          eyebrow="PNG Share Card Preview"
+          headline={safeHeadline}
+          location={resume.location || undefined}
+          name={safeName}
+          qrAlt={`QR code preview for ${displayUrl}`}
+          qrDataUrl={qrDataUrl}
+          slug={slug}
+          tags={shareTags}
+          visual={visual}
+        />
+        <div className="mt-3 flex flex-wrap justify-end gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[#DBEAFE]">
+          <span className="border border-[rgba(147,197,253,0.22)] bg-[rgba(59,130,246,0.08)] px-2 py-1">Copy Link</span>
+          <span className="border border-[rgba(147,197,253,0.22)] bg-[rgba(59,130,246,0.08)] px-2 py-1">Download PNG</span>
         </div>
-
-        <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full font-heading text-2xl font-bold text-[#0A1628] shadow-[0_0_30px_rgba(0,0,0,0.3)]"
-          style={{ background: `linear-gradient(135deg, ${visual.accent}, #E2E8F0)` }}
-          aria-hidden="true"
-        >
-          {initial}
-        </div>
-      </div>
-
-      <div className="relative mt-5 flex flex-wrap gap-2">
-        {shareTags.map((tag) => (
-          <span
-            key={tag}
-            className="max-w-full rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs leading-5 text-[rgba(240,244,255,0.78)] whitespace-normal break-words"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <div className="relative mt-5 grid gap-4 rounded-[1.35rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(6,14,28,0.54)] p-4 sm:grid-cols-[minmax(0,1fr)_144px] sm:items-center">
-        <div>
-          <p className="text-sm font-semibold text-[#F0F4FF]">Scan to visit {firstName}&rsquo;s living page</p>
-          <p className="mt-1 text-xs leading-6 text-[rgba(240,244,255,0.56)]">
-            The export includes a unique QR code and direct link for quick follow-up.
-          </p>
-        </div>
-
-        {qrDataUrl ? (
-          <img
-            src={qrDataUrl}
-            alt={`QR code preview for ${displayUrl}`}
-            className="h-32 w-32 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-white p-2 justify-self-start sm:justify-self-end"
-          />
-        ) : (
-          <div className="h-32 w-32 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] sm:justify-self-end" />
-        )}
-      </div>
-
-      <div className="relative mt-5 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#93C5FD]">
-          Copy Link
-        </span>
-        <span className="rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)]">
-          Download PNG
-        </span>
-      </div>
-
-      <p className="relative mt-4 font-mono text-xs text-[rgba(240,244,255,0.56)]">{displayUrl}</p>
+      </ProfileWindow>
     </div>
   );
 }
@@ -145,14 +111,7 @@ export default function LandingUnifiedShowcase() {
   const [themeId, setThemeId] = useState<ShowcaseThemeId>("ember");
   const [viewId, setViewId] = useState<ShowcaseViewId>("living-page");
 
-  const activeView = useMemo(
-    () => SHOWCASE_VIEWS.find((view) => view.id === viewId) ?? SHOWCASE_VIEWS[0],
-    [viewId],
-  );
-
-  if (!SHOWCASE_RESUME) {
-    return null;
-  }
+  if (!SHOWCASE_RESUME) return null;
 
   const theme = THEME_MAP[themeId];
   const slug = slugifyUsername(SHOWCASE_RESUME.name || "member");
@@ -160,54 +119,24 @@ export default function LandingUnifiedShowcase() {
 
   return (
     <section id="demo-section" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
-        <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] p-6 sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#60A5FA]">See it in action</p>
-          <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.02] tracking-[-0.03em] text-[#F7F1E8] sm:text-4xl">
-            One story. Three useful outputs.
-          </h2>
-          <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-            See how the same saved details become a polished living resume and a QR-ready share card. Your ATS-ready PDF stays aligned with them automatically.
-          </p>
+      <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+        <div className="space-y-4 lg:sticky lg:top-24">
+          <ProfileWindow title="Live demo controls" status="fictional sample" contentClassName="p-4">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#60A5FA]">
+              See it in action
+            </p>
+            <h2 className="mt-2 font-heading text-3xl font-bold leading-none text-[#F7F1E8]">
+              One story. Three useful outputs.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+              Change the page skin, then switch between a living profile and its matching QR share card. The ATS-ready PDF stays clean and conventional.
+            </p>
 
-          <div className="mt-6 grid gap-3">
-            <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-sm font-semibold text-[#F0F4FF]">Start with what you already have</p>
-              <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Add your details once, then keep one consistent story across your page, PDF, and share card.
-              </p>
-            </div>
-            <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-sm font-semibold text-[#F0F4FF]">Share it in the format that fits</p>
-              <p className="mt-1 text-sm leading-6 text-[rgba(240,244,255,0.6)]">
-                Use the living page for quick context, the PDF for applications, and the share card for networking or follow-up.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link
-              href={getSignupHref("landing_demo_primary")}
-              className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.2)]"
-            >
-              Create Your Page (Free)
-            </Link>
-            <Link
-              href="/examples"
-              className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-            >
-              Browse sample pages
-            </Link>
-          </div>
-        </div>
-
-        <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] p-4 sm:p-5">
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(240,244,255,0.42)]">
-                Theme
-              </p>
-              <div role="tablist" aria-label="Theme selection" className="mt-3 flex flex-wrap gap-2">
+            <fieldset className="mt-5">
+              <legend className="font-mono text-[10px] uppercase tracking-[0.12em] text-[rgba(240,244,255,0.52)]">
+                Choose a page skin
+              </legend>
+              <div role="tablist" aria-label="Theme selection" className="mt-2 grid grid-cols-3 gap-1.5 lg:grid-cols-1">
                 {SHOWCASE_THEMES.map((themeOption) => {
                   const isActive = themeOption.id === themeId;
                   return (
@@ -216,27 +145,29 @@ export default function LandingUnifiedShowcase() {
                       id={`theme-tab-${themeOption.id}`}
                       type="button"
                       role="tab"
+                      tabIndex={isActive ? 0 : -1}
                       aria-selected={isActive}
                       aria-controls="landing-showcase-panel"
                       onClick={() => setThemeId(themeOption.id)}
-                      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all ${
+                      onKeyDown={(event) => moveTabSelection(event, SHOWCASE_THEMES, themeId, setThemeId, "theme-tab")}
+                      className={`min-h-11 border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${
                         isActive
-                          ? "border-[rgba(96,165,250,0.4)] bg-[rgba(59,130,246,0.12)] text-[#DBEAFE]"
-                          : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.58)] hover:border-[rgba(96,165,250,0.24)] hover:text-[#DBEAFE]"
+                          ? "border-[#60A5FA] bg-[rgba(59,130,246,0.24)] text-[#EFF6FF]"
+                          : "border-[rgba(147,197,253,0.16)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.58)] hover:bg-[rgba(59,130,246,0.1)] hover:text-[#DBEAFE]"
                       }`}
                     >
-                      <span>{themeOption.label}</span>
+                      {themeOption.label}
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </fieldset>
 
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(240,244,255,0.42)]">
-                Preview
-              </p>
-              <div role="tablist" aria-label="Preview mode" className="mt-3 flex flex-wrap gap-2">
+            <fieldset className="mt-4">
+              <legend className="font-mono text-[10px] uppercase tracking-[0.12em] text-[rgba(240,244,255,0.52)]">
+                Preview format
+              </legend>
+              <div role="tablist" aria-label="Preview mode" className="mt-2 grid gap-1.5">
                 {SHOWCASE_VIEWS.map((viewOption) => {
                   const isActive = viewOption.id === viewId;
                   return (
@@ -245,82 +176,80 @@ export default function LandingUnifiedShowcase() {
                       id={`view-tab-${viewOption.id}`}
                       type="button"
                       role="tab"
+                      tabIndex={isActive ? 0 : -1}
                       aria-selected={isActive}
                       aria-controls="landing-showcase-panel"
                       onClick={() => setViewId(viewOption.id)}
-                      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all ${
+                      onKeyDown={(event) => moveTabSelection(event, SHOWCASE_VIEWS, viewId, setViewId, "view-tab")}
+                      className={`min-h-11 border px-3 py-2 text-left text-xs font-semibold transition-colors ${
                         isActive
-                          ? "border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] text-[#BFDBFE]"
-                          : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] text-[rgba(240,244,255,0.58)] hover:border-[rgba(59,130,246,0.22)] hover:text-[#BFDBFE]"
+                          ? "border-[rgba(96,165,250,0.7)] bg-[rgba(59,130,246,0.18)] text-[#EFF6FF]"
+                          : "border-[rgba(147,197,253,0.16)] text-[rgba(240,244,255,0.62)] hover:bg-[rgba(59,130,246,0.1)]"
                       }`}
                     >
-                      <span>{viewOption.label}</span>
+                      {viewOption.label}
                     </button>
                   );
                 })}
               </div>
+            </fieldset>
+          </ProfileWindow>
+
+          <ProfilePanel title="What changes" meta="live preview" contentClassName="p-3">
+            <p className="text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+              The skin changes the living page and share card. Your saved story and ATS-ready PDF stay aligned.
+            </p>
+            <div className="mt-3 grid gap-2">
+              <Link href={getSignupHref("landing_demo_primary")} className="gold-pill px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.08em]">
+                Create Your Page (Free)
+              </Link>
+              <Link href="/examples" className="profile-link py-1 text-center text-xs font-semibold">
+                Browse sample pages
+              </Link>
             </div>
+          </ProfilePanel>
+        </div>
 
-            <div className="rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3 text-sm text-[rgba(240,244,255,0.62)]">
-              <span className="font-semibold text-[#F0F4FF]">{theme.name}</span>
-              <span className="mx-2 text-[rgba(240,244,255,0.28)]">/</span>
-              <span>{activeView.label}</span>
-            </div>
-          </div>
-
-          <div
-            id="landing-showcase-panel"
-            role="tabpanel"
-            aria-labelledby={
-              viewId === "living-page" ? "view-tab-living-page" : "view-tab-share-card-qr"
-            }
-            data-testid="landing-showcase"
-            className="mt-5"
-          >
-            {viewId === "living-page" ? (
-              <div className="relative overflow-hidden rounded-[1.6rem] border border-[rgba(255,255,255,0.08)] shadow-[0_24px_70px_rgba(2,6,23,0.28)]">
-                <div className="flex items-center gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(8,14,28,0.9)] px-4 py-3">
-                  <div className="hidden gap-[5px] sm:flex">
-                    <span className="h-2 w-2 rounded-full bg-[#ff5f57]" />
-                    <span className="h-2 w-2 rounded-full bg-[#ffbd2e]" />
-                    <span className="h-2 w-2 rounded-full bg-[#28c840]" />
-                  </div>
-                  <div className="flex flex-1 items-center gap-2 rounded-md bg-[rgba(255,255,255,0.05)] px-3 py-1.5 font-mono text-[11px] text-[rgba(240,244,255,0.44)]">
-                    <span className="text-[#5BD67C]">&#x1F512;</span>
-                    <span>{livePageUrl.replace(/^https?:\/\//, "")}</span>
-                  </div>
-                </div>
-
-                <div data-testid="landing-living-page-preview" className="overflow-hidden">
-                  <ThemeCanvas
-                    themeId={themeId}
-                    height={560}
-                    className="rounded-none"
-                    interactive
-                  >
-                    <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.56)_100%)] px-3 py-3 sm:px-4 sm:py-4">
-                      <div className="h-full overflow-hidden rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,14,28,0.22)]">
-                        <ResumeLayout data={SHOWCASE_RESUME} compact headingLevel="h2" disableExternalLinks />
-                      </div>
-                    </div>
-                  </ThemeCanvas>
-                </div>
-                <div className="pointer-events-none absolute right-4 top-16 z-10 rounded-2xl border border-[rgba(91,214,124,0.28)] bg-[rgba(8,14,28,0.9)] px-4 py-3 shadow-[0_18px_40px_rgba(2,6,23,0.36)]">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#5BD67C]">
-                    Proof
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[#F0F4FF]">
-                    Someone just looked at your page
-                  </p>
-                  <p className="mt-1 text-xs text-[rgba(240,244,255,0.56)]">
-                    Viewed on mobile moments ago
-                  </p>
-                </div>
+        <div
+          id="landing-showcase-panel"
+          role="tabpanel"
+          aria-labelledby={`theme-tab-${themeId} ${
+            viewId === "living-page" ? "view-tab-living-page" : "view-tab-share-card-qr"
+          }`}
+          data-testid="landing-showcase"
+          className="min-w-0"
+        >
+          {viewId === "living-page" ? (
+            <ProfileWindow
+              title={`${theme.name} living profile // fictional sample`}
+              status={<span className="profile-status text-[#86EFAC]">published</span>}
+              contentClassName="p-2 sm:p-3"
+            >
+              <div className="mb-2 grid gap-2 border border-[rgba(147,197,253,0.16)] bg-[rgba(2,8,23,0.54)] px-3 py-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#86EFAC]">Public profile</span>
+                <span className="min-w-0 truncate font-mono text-[10px] text-[rgba(240,244,255,0.58)] sm:text-center">
+                  {livePageUrl.replace(/^https?:\/\//, "")}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(240,244,255,0.5)]">Sample data</span>
               </div>
-            ) : (
-              <ShareCardPreview themeId={themeId} />
-            )}
-          </div>
+
+              <div data-testid="landing-living-page-preview" className="overflow-hidden rounded-md border border-[rgba(255,255,255,0.1)]">
+                <ThemeCanvas themeId={themeId} height={640} className="rounded-none" interactive>
+                  <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.48)_100%)] p-2 sm:p-3">
+                    <div className="h-full overflow-hidden rounded-md border border-[rgba(255,255,255,0.12)] bg-[rgba(8,14,28,0.22)]">
+                      <ResumeLayout data={SHOWCASE_RESUME} compact headingLevel="h2" disableExternalLinks />
+                    </div>
+                  </div>
+                </ThemeCanvas>
+              </div>
+
+              <p className="mt-2 border border-[rgba(134,239,172,0.16)] bg-[rgba(34,197,94,0.07)] px-3 py-2 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+                Published profiles can record page views so you can see whether sharing led to interest.
+              </p>
+            </ProfileWindow>
+          ) : (
+            <ShareCardPreview themeId={themeId} />
+          )}
         </div>
       </div>
     </section>

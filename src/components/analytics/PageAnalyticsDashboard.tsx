@@ -8,6 +8,7 @@ import type {
   AnalyticsMetric,
   PageAnalyticsDashboardData,
 } from "@/lib/analytics/pageAnalytics";
+import { ProfilePanel, ProfileWindow } from "@/components/ui/ProfilePanel";
 
 interface PageAnalyticsDashboardProps {
   analytics: PageAnalyticsDashboardData;
@@ -114,31 +115,31 @@ function StatCard({
   testId: string;
 }) {
   return (
-    <div data-testid={testId} className="glass-card rounded-2xl p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.4)]">
-            {label}
-          </p>
-          <p className="mt-2 font-mono text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
-            {formatter(value)}
-          </p>
-        </div>
-        <span
-          className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${metricAccentClass(metric.status)}`}
-        >
-          {metric.lowData ? "Low data" : metric.status}
-        </span>
-      </div>
-      <p className="mt-3 text-sm text-[rgba(240,244,255,0.62)]">
-        {renderComparison(metric, formatter)}
-      </p>
-      <p className="mt-2 text-xs text-[rgba(240,244,255,0.42)]">{helpText}</p>
-      {secondary ? (
-        <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-[#93C5FD]">
-          {secondary}
+    <div data-testid={testId}>
+      <ProfilePanel
+        title={label}
+        meta={
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] ${metricAccentClass(metric.status)}`}
+          >
+            {metric.lowData ? "Low data" : metric.status}
+          </span>
+        }
+        contentClassName="p-4 sm:p-5"
+      >
+        <p className="font-mono text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+          {formatter(value)}
         </p>
-      ) : null}
+        <p className="mt-3 text-sm text-[rgba(240,244,255,0.62)]">
+          {renderComparison(metric, formatter)}
+        </p>
+        <p className="mt-2 text-xs text-[rgba(240,244,255,0.42)]">{helpText}</p>
+        {secondary ? (
+          <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-[#93C5FD]">
+            {secondary}
+          </p>
+        ) : null}
+      </ProfilePanel>
     </div>
   );
 }
@@ -147,7 +148,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
   const maxCount = Math.max(...analytics.trend.dailyViews.map((day) => day.count), 1);
 
   return (
-    <section className="glass-card rounded-3xl p-5 sm:p-6">
+    <ProfilePanel title="Profile visit timeline" meta={analytics.rangeLabel} contentClassName="p-5 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
@@ -197,7 +198,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
           </span>
         </div>
       </div>
-    </section>
+    </ProfilePanel>
   );
 }
 
@@ -248,10 +249,14 @@ function TopBar({
   publicPath,
 }: PageAnalyticsDashboardProps) {
   return (
-    <section className="glass-card rounded-3xl p-5 sm:p-6">
+    <ProfileWindow
+      title="Who visited your profile"
+      status={analytics.rangeLabel}
+      contentClassName="p-5 sm:p-6"
+    >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Page Analytics</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">Page Analytics</p>
           <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
             {pageName}
           </h1>
@@ -292,7 +297,7 @@ function TopBar({
           })}
         </div>
       </div>
-    </section>
+    </ProfileWindow>
   );
 }
 
@@ -302,9 +307,9 @@ function InsightsStrip({ insights }: { insights: string[] }) {
   }
 
   return (
-    <section className="glass-card rounded-3xl p-5 sm:p-6">
+    <ProfilePanel title="What profile visits are telling you" meta="Observed signals" contentClassName="p-5 sm:p-6">
       <div className="mb-4">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
           Proof summary
         </p>
         <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">
@@ -321,7 +326,7 @@ function InsightsStrip({ insights }: { insights: string[] }) {
         </div>
       ))}
       </div>
-    </section>
+    </ProfilePanel>
   );
 }
 
@@ -489,11 +494,8 @@ export default function PageAnalyticsDashboard({
       )}
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="glass-card rounded-3xl p-5 sm:p-6">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-            Follow-Up Signals
-          </p>
-          <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+        <ProfilePanel title="Follow-Up Signals" meta="Next steps" contentClassName="p-5 sm:p-6">
+          <h2 className="font-heading text-xl font-bold text-[#F0F4FF]">
             What to do after the click
           </h2>
           <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
@@ -532,13 +534,10 @@ export default function PageAnalyticsDashboard({
               </p>
             </div>
           </div>
-        </div>
+        </ProfilePanel>
 
-        <div className="glass-card rounded-3xl p-5 sm:p-6">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-            Variants
-          </p>
-          <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+        <ProfilePanel title="Profile variants" meta="Targeted links" contentClassName="p-5 sm:p-6">
+          <h2 className="font-heading text-xl font-bold text-[#F0F4FF]">
             Target the next send
           </h2>
           {variantLabels.length > 0 ? (
@@ -568,19 +567,16 @@ export default function PageAnalyticsDashboard({
           >
             Edit living page
           </Link>
-        </div>
+        </ProfilePanel>
       </section>
 
       {analytics.state.hasTraffic ? (
         <>
           <section className="grid gap-4 xl:grid-cols-2">
-            <div className="glass-card rounded-3xl p-5 sm:p-6">
+            <ProfilePanel title="How people found your profile" meta="Acquisition" contentClassName="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-                    Acquisition
-                  </p>
-                  <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+                  <h2 className="font-heading text-xl font-bold text-[#F0F4FF]">
                     How people found the page
                   </h2>
                 </div>
@@ -593,13 +589,10 @@ export default function PageAnalyticsDashboard({
                 emptyText="No referrer sources yet."
                 rows={analytics.acquisition.topReferrers}
               />
-            </div>
+            </ProfilePanel>
 
-            <div className="glass-card rounded-3xl p-5 sm:p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-                Audience
-              </p>
-              <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+            <ProfilePanel title="Profile visitor mix" meta="Audience" contentClassName="p-5 sm:p-6">
+              <h2 className="font-heading text-xl font-bold text-[#F0F4FF]">
                 Device and country mix
               </h2>
               <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -614,7 +607,7 @@ export default function PageAnalyticsDashboard({
                   rows={analytics.audience.countries}
                 />
               </div>
-            </div>
+            </ProfilePanel>
           </section>
 
           {isBasic ? (
@@ -623,13 +616,10 @@ export default function PageAnalyticsDashboard({
             />
           ) : (
             <section className="grid gap-4 xl:grid-cols-2">
-              <div className="glass-card rounded-3xl p-5 sm:p-6">
+              <ProfilePanel title="What visitors did next" meta="Conversion" contentClassName="p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-                      Conversion
-                    </p>
-                    <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+                    <h2 className="font-heading text-xl font-bold text-[#F0F4FF]">
                       What they did next
                     </h2>
                   </div>
@@ -678,15 +668,12 @@ export default function PageAnalyticsDashboard({
                         }))}
                       />
                     </div>
-                  </>
-                )}
-              </div>
+                    </>
+                  )}
+              </ProfilePanel>
 
-              <div className="glass-card rounded-3xl p-5 sm:p-6">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#3B82F6]">
-                  Content Performance
-                </p>
-                <h2 className="mt-2 font-heading text-xl font-bold text-[#F0F4FF]">
+              <ProfilePanel title="Content Performance" meta="Attention" contentClassName="p-5 sm:p-6">
+                <h2 className="font-heading text-xl font-bold text-[#F0F4FF]">
                   What kept attention
                 </h2>
                 {analytics.state.hasEngagement ? (
@@ -750,7 +737,7 @@ export default function PageAnalyticsDashboard({
                     />
                   </div>
                 )}
-              </div>
+              </ProfilePanel>
             </section>
           )}
         </>

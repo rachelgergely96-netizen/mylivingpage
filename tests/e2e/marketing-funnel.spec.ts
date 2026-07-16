@@ -35,17 +35,18 @@ test("signup page keeps the form above the fold while preserving create intent",
   const emailField = page.getByLabel("Email address");
   const passwordField = page.getByLabel("Create password");
   const submitButton = page.getByRole("button", { name: "Create My Free Resume" });
+  const formAlert = page.locator('[role="alert"]:not(#__next-route-announcer__)');
 
   await expect(googleButton).toBeInViewport();
   await expect(emailField).toBeInViewport();
   await expect(passwordField).toBeInViewport();
   await expect(submitButton).toBeInViewport();
 
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(formAlert).toHaveCount(0);
   await googleButton.click();
-  await expect(page.getByRole("alert")).toContainText("accept the Terms of Service");
+  await expect(formAlert).toContainText("accept the Terms of Service");
   await page.getByRole("checkbox").check();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(formAlert).toHaveCount(0);
 
   await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute(
     "href",

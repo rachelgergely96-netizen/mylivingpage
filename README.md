@@ -72,4 +72,5 @@ The authenticated `/api/resume/readiness` route runs the provider-free ATS check
 - `/create`, `/dashboard`, `/admin` for authenticated flows
 - `/{username}` for the public living page
 - `/api/generate/parse` is a temporary authenticated compatibility route that permanently refuses legacy AI parsing requests
+- `/api/resume/import` privately extracts and autofills structured fields from pasted text, PDF, DOCX, TXT, or Markdown resumes
 - `/api/resume/export` for ATS-safe PDF export

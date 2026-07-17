@@ -57,7 +57,12 @@ import { renderVerdant } from "./renderers/verdant";
 import { renderVault } from "./renderers/vault";
 import { renderVellum } from "./renderers/vellum";
 import { renderVelvet } from "./renderers/velvet";
-import type { ThemeCollectionId, ThemeDefinition, ThemeId } from "./types";
+import type {
+  ThemeCollectionId,
+  ThemeDefinition,
+  ThemeId,
+  ThemePresentation,
+} from "./types";
 
 const THEME_COLLECTIONS = {
   cosmic: "cinematic",
@@ -121,7 +126,138 @@ const THEME_COLLECTIONS = {
   rosaline: "editorial-luxe",
 } as const satisfies Record<ThemeId, ThemeCollectionId>;
 
-const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
+const THEME_PRESENTATION_DEFAULTS = {
+  "executive-tech": {
+    accent: "#7DD3FC",
+    accentBright: "#D7F4FF",
+    accentSoft: "rgba(77, 196, 255, 0.11)",
+    accentBorder: "rgba(125, 211, 252, 0.28)",
+    text: "#F2F8FC",
+    textMuted: "rgba(226, 241, 250, 0.68)",
+    textSubtle: "rgba(214, 234, 246, 0.42)",
+    surface: "rgba(4, 15, 25, 0.5)",
+    surfaceStrong: "rgba(4, 15, 25, 0.72)",
+    border: "rgba(157, 220, 250, 0.14)",
+    scrim:
+      "radial-gradient(ellipse at 76% 18%, rgba(1, 7, 12, 0.04) 0%, rgba(1, 7, 12, 0.28) 48%, rgba(1, 7, 12, 0.62) 100%)",
+    headingFont: "modern",
+  },
+  cinematic: {
+    accent: "#AFC9FF",
+    accentBright: "#E1EAFF",
+    accentSoft: "rgba(134, 168, 255, 0.11)",
+    accentBorder: "rgba(175, 201, 255, 0.25)",
+    text: "#F5F6FF",
+    textMuted: "rgba(232, 235, 255, 0.68)",
+    textSubtle: "rgba(223, 227, 250, 0.42)",
+    surface: "rgba(7, 9, 20, 0.5)",
+    surfaceStrong: "rgba(7, 9, 20, 0.72)",
+    border: "rgba(205, 214, 255, 0.14)",
+    scrim:
+      "radial-gradient(ellipse at 72% 16%, rgba(3, 5, 14, 0.02) 0%, rgba(3, 5, 14, 0.3) 50%, rgba(3, 5, 14, 0.64) 100%)",
+    headingFont: "editorial",
+  },
+  "organic-material": {
+    accent: "#E9C89B",
+    accentBright: "#FFE9CA",
+    accentSoft: "rgba(217, 171, 112, 0.11)",
+    accentBorder: "rgba(233, 200, 155, 0.26)",
+    text: "#FBF6ED",
+    textMuted: "rgba(244, 233, 216, 0.68)",
+    textSubtle: "rgba(237, 224, 205, 0.42)",
+    surface: "rgba(19, 13, 9, 0.5)",
+    surfaceStrong: "rgba(19, 13, 9, 0.72)",
+    border: "rgba(239, 216, 184, 0.14)",
+    scrim:
+      "radial-gradient(ellipse at 75% 16%, rgba(14, 9, 5, 0.02) 0%, rgba(14, 9, 5, 0.28) 48%, rgba(14, 9, 5, 0.63) 100%)",
+    headingFont: "editorial",
+  },
+  "editorial-luxe": {
+    accent: "#E8BC85",
+    accentBright: "#FFE6C4",
+    accentSoft: "rgba(219, 166, 101, 0.11)",
+    accentBorder: "rgba(232, 188, 133, 0.27)",
+    text: "#FFF8EF",
+    textMuted: "rgba(249, 234, 218, 0.7)",
+    textSubtle: "rgba(239, 219, 200, 0.43)",
+    surface: "rgba(18, 10, 12, 0.48)",
+    surfaceStrong: "rgba(18, 10, 12, 0.72)",
+    border: "rgba(245, 214, 180, 0.15)",
+    scrim:
+      "radial-gradient(ellipse at 78% 14%, rgba(11, 5, 8, 0.01) 0%, rgba(11, 5, 8, 0.26) 48%, rgba(11, 5, 8, 0.62) 100%)",
+    headingFont: "editorial",
+  },
+  "art-lab": {
+    accent: "#FFAE8C",
+    accentBright: "#FFE0D1",
+    accentSoft: "rgba(255, 139, 105, 0.1)",
+    accentBorder: "rgba(255, 174, 140, 0.26)",
+    text: "#FFF7F3",
+    textMuted: "rgba(248, 230, 224, 0.68)",
+    textSubtle: "rgba(239, 216, 211, 0.42)",
+    surface: "rgba(13, 10, 18, 0.49)",
+    surfaceStrong: "rgba(13, 10, 18, 0.72)",
+    border: "rgba(247, 210, 200, 0.14)",
+    scrim:
+      "radial-gradient(ellipse at 76% 16%, rgba(8, 6, 13, 0.01) 0%, rgba(8, 6, 13, 0.27) 48%, rgba(8, 6, 13, 0.62) 100%)",
+    headingFont: "modern",
+  },
+} as const satisfies Record<ThemeCollectionId, ThemePresentation>;
+
+const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresentation>>> = {
+  velvet: {
+    accent: "#E8A7B9",
+    accentBright: "#FFD9E2",
+    accentSoft: "rgba(232, 117, 151, 0.12)",
+    accentBorder: "rgba(244, 168, 190, 0.3)",
+    surface: "rgba(30, 7, 18, 0.48)",
+    surfaceStrong: "rgba(30, 7, 18, 0.74)",
+    scrim:
+      "linear-gradient(90deg, rgba(15, 3, 10, 0.7) 0%, rgba(15, 3, 10, 0.42) 50%, rgba(15, 3, 10, 0.2) 100%)",
+  },
+  atlas: {
+    accent: "#67D6FF",
+    accentBright: "#C9F3FF",
+    accentSoft: "rgba(50, 193, 255, 0.11)",
+    accentBorder: "rgba(103, 214, 255, 0.3)",
+    scrim:
+      "linear-gradient(90deg, rgba(1, 9, 15, 0.76) 0%, rgba(1, 9, 15, 0.5) 47%, rgba(1, 9, 15, 0.1) 100%)",
+  },
+  aurora: {
+    accent: "#82F3D0",
+    accentBright: "#D6FFF3",
+    accentSoft: "rgba(91, 226, 193, 0.11)",
+    accentBorder: "rgba(130, 243, 208, 0.28)",
+    scrim:
+      "linear-gradient(90deg, rgba(2, 8, 20, 0.7) 0%, rgba(2, 8, 20, 0.42) 50%, rgba(2, 8, 20, 0.12) 100%)",
+  },
+  quarry: {
+    accent: "#E9AF72",
+    accentBright: "#FFE0B8",
+    accentSoft: "rgba(217, 143, 72, 0.12)",
+    accentBorder: "rgba(233, 175, 114, 0.29)",
+    scrim:
+      "linear-gradient(90deg, rgba(12, 8, 5, 0.72) 0%, rgba(12, 8, 5, 0.4) 52%, rgba(12, 8, 5, 0.14) 100%)",
+  },
+  nocturne: {
+    accent: "#C8D4FF",
+    accentBright: "#F1F4FF",
+    accentSoft: "rgba(151, 171, 255, 0.11)",
+    accentBorder: "rgba(200, 212, 255, 0.27)",
+    scrim:
+      "linear-gradient(90deg, rgba(3, 5, 14, 0.72) 0%, rgba(3, 5, 14, 0.42) 52%, rgba(3, 5, 14, 0.1) 100%)",
+  },
+  atelier: {
+    accent: "#FFB28F",
+    accentBright: "#FFE0D1",
+    accentSoft: "rgba(255, 137, 102, 0.11)",
+    accentBorder: "rgba(255, 178, 143, 0.28)",
+    scrim:
+      "linear-gradient(90deg, rgba(10, 7, 15, 0.7) 0%, rgba(10, 7, 15, 0.4) 50%, rgba(10, 7, 15, 0.12) 100%)",
+  },
+};
+
+const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentation">> = [
   {
     id: "cosmic",
     name: "Cosmic",
@@ -160,6 +296,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   },
   {
     id: "aurora",
+    signature: true,
     name: "Aurora",
     description:
       "Layered spectral curtains ripple with noise-driven displacement while shimmer particles rain through the bands.",
@@ -349,6 +486,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   },
   {
     id: "atlas",
+    signature: true,
     name: "Atlas",
     description:
       "Luminous globe meridians, latitude bands, and route signals pulse through a dark cartographic field.",
@@ -385,6 +523,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   },
   {
     id: "velvet",
+    signature: true,
     name: "Velvet",
     description:
       "Plush jewel-toned folds breathe with soft sheen and floating gold dust across a dark editorial stage.",
@@ -457,6 +596,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   },
   {
     id: "quarry",
+    signature: true,
     name: "Quarry",
     description:
       "Layered stone terraces breathe with mineral shadow, warm seam glints, and drifting quarry dust.",
@@ -493,6 +633,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   },
   {
     id: "atelier",
+    signature: true,
     name: "Atelier",
     description:
       "Painterly ribbon strokes sweep across the canvas with layered pigment trails and luminous droplets.",
@@ -619,6 +760,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
   },
   {
     id: "nocturne",
+    signature: true,
     name: "Nocturne",
     description:
       "Moonlit crescents, indigo haze, and floating dust motes unfold like a midnight stage set.",
@@ -658,6 +800,10 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection">> = [
 export const THEME_REGISTRY: ThemeDefinition[] = THEME_DEFINITIONS.map((theme) => ({
   ...theme,
   collection: THEME_COLLECTIONS[theme.id],
+  presentation: {
+    ...THEME_PRESENTATION_DEFAULTS[THEME_COLLECTIONS[theme.id]],
+    ...THEME_PRESENTATION_OVERRIDES[theme.id],
+  },
 }));
 
 export const THEME_MAP = THEME_REGISTRY.reduce<Record<ThemeId, ThemeDefinition>>((acc, theme) => {

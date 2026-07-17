@@ -48,7 +48,9 @@ export default function ThemePicker({
       .map((collection) => ({
         collection,
         label: THEME_COLLECTION_META[collection].label,
-        themes: themes.filter((theme) => theme.collection === collection),
+        themes: themes
+          .filter((theme) => theme.collection === collection)
+          .sort((a, b) => Number(Boolean(b.signature)) - Number(Boolean(a.signature))),
       }))
       .filter((section) => section.themes.length > 0);
   }, [activeCollection, themes]);
@@ -111,6 +113,11 @@ export default function ThemePicker({
                   >
                     <div className="relative">
                       <ThemeCanvas themeId={theme.id} height={120} interactive={false} />
+                      {theme.signature ? (
+                        <span className="pointer-events-none absolute left-2 top-2 rounded-full border border-[rgba(255,231,199,0.28)] bg-[rgba(15,10,16,0.72)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#FFE2BE] backdrop-blur-lg">
+                          Signature
+                        </span>
+                      ) : null}
                       {locked ? (
                         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
                           <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">

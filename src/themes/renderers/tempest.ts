@@ -1,15 +1,11 @@
 import { fbm } from "../shared/noise";
 import type { ThemeRenderer } from "../types";
 
-// Lightning bolt state — module-level so it persists across frames
 interface Bolt {
   points: Array<[number, number]>;
   alpha: number;
   life: number; // 0–1, countdown
 }
-
-const bolts: Bolt[] = [];
-let lastLightningTick = -1;
 
 // Rain drops (seeded, stable)
 interface Raindrop {
@@ -20,11 +16,18 @@ interface Raindrop {
   alpha: number;
 }
 
-const rain: Raindrop[] = [];
-let rainInit = false;
+interface TempestState {
+  width: number;
+  height: number;
+  bolts: Bolt[];
+  lastLightningTick: number;
+  rain: Raindrop[];
+}
 
-function initRain(w: number) {
-  rain.length = 0;
+const tempestStates = new WeakMap<CanvasRenderingContext2D, TempestState>();
+
+function createRain(w: number): Raindrop[] {
+  const rain: Raindrop[] = [];
   for (let i = 0; i < 250; i++) {
     const seed = i * 41.7;
     rain.push({
@@ -35,6 +38,28 @@ function initRain(w: number) {
       alpha: 0.12 + Math.abs(Math.sin(seed * 89.3)) * 0.22,
     });
   }
+  return rain;
+}
+
+function getTempestState(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): TempestState {
+  const current = tempestStates.get(ctx);
+  if (current && current.width === width && current.height === height) {
+    return current;
+  }
+
+  const next: TempestState = {
+    width,
+    height,
+    bolts: [],
+    lastLightningTick: -1,
+    rain: createRain(width),
+  };
+  tempestStates.set(ctx, next);
+  return next;
 }
 
 function buildBoltPoints(
@@ -42,6 +67,7 @@ function buildBoltPoints(
   x2: number, y2: number,
   depth: number,
   points: Array<[number, number]>,
+  bolts: Bolt[],
 ) {
   if (depth === 0) {
     points.push([x2, y2]);
@@ -50,23 +76,31 @@ function buildBoltPoints(
   const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 60 * depth;
   const my = (y1 + y2) / 2 + (Math.random() - 0.5) * 20;
 
-  buildBoltPoints(x1, y1, mx, my, depth - 1, points);
+  buildBoltPoints(x1, y1, mx, my, depth - 1, points, bolts);
 
   // Occasional fork
   if (depth >= 2 && Math.random() < 0.45) {
     const forkPoints: Array<[number, number]> = [[mx, my]];
     const forkX = mx + (Math.random() - 0.5) * 120;
     const forkY = my + (y2 - y1) * 0.5;
-    buildBoltPoints(mx, my, forkX, forkY, depth - 2, forkPoints);
+    buildBoltPoints(mx, my, forkX, forkY, depth - 2, forkPoints, bolts);
     bolts.push({ points: forkPoints, alpha: 1, life: 1 });
   }
 
-  buildBoltPoints(mx, my, x2, y2, depth - 1, points);
+  buildBoltPoints(mx, my, x2, y2, depth - 1, points, bolts);
 }
 
-function spawnLightning(targetX: number, h: number) {
+function spawnLightning(targetX: number, h: number, bolts: Bolt[]) {
   const boltPoints: Array<[number, number]> = [[targetX, 0]];
-  buildBoltPoints(targetX, 0, targetX + (Math.random() - 0.5) * 80, h * 0.85, 4, boltPoints);
+  buildBoltPoints(
+    targetX,
+    0,
+    targetX + (Math.random() - 0.5) * 80,
+    h * 0.85,
+    4,
+    boltPoints,
+    bolts,
+  );
   bolts.push({ points: boltPoints, alpha: 1, life: 1 });
 }
 
@@ -86,10 +120,7 @@ function drawBoltPath(ctx: CanvasRenderingContext2D, points: Array<[number, numb
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _mouseY) => {
-  if (!rainInit) {
-    initRain(width);
-    rainInit = true;
-  }
+  const state = getTempestState(ctx, width, height);
 
   // Background
   ctx.fillStyle = "#020306";
@@ -115,25 +146,25 @@ export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _
 
   // ── Lightning trigger: approx every 0.65s ──────────────────────
   const tick = Math.floor(time * 1.54);
-  if (tick !== lastLightningTick) {
-    lastLightningTick = tick;
+  if (tick !== state.lastLightningTick) {
+    state.lastLightningTick = tick;
     if (Math.random() < 0.72) {
       // bias strike x toward mouse
       const baseX = Math.random() * width;
       const targetX = baseX + (mouseX * width - baseX) * 0.65;
-      spawnLightning(targetX, height);
+      spawnLightning(targetX, height, state.bolts);
     }
   }
 
   // ── Draw and age bolts ─────────────────────────────────────────
   const decayRate = 0.055;
-  for (let bi = bolts.length - 1; bi >= 0; bi--) {
-    const bolt = bolts[bi];
+  for (let bi = state.bolts.length - 1; bi >= 0; bi--) {
+    const bolt = state.bolts[bi];
     bolt.life -= decayRate;
     bolt.alpha = Math.max(0, bolt.life);
 
     if (bolt.alpha <= 0) {
-      bolts.splice(bi, 1);
+      state.bolts.splice(bi, 1);
       continue;
     }
 
@@ -160,7 +191,7 @@ export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _
   // ── Rain ────────────────────────────────────────────────────────
   ctx.save();
   ctx.strokeStyle = "rgba(160,185,210,1)";
-  for (const drop of rain) {
+  for (const drop of state.rain) {
     const y = (drop.yOffset + time * drop.speed) % (height + 100) - 20;
     const x = drop.x;
     ctx.save();

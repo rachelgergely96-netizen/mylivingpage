@@ -73,7 +73,7 @@ export default function SamplePageCard({
             style={{ height: previewHeight }}
             interactive={interactivePreview}
           >
-            <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.62)_100%)]">
+            <div className="h-full">
               <ResumeLayout data={sample.demo.data} compact headingLevel="h2" disableExternalLinks />
             </div>
           </ThemeCanvas>
@@ -163,7 +163,7 @@ export default function SamplePageCard({
             <div className="p-4 sm:p-6">
               <div className="overflow-hidden rounded-[1.5rem] border border-[rgba(255,255,255,0.08)]">
                 <ThemeCanvas themeId={sample.demo.themeId} height="min(82vh, 920px)" className="rounded-none" interactive>
-                  <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.6)_100%)]">
+                  <div className="h-full">
                     <ResumeLayout data={sample.demo.data} disableExternalLinks />
                   </div>
                 </ThemeCanvas>

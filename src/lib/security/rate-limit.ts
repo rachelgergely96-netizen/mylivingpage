@@ -55,6 +55,12 @@ export const RATE_LIMIT_POLICIES = {
     windowMs: 10 * 60 * 1000,
     scope: "user",
   },
+  resume_import: {
+    label: "Resume import",
+    maxRequests: 12,
+    windowMs: 10 * 60 * 1000,
+    scope: "user",
+  },
 } satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMIT_POLICIES;

@@ -44,7 +44,7 @@ export default function FreeProDemo() {
       >
         {/* Theme canvas with page content overlay */}
         <ThemeCanvas themeId={themeId} height={600} interactive>
-          <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.15)_0%,rgba(0,0,0,0.35)_100%)]">
+          <div className="h-full">
             <MockPageContent isPro={isPro} viewMode={viewMode} />
           </div>
         </ThemeCanvas>

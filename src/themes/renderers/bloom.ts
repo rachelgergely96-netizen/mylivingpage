@@ -10,11 +10,16 @@ interface Pollen {
   r: number;
 }
 
-const pollen: Pollen[] = [];
-let pollenInit = false;
+interface BloomState {
+  width: number;
+  height: number;
+  pollen: Pollen[];
+}
+
+const bloomStates = new WeakMap<CanvasRenderingContext2D, BloomState>();
 
 function initPollen(w: number, h: number) {
-  pollen.length = 0;
+  const pollen: Pollen[] = [];
   for (let i = 0; i < 120; i++) {
     const seed = i * 37.3;
     pollen.push({
@@ -26,6 +31,17 @@ function initPollen(w: number, h: number) {
       r: 1 + Math.abs(Math.sin(seed * 43.7)) * 1.5,
     });
   }
+  return pollen;
+}
+
+function getBloomState(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const existing = bloomStates.get(ctx);
+  if (existing && existing.width === width && existing.height === height) {
+    return existing;
+  }
+  const state = { width, height, pollen: initPollen(width, height) };
+  bloomStates.set(ctx, state);
+  return state;
 }
 
 function drawPetal(
@@ -56,10 +72,7 @@ function drawPetal(
 }
 
 export const renderBloom: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
-  if (!pollenInit) {
-    initPollen(width, height);
-    pollenInit = true;
-  }
+  const { pollen } = getBloomState(ctx, width, height);
 
   // Clear
   ctx.fillStyle = "#0a0514";
@@ -129,12 +142,13 @@ export const renderBloom: ThemeRenderer = (ctx, width, height, time, mouseX, mou
   }
 
   // Pollen particles
-  for (const p of pollen) {
+  for (let pollenIndex = 0; pollenIndex < pollen.length; pollenIndex += 1) {
+    const p = pollen[pollenIndex];
     p.x += p.vx + Math.sin(time * 0.8 + p.y * 0.005) * 0.3;
     p.y += p.vy;
 
     if (p.y < -10) {
-      const fi = Math.floor(Math.random() * flowerCount);
+      const fi = pollenIndex % flowerCount;
       const fseed = fi * 61.3;
       p.x = Math.abs(Math.sin(fseed * 127.1)) * width;
       p.y = Math.abs(Math.sin(fseed * 311.7)) * height;

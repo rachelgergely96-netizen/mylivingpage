@@ -4,6 +4,20 @@ import { useEffect, useMemo, useRef } from "react";
 import { THEME_MAP } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 
+type ThemeCanvasStyle = React.CSSProperties & {
+  "--theme-accent": string;
+  "--theme-accent-bright": string;
+  "--theme-accent-soft": string;
+  "--theme-accent-border": string;
+  "--theme-text": string;
+  "--theme-text-muted": string;
+  "--theme-text-subtle": string;
+  "--theme-surface": string;
+  "--theme-surface-strong": string;
+  "--theme-border": string;
+  "--theme-heading-font": string;
+};
+
 interface ThemeCanvasProps {
   themeId: ThemeId;
   height?: number | string;
@@ -34,7 +48,27 @@ export default function ThemeCanvas({
   const touchActiveRef = useRef(false);
   const ambientResumeAtRef = useRef(0);
   const ambientEnabledRef = useRef(false);
+  const reducedMotionRef = useRef(false);
   const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
+  const themeStyle = useMemo<ThemeCanvasStyle>(() => {
+    const presentation = theme.presentation;
+    return {
+      "--theme-accent": presentation.accent,
+      "--theme-accent-bright": presentation.accentBright,
+      "--theme-accent-soft": presentation.accentSoft,
+      "--theme-accent-border": presentation.accentBorder,
+      "--theme-text": presentation.text,
+      "--theme-text-muted": presentation.textMuted,
+      "--theme-text-subtle": presentation.textSubtle,
+      "--theme-surface": presentation.surface,
+      "--theme-surface-strong": presentation.surfaceStrong,
+      "--theme-border": presentation.border,
+      "--theme-heading-font":
+        presentation.headingFont === "editorial"
+          ? "var(--font-playfair), serif"
+          : "var(--font-dm-sans), sans-serif",
+    };
+  }, [theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -72,6 +106,8 @@ export default function ThemeCanvas({
       const anyCoarse = anyPointerCoarseQuery?.matches ?? false;
       const prefersReducedMotion = reducedMotionQuery?.matches ?? false;
 
+      reducedMotionRef.current = prefersReducedMotion;
+
       ambientEnabledRef.current =
         mobileAmbientMotion &&
         !prefersReducedMotion &&
@@ -106,7 +142,9 @@ export default function ThemeCanvas({
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
+        return true;
       }
+      return false;
     };
 
     const container = containerRef.current;
@@ -117,6 +155,12 @@ export default function ThemeCanvas({
         theme.renderer(context, canvas.width, canvas.height, elapsed, mouseRef.current.x, mouseRef.current.y);
       } catch {
         // Prevent a single renderer error from killing the animation loop
+      }
+    };
+
+    const handleResize = () => {
+      if (resize()) {
+        renderFrame(elapsedRef.current);
       }
     };
 
@@ -146,6 +190,10 @@ export default function ThemeCanvas({
 
     const start = () => {
       if (runningRef.current || document.hidden || !visibleRef.current) {
+        return;
+      }
+      if (reducedMotionRef.current) {
+        renderFrame(elapsedRef.current);
         return;
       }
       runningRef.current = true;
@@ -186,7 +234,15 @@ export default function ThemeCanvas({
       if (!query) {
         return;
       }
-      const handleChange = () => syncAmbientMode();
+      const handleChange = () => {
+        syncAmbientMode();
+        if (reducedMotionRef.current) {
+          stop();
+          renderFrame(elapsedRef.current);
+        } else {
+          start();
+        }
+      };
       if (typeof query.addEventListener === "function" && typeof query.removeEventListener === "function") {
         query.addEventListener("change", handleChange);
         mediaQueryDisposers.push(() => query.removeEventListener("change", handleChange));
@@ -204,7 +260,7 @@ export default function ThemeCanvas({
     resize();
     applyAmbientPointer(elapsedRef.current, performance.now());
     renderFrame(elapsedRef.current);
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", handleResize);
     document.addEventListener("visibilitychange", handleVisibility);
     watchMediaQuery(pointerCoarseQuery);
     watchMediaQuery(pointerFineQuery);
@@ -214,7 +270,7 @@ export default function ThemeCanvas({
     // ResizeObserver catches late layout shifts that the initial resize() misses
     let observer: ResizeObserver | null = null;
     if (container) {
-      observer = new ResizeObserver(() => resize());
+      observer = new ResizeObserver(handleResize);
       observer.observe(container);
     }
 
@@ -248,7 +304,7 @@ export default function ThemeCanvas({
 
     return () => {
       stop();
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", handleResize);
       document.removeEventListener("visibilitychange", handleVisibility);
       mediaQueryDisposers.forEach((dispose) => dispose());
       observer?.disconnect();
@@ -266,11 +322,14 @@ export default function ThemeCanvas({
   return (
     <div
       ref={containerRef}
+      data-theme-id={theme.id}
+      data-theme-collection={theme.collection}
       className={className}
       style={{
         position: "relative",
         overflow: "hidden",
         ...(!className?.includes("rounded-none") ? { borderRadius: 16 } : {}),
+        ...themeStyle,
         ...style,
       }}
     >
@@ -284,16 +343,28 @@ export default function ThemeCanvas({
         }}
       />
       {children ? (
-        <div
-          style={{
-            pointerEvents: "auto",
-            position: "absolute",
-            inset: 0,
-            zIndex: 2,
-          }}
-        >
-          {children}
-        </div>
+        <>
+          <div
+            aria-hidden="true"
+            style={{
+              pointerEvents: "none",
+              position: "absolute",
+              inset: 0,
+              zIndex: 1,
+              background: theme.presentation.scrim,
+            }}
+          />
+          <div
+            style={{
+              pointerEvents: "auto",
+              position: "absolute",
+              inset: 0,
+              zIndex: 2,
+            }}
+          >
+            {children}
+          </div>
+        </>
       ) : null}
     </div>
   );

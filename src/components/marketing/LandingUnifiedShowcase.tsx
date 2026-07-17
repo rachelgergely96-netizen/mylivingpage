@@ -298,8 +298,8 @@ export default function LandingUnifiedShowcase() {
                     className="rounded-none"
                     interactive
                   >
-                    <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.56)_100%)] px-3 py-3 sm:px-4 sm:py-4">
-                      <div className="h-full overflow-hidden rounded-[1.35rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,14,28,0.22)]">
+                    <div className="h-full px-3 py-3 sm:px-4 sm:py-4">
+                      <div className="theme-surface h-full overflow-hidden rounded-[1.35rem] border">
                         <ResumeLayout data={SHOWCASE_RESUME} compact headingLevel="h2" disableExternalLinks />
                       </div>
                     </div>

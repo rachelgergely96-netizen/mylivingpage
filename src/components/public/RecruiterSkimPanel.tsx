@@ -47,21 +47,21 @@ export default function RecruiterSkimPanel({
   return (
     <section
       data-testid="recruiter-skim-panel"
-      className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 md:px-8"
+      className="resume-theme mx-auto max-w-4xl px-4 pt-6 sm:px-6 md:px-8"
     >
-      <div className="rounded-[2rem] border border-[rgba(59,130,246,0.2)] bg-[rgba(10,22,40,0.6)] px-4 py-4 shadow-[0_24px_70px_rgba(2,6,23,0.3)] backdrop-blur-xl sm:px-5 sm:py-4">
+      <div className="theme-surface-strong rounded-[2rem] border px-4 py-4 sm:px-5 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+            <p className="resume-theme-accent text-[10px] uppercase tracking-[0.18em]">
               Recruiter version
             </p>
-            <p className="mt-1 text-sm text-[rgba(240,244,255,0.58)]">{variantLabel}</p>
+            <p className="resume-theme-muted mt-1 text-sm">{variantLabel}</p>
             {visibleChips.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {visibleChips.map((point) => (
                   <span
                     key={`collapsed-${point}`}
-                    className="rounded-full border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-xs text-[#BFDBFE]"
+                    className="theme-tag rounded-full border px-3 py-1.5 text-xs"
                   >
                     {point}
                   </span>
@@ -74,7 +74,7 @@ export default function RecruiterSkimPanel({
             aria-expanded={expanded}
             aria-controls={contentId}
             onClick={() => setExpanded((current) => !current)}
-            className="inline-flex items-center gap-2 self-start rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(10,22,40,0.82)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.76)] transition-colors hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD] sm:self-center"
+            className="theme-surface resume-theme-link inline-flex items-center gap-2 self-start rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors sm:self-center"
           >
             <span>{expanded ? "Collapse recruiter skim" : "Expand recruiter skim"}</span>
             <svg
@@ -94,32 +94,32 @@ export default function RecruiterSkimPanel({
           <div
             id={contentId}
             data-testid="recruiter-skim-content"
-            className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4"
+            className="theme-divider mt-4 border-t pt-4"
           >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl space-y-4">
                 {roleHeading ? (
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+                    <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
                       Target role
                     </p>
-                    <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF] sm:text-2xl">
+                    <h2 className="resume-theme-name mt-2 text-xl font-semibold sm:text-2xl">
                       {roleHeading}
                     </h2>
                   </div>
                 ) : null}
                 {summary ? (
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+                    <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
                       Opening summary
                     </p>
-                    <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.7)]">
+                    <p className="resume-theme-muted mt-2 max-w-3xl text-sm leading-7">
                       {summary}
                     </p>
                   </div>
                 ) : null}
                 {ctaEmphasis ? (
-                  <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(229,183,107,0.08)] px-3 py-1.5 text-xs text-[#F5D7A2]">
+                  <p className="theme-tag inline-flex rounded-full border px-3 py-1.5 text-xs">
                     {ctaEmphasis}
                   </p>
                 ) : null}
@@ -135,7 +135,7 @@ export default function RecruiterSkimPanel({
                 {resumeData.email ? (
                   <a
                     href={`mailto:${resumeData.email}`}
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm"
+                    className="theme-surface-strong theme-link rounded-full border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                   >
                     Email
                   </a>
@@ -145,14 +145,14 @@ export default function RecruiterSkimPanel({
                     href={toHref(resumeData.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm"
+                    className="theme-surface-strong theme-link rounded-full border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                   >
                     LinkedIn
                   </a>
                 ) : null}
                 <a
                   href={publicPath}
-                  className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm"
+                  className="theme-surface-strong theme-link rounded-full border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                 >
                   Open current page
                 </a>
@@ -160,14 +160,14 @@ export default function RecruiterSkimPanel({
             </div>
 
             {featuredProject ? (
-              <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+              <div className="theme-surface mt-5 rounded-2xl border p-4">
+                <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
                   Featured work sample
                 </p>
                 <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div className="max-w-2xl">
-                    <p className="font-heading text-xl text-[#F0F4FF]">{featuredProject.name}</p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+                    <p className="resume-theme-name text-xl">{featuredProject.name}</p>
+                    <p className="resume-theme-muted mt-2 text-sm leading-6">
                       {featuredProject.description}
                     </p>
                     {featuredProject.tech.length > 0 ? (
@@ -175,7 +175,7 @@ export default function RecruiterSkimPanel({
                         {featuredProject.tech.slice(0, 4).map((tech) => (
                           <span
                             key={tech}
-                            className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(6,14,28,0.4)] px-3 py-1 text-xs text-[rgba(240,244,255,0.7)]"
+                            className="theme-tag rounded-full border px-3 py-1 text-xs"
                           >
                             {tech}
                           </span>
@@ -188,7 +188,7 @@ export default function RecruiterSkimPanel({
                       href={toHref(featuredProject.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-full border border-[rgba(59,130,246,0.28)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
+                      className="theme-link rounded-full border border-[var(--theme-accent-border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors"
                     >
                       Open project
                     </a>

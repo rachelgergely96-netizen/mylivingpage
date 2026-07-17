@@ -214,7 +214,7 @@ export default async function PublicLivingPage({
         mobileAmbientMotion
       >
         <PageOwnerBar pageId={page.id} pageUserId={pageUserId}>
-          <div className="h-full bg-[radial-gradient(ellipse_at_30%_20%,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.58)_100%)]">
+          <div className="h-full">
             <div
               data-analytics-scroll-root="true"
               className="h-full overflow-y-auto scrollbar-hide"

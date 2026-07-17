@@ -14,11 +14,8 @@ interface ThreadConfig {
   alpha: number;
 }
 
-const threads: ThreadConfig[] = [];
-let threadsInit = false;
-
-function initThreads() {
-  threads.length = 0;
+function createThreads(): ThreadConfig[] {
+  const threads: ThreadConfig[] = [];
   const count = 28;
   for (let i = 0; i < count; i++) {
     const seed = i * 47.9;
@@ -36,14 +33,12 @@ function initThreads() {
       alpha: 0.28 + Math.abs(s(37.1)) * 0.55,
     });
   }
+  return threads;
 }
 
-export const renderSilk: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
-  if (!threadsInit) {
-    initThreads();
-    threadsInit = true;
-  }
+const THREADS = createThreads();
 
+export const renderSilk: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
   // Clear with slight trail for silkier motion
   ctx.fillStyle = "rgba(4,6,18,0.88)";
   ctx.fillRect(0, 0, width, height);
@@ -52,7 +47,7 @@ export const renderSilk: ThemeRenderer = (ctx, width, height, time, mouseX, mous
   const my = mouseY * height;
   const steps = Math.ceil(width / 2); // sample every 2px for performance
 
-  for (const thread of threads) {
+  for (const thread of THREADS) {
     const baseY = thread.baseY * height;
     const mouseInfluenceRadius = 220;
 

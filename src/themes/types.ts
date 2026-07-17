@@ -100,6 +100,21 @@ export type ThemeRenderer = (
   mouseY: number,
 ) => void;
 
+export interface ThemePresentation {
+  accent: string;
+  accentBright: string;
+  accentSoft: string;
+  accentBorder: string;
+  text: string;
+  textMuted: string;
+  textSubtle: string;
+  surface: string;
+  surfaceStrong: string;
+  border: string;
+  scrim: string;
+  headingFont: "editorial" | "modern";
+}
+
 export interface ThemeMeta {
   id: ThemeId;
   collection: ThemeCollectionId;
@@ -107,6 +122,8 @@ export interface ThemeMeta {
   description: string;
   vibe: string;
   background: string;
+  presentation: ThemePresentation;
+  signature?: boolean;
 }
 
 export interface ThemeDefinition extends ThemeMeta {

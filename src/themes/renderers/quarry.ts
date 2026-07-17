@@ -2,77 +2,125 @@ import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
+function strataY(x: number, w: number, h: number, layer: number, t: number) {
+  const normalized = x / Math.max(w, 1);
+  return (
+    h * (0.1 + layer * 0.115) +
+    Math.sin(normalized * 6.2 + layer * 0.82 + t * 0.08) * (8 + layer * 0.8) +
+    Math.sin(normalized * 14.5 - layer * 0.34) * 3
+  );
+}
+
 export const renderQuarry: ThemeRenderer = (ctx, w, h, t, mx, my) => {
-  const background = ctx.createLinearGradient(0, 0, 0, h);
-  background.addColorStop(0, "#110D0B");
-  background.addColorStop(0.56, "#0B0807");
-  background.addColorStop(1, "#050403");
+  const background = ctx.createLinearGradient(0, 0, w, h);
+  background.addColorStop(0, "#120D09");
+  background.addColorStop(0.5, "#0A0705");
+  background.addColorStop(1, "#030302");
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, w, h);
 
-  const layers = 7;
-  const lightShift = (mx - 0.5) * 40;
-  for (let layer = 0; layer < layers; layer += 1) {
-    const topY = h * (0.14 + layer * 0.12) + Math.sin(t * 0.16 + layer) * 10;
-    const bottomY = topY + h * (0.14 + layer * 0.008);
-    const segments = 6;
-    const points: Array<[number, number]> = [];
+  const palette = [
+    [62, 42, 29],
+    [79, 51, 35],
+    [50, 37, 29],
+    [91, 59, 38],
+    [55, 40, 31],
+    [77, 50, 34],
+    [43, 33, 27],
+    [66, 45, 33],
+  ];
 
-    for (let i = 0; i <= segments; i += 1) {
-      const x = (i / segments) * w;
-      const y = topY + Math.sin(i * 0.9 + layer * 0.6 + t * 0.18) * 12 + (my - 0.5) * 10;
-      points.push([x, y]);
-    }
-    for (let i = segments; i >= 0; i -= 1) {
-      const x = (i / segments) * w;
-      const y = bottomY + Math.cos(i * 0.8 + layer * 0.5 + t * 0.14) * 10;
-      points.push([x, y]);
+  for (let layer = 0; layer < palette.length; layer += 1) {
+    const top: Array<[number, number]> = [];
+    const bottom: Array<[number, number]> = [];
+    const thickness = h * (0.13 + (layer % 3) * 0.008);
+    for (let x = -12; x <= w + 12; x += Math.max(20, w / 18)) {
+      const topY = strataY(x, w, h, layer, t) + (my - 0.5) * (layer + 1) * 1.5;
+      top.push([x, topY]);
+      bottom.push([x, topY + thickness + Math.cos(x * 0.012 + layer) * 5]);
     }
 
     ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (let i = 1; i < points.length; i += 1) {
-      ctx.lineTo(points[i][0], points[i][1]);
-    }
+    ctx.moveTo(top[0][0], top[0][1]);
+    top.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
+    bottom.slice().reverse().forEach(([x, y]) => ctx.lineTo(x, y));
     ctx.closePath();
 
-    const fill = ctx.createLinearGradient(0, topY, w, bottomY);
-    fill.addColorStop(0, `rgba(${60 + layer * 8}, ${44 + layer * 6}, ${35 + layer * 4}, 0.76)`);
-    fill.addColorStop(1, `rgba(${26 + layer * 5}, ${20 + layer * 4}, ${16 + layer * 3}, 0.94)`);
+    const [r, g, b] = palette[layer];
+    const fill = ctx.createLinearGradient(0, top[0][1], w, bottom[0][1]);
+    fill.addColorStop(0, `rgba(${Math.max(0, r - 18)}, ${Math.max(0, g - 12)}, ${Math.max(0, b - 8)}, 0.9)`);
+    fill.addColorStop(0.58, `rgba(${r}, ${g}, ${b}, 0.96)`);
+    fill.addColorStop(1, `rgba(${r + 18}, ${g + 12}, ${b + 7}, 0.88)`);
     ctx.fillStyle = fill;
     ctx.fill();
 
     ctx.beginPath();
-    for (let i = 0; i <= segments; i += 1) {
-      const x = (i / segments) * w;
-      const y = topY + Math.sin(i * 0.9 + layer * 0.6 + t * 0.18) * 12 + (my - 0.5) * 10;
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-    ctx.strokeStyle = `rgba(${166 + layer * 6}, ${116 + layer * 4}, ${82 + layer * 2}, ${0.1 + layer * 0.01})`;
-    ctx.lineWidth = 1.3;
+    top.forEach(([x, y], index) => {
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = `rgba(239, 177, 113, ${0.12 + (layer % 3) * 0.025})`;
+    ctx.lineWidth = 1.15;
     ctx.stroke();
-
-    const seamX = ((layer * 73 + t * 36) % (w + 180)) - 90 + lightShift;
-    const seam = ctx.createLinearGradient(seamX - 50, topY, seamX + 50, topY);
-    seam.addColorStop(0, "rgba(255, 215, 170, 0)");
-    seam.addColorStop(0.5, "rgba(255, 212, 170, 0.12)");
-    seam.addColorStop(1, "rgba(255, 215, 170, 0)");
-    ctx.fillStyle = seam;
-    ctx.fillRect(seamX - 50, topY - 10, 100, bottomY - topY + 20);
   }
 
-  for (let i = 0; i < 44; i += 1) {
-    const seed = i * 0.63 + 0.2;
-    const progress = (t * (0.03 + (i % 3) * 0.008) + seed * 0.2) % 1;
-    const x = (Math.sin(seed * 4.1) * 0.5 + 0.5) * w;
-    const y = h * 0.92 - progress * h * 0.84;
+  const faultX = w * (0.7 + (mx - 0.5) * 0.08);
+  const faultPoints: Array<[number, number]> = [];
+  for (let y = -20; y <= h + 20; y += h / 12) {
+    const normalized = y / Math.max(h, 1);
+    const x = faultX + Math.sin(normalized * 10.4 + t * 0.12) * w * 0.035 + Math.sin(normalized * 27) * w * 0.01;
+    faultPoints.push([x, y]);
+  }
+
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 143, 61, 0.52)";
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  faultPoints.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = "rgba(255, 166, 91, 0.34)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  faultPoints.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = "rgba(255, 220, 174, 0.52)";
+  ctx.lineWidth = 0.65;
+  ctx.stroke();
+
+  for (let branch = 0; branch < 5; branch += 1) {
+    const anchor = faultPoints[2 + branch * 2];
+    if (!anchor) continue;
+    const direction = branch % 2 === 0 ? -1 : 1;
     ctx.beginPath();
-    ctx.arc(x, y, 1.1, 0, TAU);
-    ctx.fillStyle = `rgba(230, 205, 180, ${(1 - progress) * 0.12})`;
+    ctx.moveTo(anchor[0], anchor[1]);
+    ctx.lineTo(anchor[0] + direction * w * (0.06 + branch * 0.012), anchor[1] + h * 0.045);
+    ctx.lineTo(anchor[0] + direction * w * (0.1 + branch * 0.008), anchor[1] + h * 0.09);
+    ctx.strokeStyle = "rgba(236, 144, 77, 0.18)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < 86; i += 1) {
+    const seed = i * 0.621 + 0.16;
+    const x = (Math.sin(seed * 5.1) * 0.5 + 0.5) * w;
+    const y = (Math.cos(seed * 3.9) * 0.5 + 0.5) * h;
+    const radius = 0.45 + (i % 4) * 0.24;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, TAU);
+    ctx.fillStyle = `rgba(246, 218, 188, ${0.025 + (i % 5) * 0.008})`;
     ctx.fill();
   }
+
+  const light = ctx.createLinearGradient(w * 0.42, 0, w, 0);
+  light.addColorStop(0, "rgba(255, 201, 143, 0)");
+  light.addColorStop(1, "rgba(255, 190, 125, 0.07)");
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, w, h);
 };

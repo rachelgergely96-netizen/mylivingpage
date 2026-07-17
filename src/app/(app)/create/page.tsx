@@ -7,6 +7,7 @@ import AtsReadinessCard from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
 import JobSeekerStarterKit from "@/components/create/JobSeekerStarterKit";
+import ResumeImport from "@/components/create/ResumeImport";
 import VariantPlanner from "@/components/create/VariantPlanner";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
@@ -75,12 +76,38 @@ const DEFAULT_JOB_SEEKER_PROFILE: JobSeekerProfile = {
   target_audience: "recruiter",
 };
 
+function hasGuidedDraftContent(data: Partial<ResumeData>) {
+  const hasText = [
+    data.name,
+    data.headline,
+    data.location,
+    data.email,
+    data.linkedin,
+    data.github,
+    data.website,
+    data.summary,
+  ].some((value) => value?.trim());
+  const hasListContent = [
+    data.experience,
+    data.education,
+    data.projects,
+    data.certifications,
+    data.stats,
+    data.proofs,
+    data.testimonials,
+  ].some((items) => (items?.length ?? 0) > 0);
+  const hasSkills = data.skills?.some((group) => group.items.some((item) => item.trim())) ?? false;
+
+  return hasText || hasListContent || hasSkills;
+}
+
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>(EMPTY_GUIDED_DATA);
   const [resumeText, setResumeText] = useState("");
+  const [guidedFlowVersion, setGuidedFlowVersion] = useState(0);
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>("cosmic");
   const [error, setError] = useState("");
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
@@ -470,6 +497,20 @@ export default function CreatePage() {
 
       {!atPageLimit && step === "input" ? (
         <section className="space-y-4">
+          <ResumeImport
+            hasExistingData={Boolean(
+              resumeText.trim() || hasGuidedDraftContent(guidedData),
+            )}
+            onImported={(result) => {
+              setResumeText(result.text);
+              setGuidedData(result.data);
+              setParsedData(null);
+              setVariants([]);
+              setSelectedPreviewVariantId(null);
+              setError("");
+              setGuidedFlowVersion((version) => version + 1);
+            }}
+          />
           <JobSeekerStarterKit
             value={jobSeekerProfile}
             onChange={setJobSeekerProfile}
@@ -481,19 +522,20 @@ export default function CreatePage() {
                 Private guided entry
               </p>
               <p className="mt-2 text-sm text-[#F0F4FF]">
-                Add your details section by section, then preview everything before publishing.
-                No AI service reads or rewrites your resume.
+                Review or add your details section by section, then preview everything before
+                publishing. Resume imports are used only to autofill these editable fields—no AI
+                service reads or rewrites your resume.
               </p>
             </div>
           </div>
           {resumeText.trim() ? (
             <details className="rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.07)] p-4">
               <summary className="cursor-pointer text-sm font-medium text-[#FDE68A]">
-                Your saved resume text is available as a reference
+                Imported resume text is available as a reference
               </summary>
               <p className="mt-3 text-xs leading-5 text-[rgba(240,244,255,0.58)]">
-                This came from an older draft. Copy the details you want into the guided fields
-                below. The text is kept locally and is not sent to an AI provider.
+                This text stays in your local draft so you can compare it with the autofilled
+                fields below. It is not saved with your published page.
               </p>
               <textarea
                 readOnly
@@ -511,6 +553,7 @@ export default function CreatePage() {
             </details>
           ) : null}
           <GuidedFlow
+            key={guidedFlowVersion}
             guidedData={guidedData}
             onUpdate={setGuidedData}
             onComplete={(data) => {
@@ -636,7 +679,7 @@ export default function CreatePage() {
                 </div>
               </div>
               <ThemeCanvas themeId={selectedTheme} height="min(540px, calc(100dvh - 280px))" className="rounded-none">
-                <div className="h-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.55)_100%)]">
+                <div className="h-full">
                   <ResumeLayout data={previewData} />
                 </div>
               </ThemeCanvas>

@@ -4,11 +4,8 @@ import type { ThemeRenderer } from "../types";
 // Crack path (array of [x,y] points)
 type CrackPath = Array<[number, number]>;
 
-const cracks: CrackPath[] = [];
-let cracksInit = false;
-
-function buildCracks(w: number, h: number) {
-  cracks.length = 0;
+function buildCracks(w: number, h: number): CrackPath[] {
+  const cracks: CrackPath[] = [];
   const count = 18;
 
   for (let i = 0; i < count; i++) {
@@ -46,6 +43,7 @@ function buildCracks(w: number, h: number) {
 
     cracks.push(path);
   }
+  return cracks;
 }
 
 // Heat particles
@@ -58,10 +56,16 @@ interface Particle {
   crackIdx: number;
 }
 
-const particles: Particle[] = [];
-let particlesInit = false;
+interface ObsidianState {
+  width: number;
+  height: number;
+  cracks: CrackPath[];
+  particles: Particle[];
+}
 
-function resetParticle(p: Particle, w: number) {
+const obsidianStates = new WeakMap<CanvasRenderingContext2D, ObsidianState>();
+
+function resetParticle(p: Particle, w: number, cracks: CrackPath[]) {
   const crack = cracks[p.crackIdx];
   if (!crack || crack.length === 0) {
     p.x = Math.random() * w;
@@ -76,18 +80,40 @@ function resetParticle(p: Particle, w: number) {
   p.r = 0.8 + Math.random() * 1.4;
 }
 
-function initParticles(w: number) {
-  particles.length = 0;
+function createParticles(w: number, cracks: CrackPath[]): Particle[] {
+  const particles: Particle[] = [];
   for (let i = 0; i < 90; i++) {
     const p: Particle = {
       x: 0, y: 0, vy: 0, alpha: 0, r: 1,
       crackIdx: i % cracks.length,
     };
-    resetParticle(p, w);
+    resetParticle(p, w, cracks);
     // Scatter starting y
     p.y += Math.random() * 600;
     particles.push(p);
   }
+  return particles;
+}
+
+function getObsidianState(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): ObsidianState {
+  const current = obsidianStates.get(ctx);
+  if (current && current.width === width && current.height === height) {
+    return current;
+  }
+
+  const cracks = buildCracks(width, height);
+  const next: ObsidianState = {
+    width,
+    height,
+    cracks,
+    particles: createParticles(width, cracks),
+  };
+  obsidianStates.set(ctx, next);
+  return next;
 }
 
 function drawCrack(
@@ -132,14 +158,7 @@ function drawCrack(
 }
 
 export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
-  if (!cracksInit) {
-    buildCracks(width, height);
-    cracksInit = true;
-  }
-  if (!particlesInit && cracks.length > 0) {
-    initParticles(width);
-    particlesInit = true;
-  }
+  const state = getObsidianState(ctx, width, height);
 
   const mx = mouseX * width;
   const my = mouseY * height;
@@ -163,8 +182,8 @@ export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, 
   }
 
   // ── Cracks ──────────────────────────────────────────────────────
-  for (let i = 0; i < cracks.length; i++) {
-    const crack = cracks[i];
+  for (let i = 0; i < state.cracks.length; i++) {
+    const crack = state.cracks[i];
     const crackSeed = i * 0.71;
 
     // Breathing pulse per crack
@@ -186,13 +205,13 @@ export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, 
   }
 
   // ── Heat particles ───────────────────────────────────────────────
-  for (const p of particles) {
+  for (const p of state.particles) {
     p.y += p.vy;
     p.x += Math.sin(time * 1.1 + p.y * 0.02) * 0.4;
     p.alpha -= 0.004;
 
     if (p.alpha <= 0 || p.y < -10) {
-      resetParticle(p, width);
+      resetParticle(p, width, state.cracks);
     }
 
     // Particles near mouse rise faster
@@ -201,7 +220,7 @@ export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, 
       p.vy -= 0.02 * (1 - dist / 100);
     }
 
-    const hue = 20 + Math.random() * 20; // orange-red
+    const hue = 20 + (p.crackIdx % 7) * 3;
     ctx.save();
     ctx.globalAlpha = p.alpha * 0.75;
     ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;

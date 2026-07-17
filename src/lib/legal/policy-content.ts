@@ -37,6 +37,120 @@ function getSecurityEmail(site: LegalSiteConfig): string {
   return process.env.NEXT_PUBLIC_SECURITY_EMAIL?.trim() || site.contactEmailPlaceholder;
 }
 
+function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
+  if (site.id === "mylivingpage") {
+    return [
+      {
+        id: "free-service-legacy-billing",
+        heading: "Free Service and Legacy Billing",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "MyLivingPage currently provides one living resume, public hosting, PDF exports, Share Cards, themes, targeted versions, and analytics without a subscription or payment card. We do not offer new paid plans at this time.",
+          },
+          {
+            type: "paragraph",
+            text: "If you previously started a paid subscription, Stripe may continue processing its recurring charges until you cancel it in account settings. Current free access does not depend on keeping that legacy subscription.",
+          },
+        ],
+      },
+      {
+        id: "legacy-subscription-cancellation",
+        heading: "Legacy Subscription Cancellation and Refunds",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "These billing terms apply only if your account still has a legacy paid subscription.",
+              "You may cancel a legacy subscription at any time from the Stripe customer billing portal linked in account settings.",
+              "Cancellation stops future renewals and generally takes effect at the end of the current paid period. Your access to the current free Service remains available.",
+              "Except where required by applicable law, previously charged fees are non-refundable and we do not provide prorated refunds for partial billing periods.",
+              "If you delete your account, any active legacy subscription is canceled before account deletion is finalized.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "legacy-payment-status",
+        heading: "Legacy Payment Status",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "A failed or declined charge may affect only a legacy subscription. It does not remove current free access to the core Service. We may retry a failed legacy charge through our payment processor in accordance with processor rules.",
+          },
+        ],
+      },
+      {
+        id: "future-optional-paid-services",
+        heading: "Future Optional Paid Services",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "If we later introduce an optional paid service, we will clearly disclose its price, billing period, renewal, cancellation, and refund terms before collecting billing information, and we will require your express authorization before charging you. These Terms do not authorize charges for the currently free Service.",
+          },
+        ],
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "paid-services",
+      heading: "Paid Services and Billing",
+      blocks: [
+        {
+          type: "paragraph",
+          text: "Certain features require a paid subscription. Current paid pricing and plan details are shown at checkout and in account settings. Payment processing is provided by Stripe, Inc.",
+        },
+        {
+          type: "paragraph",
+          text: "By starting a paid subscription, you authorize recurring monthly charges to your selected payment method until canceled.",
+        },
+      ],
+    },
+    {
+      id: "subscription-renewal-cancellation",
+      heading: "Auto-Renewal, Cancellation, and Refunds",
+      blocks: [
+        {
+          type: "list",
+          items: [
+            "Paid subscriptions renew automatically each billing cycle unless canceled.",
+            "You may cancel at any time from the Stripe customer billing portal linked in account settings.",
+            "Cancellation stops future renewals and generally takes effect at the end of the current paid period.",
+            "Except where required by applicable law, fees are non-refundable and we do not provide prorated refunds for partial billing periods.",
+            "If you delete your account, active subscriptions are canceled before account deletion is finalized.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "failed-payments-and-plan-status",
+      heading: "Failed Payments and Plan Status",
+      blocks: [
+        {
+          type: "paragraph",
+          text: "If payment fails or a charge is declined, your paid features may be suspended or your account may be downgraded until billing is resolved. We may retry failed charges through our payment processor in accordance with processor rules.",
+        },
+      ],
+    },
+    {
+      id: "taxes-price-changes-chargebacks",
+      heading: "Taxes, Price Changes, and Chargebacks",
+      blocks: [
+        {
+          type: "list",
+          items: [
+            "You are responsible for applicable taxes, duties, or government charges associated with your subscription.",
+            "We may change pricing or plan features with advance notice before the change takes effect for future billing periods.",
+            "If you initiate a chargeback or payment dispute in bad faith, we may suspend or terminate access pending resolution.",
+          ],
+        },
+      ],
+    },
+  ];
+}
+
 function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
   return [
     {
@@ -157,13 +271,16 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
         },
       ],
     },
-    {
-      id: "termination",
-      heading: "Termination",
-      blocks: [
-        {
-          type: "paragraph",
-          text: "You may stop using the Service at any time. We may suspend or terminate access for violations, legal requirements, abuse risks, unpaid fees, or security concerns. Sections that by nature should survive termination will survive.",
+      {
+        id: "termination",
+        heading: "Termination",
+        blocks: [
+          {
+            type: "paragraph",
+            text:
+              site.id === "mylivingpage"
+                ? "You may stop using the Service at any time. We may suspend or terminate access for violations, legal requirements, abuse risks, unpaid amounts tied to a paid service you expressly chose, or security concerns. Sections that by nature should survive termination will survive."
+                : "You may stop using the Service at any time. We may suspend or terminate access for violations, legal requirements, abuse risks, unpaid fees, or security concerns. Sections that by nature should survive termination will survive.",
         },
       ],
     },
@@ -291,60 +408,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           },
         ],
       },
-      {
-        id: "paid-services",
-        heading: "Paid Services and Billing",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "Certain features require a paid subscription. Current paid pricing and plan details are shown at checkout and in account settings. Payment processing is provided by Stripe, Inc.",
-          },
-          {
-            type: "paragraph",
-            text: "By starting a paid subscription, you authorize recurring monthly charges to your selected payment method until canceled.",
-          },
-        ],
-      },
-      {
-        id: "subscription-renewal-cancellation",
-        heading: "Auto-Renewal, Cancellation, and Refunds",
-        blocks: [
-          {
-            type: "list",
-            items: [
-              "Paid subscriptions renew automatically each billing cycle unless canceled.",
-              "You may cancel at any time from the Stripe customer billing portal linked in account settings.",
-              "Cancellation stops future renewals and generally takes effect at the end of the current paid period.",
-              "Except where required by applicable law, fees are non-refundable and we do not provide prorated refunds for partial billing periods.",
-              "If you delete your account, active subscriptions are canceled before account deletion is finalized.",
-            ],
-          },
-        ],
-      },
-      {
-        id: "failed-payments-and-plan-status",
-        heading: "Failed Payments and Plan Status",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "If payment fails or a charge is declined, your paid features may be suspended or your account may be downgraded until billing is resolved. We may retry failed charges through our payment processor in accordance with processor rules.",
-          },
-        ],
-      },
-      {
-        id: "taxes-price-changes-chargebacks",
-        heading: "Taxes, Price Changes, and Chargebacks",
-        blocks: [
-          {
-            type: "list",
-            items: [
-              "You are responsible for applicable taxes, duties, or government charges associated with your subscription.",
-              "We may change pricing or plan features with advance notice before the change takes effect for future billing periods.",
-              "If you initiate a chargeback or payment dispute in bad faith, we may suspend or terminate access pending resolution.",
-            ],
-          },
-        ],
-      },
+      ...getBillingTermsSections(site),
       {
         id: "third-party-services",
         heading: "Third-Party Services",
@@ -352,7 +416,9 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "Stripe (payments and billing portal)",
+              site.id === "mylivingpage"
+                ? "Stripe (legacy subscription records and billing portal, where applicable)"
+                : "Stripe (payments and billing portal)",
               "Supabase (authentication, database, and object storage)",
               "Vercel (application hosting and delivery)",
               "Google OAuth (optional social sign-in)",
@@ -424,7 +490,9 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
               "Identifiers: name, username, email, account ID, device IDs, and IP address.",
               "Profile and content: text, photos, links, notes, files, and user-submitted materials.",
               "Usage data: logs, interactions, diagnostics, and performance metrics.",
-              "Transactions: subscription status, invoice references, and billing metadata from Stripe. Full payment card numbers are processed by Stripe and are not stored on our servers.",
+              site.id === "mylivingpage"
+                ? "Legacy transactions, where applicable: subscription status, invoice references, and billing metadata from Stripe. Full payment card numbers are processed by Stripe and are not stored on our servers."
+                : "Transactions: subscription status, invoice references, and billing metadata from Stripe. Full payment card numbers are processed by Stripe and are not stored on our servers.",
               "Support data: messages, reports, and feedback.",
             ],
           },
@@ -454,7 +522,9 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
             items: [
               "Provide, secure, maintain, and improve the Service.",
               "Operate resume building, exports, and sharing features.",
-              "Process payments and provide customer support.",
+              site.id === "mylivingpage"
+                ? "Maintain legacy billing records where applicable and provide customer support."
+                : "Process payments and provide customer support.",
               "Detect abuse, fraud, and policy violations.",
               "Comply with legal obligations.",
             ],
@@ -470,10 +540,14 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
             items: [
               "Infrastructure and hosting providers.",
               "Analytics, communications, and support vendors.",
-              "Payment and billing providers.",
+              site.id === "mylivingpage"
+                ? "Legacy payment and billing providers, where applicable."
+                : "Payment and billing providers.",
               "Security and fraud prevention providers.",
               "Professional advisors and authorities where legally required.",
-              "Primary providers include Supabase, Vercel, Stripe, and Google OAuth (if you choose Google sign-in).",
+              site.id === "mylivingpage"
+                ? "Primary providers include Supabase, Vercel, Stripe for legacy billing where applicable, and Google OAuth if you choose Google sign-in."
+                : "Primary providers include Supabase, Vercel, Stripe, and Google OAuth (if you choose Google sign-in).",
             ],
           },
         ],

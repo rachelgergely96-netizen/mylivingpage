@@ -11,27 +11,44 @@ import {
 } from "@/lib/share-card";
 import { slugifyUsername } from "@/lib/usernames";
 import type { ThemeId } from "@/themes/types";
+import type { ResumeData } from "@/types/resume";
 
 interface LandingStoryShareCardProps {
+  data?: ResumeData;
+  headingLevel?: "h2" | "h3";
+  qrLabel?: string;
+  sharePath?: `/${string}`;
   themeId: ThemeId;
 }
 
 const STORY_RESUME = DEMO_PAGES[0]?.data;
 
-export function LandingStoryShareCard({ themeId }: LandingStoryShareCardProps) {
-  if (!STORY_RESUME) {
+export function LandingStoryShareCard({
+  data = STORY_RESUME,
+  headingLevel = "h3",
+  qrLabel = "Scan to open the full page",
+  sharePath,
+  themeId,
+}: LandingStoryShareCardProps) {
+  if (!data) {
     return null;
   }
 
-  const slug = slugifyUsername(STORY_RESUME.name || "member");
+  const slug = slugifyUsername(data.name || "member");
   const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
-  const livePageUrl = toLivePageUrl(appUrl, slug);
-  const displayUrl = truncate(toDisplayDomainUrl(appUrl, slug), 36);
+  const livePageUrl = sharePath
+    ? new URL(sharePath, `${appUrl}/`).toString()
+    : toLivePageUrl(appUrl, slug);
+  const displayUrl = truncate(
+    sharePath ? livePageUrl.replace(/^https?:\/\//, "") : toDisplayDomainUrl(appUrl, slug),
+    36,
+  );
   const visual = getShareCardVisual(themeId);
   const qrDataUrl = buildQrDataUrl(livePageUrl);
-  const tags = getShareCardTags(STORY_RESUME);
-  const name = truncate(STORY_RESUME.name || "MyLivingPage User", 34);
-  const headline = truncate(STORY_RESUME.headline || "Professional profile", 60);
+  const tags = getShareCardTags(data);
+  const name = truncate(data.name || "MyLivingPage User", 34);
+  const headline = truncate(data.headline || "Professional profile", 60);
+  const Heading = headingLevel;
 
   return (
     <article
@@ -54,9 +71,9 @@ export function LandingStoryShareCard({ themeId }: LandingStoryShareCardProps) {
           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[rgba(240,244,255,0.5)] sm:text-[10px]">
             Share card
           </p>
-          <h3 className="mt-2 truncate font-heading text-xl font-bold text-[#F0F4FF] sm:text-3xl">
+          <Heading className="mt-2 truncate font-heading text-xl font-bold text-[#F0F4FF] sm:text-3xl">
             {name}
-          </h3>
+          </Heading>
           <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-[rgba(240,244,255,0.74)] sm:text-sm">
             {headline}
           </p>
@@ -84,7 +101,7 @@ export function LandingStoryShareCard({ themeId }: LandingStoryShareCardProps) {
 
       <div className="relative mt-4 grid grid-cols-[minmax(0,1fr)_72px] items-center gap-3 rounded-[1rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(5,12,24,0.48)] p-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:p-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold text-[#F0F4FF] sm:text-xs">Scan to open the full page</p>
+          <p className="text-[10px] font-semibold text-[#F0F4FF] sm:text-xs">{qrLabel}</p>
           <p className="mt-1 truncate font-mono text-[8px] text-[rgba(240,244,255,0.46)] sm:text-[10px]">
             {displayUrl}
           </p>
@@ -103,12 +120,15 @@ export function LandingStoryShareCard({ themeId }: LandingStoryShareCardProps) {
         )}
       </div>
 
-      <div className="relative mt-3 flex items-center gap-2 text-[8px] font-semibold uppercase tracking-[0.14em] sm:mt-4 sm:text-[9px]">
+      <div
+        className="relative mt-3 flex items-center gap-2 text-[8px] font-semibold uppercase tracking-[0.14em] sm:mt-4 sm:text-[9px]"
+        aria-label="Share options included with the finished card"
+      >
         <span className="rounded-full border border-[rgba(59,130,246,0.32)] bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[#BFDBFE]">
-          Copy link
+          Link included
         </span>
         <span className="rounded-full border border-[rgba(255,255,255,0.1)] px-2.5 py-1 text-[rgba(240,244,255,0.5)]">
-          Download PNG
+          PNG export
         </span>
       </div>
     </article>

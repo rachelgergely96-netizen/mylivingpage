@@ -114,7 +114,12 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
   },
 };
 
-const MYLIVINGPAGE_POLICIES: LegalPolicyId[] = ["terms", "privacy"];
+const MYLIVINGPAGE_POLICIES: LegalPolicyId[] = [
+  "terms",
+  "privacy",
+  "security",
+  "delete-account",
+];
 
 const SECOND_SITE_POLICIES: LegalPolicyId[] = [
   "terms",

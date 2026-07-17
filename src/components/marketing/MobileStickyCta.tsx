@@ -78,20 +78,20 @@ export default function MobileStickyCta({
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-300 md:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-300 motion-reduce:transition-none md:hidden ${
         isShown ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
       }`}
       aria-hidden={!isShown}
       data-testid="mobile-sticky-cta"
     >
-      <div className="mx-auto flex max-w-lg items-center gap-2 rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(8,14,28,0.94)] px-3 py-2 shadow-[0_-10px_40px_rgba(2,6,23,0.4)] backdrop-blur-xl">
-        <p className="min-w-0 flex-1 truncate text-xs font-medium text-[rgba(247,241,232,0.78)]">
+      <div className="mx-auto flex max-w-lg items-center gap-2 border border-[#2D4059] bg-[rgba(8,21,37,0.96)] px-2 py-2 shadow-[6px_6px_0_rgba(2,6,14,0.45)] backdrop-blur-xl">
+        <p className="min-w-0 flex-1 truncate px-1 text-xs font-medium text-[#B8C4D4]">
           Know when someone looks.
         </p>
         <Link
           href={href}
           tabIndex={isShown ? undefined : -1}
-          className="gold-pill shrink-0 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
+          className="flex min-h-11 shrink-0 items-center justify-center border border-[#78ADFF] bg-[#78ADFF] px-4 text-xs font-bold text-[#06101F] transition-colors hover:border-[#9AC3FF] hover:bg-[#9AC3FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A9CCFF]"
         >
           {label}
         </Link>
@@ -99,7 +99,7 @@ export default function MobileStickyCta({
           type="button"
           onClick={dismiss}
           tabIndex={isShown ? undefined : -1}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.6)] transition-colors hover:border-[rgba(229,183,107,0.4)] hover:text-[#FFF3DE]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center border border-[#4A6684] bg-transparent text-[#8493A8] transition-colors hover:border-[#78ADFF] hover:text-[#F4F7FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A9CCFF]"
           aria-label="Dismiss sticky call to action"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

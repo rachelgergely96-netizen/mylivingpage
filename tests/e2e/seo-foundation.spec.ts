@@ -30,6 +30,7 @@ test("robots.txt and sitemap.xml expose the SEO foundation routes", async ({ req
 
   expect(extractLocs(sitemapText)).toEqual([
     `${origin}/`,
+    `${origin}/delete-account`,
     `${origin}/examples`,
     `${origin}/guides`,
     `${origin}/guides/living-page-vs-pdf-resume`,
@@ -38,9 +39,23 @@ test("robots.txt and sitemap.xml expose the SEO foundation routes", async ({ req
     `${origin}/legal`,
     `${origin}/pricing`,
     `${origin}/privacy`,
+    `${origin}/security`,
     `${origin}/terms`,
   ]);
   expect(sitemapText).not.toContain("/ray-smith");
+});
+
+test("homepage trust policies are public and render their current documents", async ({ page }) => {
+  await page.goto("/security");
+  await expect(page.getByRole("heading", { name: "Security Overview" })).toBeVisible();
+
+  await page.goto("/delete-account");
+  await expect(page.getByRole("heading", { name: "Account Deletion" })).toBeVisible();
+
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { name: "Free Service and Legacy Billing" })).toBeVisible();
+  await expect(page.getByText("We do not offer new paid plans at this time.")).toBeVisible();
+  await expect(page.getByText("Certain features require a paid subscription.")).toHaveCount(0);
 });
 
 test("public acquisition pages expose unique metadata and canonicals", async ({ page }) => {

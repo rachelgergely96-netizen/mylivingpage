@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import CosmicBackground from "@/components/marketing/CosmicBackground";
 import { GUIDES } from "@/lib/guides";
 import {
@@ -12,6 +13,7 @@ import {
   SITE_NAME,
   SITE_TAGLINE,
 } from "@/lib/site";
+import { getRequestLegalSite } from "@/lib/legal/request-site";
 
 const canonicalUrl = getAbsoluteUrl("/pricing");
 
@@ -33,7 +35,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const site = await getRequestLegalSite();
   const seoGuides = GUIDES.slice(0, 3);
 
   return (
@@ -46,7 +49,7 @@ export default function PricingPage() {
               my<span className="text-[#3B82F6]">living</span>page
             </Link>
             <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.6)] md:flex">
-              <Link href="/#examples" className="transition-colors hover:text-[#93C5FD]">
+              <Link href="/examples" className="transition-colors hover:text-[#93C5FD]">
                 Examples
               </Link>
               <Link href="/#pricing" className="transition-colors hover:text-[#93C5FD]">
@@ -57,7 +60,7 @@ export default function PricingPage() {
               </Link>
             </div>
             <Link
-              href="/signup?ref=pricing_nav"
+              href="/signup?ref=pricing_nav&next=/create"
               className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
             >
               Create Your Resume
@@ -136,8 +139,13 @@ export default function PricingPage() {
 
           <section className="mt-8 rounded-3xl border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] p-5 text-sm text-[rgba(240,244,255,0.74)] sm:p-6">
             <p>
-              No card. No trial. No paid plan. Build and publish one living resume, then keep the
-              same link, ATS-ready PDF, and share card current as your experience grows.
+              No card. No trial. No paid plan is required or newly offered. Build and publish one
+              living resume, then keep the same link, ATS-ready PDF, and share card current as your
+              experience grows.
+            </p>
+            <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.52)]">
+              Already have a legacy subscription? It may continue until canceled in account
+              settings. Your free access remains after cancellation.
             </p>
             <p className="mt-3 text-xs leading-6 text-[rgba(240,244,255,0.52)]">
               {ATS_READINESS_DISCLOSURE}
@@ -186,6 +194,7 @@ export default function PricingPage() {
             </div>
           </section>
         </main>
+        <SiteLegalFooter siteId={site.id} />
       </div>
     </div>
   );

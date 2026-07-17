@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 
-export default function CosmicBackground() {
+interface CosmicBackgroundProps {
+  activeWhileId?: string;
+}
+
+export default function CosmicBackground({ activeWhileId }: CosmicBackgroundProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -118,6 +122,8 @@ export default function CosmicBackground() {
         const clock = new THREE.Clock();
         let animationId: number | null = null;
         let frameCount = 0;
+        let sceneVisible = true;
+        let visibilityObserver: IntersectionObserver | null = null;
 
         const handleMouseMove = (event: MouseEvent) => {
           if (reducedMotionQuery.matches) {
@@ -203,7 +209,7 @@ export default function CosmicBackground() {
 
         const start = () => {
           stop();
-          if (document.hidden || reducedMotionQuery.matches) {
+          if (document.hidden || reducedMotionQuery.matches || !sceneVisible) {
             renderFrame(clock.getElapsedTime(), false);
             return;
           }
@@ -236,6 +242,25 @@ export default function CosmicBackground() {
           window.addEventListener("mousemove", handleMouseMove, { passive: true });
         }
         reducedMotionQuery.addEventListener?.("change", syncMotionPreference);
+
+        if (activeWhileId && "IntersectionObserver" in window) {
+          const activeElement = document.getElementById(activeWhileId);
+          if (activeElement) {
+            visibilityObserver = new IntersectionObserver(
+              ([entry]) => {
+                sceneVisible = Boolean(entry?.isIntersecting);
+                if (sceneVisible) {
+                  start();
+                } else {
+                  stop();
+                }
+              },
+              { rootMargin: "120px 0px", threshold: 0 },
+            );
+            visibilityObserver.observe(activeElement);
+          }
+        }
+
         syncMotionPreference();
 
         return () => {
@@ -244,6 +269,7 @@ export default function CosmicBackground() {
           document.removeEventListener("visibilitychange", handleVisibility);
           window.removeEventListener("mousemove", handleMouseMove);
           reducedMotionQuery.removeEventListener?.("change", syncMotionPreference);
+          visibilityObserver?.disconnect();
           scene.clear();
           renderer.dispose();
           particleGeometry.dispose();
@@ -273,7 +299,7 @@ export default function CosmicBackground() {
       disposed = true;
       cleanup?.();
     };
-  }, []);
+  }, [activeWhileId]);
 
   return (
     <canvas

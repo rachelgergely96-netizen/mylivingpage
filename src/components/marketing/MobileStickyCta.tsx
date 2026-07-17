@@ -74,24 +74,31 @@ export default function MobileStickyCta({
     }
   };
 
+  const isShown = ready && visible;
+
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-3 transition-all duration-300 md:hidden ${
-        ready && visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
+      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-300 md:hidden ${
+        isShown ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
       }`}
-      aria-hidden={!visible}
+      aria-hidden={!isShown}
       data-testid="mobile-sticky-cta"
     >
       <div className="mx-auto flex max-w-lg items-center gap-2 rounded-full border border-[rgba(229,183,107,0.24)] bg-[rgba(8,14,28,0.94)] px-3 py-2 shadow-[0_-10px_40px_rgba(2,6,23,0.4)] backdrop-blur-xl">
         <p className="min-w-0 flex-1 truncate text-xs font-medium text-[rgba(247,241,232,0.78)]">
           Know when someone looks.
         </p>
-        <Link href={href} className="gold-pill shrink-0 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
+        <Link
+          href={href}
+          tabIndex={isShown ? undefined : -1}
+          className="gold-pill shrink-0 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
+        >
           {label}
         </Link>
         <button
           type="button"
           onClick={dismiss}
+          tabIndex={isShown ? undefined : -1}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.6)] transition-colors hover:border-[rgba(229,183,107,0.4)] hover:text-[#FFF3DE]"
           aria-label="Dismiss sticky call to action"
         >

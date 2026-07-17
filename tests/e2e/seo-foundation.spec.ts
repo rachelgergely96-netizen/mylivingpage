@@ -47,16 +47,16 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
   const cases = [
     {
       path: "/",
-      title: "MyLivingPage | Your info, one Living Page, one Resume PDF",
+      title: "MyLivingPage | Make your experience easier to understand and harder to forget",
       description:
-        "Upload your info once, start with one month of free live hosting, then continue your Living Page for $9.99/month.",
+        "Build one living professional page. Shape it for the moment. Share it anywhere.",
       pathname: "/",
     },
     {
       path: "/pricing",
-      title: "Pricing | MyLivingPage",
+      title: "Simple Pricing: Free | MyLivingPage",
       description:
-        "One month of free MyLivingPage hosting, then $9.99/month to keep your page live.",
+        "Build one living professional page. Shape it for the moment. Share it anywhere.",
       pathname: "/pricing",
     },
     {

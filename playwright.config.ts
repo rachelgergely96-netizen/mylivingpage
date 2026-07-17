@@ -11,6 +11,7 @@ export default defineConfig({
   },
   use: {
     baseURL,
+    channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL,
     trace: "on-first-retry",
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL

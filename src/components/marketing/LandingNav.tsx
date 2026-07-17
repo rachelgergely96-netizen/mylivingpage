@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 const NAV_LINKS = [
-  { href: "#demo-section", label: "Demo", external: false },
+  { href: "#demo-section", label: "Story", external: false },
   { href: "#how", label: "How It Works", external: false },
   { href: "/examples", label: "Examples", external: true },
   { href: "#pricing", label: "Free", external: false },
@@ -50,7 +50,7 @@ export default function LandingNav() {
           className="gold-pill px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)] sm:px-5 sm:text-xs sm:tracking-[0.16em]"
         >
           <span className="sm:hidden">Create</span>
-          <span className="hidden sm:inline">Create Your Page (Free)</span>
+          <span className="hidden sm:inline">Create Your Page — Free</span>
         </Link>
 
         {/* Hamburger - mobile only */}
@@ -118,7 +118,7 @@ export default function LandingNav() {
                   onClick={() => setOpen(false)}
                   className="gold-pill block w-full py-3 text-center text-sm font-semibold"
                 >
-                  Create Your Page (Free)
+                  Create Your Page — Free
                 </Link>
               </div>
             </li>
@@ -128,4 +128,3 @@ export default function LandingNav() {
     </nav>
   );
 }
-

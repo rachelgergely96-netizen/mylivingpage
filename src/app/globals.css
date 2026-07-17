@@ -68,6 +68,79 @@ a {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.landing-focus-wash {
+  background: linear-gradient(
+    180deg,
+    rgba(6, 14, 28, 0) 0,
+    rgba(6, 14, 28, 0.66) 12rem,
+    rgba(6, 14, 28, 0.93) 34rem,
+    rgba(6, 14, 28, 0.97) 100%
+  );
+}
+
+.story-stage-glass {
+  backdrop-filter: blur(22px) saturate(118%);
+  -webkit-backdrop-filter: blur(22px) saturate(118%);
+}
+
+.story-system-layer,
+.story-signal-layer {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px) scale(0.975);
+  transition:
+    opacity 480ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.story-system-layer.is-active,
+.story-signal-layer.is-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.story-system-layer.is-active {
+  pointer-events: auto;
+}
+
+.story-scan-line {
+  background: linear-gradient(90deg, transparent, rgba(147, 197, 253, 0.86), transparent);
+  box-shadow: 0 0 24px rgba(59, 130, 246, 0.4);
+  height: 1px;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 20;
+}
+
+.story-system-layer.is-active .story-scan-line {
+  animation: storyScan 2.4s cubic-bezier(0.16, 1, 0.3, 1) 180ms 1 both;
+}
+
+.story-signal-layer.is-active .story-view-signal {
+  animation: storySignalIn 620ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-card,
+  .story-stage-glass {
+    background: rgba(7, 16, 31, 0.96);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card,
+  .story-stage-glass {
+    background: rgba(7, 16, 31, 0.96);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 .gold-pill {
@@ -166,6 +239,13 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  .landing-motion *,
+  .landing-motion *::before,
+  .landing-motion *::after,
   .resume-theme *,
   .resume-theme *::before,
   .resume-theme *::after {
@@ -174,9 +254,39 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+
+  .story-scan-line {
+    display: none;
+  }
 }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+@keyframes storyScan {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  12%,
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(430px);
+  }
+}
+
+@keyframes storySignalIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

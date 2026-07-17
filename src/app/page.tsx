@@ -21,10 +21,6 @@ function getSignupHref(ref: string) {
   return `/signup?ref=${ref}&next=/create`;
 }
 
-function getLoginHref() {
-  return "/login?next=/dashboard";
-}
-
 export const metadata: Metadata = {
   title: `${SITE_NAME} | ${SITE_TAGLINE}`,
   description: SITE_DESCRIPTION,
@@ -47,7 +43,7 @@ export default async function LandingPage() {
   const site = await getRequestLegalSite();
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-hidden">
+    <div className="landing-motion relative isolate min-h-screen overflow-x-clip">
       <CosmicBackground />
       <div className="relative z-10">
         <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
@@ -59,65 +55,94 @@ export default async function LandingPage() {
             id="hero-section"
             className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-start px-4 pb-10 pt-6 sm:px-6 sm:pb-14 sm:pt-8 md:min-h-[calc(100vh-5rem)] md:items-center md:px-10 md:pb-16 md:pt-10"
           >
-            <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
+            <div className="glass-card relative w-full overflow-hidden rounded-[2rem] border border-[rgba(255,255,255,0.1)] px-5 py-6 shadow-[0_40px_120px_rgba(2,6,23,0.35)] sm:px-8 sm:py-8 md:px-10 md:py-10">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(229,183,107,0.5)] to-transparent" />
-              <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
-                Free living resume
-              </p>
-              <div className="mt-5 max-w-4xl">
-                <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
-                  {SITE_TAGLINE}.
-                </h1>
-                <p className="mt-4 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
-                  {SITE_DESCRIPTION}
-                </p>
-              </div>
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] lg:items-center lg:gap-12">
+                <div>
+                  <p className="inline-flex rounded-full border border-[rgba(229,183,107,0.28)] bg-[rgba(229,183,107,0.1)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#F5D7A2] sm:text-xs sm:tracking-[0.22em]">
+                    One page. Many moments.
+                  </p>
+                  <div className="mt-5 max-w-4xl">
+                    <h1 className="font-heading text-[2.6rem] font-bold leading-[0.96] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl md:text-6xl lg:text-[4.35rem]">
+                      {SITE_TAGLINE}.
+                    </h1>
+                    <p className="mt-5 max-w-3xl text-base leading-7 text-[rgba(240,244,255,0.76)] sm:text-lg sm:leading-8">
+                      {SITE_DESCRIPTION}
+                    </p>
+                  </div>
 
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {CREDIBILITY_POINTS.map((point) => (
-                  <span
-                    key={point}
-                    className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] sm:px-4"
-                  >
-                    {point}
-                  </span>
-                ))}
-              </div>
+                  <div className="mt-7 flex flex-wrap items-center gap-3">
+                    <Link
+                      href={getSignupHref("landing_start_free")}
+                      className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.28)] sm:px-7 sm:py-4"
+                    >
+                      Create Your Page — Free
+                    </Link>
+                    <a
+                      href="#demo-section"
+                      className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm font-semibold text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
+                    >
+                      See How It Adapts
+                    </a>
+                  </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  href={getSignupHref("landing_start_free")}
-                  className="gold-pill px-5 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(229,183,107,0.28)] sm:px-7 sm:py-4"
-                >
-                  Create Your Page (Free)
-                </Link>
-                <Link
-                  href={getLoginHref()}
-                  className="rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-7 sm:py-4"
-                >
-                  Log In
-                </Link>
-                <a
-                  href="#demo-section"
-                  className="text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-                >
-                  See the Demo
-                </a>
-              </div>
+                  <div className="mt-6 flex flex-wrap gap-2.5">
+                    {CREDIBILITY_POINTS.map((point) => (
+                      <span
+                        key={point}
+                        className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.64)]"
+                      >
+                        {point}
+                      </span>
+                    ))}
+                  </div>
 
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.54)]">
-                Start in minutes. No card, trial, or subscription required. The same saved information powers your page, PDF, and share card.
-              </p>
+                  <p className="mt-4 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.5)]">
+                    Start in minutes. No card, trial, or subscription required.
+                  </p>
+                </div>
+
+                <aside aria-label="One profile powers every format" className="relative hidden lg:block">
+                  <div aria-hidden="true" className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.16),transparent_68%)]" />
+                  <div className="relative rounded-[1.75rem] border border-[rgba(255,255,255,0.11)] bg-[rgba(6,14,28,0.68)] p-4 shadow-[0_28px_90px_rgba(2,6,23,0.42)]">
+                    <div className="flex items-center justify-between gap-3 px-2 pb-4">
+                      <div>
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#93C5FD]">One source of truth</p>
+                        <p className="mt-1 text-sm font-semibold text-[#F0F4FF]">Avery Sample</p>
+                      </div>
+                      <span className="rounded-full border border-[rgba(91,214,124,0.22)] bg-[rgba(91,214,124,0.08)] px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] text-[#86EFAC]">Current</span>
+                    </div>
+                    <div className="grid gap-2.5">
+                      {[
+                        ["Living Page", "A clear story people can explore", "01"],
+                        ["ATS-ready PDF", "Real text and a clean reading order", "02"],
+                        ["Share Card + QR", "A memorable way into the full page", "03"],
+                      ].map(([title, body, number]) => (
+                        <div key={title} className="group flex items-center gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] p-4 transition-colors hover:border-[rgba(147,197,253,0.2)] hover:bg-[rgba(59,130,246,0.06)]">
+                          <span className="font-mono text-[10px] text-[rgba(147,197,253,0.58)]">{number}</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[#F0F4FF]">{title}</p>
+                            <p className="mt-1 text-xs leading-5 text-[rgba(240,244,255,0.48)]">{body}</p>
+                          </div>
+                          <span className="ml-auto text-[#93C5FD] opacity-50 transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="px-2 pt-4 text-[10px] leading-5 text-[rgba(240,244,255,0.36)]">Change the source once. Every format stays aligned.</p>
+                  </div>
+                </aside>
+              </div>
             </div>
           </section>
 
-          <LandingUnifiedShowcase />
+          <div className="landing-focus-wash relative">
+            <LandingUnifiedShowcase />
 
           <section id="how" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 md:px-10">
             <div className="mb-8 max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">What happens after you send it</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">The useful loop</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl md:text-5xl">
-                Create, share, notice, repeat.
+                Share it. See it land. Keep it current.
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -224,10 +249,10 @@ export default async function LandingPage() {
               <div className="max-w-3xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Why this exists</p>
                 <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
-                  Simple. Professional. Yours.
+                  Simple, but never generic.
                 </h2>
                 <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.66)]">
-                  MyLivingPage exists for the gap between a resume attachment and a full personal site: the moment when someone is already interested and wants proof, credibility, and contact paths fast. It is a living resume on the surface, but the real job is helping someone decide to move forward. You control when a page goes live, and the site publishes privacy, security, and deletion details before signup.
+                  Simplicity should make your value easier to see, not flatten what makes you different. MyLivingPage gives your experience enough structure for software to understand and enough personality for a person to remember—without asking you to build and maintain a full personal website.
                 </p>
               </div>
               <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -251,7 +276,9 @@ export default async function LandingPage() {
           </section>
 
           <section id="final-cta" className="mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 sm:pb-24 md:px-10">
-            <div className="glass-card rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 text-center sm:px-10 sm:py-12">
+            <div className="glass-card relative overflow-hidden rounded-[2rem] border border-[rgba(59,130,246,0.2)] px-6 py-10 text-center sm:px-10 sm:py-12">
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(59,130,246,0.2),transparent_52%)]" />
+              <div className="relative">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Ready when you are</p>
               <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.04] tracking-[-0.03em] text-[#F0F4FF] sm:text-4xl">
                 Build it once. Share it anywhere. Keep it current.
@@ -264,7 +291,7 @@ export default async function LandingPage() {
                   href={getSignupHref("landing_final_start")}
                   className="gold-pill px-6 py-3 text-sm font-semibold transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:shadow-[0_14px_42px_rgba(59,130,246,0.38)] sm:px-8 sm:py-4"
                 >
-                  Create Your Living Resume (Free)
+                  Create Your Page — Free
                 </Link>
                 <Link
                   href="/examples"
@@ -273,8 +300,10 @@ export default async function LandingPage() {
                   Browse Sample Pages
                 </Link>
               </div>
+              </div>
             </div>
           </section>
+          </div>
         </main>
 
         <SiteLegalFooter siteId={site.id} />

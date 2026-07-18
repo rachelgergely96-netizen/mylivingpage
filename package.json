@@ -2,6 +2,9 @@
   "name": "mylivingpage",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,6 +18,7 @@
     "test:e2e": "playwright test",
     "check:single-page-schema": "node ./scripts/check-single-page-schema.mjs",
     "check:analytics-schema": "node ./scripts/check-analytics-schema.mjs",
+    "check:database-security": "node ./scripts/check-database-security.mjs",
     "check:signal-frame": "node ./scripts/check-signal-frame-ui.mjs"
   },
   "dependencies": {

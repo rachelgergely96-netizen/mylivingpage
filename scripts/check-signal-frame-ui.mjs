@@ -21,6 +21,7 @@ const IN_SCOPE = [
   "src/components/create",
   "src/components/edit",
   "src/components/legal",
+  "src/components/privacy",
   "src/components/resume/ResumeEditorFields.tsx",
   "src/components/AtsReadinessCard.tsx",
   "src/components/DeletePageButton.tsx",
@@ -34,14 +35,15 @@ const IN_SCOPE = [
   "src/components/marketing/GuideLinkGrid.tsx",
   "src/components/marketing/MobileStickyCta.tsx",
   "src/components/marketing/SamplePageCard.tsx",
+  "src/components/marketing/SignalFrameHomepage.tsx",
   "src/components/marketing/SiteHeader.tsx",
   "src/components/ui",
 ];
 
-const EXCLUDED_FILES = new Set([
-  // Unreachable legacy experiment; retain until its separate cleanup decision.
-  "src/components/create/DecisionReadinessCard.tsx",
-]);
+const CSS_IN_SCOPE = [
+  "src/app/globals.css",
+  "src/components/marketing/SignalFrameHomepage.module.css",
+];
 
 const CHECKS = [
   { label: "Playfair website heading", pattern: /\bfont-heading\b/ },
@@ -60,7 +62,7 @@ const CHECKS = [
 
 async function collectFiles(entry) {
   const relative = entry.split(path.sep).join("/");
-  if (EXCLUDED_FILES.has(relative) || /\.(?:test|spec)\.[jt]sx?$/.test(relative)) {
+  if (/\.(?:test|spec)\.[jt]sx?$/.test(relative)) {
     return [];
   }
 
@@ -93,11 +95,31 @@ for (const file of files) {
   }
 }
 
+for (const file of CSS_IN_SCOPE) {
+  const source = await readFile(path.join(ROOT, file), "utf8");
+  const lines = source.split("\n");
+
+  for (const [index, line] of lines.entries()) {
+    const radius = line.match(/border-radius:\s*([^;]+);/i)?.[1]?.trim();
+    if (
+      radius &&
+      !/^0(?:px|rem|em|%)?$/.test(radius) &&
+      radius !== "var(--site-radius)"
+    ) {
+      failures.push(
+        `${file}:${index + 1} rounded website geometry: ${line.trim()}`,
+      );
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error("Signal Frame site UI check failed:\n");
   console.error(failures.join("\n"));
   console.error("\nTheme-owned output belongs outside this check; move mixed output behind an explicit boundary rather than weakening the website rules.");
   process.exitCode = 1;
 } else {
-  console.log(`Signal Frame site UI check passed (${files.length} files).`);
+  console.log(
+    `Signal Frame site UI check passed (${files.length} components, ${CSS_IN_SCOPE.length} stylesheets).`,
+  );
 }

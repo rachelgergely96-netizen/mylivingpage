@@ -1,6 +1,43 @@
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 40;
 
+export const RESERVED_USERNAME_SLUGS = new Set([
+  "acceptable-use",
+  "admin",
+  "api",
+  "callback",
+  "cookies",
+  "create",
+  "dashboard",
+  "delete-account",
+  "disclaimer",
+  "dmca",
+  "examples",
+  "forgot-password",
+  "guides",
+  "homepage-preview",
+  "legal",
+  "login",
+  "pricing",
+  "privacy",
+  "reset-password",
+  "security",
+  "signup",
+  "terms",
+  "theme-review",
+  "about",
+  "blog",
+  "docs",
+  "help",
+  "profile",
+  "settings",
+  "support",
+]);
+
+export function isReservedUsernameSlug(slug: string) {
+  return RESERVED_USERNAME_SLUGS.has(normalizeUsernameSlug(slug));
+}
+
 export interface UsernameValidationResult {
   slug: string;
   error: string | null;
@@ -43,5 +80,6 @@ export function usernameFromEmail(email: string | null | undefined): string {
     return "member";
   }
 
-  return normalizeUsernameSlug(email.split("@")[0]) || "member";
+  const candidate = normalizeUsernameSlug(email.split("@")[0]) || "member";
+  return isReservedUsernameSlug(candidate) ? `${candidate}-member` : candidate;
 }

@@ -24,9 +24,9 @@ export async function POST() {
       },
       { status: 410 },
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to verify account." },
+      { error: "Unable to verify account." },
       { status: 500 },
     );
   }

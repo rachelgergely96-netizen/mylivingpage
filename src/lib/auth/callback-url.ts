@@ -1,5 +1,6 @@
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
 import { getAbsoluteUrl } from "@/lib/site";
+import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 
 interface BuildAuthCallbackUrlInput {
   next: string;
@@ -21,7 +22,7 @@ export function buildAuthCallbackUrl({
   legalSource = "signup",
 }: BuildAuthCallbackUrlInput): string {
   const callbackUrl = new URL(getAbsoluteUrl("/callback"));
-  callbackUrl.searchParams.set("next", next);
+  callbackUrl.searchParams.set("next", sanitizeInternalRedirectPath(next));
 
   if (legalAcceptRequested) {
     callbackUrl.searchParams.set("legal_accept", "1");
@@ -39,7 +40,7 @@ export function buildGoogleAuthStartUrl({
   ref,
 }: BuildGoogleAuthStartUrlInput): string {
   const googleAuthUrl = new URL(getAbsoluteUrl("/api/auth/google"));
-  googleAuthUrl.searchParams.set("next", next);
+  googleAuthUrl.searchParams.set("next", sanitizeInternalRedirectPath(next));
   googleAuthUrl.searchParams.set("screen", screen);
 
   if (legalAcceptRequested) {

@@ -1,16 +1,24 @@
 import { createHash } from "node:crypto";
 
 export function getClientIp(requestHeaders: Headers): string | null {
+  const vercelForwardedFor = requestHeaders.get("x-vercel-forwarded-for");
+  if (vercelForwardedFor) {
+    const vercelIp = vercelForwardedFor.split(",")[0]?.trim();
+    if (vercelIp) return vercelIp.slice(0, 128);
+  }
+
   const forwardedFor = requestHeaders.get("x-forwarded-for");
   if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) {
-      return first;
-    }
+    const hops = forwardedFor
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter(Boolean);
+    const nearestForwardedIp = hops.at(-1);
+    if (nearestForwardedIp) return nearestForwardedIp.slice(0, 128);
   }
 
   const realIp = requestHeaders.get("x-real-ip")?.trim();
-  return realIp || null;
+  return realIp ? realIp.slice(0, 128) : null;
 }
 
 export function hashSecurityIdentifier(value: string) {

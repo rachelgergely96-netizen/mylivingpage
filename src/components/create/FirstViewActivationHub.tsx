@@ -89,6 +89,7 @@ export default function FirstViewActivationHub({
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "",
   );
   const sharePanelRef = useRef<HTMLDivElement | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
   const selectedVariant =
     variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const previewSharePath = useMemo(
@@ -110,6 +111,12 @@ export default function FirstViewActivationHub({
     }
 
     setAppOrigin(window.location.origin.replace(/\/$/, ""));
+  }, []);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current !== null) {
+      window.clearTimeout(copyTimerRef.current);
+    }
   }, []);
 
   const trackShareIntent = async (
@@ -162,7 +169,11 @@ export default function FirstViewActivationHub({
         share_link_id: shareLinkId,
         share_path: trackedSharePath,
       });
-      window.setTimeout(() => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => {
+        copyTimerRef.current = null;
         setCopyState((current) => (current === "copied" ? "idle" : current));
       }, 2400);
     } catch {
@@ -213,7 +224,12 @@ export default function FirstViewActivationHub({
 
   const focusSharePanel = () => {
     setLoopState("repeat_share_prompt");
-    sharePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    sharePanelRef.current?.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    sharePanelRef.current?.focus({ preventScroll: true });
   };
 
   const handleOpenLivePage = () => {
@@ -242,7 +258,11 @@ export default function FirstViewActivationHub({
 
   return (
     <div className="space-y-5">
-      <section className="site-panel-raised p-5 sm:p-6">
+      <section
+        className="site-panel-raised p-5 sm:p-6"
+        aria-live="polite"
+        aria-busy={checkingProof}
+      >
         <p className="site-eyebrow">
           Proof
         </p>
@@ -380,7 +400,8 @@ export default function FirstViewActivationHub({
 
       <section
         ref={sharePanelRef}
-        className="site-panel scroll-mt-24 p-5 sm:p-6"
+        tabIndex={-1}
+        className="site-panel scroll-mt-24 p-5 outline-none sm:p-6"
       >
         <p className="site-eyebrow">
           Send it now
@@ -492,6 +513,9 @@ export default function FirstViewActivationHub({
             <p role="alert" className="mt-3 text-sm text-site-danger">
               Could not copy that message. Try again or copy the live URL manually.
             </p>
+          ) : null}
+          {copyState === "copied" ? (
+            <p role="status" className="sr-only">Copied to clipboard.</p>
           ) : null}
         </div>
       </section>

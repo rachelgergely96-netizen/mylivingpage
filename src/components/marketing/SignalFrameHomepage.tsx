@@ -461,7 +461,7 @@ export default function SignalFrameHomepage() {
                       <>
                         <span className={styles.uploadMark}>↑</span>
                         <strong>Upload your résumé after signup</strong>
-                        <p>PDF, DOCX, TXT, or Markdown · up to 6 MB</p>
+                        <p>PDF, DOCX, TXT, or Markdown · up to 3.5 MB</p>
                         <Link href={getSignupHref("landing_import_upload")}>Start with my résumé</Link>
                       </>
                     ) : (

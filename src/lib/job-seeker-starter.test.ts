@@ -117,4 +117,22 @@ describe("job-seeker starter helpers", () => {
       audience: "Hiring managers",
     });
   });
+
+  it("supports a neutral professional-card setup without assuming a job search", () => {
+    const profile: JobSeekerProfile = {
+      role_track: "general",
+      primary_goal: "share_profile",
+      target_audience: "general_public",
+    };
+
+    expect(describeJobSeekerProfile(profile)).toEqual({
+      role: "General / multi-hyphenate",
+      goal: "Share my professional story",
+      audience: "Professional contacts",
+    });
+    expect(buildStarterVariant(BASE_RESUME, profile)).toMatchObject({
+      label: "Professional introduction",
+      ctaEmphasis: "Built to make your work clear to any new professional contact.",
+    });
+  });
 });

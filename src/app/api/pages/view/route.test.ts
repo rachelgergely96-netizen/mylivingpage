@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   authGetUser: vi.fn(),
   createServiceRoleSupabaseClient: vi.fn(),
+  deletePageView: vi.fn(),
   enforceRateLimit: vi.fn(),
   headers: vi.fn(),
   insertPageView: vi.fn(),
@@ -54,6 +55,9 @@ function createServiceRoleClient(options?: {
     billing_cohort?: string | null;
     hosting_trial_started_at?: string | null;
   } | null;
+  pageError?: { message: string } | null;
+  ownerProfileError?: { message: string } | null;
+  recentViewError?: { message: string } | null;
 }) {
   return {
     from(table: string) {
@@ -72,7 +76,7 @@ function createServiceRoleClient(options?: {
                         status: "live",
                         visibility: "public",
                       },
-                    error: null,
+                    error: options?.pageError ?? null,
                   }),
                 };
               },
@@ -102,7 +106,7 @@ function createServiceRoleClient(options?: {
                         billing_cohort: "legacy_freemium",
                         hosting_trial_started_at: null,
                       },
-                    error: null,
+                    error: options?.ownerProfileError ?? null,
                   }),
                 };
               },
@@ -121,7 +125,7 @@ function createServiceRoleClient(options?: {
                     return {
                       gte: vi.fn().mockResolvedValue({
                         data: [],
-                        error: null,
+                        error: options?.recentViewError ?? null,
                       }),
                     };
                   },
@@ -140,6 +144,14 @@ function createServiceRoleClient(options?: {
                   }),
                 };
               },
+            };
+          },
+          delete() {
+            return {
+              eq: vi.fn((field: string, value: string) => {
+                mocks.deletePageView(field, value);
+                return Promise.resolve({ error: null });
+              }),
             };
           },
         };
@@ -198,5 +210,81 @@ describe("POST /api/pages/view", () => {
     expect(mocks.pageUpdate).not.toHaveBeenCalled();
     expect(mocks.insertPageView).toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a public draft", { status: "draft", visibility: "public" }],
+    ["a private live page", { status: "live", visibility: "private" }],
+  ])("does not record views for %s", async (_label, publicationState) => {
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({
+        page: {
+          id: "page-1",
+          owner_id: "owner-1",
+          user_id: "owner-1",
+          ...publicationState,
+        },
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(mocks.insertPageView).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["page lookup", { pageError: { message: "page lookup failed" } }],
+    [
+      "owner profile lookup",
+      { ownerProfileError: { message: "profile lookup failed" } },
+    ],
+    [
+      "view deduplication lookup",
+      { recentViewError: { message: "dedupe lookup failed" } },
+    ],
+  ])("fails closed when the %s fails", async (_label, options) => {
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient(options),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(mocks.insertPageView).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("removes the inserted view when the counter update fails", async () => {
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient(),
+    );
+    mocks.rpc.mockResolvedValue({
+      error: { message: "counter update failed" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId: "page-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(mocks.deletePageView).toHaveBeenCalledWith("id", "view-1");
   });
 });

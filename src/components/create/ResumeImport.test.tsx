@@ -13,6 +13,7 @@ describe("ResumeImport", () => {
     expect(markup).toContain("Choose a resume");
     expect(markup).toContain("Paste resume text");
     expect(markup).toContain("PDF, DOCX, TXT, or MD");
+    expect(markup).toContain("up to 3.5 MB");
     expect(markup).toContain("not sent to an AI provider");
     expect(markup).toContain("Autofill my page");
   });

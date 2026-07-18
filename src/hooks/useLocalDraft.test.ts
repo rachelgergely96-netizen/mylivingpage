@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  clearLocalDraftStorage,
   loadDraftEnvelope,
   persistDraftEnvelope,
   removeDraftEnvelope,
@@ -49,6 +50,66 @@ describe("useLocalDraft storage helpers", () => {
     removeDraftEnvelope(storage, null);
 
     expect(storage.setItem).not.toHaveBeenCalled();
+    expect(storage.removeItem).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when a draft cannot be removed from browser storage", () => {
+    const storage = {
+      removeItem: vi.fn(() => {
+        throw new Error("Storage is unavailable");
+      }),
+    };
+
+    expect(() => removeDraftEnvelope(storage, "mlp-draft-create-user-123")).not.toThrow();
+  });
+
+  it("does not throw when a corrupt draft cannot be cleaned up", () => {
+    const storage = {
+      getItem: vi.fn(() => "not-json"),
+      removeItem: vi.fn(() => {
+        throw new Error("Storage is unavailable");
+      }),
+    };
+
+    expect(() => loadDraftEnvelope(storage, "mlp-draft-create-user-123")).not.toThrow();
+    expect(loadDraftEnvelope(storage, "mlp-draft-create-user-123")).toBeNull();
+  });
+
+  it("clears MyLivingPage drafts without removing consent or unrelated preferences", () => {
+    const keys = [
+      "mlp-draft-create-user-123",
+      "analytics-consent",
+      "mlp-draft-edit-page-456-living-page",
+      "theme-preference",
+    ];
+    const removeItem = vi.fn();
+    const storage = {
+      get length() {
+        return keys.length;
+      },
+      key: vi.fn((index: number) => keys[index] ?? null),
+      removeItem,
+    };
+
+    clearLocalDraftStorage(storage);
+
+    expect(removeItem).toHaveBeenCalledTimes(2);
+    expect(removeItem).toHaveBeenCalledWith("mlp-draft-create-user-123");
+    expect(removeItem).toHaveBeenCalledWith("mlp-draft-edit-page-456-living-page");
+    expect(removeItem).not.toHaveBeenCalledWith("analytics-consent");
+    expect(removeItem).not.toHaveBeenCalledWith("theme-preference");
+  });
+
+  it("does not interrupt sign-out when browser storage cannot be inspected", () => {
+    const storage = {
+      get length(): number {
+        throw new Error("Storage is unavailable");
+      },
+      key: vi.fn(),
+      removeItem: vi.fn(),
+    };
+
+    expect(() => clearLocalDraftStorage(storage)).not.toThrow();
     expect(storage.removeItem).not.toHaveBeenCalled();
   });
 });

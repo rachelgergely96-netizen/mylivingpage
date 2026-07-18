@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { deflateSync } from "node:zlib";
-import { extractResumeFileText, ResumeFileError } from "@/lib/resume-file";
+import {
+  extractResumeFileText,
+  MAX_RESUME_FILE_BYTES,
+  ResumeFileError,
+} from "@/lib/resume-file";
 
 function createStoredZip(fileName: string, contents: string) {
   const name = Buffer.from(fileName);
@@ -102,6 +106,17 @@ endobj
         contentType: "application/octet-stream",
       }),
     ).toThrowError(ResumeFileError);
+  });
+
+  it("keeps uploaded files below the serverless multipart request limit", () => {
+    expect(MAX_RESUME_FILE_BYTES).toBeLessThanOrEqual(3.5 * 1024 * 1024);
+    expect(() =>
+      extractResumeFileText({
+        buffer: Buffer.alloc(MAX_RESUME_FILE_BYTES + 1),
+        fileName: "resume.txt",
+        contentType: "text/plain",
+      }),
+    ).toThrowError("Resume files must be 3.5 MB or smaller.");
   });
 
   it("caps the aggregate expansion of compressed PDF streams", () => {

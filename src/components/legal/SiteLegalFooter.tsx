@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CookieSettingsButton from "@/components/privacy/CookieSettingsButton";
 import {
   getLegalSiteConfig,
   getLegalNavItems,
@@ -54,6 +55,7 @@ export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {
                 {link.label}
               </Link>
             ))}
+            {siteId === "mylivingpage" ? <CookieSettingsButton /> : null}
           </div>
         </nav>
         <p className="text-xs text-site-muted md:text-right">

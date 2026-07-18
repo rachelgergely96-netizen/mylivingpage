@@ -37,6 +37,12 @@ interface AdminUser {
 
 type UserFilter = "all" | "suspicious" | "unconfirmed";
 
+const DIALOG_FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "input:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -85,12 +91,19 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const deleteDialogTitleId = useId();
+  const deleteDialogDescriptionId = useId();
   const deleteConfirmInputId = useId();
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const deleteDialogRef = useRef<HTMLDivElement | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const showToast = (kind: "success" | "error", text: string) => {
     setToast({ kind, text });
-    window.setTimeout(() => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      toastTimerRef.current = null;
       setToast((current) => (current?.text === text ? null : current));
     }, 3000);
   };
@@ -113,25 +126,60 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
   const suspiciousCount = rows.filter((user) => user.botDisposition === "suspicious").length;
   const unconfirmedCount = rows.filter((user) => !user.emailConfirmedAt).length;
 
-  const closeDeleteModal = useCallback(() => {
+  const closeDeleteModal = useCallback((allowInFlight = false) => {
+    if (deletingUserId && !allowInFlight) {
+      return;
+    }
     setSelectedUser(null);
     setDeleteConfirmText("");
     setDeletingUserId(null);
     window.requestAnimationFrame(() => deleteTriggerRef.current?.focus());
-  }, []);
+  }, [deletingUserId]);
 
   useEffect(() => {
     if (!selectedUser) return;
 
+    const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !deletingUserId) {
         closeDeleteModal();
+        return;
+      }
+
+      if (event.key !== "Tab" || !deleteDialogRef.current) {
+        return;
+      }
+
+      const focusable = Array.from(
+        deleteDialogRef.current.querySelectorAll<HTMLElement>(DIALOG_FOCUSABLE_SELECTOR),
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        deleteDialogRef.current.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
+    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [closeDeleteModal, deletingUserId, selectedUser]);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+  }, []);
 
   const handleDeleteUser = async () => {
     if (!selectedUser?.email) return;
@@ -147,7 +195,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
 
       setRows((current) => current.filter((user) => user.id !== selectedUser.id));
       showToast("success", `Deleted ${selectedUser.email}`);
-      closeDeleteModal();
+      closeDeleteModal(true);
       startTransition(() => router.refresh());
     } catch (error) {
       showToast("error", error instanceof Error ? error.message : "Failed to delete user.");
@@ -353,15 +401,18 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
       {selectedUser ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div
+            ref={deleteDialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby={deleteDialogTitleId}
+            aria-describedby={deleteDialogDescriptionId}
             className="site-panel-raised w-full max-w-md border-site-danger p-6 sm:p-7"
           >
             <h3 id={deleteDialogTitleId} className="site-panel-title mb-3 text-site-danger">
               Delete User Account
             </h3>
-            <p className="mb-2 text-sm text-site-secondary">
+            <p id={deleteDialogDescriptionId} className="mb-2 text-sm text-site-secondary">
               This permanently deletes the user account, associated pages, auth access, and avatar storage.
             </p>
             <div className="mb-4 border border-site-border bg-site-canvas-alt p-4 text-sm text-site-secondary">
@@ -384,8 +435,9 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={closeDeleteModal}
-                className="site-button site-button-secondary flex-1 py-2.5 text-xs"
+                onClick={() => closeDeleteModal()}
+                disabled={deletingUserId === selectedUser.id}
+                className="site-button site-button-secondary flex-1 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
+import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import { getAppOrigin } from "@/lib/site";
 import { getRequestHostname } from "@/lib/supabase/cookies";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
@@ -7,14 +8,6 @@ import { trackEvent } from "@/lib/track-event";
 
 const routeTrustLevel = "public_read";
 export const dynamic = "force-dynamic";
-
-function safeRedirectPath(value: string | null) {
-  if (!value || !value.startsWith("/")) {
-    return "/dashboard";
-  }
-
-  return value;
-}
 
 function safeAuthScreen(value: string | null) {
   return value === "signup" ? "signup" : "login";
@@ -28,7 +21,7 @@ function applyNoStoreHeaders(response: NextResponse) {
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const appOrigin = getAppOrigin();
-  const next = safeRedirectPath(requestUrl.searchParams.get("next"));
+  const next = sanitizeInternalRedirectPath(requestUrl.searchParams.get("next"));
   const screen = safeAuthScreen(requestUrl.searchParams.get("screen"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSource = requestUrl.searchParams.get("legal_source") === "checkout" ? "checkout" : "signup";

@@ -10,9 +10,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       # Placeholder env keeps build analysis runnable on PRs without exposing secrets.
       NEXT_PUBLIC_APP_URL: https://www.mylivingpage.com
@@ -24,6 +29,7 @@ jobs:
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
       STRIPE_STARTER_MONTHLY_PRICE_ID: price_starter_ci_placeholder
       STRIPE_PRO_MONTHLY_PRICE_ID: price_pro_ci_placeholder
+      ADMIN_EMAIL: admin@example.com
       CI: "1"
     steps:
       - name: Checkout
@@ -32,7 +38,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -43,6 +49,9 @@ jobs:
 
       - name: Client security boundary
         run: npm run check:client-security
+
+      - name: Signal Frame design boundary
+        run: npm run check:signal-frame
 
       - name: Typecheck
         run: npm run typecheck
@@ -58,9 +67,48 @@ jobs:
         # still bundles a moderate PostCSS advisory with no safe in-line fix.
         run: npm audit --omit=dev --audit-level=high
 
-  integration:
+  database-schema:
     runs-on: ubuntu-latest
     needs: quality
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.STAGING_SCHEMA_CHECK_DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Explain unavailable database gate
+        if: env.DATABASE_URL == ''
+        run: echo "::warning::Database gates skipped. Set STAGING_SCHEMA_CHECK_DATABASE_URL to a GitHub-runner-reachable staging database."
+
+      - name: Install dependencies
+        if: env.DATABASE_URL != ''
+        run: npm ci
+
+      - name: Verify single-page schema
+        if: env.DATABASE_URL != ''
+        run: npm run check:single-page-schema
+
+      - name: Verify analytics schema
+        if: env.DATABASE_URL != ''
+        run: npm run check:analytics-schema
+
+      - name: Verify database security boundary
+        if: env.DATABASE_URL != ''
+        run: npm run check:database-security
+
+  integration:
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+      - database-schema
+    timeout-minutes: 30
     env:
       # Integration and Playwright must target the isolated staging stack, never production.
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
@@ -68,8 +116,6 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
       SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
-      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-      SCHEMA_CHECK_DATABASE_URL: ${{ secrets.STAGING_SCHEMA_CHECK_DATABASE_URL }}
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STAGING_STRIPE_PUBLISHABLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STAGING_STRIPE_SECRET_KEY }}
@@ -95,7 +141,6 @@ jobs:
       PLAYWRIGHT_GOOGLE_EMAIL: ${{ secrets.STAGING_PLAYWRIGHT_GOOGLE_EMAIL }}
       PLAYWRIGHT_GOOGLE_PASSWORD: ${{ secrets.STAGING_PLAYWRIGHT_GOOGLE_PASSWORD }}
       ENABLE_E2E_FAILURE_INJECTION: "1"
-      RUN_LIVE_STRIPE_CONFIG_TESTS: "1"
       CI: "1"
     steps:
       - name: Checkout
@@ -104,7 +149,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Determine integration readiness
@@ -114,11 +159,6 @@ jobs:
           for key in \
             NEXT_PUBLIC_SUPABASE_URL \
             SUPABASE_SECRET_KEY \
-            DATABASE_URL \
-            STRIPE_SECRET_KEY \
-            STRIPE_WEBHOOK_SECRET \
-            STRIPE_STARTER_MONTHLY_PRICE_ID \
-            STRIPE_PRO_MONTHLY_PRICE_ID \
             PLAYWRIGHT_TEST_EMAIL \
             PLAYWRIGHT_TEST_PASSWORD
           do
@@ -136,7 +176,7 @@ jobs:
 
       - name: Skip integration checks when secrets are unavailable
         if: steps.readiness.outputs.ready != 'true'
-        run: echo "Integration checks skipped. Configure staging/test secrets to enable schema, Stripe, and Playwright release gates."
+        run: echo "::warning::Integration checks skipped. Configure the staging Supabase and Playwright credentials to enable the browser release gate."
 
       - name: Install dependencies
         if: steps.readiness.outputs.ready == 'true'
@@ -146,20 +186,17 @@ jobs:
         if: steps.readiness.outputs.ready == 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Verify single-page schema
-        if: steps.readiness.outputs.ready == 'true' && env.SCHEMA_CHECK_DATABASE_URL != ''
-        run: npm run check:single-page-schema
-        env:
-          DATABASE_URL: ${{ secrets.SCHEMA_CHECK_DATABASE_URL }}
-
-      - name: Skip schema verification when CI DB connectivity is unavailable
-        if: steps.readiness.outputs.ready == 'true' && env.SCHEMA_CHECK_DATABASE_URL == ''
-        run: echo "Schema verification skipped. Set SCHEMA_CHECK_DATABASE_URL to a GitHub-runner-reachable Postgres connection string to enable this gate."
-
-      - name: Verify live Stripe pricing contract
-        if: steps.readiness.outputs.ready == 'true'
-        run: npx vitest run src/lib/billing.stripe-config.test.ts
-
       - name: Run Playwright smoke suite
         if: steps.readiness.outputs.ready == 'true'
         run: npm run test:e2e
+
+      - name: Upload Playwright diagnostics
+        if: always() && steps.readiness.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

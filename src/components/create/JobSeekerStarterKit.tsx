@@ -68,9 +68,9 @@ export default function JobSeekerStarterKit({
   const current =
     value ??
     ({
-      role_track: "engineering",
-      primary_goal: "land_interviews",
-      target_audience: "recruiter",
+      role_track: "general",
+      primary_goal: "share_profile",
+      target_audience: "general_public",
     } satisfies JobSeekerProfile);
   const summary = describeJobSeekerProfile(current);
   const roleOption = JOB_SEEKER_ROLE_OPTIONS.find(
@@ -85,20 +85,20 @@ export default function JobSeekerStarterKit({
     >
       <div className="max-w-3xl">
         <p className="site-eyebrow">
-          Job-seeker starter kit
+          Page purpose
         </p>
         <h2 className="site-panel-title mt-2">
-          Set the page up for the kind of search you are actually in.
+          Set the page up for how you want to use it.
         </h2>
         <p className="mt-3 text-sm leading-7 text-site-secondary">
-          Choose your role, goal, and target audience once. We will use that to suggest a sharper
-          variant, stronger proof framing, and cleaner follow-up language.
+          Choose the closest fit. We will use it to suggest clearer proof, a useful targeted
+          version, and language that fits the people you plan to share it with.
         </p>
       </div>
 
       <div className="mt-5 space-y-5">
         <SelectionRow<JobSeekerRoleTrack>
-          label="Role track"
+          label="Your field"
           items={JOB_SEEKER_ROLE_OPTIONS.map((option) => ({
             id: option.id,
             label: option.label,
@@ -118,7 +118,7 @@ export default function JobSeekerStarterKit({
         />
 
         <SelectionRow<JobSeekerAudience>
-          label="Main audience"
+          label="Who will use this most?"
           items={JOB_SEEKER_AUDIENCE_OPTIONS.map((option) => ({
             id: option.id,
             label: option.label,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
+import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -25,10 +26,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const next = params.get("next");
-    if (next && next.startsWith("/")) {
-      setNextPath(next);
-    }
+    setNextPath(sanitizeInternalRedirectPath(params.get("next"), "/create"));
     const ref = params.get("ref") || params.get("utm_source") || null;
     if (ref) setSignupReferrer(ref);
   }, []);

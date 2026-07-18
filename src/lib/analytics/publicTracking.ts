@@ -78,7 +78,7 @@ export function normalizeEngagementPayload(
     : null;
 
   const clickMap = new Map<string, AnalyticsClickPayload>();
-  const rawClicks = Array.isArray(input.clicks) ? input.clicks : [];
+  const rawClicks = Array.isArray(input.clicks) ? input.clicks.slice(0, 100) : [];
 
   for (const click of rawClicks) {
     if (!isPlainObject(click)) {

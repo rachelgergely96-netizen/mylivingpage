@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal/legal-version";
-import { processStripeWebhookEvent } from "@/lib/billing/stripeWebhook";
+import {
+  createSupabaseBillingRepository,
+  processStripeWebhookEvent,
+} from "@/lib/billing/stripeWebhook";
 
 function buildEvent(
   type: Stripe.Event.Type,
@@ -31,6 +35,47 @@ function createRepository(userId: string | null) {
     findUserIdByCustomerId: vi.fn().mockResolvedValue(userId),
   };
 }
+
+describe("createSupabaseBillingRepository", () => {
+  it("surfaces profile update failures so Stripe can retry the webhook", async () => {
+    const eq = vi.fn().mockResolvedValue({
+      error: { message: "profiles update failed" },
+    });
+    const supabase = {
+      from: vi.fn(() => ({
+        update: vi.fn(() => ({ eq })),
+      })),
+    } as unknown as SupabaseClient;
+    const repository = createSupabaseBillingRepository(supabase);
+
+    await expect(
+      repository.updateBillingStateByCustomerId("cus_123", {
+        plan: "pro",
+        stripeSubscriptionStatus: "active",
+        stripeTrialEndsAt: null,
+      }),
+    ).rejects.toThrow("Unable to update billing state: profiles update failed");
+  });
+
+  it("surfaces customer lookup failures instead of treating them as a missing user", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "profiles lookup failed" },
+    });
+    const supabase = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle })),
+        })),
+      })),
+    } as unknown as SupabaseClient;
+    const repository = createSupabaseBillingRepository(supabase);
+
+    await expect(repository.findUserIdByCustomerId("cus_123")).rejects.toThrow(
+      "Unable to resolve billing customer: profiles lookup failed",
+    );
+  });
+});
 
 describe("processStripeWebhookEvent", () => {
   beforeEach(() => {

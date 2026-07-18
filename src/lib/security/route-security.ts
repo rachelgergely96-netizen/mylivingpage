@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type RouteTrustLevel =
@@ -83,7 +83,7 @@ export async function requireAdminUser(): Promise<
     return authResult;
   }
 
-  if (authResult.value.user.email !== ADMIN_EMAIL) {
+  if (!isAdminEmail(authResult.value.user.email)) {
     return {
       response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
     };

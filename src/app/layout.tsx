@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Mono, DM_Sans, Playfair_Display } from "next/font/google";
-import Script from "next/script";
 import JsonLd from "@/components/seo/JsonLd";
+import AnalyticsConsent from "@/components/privacy/AnalyticsConsent";
 import { getAbsoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -62,23 +62,10 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <head>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-H46XPWEWEC"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-H46XPWEWEC');
-          `}
-        </Script>
-      </head>
       <body className={`${playfair.variable} ${dmSans.variable} ${dmMono.variable} antialiased`}>
         <JsonLd data={[organizationJsonLd, websiteJsonLd]} />
         {children}
+        <AnalyticsConsent />
       </body>
     </html>
   );

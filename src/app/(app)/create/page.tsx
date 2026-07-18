@@ -71,9 +71,9 @@ const EMPTY_GUIDED_DATA: Partial<ResumeData> = {
 };
 
 const DEFAULT_JOB_SEEKER_PROFILE: JobSeekerProfile = {
-  role_track: "engineering",
-  primary_goal: "land_interviews",
-  target_audience: "recruiter",
+  role_track: "general",
+  primary_goal: "share_profile",
+  target_audience: "general_public",
 };
 
 function hasGuidedDraftContent(data: Partial<ResumeData>) {
@@ -522,9 +522,11 @@ export default function CreatePage() {
                 Private guided entry
               </p>
               <p className="mt-2 text-sm leading-6 text-site-text">
-                Review or add your details section by section, then preview everything before
-                publishing. Resume imports are used only to autofill these editable fields—no AI
-                service reads or rewrites your resume.
+                {resumeText.trim()
+                  ? "Review all autofilled fields together, then choose a theme and inspect the complete page before publishing."
+                  : "Add your details section by section, then choose a theme and inspect the complete page before publishing."}{" "}
+                Resume imports are used only to autofill editable fields—no AI service reads or
+                rewrites your resume.
               </p>
             </div>
           </div>
@@ -560,6 +562,7 @@ export default function CreatePage() {
               beginReviewOutputs(data);
             }}
             onBack={() => router.push("/dashboard")}
+            consolidatedReview={Boolean(resumeText.trim())}
           />
         </section>
       ) : null}
@@ -582,10 +585,10 @@ export default function CreatePage() {
                 Starter setup
               </p>
               <h3 className="site-panel-title mt-2">
-                Built for {jobSeekerSummary.role.toLowerCase()} outreach
+                Built for how you plan to share it
               </h3>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
-                This page is being framed to {jobSeekerSummary.goal.toLowerCase()} with {jobSeekerSummary.audience.toLowerCase()} as the first audience. We also seeded {previewData.proofs?.length ?? 0} structured proof {previewData.proofs?.length === 1 ? "block" : "blocks"} from your existing content so the page starts with evidence, not just claims.
+                This {jobSeekerSummary.role.toLowerCase()} page is being framed to {jobSeekerSummary.goal.toLowerCase()} with {jobSeekerSummary.audience.toLowerCase()} as the first audience. We also seeded {previewData.proofs?.length ?? 0} structured proof {previewData.proofs?.length === 1 ? "block" : "blocks"} from your existing content so the page starts with evidence, not just claims.
               </p>
             </section>
           ) : null}
@@ -616,6 +619,24 @@ export default function CreatePage() {
             </section>
           )}
 
+          <section data-testid="create-theme-section" className="space-y-4">
+            <div>
+              <p className="site-eyebrow">Theme</p>
+              <h3 className="site-panel-title mt-2">Make it feel like you</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-site-secondary">
+                Choose a style, then inspect the complete page below before it goes live.
+              </p>
+            </div>
+            <ThemePicker
+              themes={THEME_REGISTRY}
+              selectedThemeId={selectedTheme}
+              onSelectTheme={setSelectedTheme}
+              allowedThemeIds={accountAccess.allowedThemeIds}
+              lockedLabel="Not available"
+              showDescription
+            />
+          </section>
+
           <div className="space-y-5">
             <div className="site-panel p-4 sm:p-5">
               <p className="site-eyebrow">Preview</p>
@@ -625,7 +646,7 @@ export default function CreatePage() {
               <p className="mt-2 text-sm leading-6 text-site-secondary">
                 {selectedPreviewVariant
                   ? `You are previewing "${selectedPreviewVariant.label}". Targeted links will open this version first.`
-                  : "You are previewing the base page. Add a targeted version above if you want a sharper send for a recruiter, follow-up, or referral."}
+                  : "You are previewing the base page. Add a targeted version above if you want a sharper send for a specific conversation or audience."}
               </p>
               <div className="mt-4 border border-site-border bg-site-canvas-alt p-4">
                 <p className="site-eyebrow text-site-muted">Your link</p>
@@ -637,35 +658,6 @@ export default function CreatePage() {
                     The tracked share link for this version will include its own targeted URL automatically after publish.
                   </p>
                 ) : null}
-              </div>
-              <div className="site-callout mt-4 flex flex-wrap items-center justify-between gap-4 p-4">
-                <div>
-                  <p className="site-eyebrow">Publish</p>
-                  <p className="mt-2 text-sm leading-6 text-site-text">
-                    Your page goes live with one shareable link and an ATS-ready PDF download.
-                    Publishing is free and does not require a card.
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-site-secondary">
-                    When someone opens this, you&apos;ll know.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep("input")}
-                    className="site-button site-button-secondary"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    disabled={publishing}
-                    onClick={handlePublishClick}
-                    className="site-button site-button-primary disabled:opacity-60"
-                  >
-                    {publishing ? "Publishing..." : "Publish Page"}
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -684,25 +676,37 @@ export default function CreatePage() {
                 </div>
               </ThemeCanvas>
             </div>
-          </div>
 
-          <section data-testid="create-theme-section" className="space-y-4">
-            <div>
-              <p className="site-eyebrow">Theme</p>
-              <h3 className="site-panel-title mt-2">Make it feel like you</h3>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-site-secondary">
-                Pick a clean style. Don&apos;t overthink it.
-              </p>
+            <div className="site-callout flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+              <div className="max-w-3xl">
+                <p className="site-eyebrow">Ready to publish?</p>
+                <p className="mt-2 text-sm leading-6 text-site-text">
+                  This is the only publish step. Your page goes live with one shareable link and
+                  an ATS-ready PDF download. Publishing is free and does not require a card.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
+                  You can edit or unpublish it later from your dashboard.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep("input")}
+                  className="site-button site-button-secondary"
+                >
+                  Back to details
+                </button>
+                <button
+                  type="button"
+                  disabled={publishing}
+                  onClick={handlePublishClick}
+                  className="site-button site-button-primary disabled:opacity-60"
+                >
+                  {publishing ? "Publishing..." : "Publish Page"}
+                </button>
+              </div>
             </div>
-            <ThemePicker
-              themes={THEME_REGISTRY}
-              selectedThemeId={selectedTheme}
-              onSelectTheme={setSelectedTheme}
-              allowedThemeIds={accountAccess.allowedThemeIds}
-              lockedLabel="Not available"
-              showDescription
-            />
-          </section>
+          </div>
         </section>
       ) : null}
 
@@ -751,23 +755,23 @@ export default function CreatePage() {
               First week plan
             </p>
             <h3 className="site-panel-title mt-2">
-              Use the page like a follow-up asset, not a profile dump.
+              Put the page to work in one real conversation.
             </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="border-l-2 border-site-action bg-site-canvas-alt p-4">
-                <p className="site-eyebrow">1. Send it</p>
+                <p className="site-eyebrow">1. Share it</p>
                 <p className="mt-2 text-sm leading-6 text-site-secondary">
-                  Use the tracked link in a recruiter reply, application follow-up, or referral handoff instead of attaching another file.
+                  Send the tracked link in a follow-up, introduction, proposal, application, or event conversation instead of explaining everything again.
                 </p>
               </div>
               <div className="border-l-2 border-site-action bg-site-canvas-alt p-4">
-                <p className="site-eyebrow">2. Watch proof</p>
+                <p className="site-eyebrow">2. Watch interest</p>
                 <p className="mt-2 text-sm leading-6 text-site-secondary">
                   Start with the proof section and use the first-view loop below to see when interest is real.
                 </p>
               </div>
               <div className="border-l-2 border-site-action bg-site-canvas-alt p-4">
-                <p className="site-eyebrow">3. Tighten variants</p>
+                <p className="site-eyebrow">3. Adjust for the moment</p>
                 <p className="mt-2 text-sm leading-6 text-site-secondary">
                   {variants.length > 0
                     ? `You already have ${variants.length} targeted ${variants.length === 1 ? "version" : "versions"} ready. Use the one that matches the next conversation.`

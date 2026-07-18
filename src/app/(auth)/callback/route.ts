@@ -10,16 +10,10 @@ import {
   getRequestHostname,
 } from "@/lib/supabase/cookies";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
+import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
-
-function safeRedirectPath(value: string | null): string {
-  if (!value || !value.startsWith("/")) {
-    return "/dashboard";
-  }
-  return value;
-}
 
 function applyNoStoreHeaders(response: NextResponse) {
   response.headers.set("Cache-Control", "no-store, max-age=0");
@@ -32,7 +26,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const appOrigin = getAppOrigin();
   const code = requestUrl.searchParams.get("code");
-  const next = safeRedirectPath(requestUrl.searchParams.get("next"));
+  const next = sanitizeInternalRedirectPath(requestUrl.searchParams.get("next"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSourceParam = requestUrl.searchParams.get("legal_source");
   const legalSource: LegalAcceptanceSource =

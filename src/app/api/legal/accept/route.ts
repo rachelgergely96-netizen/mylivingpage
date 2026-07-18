@@ -44,8 +44,14 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get("user-agent"),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    await trackEvent(user.id, "legal.acceptance.failed", {
+      source,
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
+    return NextResponse.json(
+      { error: "Unable to record legal acceptance." },
+      { status: 500 },
+    );
   }
 
   if (source === "signup") {

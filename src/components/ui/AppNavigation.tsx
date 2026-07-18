@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SignOutButton from "@/components/ui/SignOutButton";
 
 interface AppNavigationProps {
@@ -39,6 +39,8 @@ function linkIsCurrent(pathname: string, item: NavigationItem) {
 export default function AppNavigation({ variant, showAdmin = false }: AppNavigationProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
+  const mobileMenuRef = useRef<HTMLElement | null>(null);
   const links = variant === "admin"
     ? ADMIN_LINKS
     : [
@@ -63,9 +65,14 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
+        window.requestAnimationFrame(() => mobileToggleRef.current?.focus());
       }
     };
 
+    const firstControl = mobileMenuRef.current?.querySelector<HTMLElement>(
+      "a[href], button:not([disabled])",
+    );
+    firstControl?.focus();
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [open]);
@@ -102,6 +109,7 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
         {renderLinks(false)}
       </nav>
       <button
+        ref={mobileToggleRef}
         type="button"
         className="site-icon-button md:hidden"
         aria-expanded={open}
@@ -113,6 +121,7 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
       </button>
       {open ? (
         <nav
+          ref={mobileMenuRef}
           id={`${variant}-mobile-navigation`}
           className="absolute left-0 right-0 top-full grid gap-2 border-b border-site-border bg-site-canvas p-4 shadow-[var(--site-shadow-overlay)] md:hidden"
           aria-label={`${variant === "admin" ? "Admin" : "Product"} mobile navigation`}

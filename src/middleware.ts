@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 
 const PROTECTED_PATHS = ["/create", "/dashboard", "/admin"];
 const ADMIN_PATHS = ["/admin"];
@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAdminPath(pathname) && userEmail !== ADMIN_EMAIL) {
+  if (isAdminPath(pathname) && !isAdminEmail(userEmail)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

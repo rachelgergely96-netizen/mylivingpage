@@ -24,6 +24,7 @@ interface ThemeCanvasProps {
   className?: string;
   style?: React.CSSProperties;
   interactive?: boolean;
+  animated?: boolean;
   mobileAmbientMotion?: boolean;
   children?: React.ReactNode;
 }
@@ -34,6 +35,7 @@ export default function ThemeCanvas({
   className,
   style,
   interactive = true,
+  animated = true,
   mobileAmbientMotion = false,
   children,
 }: ThemeCanvasProps) {
@@ -192,7 +194,7 @@ export default function ThemeCanvas({
       if (runningRef.current || document.hidden || !visibleRef.current) {
         return;
       }
-      if (reducedMotionRef.current) {
+      if (!animated || reducedMotionRef.current) {
         renderFrame(elapsedRef.current);
         return;
       }
@@ -236,7 +238,7 @@ export default function ThemeCanvas({
       }
       const handleChange = () => {
         syncAmbientMode();
-        if (reducedMotionRef.current) {
+        if (!animated || reducedMotionRef.current) {
           stop();
           renderFrame(elapsedRef.current);
         } else {
@@ -317,7 +319,7 @@ export default function ThemeCanvas({
         container.removeEventListener("touchcancel", handleTouchEnd);
       }
     };
-  }, [interactive, mobileAmbientMotion, theme]);
+  }, [animated, interactive, mobileAmbientMotion, theme]);
 
   return (
     <div

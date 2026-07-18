@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -11,22 +11,47 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
-  const [ready, setReady] = useState(false);
+  const [verification, setVerification] = useState<"verifying" | "ready" | "error">("verifying");
+  const redirectTimerRef = useRef<number | null>(null);
 
   // Supabase redirects here with a hash fragment containing the access token.
   // The browser client picks it up automatically via onAuthStateChange.
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
+    let active = true;
+    const verificationTimer = window.setTimeout(() => {
+      if (!active) return;
+      setVerification("error");
+      setMessage("This reset link could not be verified. It may be expired or already used.");
+    }, 8_000);
+
+    const markReady = () => {
+      if (!active) return;
+      window.clearTimeout(verificationTimer);
+      setVerification("ready");
+      setMessage("");
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        setReady(true);
+        markReady();
       }
     });
     // Also check if already in a session (page reload)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
+      if (session) markReady();
+    }).catch(() => {
+      // The bounded verification timer provides a stable recovery state.
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      active = false;
+      window.clearTimeout(verificationTimer);
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+      }
+      subscription.unsubscribe();
+    };
   }, []);
 
   const onSubmit = async (e: FormEvent) => {
@@ -51,7 +76,7 @@ export default function ResetPasswordPage() {
       if (error) throw error;
       setStatus("success");
       setMessage("Password updated! Redirecting...");
-      setTimeout(() => router.replace("/dashboard"), 2000);
+      redirectTimerRef.current = window.setTimeout(() => router.replace("/dashboard"), 2000);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Failed to reset password.");
@@ -64,13 +89,18 @@ export default function ResetPasswordPage() {
         <p className="site-eyebrow">Password reset</p>
         <h1 className="site-page-title mt-3">Set a new password</h1>
 
-        {!ready ? (
+        {verification === "verifying" ? (
           <div className="mt-6">
             <p role="status" className="text-sm text-site-secondary">Verifying reset link...</p>
-            <p className="mt-3 text-sm text-site-muted">
-              If this takes too long, your link may have expired.{" "}
+          </div>
+        ) : verification === "error" ? (
+          <div className="mt-6">
+            <p role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+              {message}
+            </p>
+            <p className="mt-4 text-sm text-site-muted">
               <Link href="/forgot-password" className="font-semibold text-site-action hover:text-site-action-hover">
-                Request a new one
+                Request a new reset link
               </Link>
             </p>
           </div>

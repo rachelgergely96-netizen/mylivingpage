@@ -577,7 +577,12 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "Cookies and analytics are described in this policy and the Cookie Policy.",
+              site.id === "mylivingpage"
+                ? "Essential authentication storage operates as needed. Optional Google Analytics loads only after you choose Allow analytics, and you can change that choice through Cookie settings in the site footer."
+                : "Cookies and analytics are described in this policy and the Cookie Policy.",
+              site.id === "mylivingpage"
+                ? "Analytics is limited to MyLivingPage marketing, guidance, and policy pages. It does not run on public professional pages, dashboard pages, creation tools, authentication pages, or admin pages."
+                : "Analytics controls are provided where required.",
               "Do Not Track note: no uniform industry handling; controls are provided where required.",
               "Children's privacy: not intended for children under 13, or higher age where required.",
               "If data is transferred internationally, we rely on contractual or legal safeguards appropriate to the transfer destination and applicable law.",
@@ -608,7 +613,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
   return {
     policyId: "cookies",
     title: "Cookie Policy",
-    summary: "This policy explains cookie categories, optional analytics or advertising technologies, and available user controls.",
+    summary: "This policy explains essential browser storage, optional analytics, and the controls available to you.",
     lastUpdated: LAST_UPDATED,
     sections: [
       {
@@ -629,9 +634,15 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
             type: "list",
             items: [
               "Strictly necessary cookies used for authentication, session continuity, fraud prevention, and security.",
-              "Functional storage used to remember settings and improve usability.",
-              "Analytics cookies may be used to understand performance and feature usage when enabled.",
-              "Advertising or attribution cookies are only used if marketing features are enabled.",
+              site.id === "mylivingpage"
+                ? "Local storage records whether you selected Allow analytics or Essential only so the Service can honor your choice."
+                : "Functional storage used to remember settings and improve usability.",
+              site.id === "mylivingpage"
+                ? "Google Analytics may use analytics storage to understand visits only after you select Allow analytics."
+                : "Analytics cookies may be used to understand performance and feature usage when enabled.",
+              site.id === "mylivingpage"
+                ? "MyLivingPage does not enable advertising or personalization storage through this consent control."
+                : "Advertising or attribution cookies are only used if marketing features are enabled.",
             ],
           },
         ],
@@ -642,7 +653,10 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "Where enabled, analytics or marketing technologies may be provided by third parties such as Vercel analytics or other approved vendors. Those providers process data under their own policies.",
+            text:
+              site.id === "mylivingpage"
+                ? "If you select Allow analytics, Google Analytics measures visits on a limited set of MyLivingPage marketing, guidance, and policy pages. We disable automatic pageviews, advertising signals, and ad personalization; send a generic page title; and omit query strings. Google Analytics is not loaded during direct visits to public professional pages and does not receive pageviews for those pages. Google processes analytics data under its own privacy terms."
+                : "Where enabled, analytics or marketing technologies may be provided by approved vendors. Those providers process data under their own policies.",
           },
         ],
       },
@@ -654,7 +668,9 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
             type: "list",
             items: [
               "Adjust browser settings to block or delete cookies.",
-              "Use in-product cookie settings where available.",
+              site.id === "mylivingpage"
+                ? "Select Cookie settings in the footer of a MyLivingPage marketing or policy page to allow or disable analytics at any time."
+                : "Use in-product cookie settings where available.",
               "Use vendor-specific opt-out tools where available.",
             ],
           },
@@ -670,7 +686,10 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
         blocks: [
           {
             type: "paragraph",
-            text: "We request consent for non-essential cookies where required by law. Essential authentication and security cookies remain active because the Service cannot function safely without them.",
+            text:
+              site.id === "mylivingpage"
+                ? "Optional analytics remains off until you select Allow analytics. Selecting Essential only keeps it off. Essential authentication and security storage remains available because signed-in features cannot function safely without it."
+                : "We request consent for non-essential cookies where required by law. Essential authentication and security cookies remain active because the Service cannot function safely without them.",
           },
         ],
       },

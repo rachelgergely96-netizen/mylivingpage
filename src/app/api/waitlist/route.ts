@@ -15,7 +15,14 @@ export async function POST(request: Request) {
     if (rateLimit.limited) {
       return rateLimit.response;
     }
+  } catch {
+    return NextResponse.json(
+      { error: "Waitlist signup is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
 
+  try {
     const body = (await request.json()) as { email?: string; referralCode?: string };
     const email = body.email?.trim().toLowerCase();
     if (!email || !EMAIL_REGEX.test(email)) {
@@ -32,13 +39,17 @@ export async function POST(request: Request) {
       if (error.code === "23505") {
         return NextResponse.json({ message: "You are already on the waitlist." });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("waitlist.insert_failed", { error: error.message });
+      return NextResponse.json(
+        { error: "Unable to join the waitlist right now." },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ message: "You are in. We will email launch updates soon." });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Invalid request payload." },
+      { error: "Invalid request payload." },
       { status: 400 },
     );
   }

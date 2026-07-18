@@ -53,7 +53,7 @@ export function createSupabaseBillingRepository(
 ): BillingRepository {
   return {
     async updateBillingStateByCustomerId(customerId, state) {
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           plan: state.plan,
@@ -61,13 +61,21 @@ export function createSupabaseBillingRepository(
           stripe_trial_ends_at: state.stripeTrialEndsAt,
         })
         .eq("stripe_customer_id", customerId);
+
+      if (error) {
+        throw new Error(`Unable to update billing state: ${error.message}`);
+      }
     },
     async findUserIdByCustomerId(customerId) {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("id")
         .eq("stripe_customer_id", customerId)
         .maybeSingle<{ id: string }>();
+
+      if (error) {
+        throw new Error(`Unable to resolve billing customer: ${error.message}`);
+      }
 
       return profile?.id ?? null;
     },

@@ -37,6 +37,7 @@ interface PageFixture {
 
 function createServiceRoleClient(options: {
   page: PageFixture;
+  pageLookupError?: { message: string } | null;
   onPageUpdate: (values: Record<string, unknown>) => void;
 }) {
   return {
@@ -51,7 +52,7 @@ function createServiceRoleClient(options: {
                     return {
                       maybeSingle: vi.fn().mockResolvedValue({
                         data: options.page,
-                        error: null,
+                        error: options.pageLookupError ?? null,
                       }),
                     };
                   },
@@ -218,6 +219,65 @@ describe("PATCH /api/pages/[pageId] visibility transitions", () => {
     const response = await patchPage(body);
 
     expect(response.status).toBe(400);
+    expect(pageUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed resume data and client-controlled timestamps", async () => {
+    const pageUpdate = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({
+        page: {
+          id: "page-1",
+          owner_id: "user-1",
+          user_id: "user-1",
+          status: "live",
+          visibility: "public",
+          published_at: "2026-06-01T12:00:00.000Z",
+          resume_data: { name: "Rachel Gergely" },
+          theme_id: "cosmic",
+          slug: "rachel",
+        },
+        onPageUpdate: pageUpdate,
+      }),
+    );
+
+    const malformed = await patchPage({
+      resume_data: { name: "Rachel", experience: "invalid" },
+    });
+    const timestampOnly = await patchPage({
+      updated_at: "2099-01-01T00:00:00.000Z",
+    });
+
+    expect(malformed.status).toBe(400);
+    expect(timestampOnly.status).toBe(400);
+    expect(pageUpdate).not.toHaveBeenCalled();
+  });
+
+  it("reports a temporary outage instead of masking a page lookup error", async () => {
+    const pageUpdate = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({
+        pageLookupError: { message: "database unavailable" },
+        page: {
+          id: "page-1",
+          owner_id: "user-1",
+          user_id: "user-1",
+          status: "live",
+          visibility: "public",
+          published_at: "2026-06-01T12:00:00.000Z",
+          resume_data: { name: "Rachel Gergely" },
+          theme_id: "cosmic",
+          slug: "rachel",
+        },
+        onPageUpdate: pageUpdate,
+      }),
+    );
+
+    const response = await patchPage({
+      resume_data: { name: "Rachel Gergely" },
+    });
+
+    expect(response.status).toBe(503);
     expect(pageUpdate).not.toHaveBeenCalled();
   });
 });

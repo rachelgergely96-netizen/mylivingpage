@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isReservedUsernameSlug,
   normalizeUsernameSlug,
   slugifyUsername,
   usernameFromEmail,
@@ -10,6 +11,14 @@ describe("username helpers", () => {
   it("normalizes user input without falling back to member", () => {
     expect(normalizeUsernameSlug("  Jane Doe  ")).toBe("jane-doe");
     expect(normalizeUsernameSlug(".__Jane__." )).toBe("jane");
+  });
+
+  it("reserves every top-level product and marketing route", () => {
+    for (const slug of ["examples", "guides", "homepage-preview", "theme-review"]) {
+      expect(isReservedUsernameSlug(slug)).toBe(true);
+    }
+    expect(isReservedUsernameSlug("avery-morgan")).toBe(false);
+    expect(usernameFromEmail("guides@example.com")).toBe("guides-member");
   });
 
   it("treats blank usernames as invalid", () => {

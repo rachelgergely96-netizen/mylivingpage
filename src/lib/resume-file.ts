@@ -1,7 +1,11 @@
 import { inflateRawSync, inflateSync } from "node:zlib";
 import { MAX_RESUME_TEXT_CHARACTERS } from "@/lib/resume-import";
+import {
+  MAX_RESUME_FILE_BYTES,
+  MAX_RESUME_FILE_LABEL,
+} from "@/lib/resume-file-limits";
+export { MAX_RESUME_FILE_BYTES, MAX_RESUME_FILE_LABEL } from "@/lib/resume-file-limits";
 
-export const MAX_RESUME_FILE_BYTES = 6 * 1024 * 1024;
 const MAX_EXPANDED_DOCUMENT_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_STREAMS = 256;
 
@@ -423,7 +427,10 @@ export function extractResumeFileText(input: {
     throw new ResumeFileError("The selected file is empty.", "empty_file");
   }
   if (buffer.length > MAX_RESUME_FILE_BYTES) {
-    throw new ResumeFileError("Resume files must be 6 MB or smaller.", "file_too_large");
+    throw new ResumeFileError(
+      `Resume files must be ${MAX_RESUME_FILE_LABEL} or smaller.`,
+      "file_too_large",
+    );
   }
 
   const kind = inferFileKind(fileName, input.contentType ?? "", buffer);

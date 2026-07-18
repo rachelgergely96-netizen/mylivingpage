@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { syncPageHostingState } from "@/lib/hosting-state";
+import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
 import {
   buildResumePdfFileName,
   coerceResumeDataForExport,
@@ -80,11 +80,7 @@ export async function POST(request: Request) {
         })
       : null;
 
-    const publicDownloadAllowed =
-      syncedPage?.page.visibility === "public" ||
-      (syncedPage?.page.visibility == null && syncedPage?.page.status === "live");
-
-    if (!page || !publicDownloadAllowed) {
+    if (!page || !syncedPage || !isPubliclyAvailablePage(syncedPage.page)) {
       return NextResponse.json({ error: "Page not found." }, { status: 404 });
     }
 
@@ -105,6 +101,13 @@ export async function POST(request: Request) {
             ? rateLimitError.message
             : "unknown_rate_limit_error",
       });
+      return NextResponse.json(
+        {
+          error:
+            "Resume downloads are temporarily unavailable. Please try again in a moment.",
+        },
+        { status: 503 },
+      );
     }
 
     const selectedVariant = getPageVariant(

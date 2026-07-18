@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 import { getAuthErrorMessage, getPasswordAuthErrorMessage } from "@/lib/auth/auth-error";
+import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const SESSION_CHECK_DELAYS_MS = [0, 150, 350, 700];
@@ -42,10 +43,7 @@ export default function LoginPage() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    const next = params.get("next");
-    if (next && next.startsWith("/")) {
-      setNextPath(next);
-    }
+    setNextPath(sanitizeInternalRedirectPath(params.get("next"), "/dashboard"));
 
     const error = params.get("error");
     if (error) {

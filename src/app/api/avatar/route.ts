@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { detectAvatarMimeType } from "@/lib/security/avatar-file";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
@@ -16,7 +17,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData = await request.formData();
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_FILE_SIZE + 128 * 1024
+  ) {
+    return NextResponse.json({ error: "File must be under 2 MB." }, { status: 413 });
+  }
+
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return NextResponse.json({ error: "Unable to read the upload." }, { status: 400 });
+  }
   const file = formData.get("file") as File | null;
 
   if (!file) {
@@ -26,15 +38,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only JPEG, PNG, and WebP images are allowed." }, { status: 400 });
   }
   if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: "File must be under 2 MB." }, { status: 400 });
+    return NextResponse.json({ error: "File must be under 2 MB." }, { status: 413 });
+  }
+  if (file.size === 0) {
+    return NextResponse.json({ error: "The selected file is empty." }, { status: 400 });
   }
 
-  const path = `${user.id}/${AVATAR_PATH_BASENAME}`;
-
   const supabase = createServiceRoleSupabaseClient();
-  const { data: existing } = await supabase.storage.from("avatars").list(user.id);
+  const { data: existing, error: listError } = await supabase.storage
+    .from("avatars")
+    .list(user.id);
+  if (listError) {
+    await trackEvent(user.id, "avatar.upload.failed", {
+      error: listError.message,
+      stage: "storage-list",
+    });
+    return NextResponse.json({ error: "Upload failed." }, { status: 500 });
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const detectedType = detectAvatarMimeType(buffer);
+  if (!detectedType || detectedType !== file.type) {
+    return NextResponse.json(
+      { error: "The file contents do not match a supported image type." },
+      { status: 400 },
+    );
+  }
   if (ENABLE_E2E_FAILURE_INJECTION && request.headers.get("x-test-avatar-failure") === "before-upload") {
     await trackEvent(user.id, "avatar.upload.failed", {
       injected: true,
@@ -42,6 +71,9 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ error: "Injected avatar upload failure." }, { status: 500 });
   }
+
+  const objectName = `${AVATAR_PATH_BASENAME}-${crypto.randomUUID()}`;
+  const path = `${user.id}/${objectName}`;
 
   const { error: uploadError } = await supabase.storage
     .from("avatars")
@@ -58,27 +90,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Upload failed." }, { status: 500 });
   }
 
-  const legacyPaths = (existing ?? [])
-    .filter((entry) => entry.name !== AVATAR_PATH_BASENAME)
-    .map((entry) => `${user.id}/${entry.name}`);
-
-  if (legacyPaths.length) {
-    await supabase.storage.from("avatars").remove(legacyPaths);
-  }
-
   const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
 
   // Bust cache by appending timestamp
   const url = `${urlData.publicUrl}?t=${Date.now()}`;
 
   // Persist avatar URL to profiles
-  const { error: profileUpdateError } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
-  if (profileUpdateError) {
+  const { data: updatedProfile, error: profileUpdateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: url })
+    .eq("id", user.id)
+    .select("id")
+    .maybeSingle();
+  if (profileUpdateError || !updatedProfile) {
+    await supabase.storage.from("avatars").remove([path]);
     await trackEvent(user.id, "avatar.upload.failed", {
-      error: profileUpdateError.message,
+      error: profileUpdateError?.message ?? "Profile was not found.",
       stage: "profile-update",
     });
     return NextResponse.json({ error: "Upload failed." }, { status: 500 });
+  }
+
+  const previousPaths = (existing ?? []).map(
+    (entry) => `${user.id}/${entry.name}`,
+  );
+  if (previousPaths.length) {
+    const { error: cleanupError } = await supabase.storage
+      .from("avatars")
+      .remove(previousPaths);
+    if (cleanupError) {
+      await trackEvent(user.id, "avatar.cleanup.failed", {
+        error: cleanupError.message,
+      });
+    }
   }
 
   await trackEvent(user.id, "avatar.upload");
@@ -96,18 +140,43 @@ export async function DELETE() {
 
   const supabase = createServiceRoleSupabaseClient();
 
-  const { data: existing } = await supabase.storage.from("avatars").list(user.id);
-  if (existing?.length) {
-    await supabase.storage.from("avatars").remove(existing.map((f) => `${user.id}/${f.name}`));
-  }
-
-  // Clear avatar URL from profiles
-  const { error } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
-  if (error) {
+  const { data: existing, error: listError } = await supabase.storage
+    .from("avatars")
+    .list(user.id);
+  if (listError) {
     await trackEvent(user.id, "avatar.remove.failed", {
-      error: error.message,
+      error: listError.message,
+      stage: "storage-list",
     });
     return NextResponse.json({ error: "Unable to remove avatar." }, { status: 500 });
+  }
+
+  // Hide the avatar from the profile before removing the public object.
+  const { data: updatedProfile, error: profileUpdateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: null })
+    .eq("id", user.id)
+    .select("id")
+    .maybeSingle();
+  if (profileUpdateError || !updatedProfile) {
+    await trackEvent(user.id, "avatar.remove.failed", {
+      error: profileUpdateError?.message ?? "Profile was not found.",
+      stage: "profile-update",
+    });
+    return NextResponse.json({ error: "Unable to remove avatar." }, { status: 500 });
+  }
+
+  if (existing?.length) {
+    const { error: removeError } = await supabase.storage
+      .from("avatars")
+      .remove(existing.map((file) => `${user.id}/${file.name}`));
+    if (removeError) {
+      await trackEvent(user.id, "avatar.remove.failed", {
+        error: removeError.message,
+        stage: "storage-remove",
+      });
+      return NextResponse.json({ error: "Unable to remove avatar." }, { status: 500 });
+    }
   }
 
   await trackEvent(user.id, "avatar.remove");

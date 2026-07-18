@@ -30,6 +30,7 @@ test("robots.txt and sitemap.xml expose the SEO foundation routes", async ({ req
 
   expect(extractLocs(sitemapText)).toEqual([
     `${origin}/`,
+    `${origin}/cookies`,
     `${origin}/delete-account`,
     `${origin}/examples`,
     `${origin}/guides`,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   extractResumeFileText,
   MAX_RESUME_FILE_BYTES,
+  MAX_RESUME_FILE_LABEL,
   ResumeFileError,
 } from "@/lib/resume-file";
 import {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     declaredContentLength > MAX_MULTIPART_BODY_BYTES
   ) {
     return NextResponse.json(
-      { error: "Resume files must be 6 MB or smaller." },
+      { error: `Resume files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
       { status: 413 },
     );
   }
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     if (typeof fileValue !== "string" && fileValue) {
       if (fileValue.size > MAX_RESUME_FILE_BYTES) {
         return NextResponse.json(
-          { error: "Resume files must be 6 MB or smaller." },
+          { error: `Resume files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
           { status: 413 },
         );
       }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function SignOutButton({ className = "" }: { className?: string }) {
@@ -9,6 +10,7 @@ export default function SignOutButton({ className = "" }: { className?: string }
   const signOut = async () => {
     const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
+    clearBrowserLocalDraftStorage();
     router.replace("/login");
   };
 

@@ -6,9 +6,18 @@ import {
 import { sanitizePageVariants } from "@/lib/page-variants";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { isThemeAllowed } from "@/lib/plans";
+import {
+  MAX_PAGE_TITLE_LENGTH,
+  MAX_RAW_RESUME_CHARACTERS,
+  isPlainJsonObject,
+  validatePageConfigPayload,
+  validatePageWriteBodySize,
+  validateResumeDataPayload,
+} from "@/lib/security/page-write";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { usernameFromEmail } from "@/lib/usernames";
+import { THEME_IDS } from "@/themes/types";
 
 const routeTrustLevel = "authenticated_user";
 
@@ -25,32 +34,53 @@ async function persistPageRecord(
   userId: string,
   fields: Record<string, unknown>,
 ) {
-  const { data: existing } = await supabase
+  const { data: existing, error: existingLookupError } = await supabase
     .from("pages")
     .select("id")
     .eq("owner_id", userId)
     .maybeSingle();
+  if (existingLookupError) {
+    return {
+      error: existingLookupError,
+      existingId: null,
+      pageId: null,
+    };
+  }
 
   const { error } = await supabase.from("pages").upsert(fields, { onConflict: "owner_id" });
   if (error) {
     return { error, existingId: existing?.id ?? null, pageId: existing?.id ?? null };
   }
 
-  const { data: persisted } = await supabase
+  const { data: persisted, error: persistedLookupError } = await supabase
     .from("pages")
     .select("id")
     .eq("owner_id", userId)
     .maybeSingle();
+  if (persistedLookupError || !persisted?.id) {
+    return {
+      error:
+        persistedLookupError ??
+        new Error("Published page could not be read after it was saved."),
+      existingId: existing?.id ?? null,
+      pageId: null,
+    };
+  }
 
   return {
     error: null,
     existingId: existing?.id ?? null,
-    pageId: persisted?.id ?? existing?.id ?? null,
+    pageId: persisted.id,
   };
 }
 
 export async function POST(request: Request) {
   try {
+    const bodySizeError = validatePageWriteBodySize(request);
+    if (bodySizeError) {
+      return NextResponse.json({ error: bodySizeError }, { status: 413 });
+    }
+
     const authClient = await createServerSupabaseClient();
     const {
       data: { user },
@@ -60,13 +90,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const body = (await request.json()) as Partial<PublishBody>;
+    const parsedBody = await request.json().catch(() => null);
+    if (!isPlainJsonObject(parsedBody)) {
+      return NextResponse.json({ error: "Invalid page payload." }, { status: 400 });
+    }
+    const body = parsedBody as unknown as Partial<PublishBody>;
     if (!body.theme_id || !body.resume_data) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+    if (
+      typeof body.theme_id !== "string" ||
+      !THEME_IDS.includes(body.theme_id as (typeof THEME_IDS)[number])
+    ) {
+      return NextResponse.json({ error: "Invalid theme." }, { status: 400 });
+    }
+
+    const resumeDataError = validateResumeDataPayload(body.resume_data);
+    if (resumeDataError) {
+      return NextResponse.json({ error: resumeDataError }, { status: 400 });
+    }
+    if (
+      body.title !== undefined &&
+      (typeof body.title !== "string" || body.title.length > MAX_PAGE_TITLE_LENGTH)
+    ) {
+      return NextResponse.json({ error: "Page title is invalid." }, { status: 400 });
+    }
+    if (
+      body.raw_resume !== undefined &&
+      (typeof body.raw_resume !== "string" ||
+        body.raw_resume.length > MAX_RAW_RESUME_CHARACTERS)
+    ) {
+      return NextResponse.json({ error: "Raw resume text is invalid." }, { status: 400 });
+    }
+    if (body.page_config !== undefined) {
+      const pageConfigError = validatePageConfigPayload(body.page_config);
+      if (pageConfigError) {
+        return NextResponse.json({ error: pageConfigError }, { status: 400 });
+      }
+    }
 
     const supabase = createServiceRoleSupabaseClient();
-    const { data: profile, schema: profileSchema } =
+    const {
+      data: profile,
+      error: profileError,
+      schema: profileSchema,
+    } =
       await fetchProfileWithHostingAccess<{
         plan?: string | null;
         username?: string | null;
@@ -76,6 +144,16 @@ export async function POST(request: Request) {
         matchField: "id",
         matchValue: user.id,
       });
+    if (profileError) {
+      await trackEvent(user.id, "page.publish.failed", {
+        error: profileError.message,
+        stage: "profile-lookup",
+      });
+      return NextResponse.json(
+        { error: "Account access is temporarily unavailable." },
+        { status: 503 },
+      );
+    }
 
     const userPlan = profile?.plan ?? "spark";
     const accountAccess = getAccountAccessState({
@@ -137,9 +215,19 @@ export async function POST(request: Request) {
           profile?.stripe_trial_ends_at ?? null;
       }
 
-      await supabase.from("profiles").upsert(profileUpsertFields, {
+      const { error: profileUpsertError } = await supabase.from("profiles").upsert(profileUpsertFields, {
         onConflict: "id",
       });
+      if (profileUpsertError) {
+        await trackEvent(user.id, "page.publish.failed", {
+          error: profileUpsertError.message,
+          stage: "profile-upsert",
+        });
+        return NextResponse.json(
+          { error: "Unable to prepare your profile for publishing." },
+          { status: 500 },
+        );
+      }
     }
 
     const allFields: Record<string, unknown> = {
@@ -148,10 +236,12 @@ export async function POST(request: Request) {
       slug: username,
       status: "live",
       visibility: "public",
-      title: body.title || "My Living Page",
+      title: body.title?.trim() || "My Living Page",
       theme_id: body.theme_id,
       resume_data: body.resume_data,
-      raw_resume: body.raw_resume ?? "",
+      // Raw imports can contain private details that users removed during review.
+      // Persist only the structured, user-approved page data.
+      raw_resume: "",
       published_at: now,
     };
 
@@ -170,7 +260,10 @@ export async function POST(request: Request) {
         theme_id: body.theme_id,
         error: error.message,
       });
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Unable to publish the page right now." },
+        { status: 500 },
+      );
     }
 
     await trackEvent(user.id, "page.publish", {
@@ -185,7 +278,7 @@ export async function POST(request: Request) {
       error: err instanceof Error ? err.message : "Publish failed",
     });
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Publish failed" },
+      { error: "Unable to publish the page right now." },
       { status: 500 },
     );
   }

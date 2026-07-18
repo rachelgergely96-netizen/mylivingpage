@@ -30,6 +30,7 @@ export async function fetchPublicLivePage(
     .from("pages")
     .select("*")
     .eq("owner_id", profile.id)
+    .eq("status", "live")
     .eq("visibility", "public")
     .order("updated_at", { ascending: false })
     .limit(1)

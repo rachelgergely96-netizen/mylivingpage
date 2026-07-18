@@ -106,7 +106,12 @@ export default function ThemePicker({
                     className={`site-panel rounded-none p-3 text-left transition-colors duration-200 ${selectedThemeId === theme.id ? "border-site-action bg-site-selected" : ""} ${locked ? "cursor-not-allowed opacity-60" : "hover:border-site-border-strong hover:bg-site-surface-raised"}`}
                   >
                     <div className="relative">
-                      <ThemeCanvas themeId={theme.id} height={120} interactive={false} />
+                      <ThemeCanvas
+                        themeId={theme.id}
+                        height={120}
+                        interactive={false}
+                        animated={selectedThemeId === theme.id}
+                      />
                       {theme.signature ? (
                         <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2.5 py-1 text-[9px] font-semibold text-site-warning">
                           Signature

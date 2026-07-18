@@ -1,5 +1,6 @@
 import nextEnv from "@next/env";
 import pg from "pg";
+import { getVerifiedDatabaseClientConfig } from "./database-connection.mjs";
 
 const { loadEnvConfig } = nextEnv;
 
@@ -158,12 +159,7 @@ const duplicateOwnersQuery = `
   limit 10
 `;
 
-const client = new Client({
-  connectionString: databaseUrl,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
+const client = new Client(getVerifiedDatabaseClientConfig(databaseUrl));
 
 try {
   await client.connect();

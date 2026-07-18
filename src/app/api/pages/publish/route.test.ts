@@ -34,6 +34,10 @@ function createServiceRoleClient(options?: {
   } | null;
   existingPageId?: string | null;
   persistedPageId?: string | null;
+  profileError?: { message: string } | null;
+  profileUpsertError?: { message: string } | null;
+  existingLookupError?: { message: string } | null;
+  persistedLookupError?: { message: string } | null;
   onProfileUpdate?: (values: Record<string, unknown>) => void;
   onProfileUpsert?: (values: Record<string, unknown>) => void;
   onPageUpsert?: (values: Record<string, unknown>) => void;
@@ -58,7 +62,7 @@ function createServiceRoleClient(options?: {
                         stripe_subscription_status: null,
                         stripe_trial_ends_at: null,
                       },
-                    error: null,
+                    error: options?.profileError ?? null,
                   }),
                   single: vi.fn().mockResolvedValue({
                     data:
@@ -70,7 +74,7 @@ function createServiceRoleClient(options?: {
                         stripe_subscription_status: null,
                         stripe_trial_ends_at: null,
                       },
-                    error: null,
+                    error: options?.profileError ?? null,
                   }),
                 };
               },
@@ -86,7 +90,7 @@ function createServiceRoleClient(options?: {
           },
           upsert(values: Record<string, unknown>) {
             options?.onProfileUpsert?.(values);
-            return Promise.resolve({ error: null });
+            return Promise.resolve({ error: options?.profileUpsertError ?? null });
           },
         };
       }
@@ -112,7 +116,10 @@ function createServiceRoleClient(options?: {
                 return {
                   maybeSingle: vi.fn().mockResolvedValue({
                     data,
-                    error: null,
+                    error:
+                      currentCall === 0
+                        ? options?.existingLookupError ?? null
+                        : options?.persistedLookupError ?? null,
                   }),
                 };
               },
@@ -142,6 +149,63 @@ describe("POST /api/pages/publish", () => {
       },
     });
     mocks.trackEvent.mockResolvedValue(undefined);
+  });
+
+  it("rejects malformed or oversized page data before writing", async () => {
+    const pageUpserts = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({ onPageUpsert: pageUpserts }),
+    );
+
+    const malformed = await POST(
+      new Request("http://localhost/api/pages/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme_id: "cosmic",
+          resume_data: { name: "Rachel", experience: "invalid" },
+        }),
+      }),
+    );
+    const invalidTheme = await POST(
+      new Request("http://localhost/api/pages/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme_id: "made-up-theme",
+          resume_data: { name: "Rachel" },
+        }),
+      }),
+    );
+
+    expect(malformed.status).toBe(400);
+    expect(invalidTheme.status).toBe(400);
+    expect(pageUpserts).not.toHaveBeenCalled();
+  });
+
+  it("never persists the raw imported resume", async () => {
+    const pageUpserts = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({ onPageUpsert: pageUpserts }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Rachel Gergely",
+          theme_id: "cosmic",
+          resume_data: { name: "Rachel Gergely" },
+          raw_resume: "Private source text that should not be retained",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(pageUpserts).toHaveBeenCalledWith(
+      expect.objectContaining({ raw_resume: "" }),
+    );
   });
 
   it("publishes for trial-hosting cohort users without starting a hosting timer", async () => {
@@ -275,5 +339,61 @@ describe("POST /api/pages/publish", () => {
     expect(pageUpserts).toHaveBeenCalledWith(
       expect.objectContaining({ status: "live", visibility: "public" }),
     );
+  });
+
+  it("does not publish when the account lookup fails", async () => {
+    const pageUpserts = vi.fn();
+    const profileUpserts = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({
+        profileError: { message: "profile lookup failed" },
+        onPageUpsert: pageUpserts,
+        onProfileUpsert: profileUpserts,
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme_id: "cosmic",
+          resume_data: { name: "Rachel Gergely" },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(profileUpserts).not.toHaveBeenCalled();
+    expect(pageUpserts).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["existing page lookup", { existingLookupError: { message: "lookup failed" } }],
+    [
+      "post-publish lookup",
+      { persistedLookupError: { message: "readback failed" } },
+    ],
+  ])("reports a failed publish when the %s fails", async (_label, options) => {
+    const pageUpserts = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({ ...options, onPageUpsert: pageUpserts }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/pages/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme_id: "cosmic",
+          resume_data: { name: "Rachel Gergely" },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    if ("existingLookupError" in options) {
+      expect(pageUpserts).not.toHaveBeenCalled();
+    }
   });
 });

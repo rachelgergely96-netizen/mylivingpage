@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { requireAuthenticatedUser } from "@/lib/security/route-security";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { validateUsernameSlug } from "@/lib/usernames";
-
-const RESERVED_SLUGS = new Set([
-  "login", "signup", "dashboard", "create", "api", "callback",
-  "admin", "settings", "profile", "help", "about", "pricing",
-  "terms", "privacy", "cookies", "acceptable-use", "dmca", "disclaimer",
-  "security", "delete-account", "legal", "blog", "docs", "support",
-]);
+import { isReservedUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
 
 const routeTrustLevel = {
   GET: "public_read",
@@ -34,7 +27,7 @@ export async function GET(request: Request) {
   if (error) {
     return NextResponse.json({ available: false, slug, reason: error });
   }
-  if (RESERVED_SLUGS.has(slug)) {
+  if (isReservedUsernameSlug(slug)) {
     return NextResponse.json({ available: false, slug, reason: "This name is reserved." });
   }
 
@@ -67,7 +60,7 @@ export async function PATCH(request: Request) {
   if (error) {
     return NextResponse.json({ error }, { status: 400 });
   }
-  if (RESERVED_SLUGS.has(slug)) {
+  if (isReservedUsernameSlug(slug)) {
     return NextResponse.json({ error: "This name is reserved." }, { status: 400 });
   }
 

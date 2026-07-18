@@ -63,13 +63,15 @@ test("interactive sample keeps each professional output and visual direction ali
 
   await referred.click();
   await expect(referred).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('[data-living-output][data-theme-id="matrix"]')).toBeVisible();
+  const livingOutput = demo.getByTestId("story-living-output");
+  await expect(livingOutput).toHaveAttribute("data-theme-id", "matrix");
+  await expect(livingOutput).toBeVisible();
   await expect(demo.getByRole("heading", { name: "Avery Morgan" })).toBeVisible();
 
   const warmTheme = page.getByRole("button", { name: /Warm \+ approachable/ });
   await warmTheme.click();
   await expect(warmTheme).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('[data-living-output][data-theme-id="aurora"]')).toBeVisible();
+  await expect(livingOutput).toHaveAttribute("data-theme-id", "aurora");
 
   await introduction.click();
   await expect(introduction).toHaveAttribute("aria-pressed", "true");
@@ -88,7 +90,7 @@ test("interactive sample keeps each professional output and visual direction ali
     "true",
   );
   await expect(page.getByLabel("Sample pasted résumé text")).toHaveValue(
-    "Led a TypeScript and SQL platform serving 2M+ requests daily.",
+    "Avery Morgan\nSenior Product Lead\n\nLed a TypeScript and SQL platform serving 2M+ requests daily.",
   );
 
   await expect(page.getByText("5 matching details to review")).toBeVisible();
@@ -120,7 +122,7 @@ test("reduced-motion visitors keep the complete story without ambient animation"
   expect(revealState).toBe(true);
 
   await page.getByRole("button", { name: /Getting referred/ }).first().click();
-  await expect(page.locator("[data-living-output]")).toBeVisible();
+  await expect(page.getByTestId("story-living-output")).toBeVisible();
 });
 
 test("mobile menu works and sticky CTA appears after the hero then hides near the final CTA", async ({ page }) => {

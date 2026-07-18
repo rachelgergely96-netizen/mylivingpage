@@ -2,9 +2,9 @@
 
 import React, { useRef, useState } from "react";
 import type { ParsedResumeImport, ResumeImportField } from "@/lib/resume-import";
+import { MAX_RESUME_FILE_BYTES, MAX_RESUME_FILE_LABEL } from "@/lib/resume-file-limits";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
-const MAX_FILE_BYTES = 6 * 1024 * 1024;
 
 interface ResumeImportResponse extends ParsedResumeImport {
   text: string;
@@ -31,8 +31,8 @@ const FIELD_LABELS: Record<ResumeImportField, string> = {
 };
 
 function validateFile(file: File) {
-  if (file.size > MAX_FILE_BYTES) {
-    return "Resume files must be 6 MB or smaller.";
+  if (file.size > MAX_RESUME_FILE_BYTES) {
+    return `Resume files must be ${MAX_RESUME_FILE_LABEL} or smaller.`;
   }
   if (!/\.(?:pdf|docx|txt|md)$/i.test(file.name)) {
     return "Choose a PDF, DOCX, TXT, or Markdown file.";
@@ -194,7 +194,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
                   Choose a resume
                 </button>
                 <p className="mt-2 text-xs text-site-muted">
-                  PDF, DOCX, TXT, or MD · up to 6 MB
+                  PDF, DOCX, TXT, or MD · up to {MAX_RESUME_FILE_LABEL}
                 </p>
               </>
             )}

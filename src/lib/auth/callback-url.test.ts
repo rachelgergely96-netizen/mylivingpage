@@ -22,6 +22,19 @@ describe("buildAuthCallbackUrl", () => {
     ).toBe("https://www.mylivingpage.com/callback?next=%2Fdashboard");
   });
 
+  it("sanitizes unsafe destinations before adding them to auth URLs", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
+
+    expect(buildAuthCallbackUrl({ next: "//evil.example/steal" })).toBe(
+      "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+    );
+    expect(
+      buildGoogleAuthStartUrl({ next: "/\\evil.example/steal", screen: "login" }),
+    ).toBe(
+      "https://www.mylivingpage.com/api/auth/google?next=%2Fdashboard&screen=login",
+    );
+  });
+
   it("preserves legal acceptance metadata for signup callbacks", () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
 

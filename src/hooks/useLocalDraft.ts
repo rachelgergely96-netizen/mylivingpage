@@ -7,6 +7,45 @@ export interface DraftEnvelope<T> {
   savedAt: number;
 }
 
+const LOCAL_DRAFT_STORAGE_PREFIX = "mlp-draft-";
+
+export function clearLocalDraftStorage(
+  storage: Pick<Storage, "key" | "length" | "removeItem">,
+) {
+  const draftKeys: string[] = [];
+
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(LOCAL_DRAFT_STORAGE_PREFIX)) {
+        draftKeys.push(key);
+      }
+    }
+  } catch {
+    return;
+  }
+
+  draftKeys.forEach((key) => {
+    try {
+      storage.removeItem(key);
+    } catch {
+      // Storage can be unavailable in hardened browser modes.
+    }
+  });
+}
+
+export function clearBrowserLocalDraftStorage() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    clearLocalDraftStorage(window.localStorage);
+  } catch {
+    // Accessing localStorage itself can fail in hardened browser modes.
+  }
+}
+
 export function loadDraftEnvelope<T>(
   storage: Pick<Storage, "getItem" | "removeItem">,
   key: string | null,
@@ -23,7 +62,11 @@ export function loadDraftEnvelope<T>(
 
     return JSON.parse(raw) as DraftEnvelope<T>;
   } catch {
-    storage.removeItem(key);
+    try {
+      storage.removeItem(key);
+    } catch {
+      // Storage can be unavailable in hardened browser modes.
+    }
     return null;
   }
 }
@@ -52,7 +95,11 @@ export function removeDraftEnvelope(
     return;
   }
 
-  storage.removeItem(key);
+  try {
+    storage.removeItem(key);
+  } catch {
+    // localStorage can be unavailable in hardened browser modes.
+  }
 }
 
 export function useLocalDraft<T>(key: string | null) {
@@ -67,10 +114,17 @@ export function useLocalDraft<T>(key: string | null) {
 
     if (!key) {
       setPendingDraft(null);
-      return;
+      return undefined;
     }
 
     setPendingDraft(loadDraftEnvelope<T>(localStorage, key));
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [key]);
 
   const saveDraft = useCallback(
@@ -88,6 +142,7 @@ export function useLocalDraft<T>(key: string | null) {
           data,
           savedAt: Date.now(),
         });
+        timerRef.current = null;
       }, 1000);
     },
     [key],
@@ -96,12 +151,17 @@ export function useLocalDraft<T>(key: string | null) {
   const clearDraft = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
     removeDraftEnvelope(localStorage, key);
     setPendingDraft(null);
   }, [key]);
 
   const dismissDraft = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     setPendingDraft(null);
     removeDraftEnvelope(localStorage, key);
   }, [key]);

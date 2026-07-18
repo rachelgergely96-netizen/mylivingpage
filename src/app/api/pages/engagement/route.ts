@@ -26,18 +26,33 @@ const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {
+    const declaredLength = Number(request.headers.get("content-length"));
+    if (Number.isFinite(declaredLength) && declaredLength > 32 * 1024) {
+      return NextResponse.json(
+        { error: "Engagement payload is too large." },
+        { status: 413 },
+      );
+    }
+
     const payload = normalizeEngagementPayload(await parseRequestBody(request));
     if (!payload) {
       return NextResponse.json({ error: "Invalid engagement payload." }, { status: 400 });
     }
 
-    const rateLimit = await enforceRateLimit({
-      request,
-      policy: "public_page_engagement",
-      route: "/api/pages/engagement",
-    });
-    if (rateLimit.limited) {
-      return rateLimit.response;
+    try {
+      const rateLimit = await enforceRateLimit({
+        request,
+        policy: "public_page_engagement",
+        route: "/api/pages/engagement",
+      });
+      if (rateLimit.limited) {
+        return rateLimit.response;
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Engagement tracking is temporarily unavailable." },
+        { status: 503 },
+      );
     }
 
     const supabase = createServiceRoleSupabaseClient();
@@ -110,13 +125,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("page.engagement.failed", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to record page engagement.",
-      },
+      { error: "Unable to record page engagement." },
       { status: 500 },
     );
   }

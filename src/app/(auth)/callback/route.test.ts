@@ -66,6 +66,18 @@ describe("GET /callback", () => {
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
+  it.each([
+    "%2F%2Fevil.example%2Fsteal",
+    "%2F%5Cevil.example%2Fsteal",
+    "%252F%252Fevil.example%2Fsteal",
+  ])("rejects an unsafe callback destination: %s", async (next) => {
+    const response = await GET(
+      new NextRequest(`https://www.mylivingpage.com/callback?next=${next}`),
+    );
+
+    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");
+  });
+
   it("tracks callback failures with both request host and canonical auth origin", async () => {
     mocks.exchangeCodeForSession.mockResolvedValue({
       error: new Error("PKCE code verifier not found in storage."),

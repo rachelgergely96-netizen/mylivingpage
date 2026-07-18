@@ -21,8 +21,8 @@ export function isPubliclyAvailablePage(
 ) {
   return Boolean(
     page &&
-      (page.visibility === "public" ||
-        (page.visibility == null && page.status === "live")),
+      page.status === "live" &&
+      (page.visibility === "public" || page.visibility == null),
   );
 }
 

@@ -7,6 +7,7 @@ import {
   getAccountAccessState,
   type AccountAccessState,
 } from "@/lib/account-access";
+import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
@@ -71,11 +72,13 @@ export default function SettingsPage() {
   const deleteInputRef = useRef<HTMLInputElement>(null);
   const deleteDialogRef = useRef<HTMLDivElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deletingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
   const [billingAction, setBillingAction] = useState<"portal" | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
 
   // Profile fields
   const [fullName, setFullName] = useState("");
@@ -119,7 +122,7 @@ export default function SettingsPage() {
   // Load profile (with polling retry after upgrade to handle webhook race condition)
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const res = await fetch("/api/profile");
       if (cancelled) return;
       if (res.status === 401) { router.push("/login?next=/dashboard/settings"); return; }
@@ -189,7 +192,12 @@ export default function SettingsPage() {
         showToast(`${upgradedAccess.publicPlanLabel} trial is active.`);
         router.replace("/dashboard/settings", { scroll: false });
       }
-    })();
+    })().catch(() => {
+      if (!cancelled) {
+        setProfileLoadError("We could not load your settings. Check your connection and try again.");
+        setLoading(false);
+      }
+    });
     return () => { cancelled = true; };
   }, [router, searchParams, showToast]);
 
@@ -249,7 +257,7 @@ export default function SettingsPage() {
     const trigger = deleteTriggerRef.current;
     const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !deletingRef.current) {
         setShowDeleteModal(false);
         setDeleteConfirmText("");
         return;
@@ -300,15 +308,22 @@ export default function SettingsPage() {
   // Save full name
   const onSaveName = async () => {
     setSavingName(true);
-    const res = await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name: fullName }),
-    });
-    setSavingName(false);
-    if (res.ok) {
-      setProfile((p) => p ? { ...p, full_name: fullName } : p);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: fullName }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Could not update your name.");
+      }
+      setProfile((current) => current ? { ...current, full_name: fullName } : current);
       showToast("Name updated");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not update your name.");
+    } finally {
+      setSavingName(false);
     }
   };
 
@@ -322,17 +337,24 @@ export default function SettingsPage() {
     const slug = validation.slug;
     if (!usernameAvail?.available || usernameAvail.slug !== validation.slug) return;
     setSavingUsername(true);
-    const res = await fetch("/api/username", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug }),
-    });
-    setSavingUsername(false);
-    if (res.ok) {
-      setProfile((p) => p ? { ...p, username: slug } : p);
+    try {
+      const res = await fetch("/api/username", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Could not update your username.");
+      }
+      setProfile((current) => current ? { ...current, username: slug } : current);
       setUsername(slug);
       setUsernameAvail(null);
       showToast("Username updated");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not update your username.");
+    } finally {
+      setSavingUsername(false);
     }
   };
 
@@ -341,25 +363,39 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAvatar(true);
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/avatar", { method: "POST", body: form });
-    setUploadingAvatar(false);
-    if (res.ok) {
-      const { url } = await res.json();
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/avatar", { method: "POST", body: form });
+      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error ?? "Could not upload your avatar.");
+      }
+      const { url } = data;
       setAvatarUrl(url);
       showToast("Avatar updated");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not upload your avatar.");
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const onAvatarRemove = async () => {
     setUploadingAvatar(true);
-    const res = await fetch("/api/avatar", { method: "DELETE" });
-    setUploadingAvatar(false);
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/avatar", { method: "DELETE" });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Could not remove your avatar.");
+      }
       setAvatarUrl(null);
       showToast("Avatar removed");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not remove your avatar.");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -371,34 +407,49 @@ export default function SettingsPage() {
     if (newPassword !== confirmPassword) { setPasswordMsg({ ok: false, text: "Passwords do not match." }); return; }
 
     setSavingPassword(true);
-    const res = await fetch("/api/account/change-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: newPassword }),
-    });
-    setSavingPassword(false);
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/account/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Failed to update password.");
+      }
       setNewPassword("");
       setConfirmPassword("");
       setPasswordMsg({ ok: true, text: "Password updated successfully." });
-    } else {
-      const data = await res.json();
-      setPasswordMsg({ ok: false, text: data.error ?? "Failed to update password." });
+    } catch (error) {
+      setPasswordMsg({
+        ok: false,
+        text: error instanceof Error ? error.message : "Failed to update password.",
+      });
+    } finally {
+      setSavingPassword(false);
     }
   };
 
   // Delete account
   const onDeleteAccount = async () => {
+    if (deletingRef.current) return;
+    deletingRef.current = true;
     setDeleting(true);
-    const res = await fetch("/api/account/delete", { method: "POST" });
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Failed to delete account.");
+      }
       const supabase = createBrowserSupabaseClient();
+      clearBrowserLocalDraftStorage();
       await supabase.auth.signOut();
       router.replace("/");
-    } else {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Failed to delete account.");
+    } finally {
+      deletingRef.current = false;
       setDeleting(false);
-      showToast(data?.error ?? "Failed to delete account.");
     }
   };
 
@@ -413,7 +464,16 @@ export default function SettingsPage() {
   if (!profile) {
     return (
       <main className="site-container py-10" id="main-content">
-        <p className="text-sm text-site-danger" role="alert">Unable to load profile.</p>
+        <p className="text-sm text-site-danger" role="alert">
+          {profileLoadError ?? "Unable to load profile."}
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="site-button site-button-secondary mt-4"
+        >
+          Try again
+        </button>
       </main>
     );
   }
@@ -443,9 +503,9 @@ export default function SettingsPage() {
       }
 
       showToast(data?.error ?? "Could not open billing portal.");
-      setBillingAction(null);
     } catch {
       showToast("Could not open billing portal.");
+    } finally {
       setBillingAction(null);
     }
   };
@@ -708,8 +768,14 @@ export default function SettingsPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
-                className="site-button site-button-secondary flex-1 text-xs"
+                onClick={() => {
+                  if (!deleting) {
+                    setShowDeleteModal(false);
+                    setDeleteConfirmText("");
+                  }
+                }}
+                disabled={deleting}
+                className="site-button site-button-secondary flex-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

@@ -30,21 +30,31 @@ export interface TestimonialRecord {
 }
 
 export type JobSeekerRoleTrack =
+  | "general"
   | "engineering"
   | "product"
   | "marketing"
   | "sales"
-  | "operations";
+  | "operations"
+  | "other";
 
 export type JobSeekerGoal =
+  | "share_profile"
   | "land_interviews"
   | "strengthen_followups"
-  | "turn_referrals";
+  | "turn_referrals"
+  | "build_network"
+  | "win_clients"
+  | "book_speaking";
 
 export type JobSeekerAudience =
+  | "general_public"
   | "recruiter"
   | "hiring_manager"
-  | "referral";
+  | "referral"
+  | "clients"
+  | "collaborators"
+  | "event_organizers";
 
 export interface JobSeekerProfile {
   role_track: JobSeekerRoleTrack;

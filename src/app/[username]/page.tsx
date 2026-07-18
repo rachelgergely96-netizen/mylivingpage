@@ -9,6 +9,7 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { getAccountAccessState } from "@/lib/account-access";
+import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import {
   applyPageVariant,
   buildRecruiterSkimModel,
@@ -134,8 +135,7 @@ export default async function PublicLivingPage({
   const [{ username }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const supabase = createServiceRoleSupabaseClient();
   const page = await fetchPublicLivePage(supabase, username);
-  const publicPageAvailable =
-    page?.visibility === "public" || (page?.visibility == null && page?.status === "live");
+  const publicPageAvailable = isPubliclyAvailablePage(page);
 
   if (!page || !publicPageAvailable) {
     const offlineContext = await fetchOfflinePageContext(username, supabase);

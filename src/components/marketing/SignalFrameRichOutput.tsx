@@ -15,7 +15,12 @@ interface SignalFrameRichOutputProps {
 export default function SignalFrameRichOutput({ mode, themeId }: SignalFrameRichOutputProps) {
   if (mode === "page") {
     return (
-      <div className={styles.livingPreview} data-living-output data-theme-id={themeId}>
+      <div
+        className={styles.livingPreview}
+        data-living-output
+        data-theme-id={themeId}
+        data-testid="story-living-output"
+      >
         <div className={styles.browserBar}>
           <span className={styles.browserAddress}>mylivingpage.com/examples</span>
           <span className={styles.liveStatus}>Sample</span>

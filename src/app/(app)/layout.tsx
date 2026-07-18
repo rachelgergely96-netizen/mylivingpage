@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AppNavigation from "@/components/ui/AppNavigation";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
@@ -29,7 +29,7 @@ export default async function AuthenticatedLayout({
           <Link href="/" className="site-wordmark shrink-0">
             my<span>living</span>page
           </Link>
-          <AppNavigation variant="product" showAdmin={user.email === ADMIN_EMAIL} />
+          <AppNavigation variant="product" showAdmin={isAdminEmail(user.email)} />
         </div>
       </header>
       <div id="site-content" tabIndex={-1}>{children}</div>

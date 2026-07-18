@@ -117,6 +117,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
 const MYLIVINGPAGE_POLICIES: LegalPolicyId[] = [
   "terms",
   "privacy",
+  "cookies",
   "security",
   "delete-account",
 ];

@@ -416,7 +416,7 @@ describe("POST /api/resume/export", () => {
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 
-  it("fails open when rate-limit persistence is unavailable and still downloads the PDF", async () => {
+  it("fails closed when rate-limit persistence is unavailable", async () => {
     mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
     mocks.enforceRateLimit.mockRejectedValueOnce(new Error("events table unavailable"));
 
@@ -430,8 +430,11 @@ describe("POST /api/resume/export", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
-    expect(mocks.renderPdf).toHaveBeenCalled();
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Resume downloads are temporarily unavailable. Please try again in a moment.",
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "resume.export.rate_limit_unavailable",
       expect.objectContaining({

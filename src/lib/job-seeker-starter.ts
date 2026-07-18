@@ -18,6 +18,12 @@ export const JOB_SEEKER_ROLE_OPTIONS: Array<{
   proofPrompt: string;
 }> = [
   {
+    id: "general",
+    label: "General / multi-hyphenate",
+    headlineHint: "Show the clearest through-line across the work you do.",
+    proofPrompt: "Choose proof that helps a new contact quickly understand your value.",
+  },
+  {
     id: "engineering",
     label: "Engineering",
     headlineHint: "Show systems shipped, scale, and technical depth.",
@@ -47,6 +53,12 @@ export const JOB_SEEKER_ROLE_OPTIONS: Array<{
     headlineHint: "Show execution, cross-functional systems, and efficiency gains.",
     proofPrompt: "Show the workflow or operating system you improved and the result it created.",
   },
+  {
+    id: "other",
+    label: "Another field",
+    headlineHint: "Use a plain-language headline that explains what you do and who you help.",
+    proofPrompt: "Choose one concrete example that makes your work easier to understand.",
+  },
 ];
 
 export const JOB_SEEKER_GOAL_OPTIONS: Array<{
@@ -54,6 +66,11 @@ export const JOB_SEEKER_GOAL_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
+  {
+    id: "share_profile",
+    label: "Share my professional story",
+    description: "Create a flexible page that works like a living professional card.",
+  },
   {
     id: "land_interviews",
     label: "Land interviews",
@@ -69,6 +86,21 @@ export const JOB_SEEKER_GOAL_OPTIONS: Array<{
     label: "Turn referrals",
     description: "Make warm intros easier to forward and understand.",
   },
+  {
+    id: "build_network",
+    label: "Build my network",
+    description: "Give new contacts a useful, memorable way to follow up.",
+  },
+  {
+    id: "win_clients",
+    label: "Win clients",
+    description: "Show services, credibility, and proof to prospective clients.",
+  },
+  {
+    id: "book_speaking",
+    label: "Book speaking or media",
+    description: "Package your expertise for organizers, hosts, and collaborators.",
+  },
 ];
 
 export const JOB_SEEKER_AUDIENCE_OPTIONS: Array<{
@@ -77,6 +109,12 @@ export const JOB_SEEKER_AUDIENCE_OPTIONS: Array<{
   variantLabel: string;
   ctaEmphasis: string;
 }> = [
+  {
+    id: "general_public",
+    label: "Professional contacts",
+    variantLabel: "Professional introduction",
+    ctaEmphasis: "Built to make your work clear to any new professional contact.",
+  },
   {
     id: "recruiter",
     label: "Recruiters",
@@ -94,6 +132,24 @@ export const JOB_SEEKER_AUDIENCE_OPTIONS: Array<{
     label: "Referrals",
     variantLabel: "Referral intro",
     ctaEmphasis: "Built for a warm intro that needs to be easy to forward.",
+  },
+  {
+    id: "clients",
+    label: "Prospective clients",
+    variantLabel: "Client introduction",
+    ctaEmphasis: "Built to make services, fit, and proof easy for a prospective client to assess.",
+  },
+  {
+    id: "collaborators",
+    label: "Collaborators",
+    variantLabel: "Collaboration introduction",
+    ctaEmphasis: "Built to make your experience and collaboration fit easy to understand.",
+  },
+  {
+    id: "event_organizers",
+    label: "Event and media organizers",
+    variantLabel: "Speaker introduction",
+    ctaEmphasis: "Built to give organizers a clear view of your expertise and credibility.",
   },
 ];
 
@@ -277,13 +333,13 @@ export function describeJobSeekerProfile(profile: JobSeekerProfile | null | unde
     return null;
   }
 
-  const role = getRoleOption(profile.role_track)?.label ?? "Job seeker";
+  const role = getRoleOption(profile.role_track)?.label ?? "Professional";
   const goal = JOB_SEEKER_GOAL_OPTIONS.find((option) => option.id === profile.primary_goal)?.label;
   const audience = getAudienceOption(profile.target_audience)?.label;
 
   return {
     role,
-    goal: goal ?? "Land interviews",
-    audience: audience ?? "Recruiters",
+    goal: goal ?? "Share my professional story",
+    audience: audience ?? "Professional contacts",
   };
 }

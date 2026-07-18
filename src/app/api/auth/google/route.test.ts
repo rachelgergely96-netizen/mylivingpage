@@ -83,6 +83,25 @@ describe("GET /api/auth/google", () => {
     );
   });
 
+  it.each([
+    "%2F%2Fevil.example%2Fsteal",
+    "%2F%5Cevil.example%2Fsteal",
+    "%252F%252Fevil.example%2Fsteal",
+  ])("replaces an unsafe post-OAuth destination: %s", async (next) => {
+    await GET(
+      new NextRequest(
+        `https://www.mylivingpage.com/api/auth/google?next=${next}&screen=login`,
+      ),
+    );
+
+    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+      },
+    });
+  });
+
   it("preserves signup callback metadata for legal acceptance", async () => {
     await GET(
       new NextRequest(

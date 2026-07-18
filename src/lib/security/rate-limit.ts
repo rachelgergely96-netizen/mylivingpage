@@ -61,26 +61,21 @@ export const RATE_LIMIT_POLICIES = {
     windowMs: 10 * 60 * 1000,
     scope: "user",
   },
+  client_event: {
+    label: "Client analytics event",
+    maxRequests: 120,
+    windowMs: 10 * 60 * 1000,
+    scope: "user",
+  },
 } satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMIT_POLICIES;
-
-interface RateLimitEventMetadata {
-  policy: RateLimitPolicyName;
-  identifier_hash: string;
-  scope: RateLimitPolicy["scope"];
-  route: string | null;
-  max_requests: number;
-  window_ms: number;
-  reset_at: string;
-}
 
 interface EnforceRateLimitInput {
   request: Request;
   policy: RateLimitPolicyName;
   route?: string;
   userId?: string | null;
-  now?: Date;
 }
 
 interface RateLimitAllowedResult {
@@ -119,65 +114,49 @@ export function isRateLimitExceeded(requestCount: number, maxRequests: number) {
   return requestCount >= maxRequests;
 }
 
-function buildRateLimitMetadata(input: {
-  policy: RateLimitPolicyName;
-  identifierHash: string;
-  route?: string;
-  resetAt: string;
-}): RateLimitEventMetadata {
-  const config = RATE_LIMIT_POLICIES[input.policy];
-  return {
-    policy: input.policy,
-    identifier_hash: input.identifierHash,
-    scope: config.scope,
-    route: input.route ?? null,
-    max_requests: config.maxRequests,
-    window_ms: config.windowMs,
-    reset_at: input.resetAt,
-  };
-}
-
 export async function enforceRateLimit(
   input: EnforceRateLimitInput,
 ): Promise<EnforceRateLimitResult> {
   const config = RATE_LIMIT_POLICIES[input.policy];
-  const now = input.now ?? new Date();
   const identifierSource =
     config.scope === "user" && input.userId
       ? `user:${input.userId}`
       : `ip:${getBestEffortRequestIdentifier(input.request.headers)}`;
   const identifierHash = hashSecurityIdentifier(identifierSource);
-  const windowStart = getRateLimitWindowStart(input.policy, now).toISOString();
-  const resetAt = getRateLimitResetAt(input.policy, now).toISOString();
-  const metadata = buildRateLimitMetadata({
-    policy: input.policy,
-    identifierHash,
-    route: input.route,
-    resetAt,
-  });
   const supabase = createServiceRoleSupabaseClient();
+  const { data, error } = await supabase.rpc("enforce_rate_limit", {
+    p_policy: input.policy,
+    p_identifier_hash: identifierHash,
+    p_scope: config.scope,
+    p_route: input.route ?? null,
+    p_user_id: input.userId ?? null,
+    p_max_requests: config.maxRequests,
+    p_window_ms: config.windowMs,
+  });
 
-  const { count, error: countError } = await supabase
-    .from("events")
-    .select("*", { count: "exact", head: true })
-    .eq("event_name", "security.rate_limit.request")
-    .gte("created_at", windowStart)
-    .contains("metadata", {
-      policy: input.policy,
-      identifier_hash: identifierHash,
-    });
-
-  if (countError) {
-    throw new Error(`Unable to enforce ${input.policy} rate limit: ${countError.message}`);
+  if (error) {
+    throw new Error(`Unable to enforce ${input.policy} rate limit: ${error.message}`);
   }
 
-  const recentCount = count ?? 0;
-  if (isRateLimitExceeded(recentCount, config.maxRequests)) {
-    await supabase.from("events").insert({
-      user_id: input.userId ?? null,
-      event_name: "security.rate_limit.blocked",
-      metadata,
-    });
+  const result = (Array.isArray(data) ? data[0] : data) as
+    | {
+        allowed?: unknown;
+        request_count?: unknown;
+        remaining?: unknown;
+        reset_at?: unknown;
+      }
+    | null;
+  if (
+    !result ||
+    typeof result.allowed !== "boolean" ||
+    typeof result.remaining !== "number" ||
+    typeof result.reset_at !== "string"
+  ) {
+    throw new Error(`Unable to enforce ${input.policy} rate limit: invalid RPC response`);
+  }
+
+  const resetAt = result.reset_at;
+  if (!result.allowed) {
 
     return {
       limited: true,
@@ -193,20 +172,10 @@ export async function enforceRateLimit(
     };
   }
 
-  const { error: insertError } = await supabase.from("events").insert({
-    user_id: input.userId ?? null,
-    event_name: "security.rate_limit.request",
-    metadata,
-  });
-
-  if (insertError) {
-    throw new Error(`Unable to record ${input.policy} rate limit event: ${insertError.message}`);
-  }
-
   return {
     limited: false,
     identifierHash,
     resetAt,
-    remaining: Math.max(0, config.maxRequests - recentCount - 1),
+    remaining: Math.max(0, result.remaining),
   };
 }

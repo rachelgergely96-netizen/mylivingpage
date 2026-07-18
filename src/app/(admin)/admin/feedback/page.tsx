@@ -15,9 +15,9 @@ interface ProfileRow {
 }
 
 const TYPE_STYLES: Record<string, string> = {
-  bug: "bg-[rgba(239,68,68,0.15)] text-[#fca5a5]",
-  feature: "bg-[rgba(59,130,246,0.15)] text-[#93C5FD]",
-  general: "bg-[rgba(255,255,255,0.08)] text-[rgba(240,244,255,0.5)]",
+  bug: "site-badge-danger",
+  feature: "border-site-action bg-site-selected text-site-action-hover",
+  general: "",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -58,17 +58,17 @@ export default async function AdminFeedbackPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10 md:px-10">
+    <main className="site-container py-10">
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Admin</p>
-        <h1 className="mt-1 font-heading text-3xl font-bold text-[#F0F4FF]">User Feedback</h1>
-        <p className="mt-1 text-sm text-[rgba(240,244,255,0.45)]">
+        <p className="site-eyebrow">Admin</p>
+        <h1 className="site-page-title mt-2">User Feedback</h1>
+        <p className="mt-2 text-sm tabular-nums text-site-muted">
           {rows.length} submission{rows.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {rows.length === 0 ? (
-        <div className="glass-card rounded-2xl p-8 text-center text-sm text-[rgba(240,244,255,0.4)]">
+        <div className="site-panel p-8 text-center text-sm text-site-muted">
           No feedback submitted yet.
         </div>
       ) : (
@@ -93,33 +93,33 @@ export default async function AdminFeedbackPage() {
             });
 
             return (
-              <div key={row.id} className="glass-card rounded-2xl p-5">
+              <article key={row.id} className="site-panel p-5">
                 <div className="mb-2 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[#F0F4FF]">{displayName}</span>
+                      <h2 className="text-sm font-semibold text-site-text">{displayName}</h2>
                       {username && (
-                        <span className="text-xs text-[rgba(240,244,255,0.4)]">@{username}</span>
+                        <span className="font-mono text-xs text-site-muted">@{username}</span>
                       )}
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${typeBadgeClass}`}>
+                      <span className={`site-badge text-[10px] ${typeBadgeClass}`}>
                         {typeLabel}
                       </span>
                     </div>
                     {email && (
-                      <span className="text-xs text-[rgba(240,244,255,0.35)]">{email}</span>
+                      <span className="text-xs text-site-muted">{email}</span>
                     )}
                   </div>
-                  <span className="shrink-0 text-xs text-[rgba(240,244,255,0.35)]">{date}</span>
+                  <time dateTime={row.created_at} className="shrink-0 font-mono text-xs text-site-muted">{date}</time>
                 </div>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-[rgba(240,244,255,0.75)]">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-site-secondary">
                   {message}
                 </p>
                 {feedbackPage && (
-                  <p className="mt-2 text-[11px] text-[rgba(240,244,255,0.3)]">
+                  <p className="mt-2 font-mono text-[11px] text-site-muted">
                     Page: {feedbackPage}
                   </p>
                 )}
-              </div>
+              </article>
             );
           })}
         </div>

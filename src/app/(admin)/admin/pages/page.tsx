@@ -53,12 +53,12 @@ export default async function AdminPagesPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-8 md:px-10">
+    <main className="site-container-wide py-8">
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Admin</p>
-        <h1 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">
+        <p className="site-eyebrow">Admin</p>
+        <h1 className="site-page-title mt-2">
           All Pages
-          <span className="ml-3 text-lg font-normal text-[rgba(240,244,255,0.4)]">
+          <span className="ml-3 text-lg font-normal tabular-nums text-site-muted">
             ({pages.length})
           </span>
         </h1>

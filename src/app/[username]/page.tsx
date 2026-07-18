@@ -152,17 +152,17 @@ export default async function PublicLivingPage({
     const pageName = offlineContext.page.resume_data?.name?.trim() || username;
 
     return (
-      <main className="min-h-screen bg-[#08111C] px-4 py-12 text-[#F0F4FF] sm:px-6 sm:py-16">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-[rgba(59,130,246,0.2)] bg-[rgba(10,22,40,0.76)] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-10">
-          <p className="text-xs uppercase tracking-[0.22em] text-[#3B82F6]">Page unavailable</p>
-          <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl">
+      <main className="site-shell px-4 py-12 sm:px-6 sm:py-16" data-site-ui>
+        <div className="site-panel-raised mx-auto max-w-3xl p-6 sm:p-10">
+          <p className="site-eyebrow">Page unavailable</p>
+          <h1 className="site-page-title mt-3">
             {pageName}&rsquo;s page is being updated.
           </h1>
-          <p className="mt-4 text-base leading-7 text-[rgba(240,244,255,0.7)]">
+          <p className="site-muted mt-4 text-base leading-7">
             This link was live before and can be reactivated anytime. The owner can turn hosting
             back on from their MyLivingPage settings when they are ready to share it again.
           </p>
-          <div className="mt-6 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+          <div className="site-callout mt-6 p-4 text-sm leading-6">
             The URL stays reserved so the page can come back without changing the link.
           </div>
         </div>

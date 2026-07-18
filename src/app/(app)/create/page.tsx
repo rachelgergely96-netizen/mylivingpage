@@ -442,11 +442,11 @@ export default function CreatePage() {
   }, [parsedData, publishPage, publishRestoredDraft]);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
+    <main className="site-container-wide py-6 sm:py-8">
       <div className="mb-5 flex items-center justify-between sm:mb-7">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your page</p>
-          <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
+          <p className="site-eyebrow">Create your page</p>
+          <h1 className="site-page-title mt-2 max-w-4xl">
             Build your page - send it - know when they open it
           </h1>
         </div>
@@ -454,13 +454,13 @@ export default function CreatePage() {
           {PROGRESS_STEPS.map((progressId, index) => (
             <span
               key={progressId}
-              className="h-1.5 rounded-full transition-all"
+              className="h-1.5 transition-all"
               style={{
                 width: currentProgressIndex >= index ? 34 : 24,
                 background:
                   currentProgressIndex >= index
-                    ? "linear-gradient(90deg, #3B82F6, #93C5FD)"
-                    : "rgba(255,255,255,0.12)",
+                    ? "var(--site-action)"
+                    : "var(--site-border)",
               }}
             />
           ))}
@@ -468,7 +468,7 @@ export default function CreatePage() {
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
+        <p role="alert" className="site-alert-danger mb-4 px-4 py-3 text-sm">
           {error}
         </p>
       ) : null}
@@ -478,17 +478,17 @@ export default function CreatePage() {
       ) : null}
 
       {atPageLimit ? (
-        <section className="glass-card rounded-2xl p-5 text-center sm:p-8">
+        <section className="site-panel p-5 text-center sm:p-8">
           <p className="mb-3 text-2xl">&#x1F512;</p>
-          <h2 className="font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">Page limit reached</h2>
-          <p className="mt-2 text-sm text-[rgba(240,244,255,0.55)]">
+          <h2 className="site-panel-title">Page limit reached</h2>
+          <p className="mt-2 text-sm text-site-secondary">
             Each account supports {MAX_PAGES_PER_ACCOUNT} public page in v1. Edit your current page, or delete it
             before creating a replacement.
           </p>
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
-            className="mt-5 gold-pill px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.16em]"
+            className="site-button site-button-primary mt-5"
           >
             Go to Your Page
           </button>
@@ -516,12 +516,12 @@ export default function CreatePage() {
             onChange={setJobSeekerProfile}
             compact
           />
-          <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+          <div className="site-callout p-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
+              <p className="site-eyebrow">
                 Private guided entry
               </p>
-              <p className="mt-2 text-sm text-[#F0F4FF]">
+              <p className="mt-2 text-sm leading-6 text-site-text">
                 Review or add your details section by section, then preview everything before
                 publishing. Resume imports are used only to autofill these editable fields—no AI
                 service reads or rewrites your resume.
@@ -529,11 +529,11 @@ export default function CreatePage() {
             </div>
           </div>
           {resumeText.trim() ? (
-            <details className="rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.07)] p-4">
-              <summary className="cursor-pointer text-sm font-medium text-[#FDE68A]">
+            <details className="site-panel border-site-warning p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-site-warning">
                 Imported resume text is available as a reference
               </summary>
-              <p className="mt-3 text-xs leading-5 text-[rgba(240,244,255,0.58)]">
+              <p className="mt-3 text-xs leading-5 text-site-secondary">
                 This text stays in your local draft so you can compare it with the autofilled
                 fields below. It is not saved with your published page.
               </p>
@@ -541,12 +541,12 @@ export default function CreatePage() {
                 readOnly
                 value={resumeText}
                 aria-label="Saved resume text reference"
-                className="mt-3 min-h-48 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(0,0,0,0.18)] p-4 font-mono text-xs leading-6 text-[rgba(240,244,255,0.72)] focus:border-[#3B82F6] focus:outline-none"
+                className="site-field mt-3 min-h-48 p-4 text-xs leading-6"
               />
               <button
                 type="button"
                 onClick={() => setResumeText("")}
-                className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[rgba(240,244,255,0.58)] transition-colors hover:text-[#F0F4FF]"
+                className="site-button site-button-secondary mt-3"
               >
                 Remove saved reference
               </button>
@@ -567,24 +567,24 @@ export default function CreatePage() {
       {step === "review" && parsedData && previewData && readiness ? (
         <section className="space-y-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 2</p>
-            <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+            <p className="site-eyebrow">Step 2</p>
+            <h2 className="site-section-title mt-2">
               This is what someone will see when you send it.
             </h2>
-            <p className="mt-2 max-w-4xl text-sm leading-7 text-[rgba(240,244,255,0.6)]">
+            <p className="mt-2 max-w-4xl text-sm leading-7 text-site-secondary">
               Your information is ready as a professional decision page. Tighten the parts that help someone decide faster, then publish it with the same Resume PDF and tracked link.
             </p>
           </div>
 
           {jobSeekerSummary ? (
-            <section className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+            <section className="site-callout p-5 sm:p-6">
+              <p className="site-eyebrow">
                 Starter setup
               </p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+              <h3 className="site-panel-title mt-2">
                 Built for {jobSeekerSummary.role.toLowerCase()} outreach
               </h3>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
                 This page is being framed to {jobSeekerSummary.goal.toLowerCase()} with {jobSeekerSummary.audience.toLowerCase()} as the first audience. We also seeded {previewData.proofs?.length ?? 0} structured proof {previewData.proofs?.length === 1 ? "block" : "blocks"} from your existing content so the page starts with evidence, not just claims.
               </p>
             </section>
@@ -602,14 +602,14 @@ export default function CreatePage() {
               maxVariants={accountAccess.variantLimit}
             />
           ) : (
-            <section className="rounded-2xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+            <section className="site-callout p-5 sm:p-6">
+              <p className="site-eyebrow">
                 Targeted versions
               </p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+              <h3 className="site-panel-title mt-2">
                 One clear resume, one reliable link
               </h3>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
                 This streamlined version keeps the focus on your main resume. You can still edit
                 it anytime after publishing.
               </p>
@@ -617,35 +617,35 @@ export default function CreatePage() {
           )}
 
           <div className="space-y-5">
-            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Preview</p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+            <div className="site-panel p-4 sm:p-5">
+              <p className="site-eyebrow">Preview</p>
+              <h3 className="site-panel-title mt-2">
                 This is what someone will see when you send it
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+              <p className="mt-2 text-sm leading-6 text-site-secondary">
                 {selectedPreviewVariant
                   ? `You are previewing "${selectedPreviewVariant.label}". Targeted links will open this version first.`
                   : "You are previewing the base page. Add a targeted version above if you want a sharper send for a recruiter, follow-up, or referral."}
               </p>
-              <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
-                <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
+              <div className="mt-4 border border-site-border bg-site-canvas-alt p-4">
+                <p className="site-eyebrow text-site-muted">Your link</p>
+                <div className="mt-2 border border-site-border-strong bg-site-canvas px-3 py-2 text-sm text-site-action">
                   mylivingpage.com/{publicSlug || "your-username"}
                 </div>
                 {selectedPreviewVariant ? (
-                  <p className="mt-2 text-sm text-[rgba(240,244,255,0.58)]">
+                  <p className="mt-2 text-sm text-site-secondary">
                     The tracked share link for this version will include its own targeted URL automatically after publish.
                   </p>
                 ) : null}
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] p-4">
+              <div className="site-callout mt-4 flex flex-wrap items-center justify-between gap-4 p-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Publish</p>
-                  <p className="mt-2 text-sm leading-6 text-[#E8F2FF]">
+                  <p className="site-eyebrow">Publish</p>
+                  <p className="mt-2 text-sm leading-6 text-site-text">
                     Your page goes live with one shareable link and an ATS-ready PDF download.
                     Publishing is free and does not require a card.
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(232,242,255,0.78)]">
+                  <p className="mt-2 text-sm leading-6 text-site-secondary">
                     When someone opens this, you&apos;ll know.
                   </p>
                 </div>
@@ -653,7 +653,7 @@ export default function CreatePage() {
                   <button
                     type="button"
                     onClick={() => setStep("input")}
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                    className="site-button site-button-secondary"
                   >
                     Back
                   </button>
@@ -661,7 +661,7 @@ export default function CreatePage() {
                     type="button"
                     disabled={publishing}
                     onClick={handlePublishClick}
-                    className="gold-pill px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60"
+                    className="site-button site-button-primary disabled:opacity-60"
                   >
                     {publishing ? "Publishing..." : "Publish Page"}
                   </button>
@@ -669,13 +669,13 @@ export default function CreatePage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.18)]">
-              <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
+            <div className="overflow-hidden border border-site-border-strong bg-site-canvas-alt">
+              <div className="flex items-center gap-2 border-b border-site-border bg-site-canvas px-4 py-3">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-                <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-                  mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || "your-username"}</span>
+                <div className="ml-3 min-w-0 truncate border border-site-border bg-site-surface px-3 py-1 text-[11px] text-site-secondary">
+                  mylivingpage.com/<span className="text-site-action">{publicSlug || "your-username"}</span>
                 </div>
               </div>
               <ThemeCanvas themeId={selectedTheme} height="min(540px, calc(100dvh - 280px))" className="rounded-none">
@@ -688,9 +688,9 @@ export default function CreatePage() {
 
           <section data-testid="create-theme-section" className="space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-[#3B82F6]">Theme</p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">Make it feel like you</h3>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.58)]">
+              <p className="site-eyebrow">Theme</p>
+              <h3 className="site-panel-title mt-2">Make it feel like you</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-site-secondary">
                 Pick a clean style. Don&apos;t overthink it.
               </p>
             </div>
@@ -708,37 +708,37 @@ export default function CreatePage() {
 
       {step === "success" ? (
         <section className="space-y-5">
-          <div className="glass-card rounded-2xl p-5 sm:p-8">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Step 3</p>
-            <h2 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+          <div className="site-panel p-5 sm:p-8">
+            <p className="site-eyebrow">Step 3</p>
+            <h2 className="site-section-title mt-2">
               Your page is live.
             </h2>
-            <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.6)]">
+            <p className="mt-2 text-sm leading-7 text-site-secondary">
               Share this living resume as a link, or download the ATS-ready PDF whenever you
               need a file.
             </p>
 
-            <div className="mt-5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Your link</p>
-              <div className="mt-2 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
+            <div className="mt-5 border border-site-border bg-site-canvas-alt p-4">
+              <p className="site-eyebrow text-site-muted">Your link</p>
+              <div className="mt-2 border border-site-border-strong bg-site-canvas px-3 py-2 text-sm text-site-action">
                 mylivingpage.com/{predictedSlug}
               </div>
-              <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+              <p className="mt-3 text-sm leading-6 text-site-secondary">
                 When someone opens this, you&apos;ll know.
               </p>
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 text-[#E8F2FF]">
-                <p className="text-[10px] uppercase tracking-[0.16em]">Page</p>
-                <h3 className="mt-2 font-heading text-xl font-semibold">Live now</h3>
+              <div className="site-callout p-4 text-site-text">
+                <p className="site-eyebrow">Page</p>
+                <h3 className="site-panel-title mt-2">Live now</h3>
                 <p className="mt-2 text-sm leading-6">
                   Your public page is live at mylivingpage.com/{predictedSlug}.
                 </p>
               </div>
-              <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-4 text-[#E8F2FF]">
-                <p className="text-[10px] uppercase tracking-[0.16em]">Resume PDF</p>
-                <h3 className="mt-2 font-heading text-xl font-semibold">Ready from the live page</h3>
+              <div className="site-callout p-4 text-site-text">
+                <p className="site-eyebrow">Resume PDF</p>
+                <h3 className="site-panel-title mt-2">Ready from the live page</h3>
                 <p className="mt-2 text-sm leading-6">
                   Anyone viewing your page can download the Resume PDF directly from the same saved content, including any targeted version you share.
                 </p>
@@ -746,29 +746,29 @@ export default function CreatePage() {
             </div>
           </div>
 
-          <section className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5 sm:p-6">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">
+          <section className="site-panel p-5 sm:p-6">
+            <p className="site-eyebrow">
               First week plan
             </p>
-            <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+            <h3 className="site-panel-title mt-2">
               Use the page like a follow-up asset, not a profile dump.
             </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">1. Send it</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+              <div className="border-l-2 border-site-action bg-site-canvas-alt p-4">
+                <p className="site-eyebrow">1. Send it</p>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
                   Use the tracked link in a recruiter reply, application follow-up, or referral handoff instead of attaching another file.
                 </p>
               </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">2. Watch proof</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+              <div className="border-l-2 border-site-action bg-site-canvas-alt p-4">
+                <p className="site-eyebrow">2. Watch proof</p>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
                   Start with the proof section and use the first-view loop below to see when interest is real.
                 </p>
               </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">3. Tighten variants</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+              <div className="border-l-2 border-site-action bg-site-canvas-alt p-4">
+                <p className="site-eyebrow">3. Tighten variants</p>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
                   {variants.length > 0
                     ? `You already have ${variants.length} targeted ${variants.length === 1 ? "version" : "versions"} ready. Use the one that matches the next conversation.`
                     : "Add a targeted version after your first send so your next outreach matches the exact audience."}
@@ -776,7 +776,7 @@ export default function CreatePage() {
               </div>
             </div>
             {jobSeekerSummary ? (
-              <p className="mt-4 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+              <p className="mt-4 text-sm leading-6 text-site-secondary">
                 Current setup: {jobSeekerSummary.role} page tuned to {jobSeekerSummary.goal.toLowerCase()} for {jobSeekerSummary.audience.toLowerCase()}.
               </p>
             ) : null}
@@ -804,7 +804,7 @@ export default function CreatePage() {
           <div className="flex flex-wrap gap-3">
             <Link
               href={`/${predictedSlug}`}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+              className="site-button site-button-secondary"
             >
               Open Your Page
             </Link>
@@ -813,21 +813,21 @@ export default function CreatePage() {
                 {accountAccess.analyticsTier === "full" ? (
                   <Link
                     href={`/dashboard/analytics/${publishedPageId}`}
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                    className="site-button site-button-secondary"
                   >
                     Open Page Analytics
                   </Link>
                 ) : (
                   <Link
                     href="/dashboard"
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                    className="site-button site-button-secondary"
                   >
                     Open Dashboard
                   </Link>
                 )}
                 <Link
                   href={`/dashboard/edit/${publishedPageId}/living-page`}
-                  className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)]"
+                  className="site-button site-button-primary"
                 >
                   Edit Page
                 </Link>

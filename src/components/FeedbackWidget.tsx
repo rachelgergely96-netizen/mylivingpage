@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type FeedbackType = "bug" | "feature" | "general";
 
@@ -11,6 +11,9 @@ const TYPE_LABELS: Record<FeedbackType, string> = {
 };
 
 export default function FeedbackWidget() {
+  const closeTimerRef = useRef<number | null>(null);
+  const messageRef = useRef<HTMLTextAreaElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("general");
   const [message, setMessage] = useState("");
@@ -24,6 +27,10 @@ export default function FeedbackWidget() {
   };
 
   const handleClose = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
     setOpen(false);
     setMessage("");
     setType("general");
@@ -50,7 +57,8 @@ export default function FeedbackWidget() {
 
       setStatus("success");
       setMessage("");
-      setTimeout(() => {
+      closeTimerRef.current = window.setTimeout(() => {
+        closeTimerRef.current = null;
         handleClose();
       }, 2000);
     } catch (err) {
@@ -59,16 +67,44 @@ export default function FeedbackWidget() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const trigger = triggerRef.current;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    messageRef.current?.focus();
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      trigger?.focus();
+    };
+  }, [open]);
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" data-site-ui>
       {open && (
-        <div className="w-80 rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.92)] p-4 shadow-2xl backdrop-blur-xl">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)]">
-            Send Feedback
+        <div className="site-panel-raised w-80 max-w-[calc(100vw-2rem)] p-4" role="dialog" aria-labelledby="feedback-title">
+          <p id="feedback-title" className="site-eyebrow mb-3">
+            Send feedback
           </p>
 
           {status === "success" ? (
-            <p className="py-4 text-center text-sm text-[#3B82F6]">Thanks for your feedback!</p>
+            <p className="py-4 text-center text-sm text-site-success" role="status">Thanks for your feedback!</p>
           ) : (
             <>
               {/* Type selector */}
@@ -77,10 +113,12 @@ export default function FeedbackWidget() {
                   <button
                     key={t}
                     onClick={() => setType(t)}
-                    className={`flex-1 rounded-full py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                    type="button"
+                    aria-pressed={type === t}
+                    className={`min-h-11 flex-1 rounded-none border px-2 py-2 text-[11px] font-semibold transition-colors ${
                       type === t
-                        ? "bg-[#3B82F6] text-white"
-                        : "border border-[rgba(255,255,255,0.12)] text-[rgba(240,244,255,0.5)] hover:text-[rgba(240,244,255,0.8)]"
+                        ? "border-site-action bg-site-selected text-site-text"
+                        : "border-site-border text-site-secondary hover:border-site-border-strong hover:text-site-text"
                     }`}
                   >
                     {TYPE_LABELS[t]}
@@ -88,33 +126,38 @@ export default function FeedbackWidget() {
                 ))}
               </div>
 
+              <label htmlFor="feedback-message" className="sr-only">Feedback message</label>
               <textarea
+                ref={messageRef}
+                id="feedback-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Share a thought, bug report, or request..."
                 maxLength={2000}
                 rows={4}
-                className="w-full resize-none rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] p-3 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none"
+                className="site-field w-full resize-none p-3 text-sm"
               />
-              <p className="mt-1 text-right text-[10px] text-[rgba(240,244,255,0.25)]">
+              <p className="mt-1 text-right text-xs text-site-muted">
                 {message.length}/2000
               </p>
 
               {error && (
-                <p className="mt-1 text-xs text-[#ff8e8e]">{error}</p>
+                <p className="mt-1 text-xs text-site-danger" role="alert">{error}</p>
               )}
 
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={handleClose}
-                  className="flex-1 rounded-full border border-[rgba(255,255,255,0.12)] py-2 text-xs text-[rgba(240,244,255,0.55)] transition-colors hover:text-[rgba(240,244,255,0.8)]"
+                  type="button"
+                  className="site-button site-button-secondary flex-1 text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={status === "loading" || !message.trim()}
-                  className="flex-1 rounded-full bg-[#3B82F6] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  type="button"
+                  className="site-button site-button-primary flex-1 text-xs disabled:opacity-50"
                 >
                   {status === "loading" ? "Sending..." : "Send"}
                 </button>
@@ -125,8 +168,11 @@ export default function FeedbackWidget() {
       )}
 
       <button
+        ref={triggerRef}
+        type="button"
         onClick={open ? handleClose : handleOpen}
-        className="rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(10,22,40,0.85)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)] shadow-lg backdrop-blur-xl transition-colors hover:border-[rgba(59,130,246,0.4)] hover:text-[#93C5FD]"
+        className="site-button site-button-secondary shadow-[var(--site-shadow-raised)]"
+        aria-expanded={open}
       >
         {open ? "Close" : "Feedback"}
       </button>

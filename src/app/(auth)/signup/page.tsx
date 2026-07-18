@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
@@ -9,11 +8,9 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/legal-version";
-import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/site";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
-  const router = useRouter();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
   const requiresCaptcha = Boolean(turnstileSiteKey);
   const [email, setEmail] = useState("");
@@ -137,71 +134,97 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-5 py-10 sm:px-6 sm:py-12">
-      <div className="glass-card w-full rounded-2xl p-6 md:p-7">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Create your free living resume</p>
-        <h1 className="mt-2 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-[2.2rem]">
-          {SITE_TAGLINE}.
+    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-8 sm:px-6 sm:py-12">
+      <div className="site-panel-raised w-full p-6 sm:p-7">
+        <p className="site-eyebrow">Create your free living résumé</p>
+        <h1 className="site-page-title mt-3 text-[2rem] sm:text-[2.35rem]">
+          Let&apos;s get your page live.
         </h1>
-        <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
-          {SITE_DESCRIPTION}
+        <p className="mt-3 text-sm leading-6 text-site-secondary">
+          You&apos;re a few minutes away from having something you can actually send.
         </p>
-        <label className="mt-4 flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] p-3 text-xs leading-5 text-[rgba(240,244,255,0.62)]">
+        <label className="mt-5 flex min-h-11 items-start gap-3 border border-site-border bg-site-canvas-alt p-3 text-sm leading-5 text-site-secondary">
           <input
+            id="signup-legal-acceptance"
             type="checkbox"
             checked={acceptedLegal}
             onChange={(event) => setAcceptedLegal(event.target.checked)}
-            className="mt-1 h-4 w-4 accent-[#3B82F6]"
+            aria-invalid={!acceptedLegal && status === "error"}
+            aria-describedby={!acceptedLegal && status === "error" ? "signup-legal-message" : undefined}
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--site-action)]"
           />
           <span>
             I agree to the{" "}
-            <Link href="/terms" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+            <Link href="/terms" className="font-semibold text-site-action underline underline-offset-2 hover:text-site-action-hover">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="/privacy" className="text-[#93C5FD] hover:text-[#BFDBFE] underline underline-offset-2">
+            <Link href="/privacy" className="font-semibold text-site-action underline underline-offset-2 hover:text-site-action-hover">
               Privacy Policy
             </Link>.
           </span>
         </label>
 
-        {!acceptedLegal && (
-          <p className="mt-2 text-xs text-[#FCD34D]">Check the box above to continue.</p>
-        )}
+        {!acceptedLegal && status === "error" ? (
+          <p id="signup-legal-message" className="mt-2 text-xs text-site-warning">
+            Check the box above to continue.
+          </p>
+        ) : null}
 
-          <button
-            type="button"
-            onClick={onGoogleSignup}
-            disabled={status === "loading"}
-            className="mt-4 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:cursor-not-allowed disabled:opacity-50"
-          >
+        <button
+          type="button"
+          onClick={onGoogleSignup}
+          disabled={status === "loading"}
+          className="site-button site-button-secondary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
+        >
           Create Your Page with Google
-          </button>
+        </button>
 
-        <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
-          <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
+        <div className="my-4 flex items-center gap-3 text-xs text-site-muted">
+          <div className="h-px flex-1 bg-site-border" />
           Or
-          <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
+          <div className="h-px flex-1 bg-site-border" />
         </div>
 
-        <form className="space-y-3" onSubmit={onSignup}>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            placeholder="Email address"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            minLength={8}
-            placeholder="Create password"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
+        <form className="space-y-4" onSubmit={onSignup}>
+          <div>
+            <label htmlFor="signup-email" className="mb-2 block text-sm font-semibold text-site-text">
+              Email address
+            </label>
+            <input
+              id="signup-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              placeholder="Email address"
+              aria-invalid={status === "error"}
+              aria-describedby={message ? "signup-message" : undefined}
+              className="site-field px-4"
+            />
+          </div>
+          <div>
+            <label htmlFor="signup-password" className="mb-2 block text-sm font-semibold text-site-text">
+              Create password
+            </label>
+            <input
+              id="signup-password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              minLength={8}
+              placeholder="Create password"
+              aria-invalid={status === "error"}
+              aria-describedby={message ? "signup-password-help signup-message" : "signup-password-help"}
+              className="site-field px-4"
+            />
+            <p id="signup-password-help" className="mt-2 text-xs text-site-muted">
+              Use at least eight characters.
+            </p>
+          </div>
           {requiresCaptcha ? (
             <TurnstileWidget
               siteKey={turnstileSiteKey}
@@ -212,40 +235,46 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
+            className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
           >
             {status === "loading" ? "Starting..." : "Create My Page"}
           </button>
         </form>
 
         {requiresCaptcha && !turnstileToken && status !== "error" ? (
-          <p className="mt-3 text-xs text-[rgba(240,244,255,0.42)]">
+          <p className="mt-3 text-xs text-site-muted">
             Complete the human verification step to enable email signup.
           </p>
         ) : null}
 
         {message ? (
-          <p className={`mt-4 text-sm ${status === "error" ? "text-[#ff8e8e]" : "text-[#3B82F6]"}`}>{message}</p>
+          <p
+            id="signup-message"
+            role={status === "error" ? "alert" : "status"}
+            className={`mt-4 border-l-2 pl-3 text-sm ${
+              status === "error"
+                ? "border-site-danger text-site-danger"
+                : "border-site-success text-site-success"
+            }`}
+          >
+            {message}
+          </p>
         ) : null}
 
-        <p className="mt-4 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
+        <p className="mt-4 text-xs leading-5 text-site-muted">
           Publishing is free. No card, trial, or subscription is required to build or keep your living resume online.
         </p>
 
-        <p className="mt-4 text-sm text-[rgba(240,244,255,0.45)]">
+        <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
           Already have an account?{" "}
-          <Link href={signInHref} className="text-[#3B82F6] hover:text-[#93C5FD]">
+          <Link href={signInHref} className="font-semibold text-site-action hover:text-site-action-hover">
             Sign in
           </Link>
         </p>
 
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="mt-4 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.35)] hover:text-[#3B82F6]"
-        >
+        <Link href="/" className="mt-4 inline-flex text-sm font-medium text-site-muted hover:text-site-action">
           Back to Home
-        </button>
+        </Link>
       </div>
     </main>
   );

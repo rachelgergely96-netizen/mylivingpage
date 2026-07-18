@@ -35,17 +35,17 @@ const STATUS_CONTENT: Record<
   ready: {
     badge: "Ready",
     heading: "Your resume passes the current checks",
-    styles: "border-[rgba(91,214,124,0.28)] bg-[rgba(91,214,124,0.09)] text-[#9BEDAF]",
+    styles: "site-status-success",
   },
   needs_attention: {
     badge: "Needs attention",
     heading: "A few changes could make this easier to process",
-    styles: "border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.09)] text-[#FDE68A]",
+    styles: "site-status-warning",
   },
   not_ready: {
     badge: "Not ready yet",
     heading: "Fix the essentials before relying on this PDF",
-    styles: "border-[rgba(255,120,120,0.3)] bg-[rgba(255,120,120,0.09)] text-[#FFB4B4]",
+    styles: "site-status-danger",
   },
 };
 
@@ -55,14 +55,14 @@ function CheckList({ checks }: { checks: AtsReadinessCheck[] }) {
       {checks.map((check) => (
         <li
           key={check.id}
-          className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(6,14,28,0.34)] p-3.5"
+          className="border border-site-border bg-site-canvas-alt p-3.5"
         >
-          <p className="font-medium text-[#F0F4FF]">{check.title}</p>
-          <p className="mt-1.5 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+          <p className="font-medium text-site-text">{check.title}</p>
+          <p className="mt-1.5 text-sm leading-6 text-site-secondary">
             {check.detail}
           </p>
           {check.suggestedFix ? (
-            <p className="mt-2 text-sm leading-6 text-[#BFDBFE]">
+            <p className="mt-2 text-sm leading-6 text-site-action-hover">
               <span className="font-semibold">Next step:</span> {check.suggestedFix}
             </p>
           ) : null}
@@ -165,20 +165,20 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
     <section
       id="ats-readiness"
       aria-labelledby="ats-readiness-title"
-      className="scroll-mt-24 rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.07)] p-5 sm:p-6"
+      className="site-panel scroll-mt-24 p-5 sm:p-6"
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+          <p className="site-eyebrow">
             ATS readiness
           </p>
           <h3
             id="ats-readiness-title"
-            className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]"
+            className="site-panel-title mt-2 text-2xl"
           >
             Check the structure before you download
           </h3>
-          <p className="mt-3 text-sm leading-7 text-[rgba(232,242,255,0.76)]">
+          <p className="site-muted mt-3 text-sm leading-7">
             Run a deterministic check for readable contact details, complete work history,
             searchable content, and a text-based PDF. It uses rules, not a paid AI service.
           </p>
@@ -188,18 +188,18 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
           type="button"
           disabled={checking}
           onClick={() => void runCheck()}
-          className="gold-pill min-w-48 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93C5FD] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07101e] disabled:cursor-wait disabled:opacity-60"
+          className="site-button site-button-primary min-w-48 disabled:cursor-wait disabled:opacity-60"
         >
           {checking ? "Checking..." : "Check ATS readiness"}
         </button>
       </div>
 
-      <details className="mt-5 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.03)] p-4">
-        <summary className="cursor-pointer text-sm font-medium text-[#BFDBFE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93C5FD]">
+      <details className="mt-5 border border-site-border bg-site-canvas-alt p-4">
+        <summary className="cursor-pointer text-sm font-medium text-site-action-hover">
           Compare with a job description (optional)
         </summary>
         <div className="mt-4 grid gap-4">
-          <label className="grid gap-2 text-sm text-[rgba(240,244,255,0.72)]">
+          <label className="grid gap-2 text-sm font-semibold text-site-secondary">
             Target job title
             <input
               type="text"
@@ -207,10 +207,10 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
               maxLength={160}
               onChange={(event) => setTargetTitle(event.target.value)}
               placeholder="Example: Product Marketing Manager"
-              className="w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(3,10,22,0.7)] px-4 py-3 text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+              className="site-field w-full px-4 py-3 font-normal"
             />
           </label>
-          <label className="grid gap-2 text-sm text-[rgba(240,244,255,0.72)]">
+          <label className="grid gap-2 text-sm font-semibold text-site-secondary">
             Job description
             <textarea
               value={jobDescription}
@@ -218,10 +218,10 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
               onChange={(event) => setJobDescription(event.target.value)}
               placeholder="Paste the role description to compare its important terms with your resume."
               rows={6}
-              className="w-full resize-y rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(3,10,22,0.7)] px-4 py-3 text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+              className="site-field w-full resize-y px-4 py-3 font-normal"
             />
           </label>
-          <p className="text-xs leading-5 text-[rgba(240,244,255,0.5)]">
+          <p className="text-xs leading-5 text-site-muted">
             Your comparison text is used only for this check and is not stored. Leave these
             fields blank for a general resume check.
           </p>
@@ -232,11 +232,11 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
         {checking ? (
           <div
             role="status"
-            className="flex items-center gap-3 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(6,14,28,0.3)] px-4 py-3 text-sm text-[#BFDBFE]"
+            className="site-callout flex items-center gap-3 px-4 py-3 text-sm text-site-action-hover"
           >
             <span
               aria-hidden="true"
-              className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(147,197,253,0.24)] border-t-[#93C5FD]"
+              className="h-4 w-4 animate-spin rounded-full border-2 border-site-border border-t-site-action"
             />
             Building and checking your PDF...
           </div>
@@ -245,14 +245,14 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
         {error ? (
           <p
             role="alert"
-            className="rounded-xl border border-[rgba(255,120,120,0.3)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#FFB4B4]"
+            className="site-alert-danger px-4 py-3 text-sm"
           >
             {error}
           </p>
         ) : null}
 
         {hasStaleResult && !checking ? (
-          <p className="rounded-xl border border-[rgba(245,158,11,0.24)] bg-[rgba(245,158,11,0.07)] px-4 py-3 text-sm text-[#FDE68A]">
+          <p className="site-callout site-callout-warning px-4 py-3 text-sm text-site-warning">
             Your resume or comparison changed since the last check. Run the check again for an
             up-to-date result.
           </p>
@@ -264,22 +264,22 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
           <div
             role="status"
             aria-live="polite"
-            className={`rounded-2xl border p-4 sm:p-5 ${statusContent.styles}`}
+            className={`rounded-none border p-4 sm:p-5 ${statusContent.styles}`}
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">
+                <p className="text-[10px] font-semibold">
                   {statusContent.badge}
                 </p>
-                <h4 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+                <h4 className="mt-2 font-site text-xl font-semibold text-site-text">
                   {statusContent.heading}
                 </h4>
               </div>
-              <div className="w-fit rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(6,14,28,0.34)] px-4 py-3 text-[#F0F4FF]">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.48)]">
+              <div className="w-fit border border-site-border-strong bg-site-canvas-alt px-4 py-3 text-site-text">
+                <p className="text-xs font-semibold text-site-muted">
                   Readiness score
                 </p>
-                <p className="mt-1 font-mono text-2xl">{Math.round(readiness.score)}/100</p>
+                <p className="mt-1 font-site text-2xl font-semibold tabular-nums">{Math.round(readiness.score)}/100</p>
               </div>
             </div>
           </div>
@@ -288,37 +288,37 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             {CATEGORY_LABELS.map((category) => (
               <div
                 key={category.id}
-                className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(6,14,28,0.34)] p-3.5"
+                className="border border-site-border bg-site-canvas-alt p-3.5"
               >
-                <p className="text-xs text-[rgba(240,244,255,0.54)]">{category.label}</p>
-                <p className="mt-1.5 font-mono text-xl text-[#F0F4FF]">
+                <p className="text-xs text-site-muted">{category.label}</p>
+                <p className="mt-1.5 font-site text-xl font-semibold tabular-nums text-site-text">
                   {Math.round(readiness.categoryScores[category.id])}
-                  <span className="text-xs text-[rgba(240,244,255,0.4)]">/100</span>
+                  <span className="text-xs text-site-muted">/100</span>
                 </p>
               </div>
             ))}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#FFB4B4]">Fix first</p>
+            <div className="border border-site-border bg-site-canvas-alt p-4">
+              <p className="site-eyebrow text-site-danger">Fix first</p>
               {readiness.criticalFixes.length > 0 ? (
                 <CheckList checks={readiness.criticalFixes} />
               ) : (
-                <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+                <p className="mt-3 text-sm leading-6 text-site-secondary">
                   No critical structural problems were found.
                 </p>
               )}
             </div>
 
-            <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#FDE68A]">
+            <div className="border border-site-border bg-site-canvas-alt p-4">
+              <p className="site-eyebrow text-site-warning">
                 Worth improving
               </p>
               {readiness.improvements.length > 0 ? (
                 <CheckList checks={readiness.improvements} />
               ) : (
-                <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+                <p className="mt-3 text-sm leading-6 text-site-secondary">
                   No material improvements were flagged by the current rules.
                 </p>
               )}
@@ -326,41 +326,41 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.06)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">PDF check</p>
-              <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.72)]">
+            <div className="site-callout p-4">
+              <p className="site-eyebrow">PDF check</p>
+              <p className="mt-2 text-sm leading-6 text-site-secondary">
                 {describePdf(readiness)}
               </p>
               {readiness.pdf.renderFailureReason ? (
-                <p className="mt-2 text-sm leading-6 text-[#FFB4B4]">
+                <p className="mt-2 text-sm leading-6 text-site-danger">
                   {readiness.pdf.renderFailureReason}
                 </p>
               ) : null}
             </div>
 
             {readiness.keywordCoverage ? (
-              <div className="rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.06)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">
+              <div className="site-callout p-4">
+                <p className="site-eyebrow">
                   Job comparison
                 </p>
-                <p className="mt-2 text-sm text-[rgba(240,244,255,0.72)]">
+                <p className="mt-2 text-sm text-site-secondary">
                   {readiness.keywordCoverage.keywords.length === 0
                     ? "No specific role terms were found to compare. Try including the responsibilities and qualifications from the posting."
                     : `${readiness.keywordCoverage.matchedKeywords.length} of ${readiness.keywordCoverage.keywords.length} important terms found (${readiness.keywordCoverage.coveragePercent}%).`}
                 </p>
                 {readiness.keywordCoverage.missingKeywords.length > 0 ? (
-                  <p className="mt-2 text-xs leading-5 text-[rgba(240,244,255,0.52)]">
+                  <p className="mt-2 text-xs leading-5 text-site-muted">
                     Missing terms: {readiness.keywordCoverage.missingKeywords.join(", ")}. Only
                     add terms that honestly describe your experience.
                   </p>
                 ) : null}
               </div>
             ) : (
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.46)]">
+              <div className="border border-site-border bg-site-canvas-alt p-4">
+                <p className="site-eyebrow text-site-muted">
                   General check
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
                   Add an optional job description above when you want to compare role-specific
                   terms.
                 </p>
@@ -369,15 +369,15 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
           </div>
 
           {readiness.passedChecks.length > 0 ? (
-            <details className="rounded-xl border border-[rgba(91,214,124,0.18)] bg-[rgba(91,214,124,0.05)] p-4">
-              <summary className="cursor-pointer text-sm font-medium text-[#9BEDAF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9BEDAF]">
+            <details className="site-status-success border p-4">
+              <summary className="cursor-pointer text-sm font-medium text-site-success">
                 See {readiness.passedChecks.length} checks that passed
               </summary>
               <CheckList checks={readiness.passedChecks} />
             </details>
           ) : null}
 
-          <p className="text-xs leading-5 text-[rgba(240,244,255,0.45)]">
+          <p className="text-xs leading-5 text-site-muted">
             {readiness.disclaimer ||
               "This rule-based check cannot predict how every ATS, recruiter, or hiring team will evaluate a resume."}
           </p>
@@ -385,7 +385,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
       ) : (
         !checking &&
         !hasStaleResult && (
-          <p className="mt-5 text-xs leading-5 text-[rgba(240,244,255,0.45)]">
+          <p className="mt-5 text-xs leading-5 text-site-muted">
             This rule-based check cannot predict how every ATS, recruiter, or hiring team will
             evaluate a resume.
           </p>

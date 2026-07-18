@@ -221,14 +221,14 @@ export default async function DashboardPage() {
       ? STARTER_PLAN_PRICE.displayLabel
       : PRO_PLAN_PRICE.displayLabel;
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
+    <main className="site-container py-8 sm:py-12" id="main-content">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:mb-8 sm:flex-row sm:items-end sm:gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Your page</p>
-          <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl md:text-4xl">
+          <p className="site-eyebrow">Your page</p>
+          <h1 className="site-page-title mt-2">
             {displayName ? (
               <>
-                Welcome back, <span className="text-[#3B82F6]">{displayName}</span>
+                Welcome back, <span className="text-site-action">{displayName}</span>
               </>
             ) : (
               "Your Living Page"
@@ -238,14 +238,14 @@ export default async function DashboardPage() {
         {!list.length ? (
           <Link
             href="/create"
-            className="gold-pill self-start px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] sm:self-auto sm:px-6 sm:py-3"
+            className="site-button site-button-primary self-start sm:self-auto"
           >
             Create Your Page
           </Link>
         ) : (
           <Link
             href="/dashboard/settings"
-            className="self-start rounded-full border border-[rgba(255,255,255,0.15)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.5)] sm:self-auto sm:px-6 sm:py-3"
+            className="site-button site-button-secondary self-start sm:self-auto"
           >
             Manage Public URL
           </Link>
@@ -253,18 +253,18 @@ export default async function DashboardPage() {
       </div>
 
       {!list.length ? (
-        <section className="glass-card rounded-2xl p-5 text-center sm:p-8">
-          <p className="text-sm text-[rgba(240,244,255,0.6)]">No pages yet. Start by creating your first living page.</p>
+        <section className="site-panel p-5 text-center sm:p-8">
+          <p className="site-muted text-sm">No pages yet. Start by creating your first Living Page.</p>
         </section>
       ) : (
         <section className="grid gap-3">
           {!accountAccess.isLegacyAccount ? (
-            <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.74)]">
+            <div className="site-callout px-4 py-3 text-sm">
               {accountAccess.hasPaidSubscription ? (
                 <>
                   Your living resume is free and remains available regardless of billing. An
                   existing {accountAccess.publicPlanLabel} subscription at {activePaidPlanPriceLabel} is still on file.{" "}
-                  <Link href="/dashboard/settings" className="text-[#93C5FD] hover:text-[#BFDBFE]">
+                  <Link href="/dashboard/settings" className="font-semibold text-site-action hover:text-site-action-hover">
                     Review the subscription
                   </Link>
                   .
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
             </div>
           ) : null}
           {offlineAttemptEvents.length > 0 ? (
-            <div className="rounded-2xl border border-[rgba(245,158,11,0.24)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
+            <div className="site-callout site-callout-warning px-4 py-3 text-sm">
               Someone tried to open your page while it was offline
               {formatRelativeTime(offlineAttemptEvents[0]?.created_at)
                 ? ` ${formatRelativeTime(offlineAttemptEvents[0]?.created_at)}`
@@ -283,11 +283,11 @@ export default async function DashboardPage() {
               restore the link.
             </div>
           ) : null}
-          <div className="rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.68)]">
+          <div className="site-callout px-4 py-3 text-sm">
             V1 supports one public page per account. Edit your current page, or delete it before creating a replacement.
           </div>
           {list.length > MAX_PAGES_PER_ACCOUNT ? (
-            <div className="rounded-2xl border border-[rgba(245,158,11,0.24)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
+            <div className="site-callout site-callout-warning px-4 py-3 text-sm">
               This account still has legacy extra pages. Your public URL resolves through one username, so remove extras before relying on the page publicly.
             </div>
           ) : null}
@@ -303,25 +303,25 @@ export default async function DashboardPage() {
             return (
               <article
                 key={page.id}
-                className="glass-card grid gap-3 rounded-2xl p-4 sm:gap-4 sm:p-5 md:grid-cols-[2fr_1fr_1fr_1fr_auto] md:items-center"
+                className="site-panel grid gap-4 p-4 sm:p-5 md:grid-cols-[2fr_1fr_1fr_1fr_auto] md:items-center"
               >
                 <div>
-                  <p className="font-heading text-lg text-[#F0F4FF] sm:text-2xl">{page.resume_data?.name ?? "Untitled"}</p>
-                  <p className="text-sm text-[rgba(240,244,255,0.45)]">
+                  <p className="font-site text-lg font-semibold text-site-text sm:text-2xl">{page.resume_data?.name ?? "Untitled"}</p>
+                  <p className="text-sm text-site-muted">
                     /{publicSlug ?? page.slug} - {page.resume_data?.headline ?? "No headline"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">Theme</p>
-                  <p className="text-sm capitalize text-[rgba(240,244,255,0.75)]">{page.theme_id}</p>
+                  <p className="text-xs font-semibold text-site-muted">Theme</p>
+                  <p className="text-sm capitalize text-site-secondary">{page.theme_id}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">People Who Looked</p>
-                  <p className="font-mono text-sm text-[#93C5FD]">{page.views ?? 0}</p>
+                  <p className="text-xs font-semibold text-site-muted">People who looked</p>
+                  <p className="font-site text-sm font-semibold tabular-nums text-site-action">{page.views ?? 0}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">Status</p>
-                  <p className="text-sm capitalize text-[rgba(240,244,255,0.75)]">
+                  <p className="text-xs font-semibold text-site-muted">Status</p>
+                  <p className="text-sm capitalize text-site-secondary">
                     {page.status ?? (page.visibility === "public" ? "live" : page.visibility) ?? "-"}
                   </p>
                 </div>
@@ -329,40 +329,40 @@ export default async function DashboardPage() {
                   {publicViewAvailable ? (
                     <Link
                       href={`/${publicSlug ?? page.slug}`}
-                      className="rounded-full border border-[rgba(59,130,246,0.35)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                      className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
                     >
                       View
                     </Link>
                   ) : <PublishPageButton pageId={page.id} />}
                   <Link
                     href={`/dashboard/edit/${page.id}/living-page`}
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                    className="site-button site-button-primary px-3 py-2 text-xs sm:px-4"
                   >
                     Edit Page
                   </Link>
                   <Link
                     href={`/dashboard/edit/${page.id}/living-page#ats-readiness`}
-                    className="rounded-full border border-[rgba(255,255,255,0.15)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] sm:px-4 sm:py-2"
+                    className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
                   >
                     Check ATS
                   </Link>
                   <Link
                     href={`/dashboard/analytics/${page.id}`}
-                    className="rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE] sm:px-4 sm:py-2"
+                    className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
                   >
                     Page Analytics
                   </Link>
                   <DeletePageButton pageId={page.id} />
                 </div>
-                <div className="rounded-2xl border border-[rgba(59,130,246,0.16)] bg-[rgba(59,130,246,0.08)] p-4 md:col-span-full">
+                <div className="-mx-4 -mb-4 border-t border-site-border bg-site-canvas-alt p-4 sm:-mx-5 sm:-mb-5 sm:p-5 md:col-span-full">
                   <div className="max-w-3xl">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#93C5FD]">
+                    <p className="site-eyebrow">
                       {proofCopy.eyebrow}
                     </p>
-                    <h2 className="mt-2 font-heading text-lg font-bold text-[#F0F4FF] sm:text-xl">
+                    <h2 className="site-panel-title mt-2 text-lg sm:text-xl">
                       {proofCopy.title}
                     </h2>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+                    <p className="site-muted mt-2 text-sm leading-6">
                       {proofCopy.body}
                     </p>
                   </div>
@@ -370,7 +370,7 @@ export default async function DashboardPage() {
                     {proofCopy.chips.map((chip) => (
                       <span
                         key={`${page.id}-${chip}`}
-                        className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[11px] text-[rgba(240,244,255,0.7)]"
+                        className="site-badge"
                       >
                         {chip}
                       </span>

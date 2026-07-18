@@ -65,12 +65,8 @@ export default function ThemePicker({
               key={collection}
               type="button"
               onClick={() => setActiveCollection(collection)}
-              className="shrink-0 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300"
-              style={{
-                borderColor: active ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.12)",
-                background: active ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.03)",
-                color: active ? "#93C5FD" : "rgba(240,244,255,0.6)",
-              }}
+              aria-pressed={active}
+              className={`min-h-11 shrink-0 rounded-none border px-4 py-2 text-xs font-semibold transition-colors duration-200 ${active ? "border-site-action bg-site-selected text-site-text" : "border-site-border bg-site-surface text-site-secondary hover:border-site-border-strong"}`}
             >
               {THEME_COLLECTION_META[collection].label}
             </button>
@@ -83,10 +79,10 @@ export default function ThemePicker({
           <section key={section.collection} className="space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">Collection</p>
-                <h3 className="mt-1 font-heading text-xl text-[#F0F4FF]">{section.label}</h3>
+                <p className="site-eyebrow">Collection</p>
+                <h3 className="site-panel-title mt-1">{section.label}</h3>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.3)]">
+              <p className="text-xs font-medium text-site-muted">
                 {section.themes.length} themes
               </p>
             </div>
@@ -100,36 +96,34 @@ export default function ThemePicker({
                   <button
                     key={theme.id}
                     type="button"
+                    aria-pressed={selectedThemeId === theme.id}
+                    aria-disabled={locked}
                     onClick={() => {
                       if (!locked) {
                         onSelectTheme(theme.id);
                       }
                     }}
-                    className={`glass-card rounded-2xl p-3 text-left transition-all duration-300 ease-soft ${locked ? "cursor-not-allowed opacity-60" : "hover:-translate-y-1"}`}
-                    style={{
-                      borderColor: selectedThemeId === theme.id ? "rgba(59,130,246,0.38)" : "rgba(255,255,255,0.08)",
-                      background: selectedThemeId === theme.id ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.03)",
-                    }}
+                    className={`site-panel rounded-none p-3 text-left transition-colors duration-200 ${selectedThemeId === theme.id ? "border-site-action bg-site-selected" : ""} ${locked ? "cursor-not-allowed opacity-60" : "hover:border-site-border-strong hover:bg-site-surface-raised"}`}
                   >
                     <div className="relative">
                       <ThemeCanvas themeId={theme.id} height={120} interactive={false} />
                       {theme.signature ? (
-                        <span className="pointer-events-none absolute left-2 top-2 rounded-full border border-[rgba(255,231,199,0.28)] bg-[rgba(15,10,16,0.72)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#FFE2BE] backdrop-blur-lg">
+                        <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2.5 py-1 text-[9px] font-semibold text-site-warning">
                           Signature
                         </span>
                       ) : null}
                       {locked ? (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(0,0,0,0.5)]">
-                          <span className="rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.6)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.6)]">
+                        <div className="absolute inset-0 flex items-center justify-center rounded-none bg-black/60">
+                          <span className="rounded-none border border-site-border-strong bg-site-canvas px-3 py-1 text-[10px] text-site-secondary">
                             {lockedLabel}
                           </span>
                         </div>
                       ) : null}
                     </div>
-                    <p className="mt-3 font-heading text-xl">{theme.name}</p>
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#3B82F6]">{theme.vibe}</p>
+                    <p className="mt-3 font-site text-xl font-semibold">{theme.name}</p>
+                    <p className="text-xs font-medium text-site-action">{theme.vibe}</p>
                     {showDescription ? (
-                      <p className="mt-2 text-xs leading-6 text-[rgba(240,244,255,0.45)]">{theme.description}</p>
+                      <p className="mt-2 text-xs leading-6 text-site-muted">{theme.description}</p>
                     ) : null}
                   </button>
                 );

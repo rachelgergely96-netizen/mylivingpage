@@ -42,45 +42,45 @@ export default async function AdminUsersPage() {
     .slice(0, 8);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-8 md:px-10">
+    <main className="site-container-wide py-8">
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Admin</p>
-        <h1 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">
+        <p className="site-eyebrow">Admin</p>
+        <h1 className="site-page-title mt-2">
           All Users
-          <span className="ml-3 text-lg font-normal text-[rgba(240,244,255,0.4)]">
+          <span className="ml-3 text-lg font-normal tabular-nums text-site-muted">
             ({users.length})
           </span>
         </h1>
       </div>
       <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="glass-card rounded-2xl p-5">
-          <p className="font-mono text-2xl text-[#ff8e8e]">{riskSummary.suspiciousTotal}</p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+        <div className="site-panel p-5">
+          <p className="text-2xl font-semibold tabular-nums text-site-danger">{riskSummary.suspiciousTotal}</p>
+          <p className="mt-1 text-xs font-medium text-site-muted">
             Suspicious Users
           </p>
         </div>
-        <div className="glass-card rounded-2xl p-5">
-          <p className="font-mono text-2xl text-[#fbbf24]">{riskSummary.watchTotal}</p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+        <div className="site-panel p-5">
+          <p className="text-2xl font-semibold tabular-nums text-site-warning">{riskSummary.watchTotal}</p>
+          <p className="mt-1 text-xs font-medium text-site-muted">
             Watch List
           </p>
         </div>
-        <div className="glass-card rounded-2xl p-5">
-          <p className="font-mono text-2xl text-[#93C5FD]">{riskSummary.unconfirmedTotal}</p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+        <div className="site-panel p-5">
+          <p className="text-2xl font-semibold tabular-nums text-site-action">{riskSummary.unconfirmedTotal}</p>
+          <p className="mt-1 text-xs font-medium text-site-muted">
             Unconfirmed
           </p>
         </div>
-        <div className="glass-card rounded-2xl p-5">
-          <p className="font-mono text-2xl text-[#fbbf24]">{riskSummary.unconfirmedPastGrace}</p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+        <div className="site-panel p-5">
+          <p className="text-2xl font-semibold tabular-nums text-site-warning">{riskSummary.unconfirmedPastGrace}</p>
+          <p className="mt-1 text-xs font-medium text-site-muted">
             Unconfirmed &gt; 24h
           </p>
         </div>
       </section>
-      <section className="glass-card mb-6 rounded-2xl p-5">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Signup Sources</p>
-        <p className="mt-2 text-sm text-[rgba(240,244,255,0.55)]">
+      <section className="site-panel mb-6 p-5">
+        <h2 className="site-panel-title">Signup Sources</h2>
+        <p className="mt-2 text-sm text-site-secondary">
           CTA refs are captured at signup so you can see which landing-page entries are turning into accounts.
         </p>
         {topSignupSources.length ? (
@@ -88,14 +88,14 @@ export default async function AdminUsersPage() {
             {topSignupSources.map(([source, count]) => (
               <span
                 key={source}
-                className="rounded-full border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-[11px] text-[#BFDBFE]"
+                className="site-badge border-site-action bg-site-selected text-site-action-hover"
               >
                 <span className="font-mono">{source}</span> ({count})
               </span>
             ))}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-[rgba(240,244,255,0.4)]">No signup source data yet.</p>
+          <p className="mt-4 text-sm text-site-muted">No signup source data yet.</p>
         )}
       </section>
       <AdminUsersTable users={users} />

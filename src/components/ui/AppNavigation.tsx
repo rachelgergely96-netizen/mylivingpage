@@ -1,0 +1,125 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import SignOutButton from "@/components/ui/SignOutButton";
+
+interface AppNavigationProps {
+  variant: "product" | "admin";
+  showAdmin?: boolean;
+}
+
+interface NavigationItem {
+  href: string;
+  label: string;
+  emphasis?: "primary" | "danger";
+  exact?: boolean;
+}
+
+const PRODUCT_LINKS: NavigationItem[] = [
+  { href: "/dashboard", label: "Your page" },
+  { href: "/create", label: "Create", emphasis: "primary" },
+  { href: "/dashboard/settings", label: "Settings" },
+];
+
+const ADMIN_LINKS: NavigationItem[] = [
+  { href: "/admin", label: "Overview", exact: true },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/pages", label: "Pages" },
+  { href: "/admin/feedback", label: "Feedback" },
+  { href: "/admin/ops", label: "Ops" },
+  { href: "/dashboard", label: "Back to app" },
+];
+
+function linkIsCurrent(pathname: string, item: NavigationItem) {
+  return pathname === item.href || (!item.exact && pathname.startsWith(`${item.href}/`));
+}
+
+export default function AppNavigation({ variant, showAdmin = false }: AppNavigationProps) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const links = variant === "admin"
+    ? ADMIN_LINKS
+    : [
+        ...(showAdmin
+          ? [{ href: "/admin", label: "Admin", emphasis: "danger" as const }]
+          : []),
+        ...PRODUCT_LINKS,
+      ];
+  const currentHref = links
+    .filter((item) => linkIsCurrent(pathname, item))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
+  const renderLinks = (mobile: boolean) => (
+    <>
+      {links.map((item) => {
+        const current = currentHref === item.href;
+        const className = item.emphasis === "primary"
+          ? "site-button site-button-primary min-h-11"
+          : item.emphasis === "danger"
+            ? "site-nav-link site-badge-danger min-h-11"
+            : "site-nav-link min-h-11";
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={current ? "page" : undefined}
+            className={`${className} ${mobile ? "w-full justify-start" : "shrink-0"}`}
+            onClick={mobile ? () => setOpen(false) : undefined}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+      <SignOutButton className={mobile ? "w-full justify-start" : ""} />
+    </>
+  );
+
+  return (
+    <>
+      <nav className="hidden items-center gap-1 md:flex" aria-label={variant === "admin" ? "Admin navigation" : "Product navigation"}>
+        {renderLinks(false)}
+      </nav>
+      <button
+        type="button"
+        className="site-icon-button md:hidden"
+        aria-expanded={open}
+        aria-controls={`${variant}-mobile-navigation`}
+        aria-label={open ? "Close navigation" : "Open navigation"}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span aria-hidden="true" className="text-xl leading-none">{open ? "×" : "≡"}</span>
+      </button>
+      {open ? (
+        <nav
+          id={`${variant}-mobile-navigation`}
+          className="absolute left-0 right-0 top-full grid gap-2 border-b border-site-border bg-site-canvas p-4 shadow-[var(--site-shadow-overlay)] md:hidden"
+          aria-label={`${variant === "admin" ? "Admin" : "Product"} mobile navigation`}
+        >
+          {renderLinks(true)}
+        </nav>
+      ) : null}
+    </>
+  );
+}

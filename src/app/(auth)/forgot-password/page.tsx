@@ -28,48 +28,63 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
-      <div className="glass-card w-full rounded-2xl p-7 md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Password Reset</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Forgot Password</h1>
-        <p className="mt-2 text-sm leading-7 text-[rgba(240,244,255,0.55)]">
+    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-10 sm:px-6 sm:py-14">
+      <div className="site-panel-raised w-full p-6 sm:p-8">
+        <p className="site-eyebrow">Password reset</p>
+        <h1 className="site-page-title mt-3">Forgot your password?</h1>
+        <p className="mt-3 text-sm leading-7 text-site-secondary">
           Enter your email address and we&apos;ll send you a link to reset your password.
         </p>
 
         {status === "sent" ? (
           <div className="mt-6">
-            <p className="text-sm text-[#3B82F6]">{message}</p>
+            <p role="status" className="border-l-2 border-site-success pl-3 text-sm text-site-success">
+              {message}
+            </p>
             <Link
               href="/login"
-              className="mt-6 inline-block text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.5)] hover:text-[#3B82F6]"
+              className="site-button site-button-primary mt-6"
             >
               Back to Sign In
             </Link>
           </div>
         ) : (
-          <form className="mt-6 space-y-3" onSubmit={onSubmit}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Email address"
-              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-            />
+          <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+            <div>
+              <label htmlFor="forgot-email" className="mb-2 block text-sm font-semibold text-site-text">
+                Email address
+              </label>
+              <input
+                id="forgot-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Email address"
+                aria-invalid={status === "error"}
+                aria-describedby={status === "error" ? "forgot-message" : undefined}
+                className="site-field px-4"
+              />
+            </div>
             <button
               type="submit"
               disabled={status === "loading"}
-              className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
+              className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
             >
               {status === "loading" ? "Sending..." : "Send Reset Link"}
             </button>
-            {status === "error" && <p className="text-sm text-[#ff8e8e]">{message}</p>}
+            {status === "error" ? (
+              <p id="forgot-message" role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+                {message}
+              </p>
+            ) : null}
           </form>
         )}
 
-        <p className="mt-5 text-sm text-[rgba(240,244,255,0.45)]">
+        <p className="mt-6 border-t border-site-border pt-5 text-sm text-site-secondary">
           Remember your password?{" "}
-          <Link href="/login" className="text-[#3B82F6] hover:text-[#93C5FD]">
+          <Link href="/login" className="font-semibold text-site-action hover:text-site-action-hover">
             Sign in
           </Link>
         </p>

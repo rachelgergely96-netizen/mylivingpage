@@ -51,19 +51,19 @@ function StatCard({
 }) {
   const valueClassName =
     tone === "danger"
-      ? "text-[#ff8e8e]"
+      ? "text-site-danger"
       : tone === "warning"
-        ? "text-[#fbbf24]"
+        ? "text-site-warning"
         : tone === "success"
-          ? "text-[#4ade80]"
-          : "text-[#93C5FD]";
+          ? "text-site-success"
+          : "text-site-action";
 
   return (
-    <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className={`font-mono text-2xl font-bold sm:text-3xl ${valueClassName}`}>
+    <div className="site-panel p-4 sm:p-5">
+      <p className={`font-site tabular-nums text-2xl font-bold sm:text-3xl ${valueClassName}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
-      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+      <p className="mt-1 text-[11px] font-semibold text-site-muted">
         {label}
       </p>
     </div>
@@ -80,22 +80,22 @@ function EventFeed({
   events: EventRow[];
 }) {
   return (
-    <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+    <section className="site-panel p-4 sm:p-5">
+      <h2 className="mb-4 text-[11px] font-semibold text-site-muted">
         {title}
-      </p>
+      </h2>
       <div className="space-y-2.5">
         {events.length === 0 ? (
-          <p className="text-sm text-[rgba(240,244,255,0.35)]">{emptyLabel}</p>
+          <p className="text-sm text-site-muted">{emptyLabel}</p>
         ) : (
           events.map((event, index) => (
             <div
               key={`${event.created_at}-${index}`}
-              className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-3 py-2"
+              className="border border-site-border bg-site-canvas-alt px-3 py-2"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-[#F0F4FF]">{event.event_name}</p>
-                <p className="shrink-0 text-[10px] font-mono text-[rgba(240,244,255,0.32)]">
+                <p className="text-sm text-site-text">{event.event_name}</p>
+                <time dateTime={event.created_at} className="shrink-0 font-mono text-[10px] text-site-muted">
                   {new Date(event.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -104,10 +104,10 @@ function EventFeed({
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                </p>
+                </time>
               </div>
               {event.metadata && Object.keys(event.metadata).length > 0 ? (
-                <p className="mt-1 truncate font-mono text-[10px] text-[rgba(240,244,255,0.32)]">
+                <p className="mt-1 truncate font-mono text-[10px] text-site-muted">
                   {JSON.stringify(event.metadata)}
                 </p>
               ) : null}
@@ -115,7 +115,7 @@ function EventFeed({
           ))
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -369,19 +369,19 @@ export default async function AdminOpsPage() {
       : null;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-10">
+    <main className="site-container-wide py-8 md:py-10">
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Admin</p>
-        <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+        <p className="site-eyebrow">Admin</p>
+        <h1 className="site-page-title mt-2">
           Operations
         </h1>
-        <p className="mt-2 max-w-3xl text-sm text-[rgba(240,244,255,0.55)]">
+        <p className="site-muted mt-2 max-w-3xl text-sm">
           Release health for billing, publishing, auth callbacks, bot pressure on public endpoints, and public legal readiness.
         </p>
       </div>
 
       {turnstileMissingInProduction ? (
-        <div className="mb-6 rounded-2xl border border-[rgba(245,158,11,0.25)] bg-[rgba(245,158,11,0.08)] px-5 py-4 text-sm text-[rgba(255,248,220,0.88)]">
+        <div className="site-callout site-callout-warning mb-6 px-5 py-4 text-sm">
           Production is missing `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Email signup hardening is not active until Turnstile is configured in both the app env and Supabase Auth CAPTCHA settings.
         </div>
       ) : null}
@@ -430,24 +430,24 @@ export default async function AdminOpsPage() {
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="glass-card rounded-2xl p-5 sm:p-6">
+        <section className="site-panel p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+              <p className="site-eyebrow text-[11px]">
                 Stripe Price Health
               </p>
-              <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+              <h2 className="site-panel-title mt-2">
                 {HOSTING_PLAN_PRICE.productName}
               </h2>
-              <p className="mt-1 text-sm text-[rgba(240,244,255,0.52)]">
+              <p className="site-muted mt-1 text-sm">
                 Expected {HOSTING_PLAN_PRICE.displayLabel}, {HOSTING_PLAN_PRICE.currency.toUpperCase()}, recurring {HOSTING_PLAN_PRICE.interval}.
               </p>
             </div>
             <span
-              className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
+              className={`site-badge px-3 py-1 text-[10px] ${
                 stripePriceStatus.errorMessage || stripePriceStatus.driftMessages.length
-                  ? "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
-                  : "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
+                  ? "site-badge-warning"
+                  : "site-badge-success"
               }`}
             >
               {stripePriceStatus.errorMessage || stripePriceStatus.driftMessages.length
@@ -457,29 +457,29 @@ export default async function AdminOpsPage() {
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+            <div className="border border-site-border bg-site-canvas-alt p-4">
+              <p className="text-[11px] font-semibold text-site-muted">
                 Latest Webhook Latency
               </p>
-              <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+              <p className="mt-2 tabular-nums text-2xl text-site-action">
                 {latestWebhookLatencyMs ?? 0} ms
               </p>
-              <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+              <p className="mt-1 text-xs text-site-muted">
                 Average over the last {processedWebhooks.length} processed webhook events: {averageWebhookLatencyMs} ms
               </p>
             </div>
-            <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+            <div className="border border-site-border bg-site-canvas-alt p-4">
+              <p className="text-[11px] font-semibold text-site-muted">
                 Stripe Snapshot
               </p>
               {stripePriceStatus.actual ? (
-                <div className="mt-2 space-y-1 text-sm text-[rgba(240,244,255,0.62)]">
-                  <p>Price ID: <span className="font-mono text-[#F0F4FF]">{stripePriceStatus.actual.id}</span></p>
-                  <p>Amount: <span className="font-mono text-[#F0F4FF]">{stripePriceStatus.actual.amountCents ?? "missing"} cents</span></p>
-                  <p>Product: <span className="font-mono text-[#F0F4FF]">{stripePriceStatus.actual.productName ?? "missing"}</span></p>
+                <div className="mt-2 space-y-1 text-sm text-site-secondary">
+                  <p>Price ID: <span className="font-mono text-site-text">{stripePriceStatus.actual.id}</span></p>
+                  <p>Amount: <span className="font-mono text-site-text">{stripePriceStatus.actual.amountCents ?? "missing"} cents</span></p>
+                  <p>Product: <span className="font-mono text-site-text">{stripePriceStatus.actual.productName ?? "missing"}</span></p>
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-[rgba(240,244,255,0.42)]">
+                <p className="mt-2 text-sm text-site-muted">
                   Stripe snapshot unavailable.
                 </p>
               )}
@@ -487,12 +487,12 @@ export default async function AdminOpsPage() {
           </div>
 
           {stripePriceStatus.errorMessage ? (
-            <p className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[#fbbf24]">
+            <p className="site-callout site-callout-warning mt-4 px-4 py-3 text-sm text-site-warning">
               {stripePriceStatus.errorMessage}
             </p>
           ) : stripePriceStatus.driftMessages.length ? (
-            <div className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[rgba(255,248,220,0.82)]">
-              <p className="font-medium text-[#fbbf24]">Stripe pricing drift detected</p>
+            <div className="site-callout site-callout-warning mt-4 px-4 py-3 text-sm">
+              <p className="font-semibold text-site-warning">Stripe pricing drift detected</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {stripePriceStatus.driftMessages.map((message) => (
                   <li key={message}>{message}</li>
@@ -500,31 +500,31 @@ export default async function AdminOpsPage() {
               </ul>
             </div>
           ) : (
-            <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
+            <p className="mt-4 border-l-4 border-site-success bg-site-canvas-alt px-4 py-3 text-sm text-site-success">
               Stripe matches the app&apos;s current hosting pricing contract.
             </p>
           )}
         </section>
 
         <div className="grid gap-4">
-          <section className="glass-card rounded-2xl p-5 sm:p-6">
+          <section className="site-panel p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+                <p className="site-eyebrow text-[11px]">
                   Google Auth Health
                 </p>
-                <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+                <h2 className="site-panel-title mt-2">
                   OAuth callback completion
                 </h2>
-                <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+                <p className="site-muted mt-2 text-sm">
                   Tracks Google OAuth starts and callback outcomes so we can distinguish real auth regressions from abandoned sign-in attempts.
                 </p>
               </div>
               <span
-                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
+                className={`site-badge px-3 py-1 text-[10px] ${
                   (authCallbackFailureCount ?? 0) > 0
-                    ? "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
-                    : "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
+                    ? "site-badge-warning"
+                    : "site-badge-success"
                 }`}
               >
                 {(authCallbackFailureCount ?? 0) > 0 ? "Needs Attention" : "Healthy"}
@@ -532,91 +532,91 @@ export default async function AdminOpsPage() {
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+              <div className="border border-site-border bg-site-canvas-alt p-4">
+                <p className="text-[11px] font-semibold text-site-muted">
                   OAuth Starts (7d)
                 </p>
-                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {authGoogleStartSuccessCount ?? 0}
                 </p>
-                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                <p className="mt-1 text-xs text-site-muted">
                   Start failures: {authGoogleStartFailureCount ?? 0}
                 </p>
               </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+              <div className="border border-site-border bg-site-canvas-alt p-4">
+                <p className="text-[11px] font-semibold text-site-muted">
                   Callback Success Rate (7d)
                 </p>
-                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {formatPercent(authCallbackSuccessRate)}
                 </p>
-                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                <p className="mt-1 text-xs text-site-muted">
                   Callback fail rate: {formatPercent(authCallbackFailureRate)}
                 </p>
               </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+              <div className="border border-site-border bg-site-canvas-alt p-4">
+                <p className="text-[11px] font-semibold text-site-muted">
                   Callback Outcomes (7d)
                 </p>
-                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {authCallbackSuccessCount ?? 0}/{authCallbackCompletionCount}
                 </p>
-                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                <p className="mt-1 text-xs text-site-muted">
                   Successful callbacks / completed callbacks
                 </p>
               </div>
-              <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+              <div className="border border-site-border bg-site-canvas-alt p-4">
+                <p className="text-[11px] font-semibold text-site-muted">
                   Start Completion Rate
                 </p>
-                <p className="mt-2 font-mono text-2xl text-[#93C5FD]">
+                <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {formatPercent(authStartCompletionRate)}
                 </p>
-                <p className="mt-1 text-xs text-[rgba(240,244,255,0.35)]">
+                <p className="mt-1 text-xs text-site-muted">
                   Completed callbacks / Google OAuth starts
                 </p>
               </div>
             </div>
 
             {topAuthFailure ? (
-              <div className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-sm text-[rgba(255,248,220,0.82)]">
-                <p className="font-medium text-[#fbbf24]">
+              <div className="site-callout site-callout-warning mt-4 px-4 py-3 text-sm">
+                <p className="font-semibold text-site-warning">
                   Most common callback failure: {topAuthFailure[0]} x{topAuthFailure[1]}
                 </p>
-                <p className="mt-2 text-[rgba(255,248,220,0.82)]">
+                <p className="mt-2 text-site-secondary">
                   {topAuthFailure[0] === "google_signin_expired"
                     ? "Recent PKCE-style callback failures usually mean the browser returned without the verifier cookie state that started the OAuth flow."
                     : "Review the recent auth event feed for the specific callback error metadata and verify the same-browser OAuth return path."}
                 </p>
               </div>
             ) : (
-              <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
+              <p className="mt-4 border-l-4 border-site-success bg-site-canvas-alt px-4 py-3 text-sm text-site-success">
                 Google OAuth callbacks have completed without tracked failures in the sampled window.
               </p>
             )}
           </section>
 
-          <section className="glass-card rounded-2xl p-5 sm:p-6">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+          <section className="site-panel p-5 sm:p-6">
+            <p className="site-eyebrow text-[11px]">
               Legal Configuration
             </p>
-            <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+            <h2 className="site-panel-title mt-2">
               Public policy values
             </h2>
-            <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+            <p className="site-muted mt-2 text-sm">
               These env-backed values are rendered on the public legal pages and should be finalized before broader launch.
             </p>
 
             {legalIssues.length === 0 ? (
-              <p className="mt-4 rounded-xl border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] px-4 py-3 text-sm text-[#4ade80]">
+              <p className="mt-4 border-l-4 border-site-success bg-site-canvas-alt px-4 py-3 text-sm text-site-success">
                 Legal contact fields are fully configured.
               </p>
             ) : (
-              <div className="mt-4 rounded-xl border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] px-4 py-3">
-                <p className="text-sm font-medium text-[#fbbf24]">
+              <div className="site-callout site-callout-warning mt-4 px-4 py-3">
+                <p className="text-sm font-semibold text-site-warning">
                   {legalIssues.length} legal env values are missing and public legal pages are still using placeholder fallback copy.
                 </p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[rgba(255,248,220,0.82)]">
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-site-secondary">
                   {legalIssues.map((issue) => (
                     <li key={issue.envKey}>{issue.message}</li>
                   ))}
@@ -624,36 +624,36 @@ export default async function AdminOpsPage() {
               </div>
             )}
 
-            <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+            <div className="mt-4 border border-site-border bg-site-canvas-alt p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+                <p className="text-[11px] font-semibold text-site-muted">
                   Signup CAPTCHA
                 </p>
                 <span
-                  className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.16em] ${
+                  className={`site-badge px-3 py-1 text-[10px] ${
                     turnstileConfigured
-                      ? "border-[rgba(74,222,128,0.35)] text-[#4ade80]"
-                      : "border-[rgba(245,158,11,0.35)] text-[#fbbf24]"
+                      ? "site-badge-success"
+                      : "site-badge-warning"
                   }`}
                 >
                   {turnstileConfigured ? "Configured" : "Missing"}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-[rgba(240,244,255,0.52)]">
+              <p className="mt-2 text-sm text-site-secondary">
                 Email signup uses Cloudflare Turnstile only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is present.
               </p>
               {!turnstileConfigured ? (
-                <p className="mt-2 text-sm text-[#fbbf24]">
+                <p className="mt-2 text-sm text-site-warning">
                   Add the site key to the app env and enable Cloudflare Turnstile in Supabase Auth CAPTCHA settings.
                 </p>
               ) : null}
             </div>
 
-            <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.38)]">
+            <div className="mt-4 border border-site-border bg-site-canvas-alt p-4">
+              <p className="text-[11px] font-semibold text-site-muted">
                 Production Auth Checklist
               </p>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[rgba(240,244,255,0.56)]">
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-site-secondary">
                 <li>Email confirmation remains enabled in Supabase Auth.</li>
                 <li>Turnstile is configured in app env and Supabase Auth CAPTCHA settings.</li>
                 <li>Supabase Auth provider rate limits stay at default or stricter values.</li>

@@ -86,6 +86,7 @@ export default function ResumeLayout({
 
   return (
     <div
+      data-living-output
       data-analytics-scroll-root={useExternalScrollRoot ? undefined : "true"}
       className={`resume-theme relative z-10 ${
         useExternalScrollRoot ? "" : "h-full overflow-y-auto scrollbar-hide"

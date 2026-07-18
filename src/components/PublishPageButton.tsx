@@ -51,11 +51,11 @@ export default function PublishPageButton({ pageId }: PublishPageButtonProps) {
         type="button"
         disabled={publishing}
         onClick={() => void publishPage()}
-        className="rounded-full border border-[rgba(74,222,128,0.35)] px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-[#4ade80] hover:text-[#86efac] disabled:opacity-50 sm:px-4 sm:py-2"
+        className="site-button site-button-success px-3 py-2 text-xs disabled:opacity-50 sm:px-4"
       >
         {publishing ? "Publishing..." : "Publish"}
       </button>
-      {error ? <p className="mt-2 text-xs text-[#ff8e8e]">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-site-danger" role="alert">{error}</p> : null}
     </div>
   );
 }

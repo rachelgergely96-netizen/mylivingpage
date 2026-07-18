@@ -59,53 +59,80 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
-      <div className="glass-card w-full rounded-2xl p-7 md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Password Reset</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Set New Password</h1>
+    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-10 sm:px-6 sm:py-14">
+      <div className="site-panel-raised w-full p-6 sm:p-8">
+        <p className="site-eyebrow">Password reset</p>
+        <h1 className="site-page-title mt-3">Set a new password</h1>
 
         {!ready ? (
           <div className="mt-6">
-            <p className="text-sm text-[rgba(240,244,255,0.55)]">Verifying reset link...</p>
-            <p className="mt-3 text-sm text-[rgba(240,244,255,0.35)]">
+            <p role="status" className="text-sm text-site-secondary">Verifying reset link...</p>
+            <p className="mt-3 text-sm text-site-muted">
               If this takes too long, your link may have expired.{" "}
-              <Link href="/forgot-password" className="text-[#3B82F6] hover:text-[#93C5FD]">
+              <Link href="/forgot-password" className="font-semibold text-site-action hover:text-site-action-hover">
                 Request a new one
               </Link>
             </p>
           </div>
         ) : status === "success" ? (
           <div className="mt-6">
-            <p className="text-sm text-[#4ade80]">{message}</p>
+            <p role="status" className="border-l-2 border-site-success pl-3 text-sm text-site-success">
+              {message}
+            </p>
           </div>
         ) : (
-          <form className="mt-6 space-y-3" onSubmit={onSubmit}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              placeholder="New password (min 8 characters)"
-              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-            />
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-              placeholder="Confirm password"
-              className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-            />
+          <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+            <div>
+              <label htmlFor="new-password" className="mb-2 block text-sm font-semibold text-site-text">
+                New password
+              </label>
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                placeholder="New password (min 8 characters)"
+                aria-invalid={status === "error"}
+                aria-describedby={status === "error" ? "reset-password-help reset-message" : "reset-password-help"}
+                className="site-field px-4"
+              />
+              <p id="reset-password-help" className="mt-2 text-xs text-site-muted">
+                Use at least eight characters.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="confirm-password" className="mb-2 block text-sm font-semibold text-site-text">
+                Confirm password
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                placeholder="Confirm password"
+                aria-invalid={status === "error"}
+                aria-describedby={status === "error" ? "reset-message" : undefined}
+                className="site-field px-4"
+              />
+            </div>
             <button
               type="submit"
               disabled={status === "loading"}
-              className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
+              className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
             >
               {status === "loading" ? "Updating..." : "Reset Password"}
             </button>
-            {status === "error" && <p className="text-sm text-[#ff8e8e]">{message}</p>}
+            {status === "error" ? (
+              <p id="reset-message" role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+                {message}
+              </p>
+            ) : null}
           </form>
         )}
       </div>

@@ -26,7 +26,7 @@ export default function DeletePageButton({ pageId }: { pageId: string }) {
       type="button"
       disabled={deleting}
       onClick={handleDelete}
-      className="rounded-full border border-[rgba(255,120,120,0.25)] px-3 py-1.5 sm:px-4 sm:py-2 text-xs uppercase tracking-[0.14em] text-[rgba(255,120,120,0.6)] hover:border-[rgba(255,120,120,0.5)] hover:text-[#ff8e8e] disabled:opacity-50"
+      className="site-button site-button-danger px-3 py-2 text-xs disabled:opacity-50 sm:px-4"
     >
       {deleting ? "Deleting..." : "Delete"}
     </button>

@@ -119,22 +119,22 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.28)] bg-[linear-gradient(145deg,rgba(59,130,246,0.12),rgba(255,255,255,0.025))]">
+    <section className="site-panel overflow-hidden">
       <div className="p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+            <p className="site-eyebrow">
               Fast start
             </p>
-            <h2 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF] sm:text-2xl">
+            <h2 className="site-panel-title mt-2">
               Start with your resume
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[rgba(240,244,255,0.68)]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-site-secondary">
               Upload your current resume or paste its text. We&apos;ll autofill as much as we can,
               then you can review every field before publishing.
             </p>
           </div>
-          <span className="w-fit rounded-full border border-[rgba(147,197,253,0.24)] bg-[rgba(59,130,246,0.12)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BFDBFE]">
+          <span className="site-badge w-fit">
             Optional
           </span>
         </div>
@@ -152,10 +152,10 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
               setDragActive(false);
               chooseFile(event.dataTransfer.files[0] ?? null);
             }}
-            className={`flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed p-5 text-center transition-colors ${
+            className={`flex min-h-40 flex-col items-center justify-center border border-dashed p-5 text-center transition-colors ${
               dragActive
-                ? "border-[#60A5FA] bg-[rgba(59,130,246,0.14)]"
-                : "border-[rgba(255,255,255,0.16)] bg-[rgba(0,0,0,0.12)]"
+                ? "border-site-action bg-site-selected"
+                : "border-site-border-strong bg-site-canvas-alt"
             }`}
           >
             <input
@@ -165,12 +165,12 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
               className="hidden"
               onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
             />
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(147,197,253,0.28)] bg-[rgba(59,130,246,0.12)] text-lg text-[#BFDBFE]">
+            <div className="flex h-10 w-10 items-center justify-center border border-site-border-strong bg-site-surface-raised text-lg text-site-action" aria-hidden="true">
               ↑
             </div>
             {file ? (
               <>
-                <p className="mt-3 max-w-full truncate text-sm font-medium text-[#F0F4FF]">
+                <p className="mt-3 max-w-full truncate text-sm font-medium text-site-text">
                   {file.name}
                 </p>
                 <button
@@ -179,7 +179,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
                     setFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="mt-2 text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#F0F4FF]"
+                  className="site-button mt-2 border-0 px-3 py-2 text-xs text-site-secondary shadow-none hover:bg-site-surface-raised hover:text-site-text"
                 >
                   Remove file
                 </button>
@@ -189,11 +189,11 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="mt-3 text-sm font-semibold text-[#BFDBFE] hover:text-white"
+                  className="site-button site-button-secondary mt-3"
                 >
                   Choose a resume
                 </button>
-                <p className="mt-1 text-xs text-[rgba(240,244,255,0.42)]">
+                <p className="mt-2 text-xs text-site-muted">
                   PDF, DOCX, TXT, or MD · up to 6 MB
                 </p>
               </>
@@ -201,7 +201,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
           </div>
 
           <div className="flex items-center justify-center">
-            <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[#101522] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[rgba(240,244,255,0.42)]">
+            <span className="site-badge bg-site-canvas-alt">
               or
             </span>
           </div>
@@ -209,7 +209,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
           <div className="flex min-h-40 flex-col">
             <label
               htmlFor="resume-import-text"
-              className="mb-2 text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.46)]"
+              className="mb-2 text-sm font-semibold text-site-secondary"
             >
               Paste resume text
             </label>
@@ -223,13 +223,13 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
               }}
               disabled={Boolean(file)}
               placeholder="Paste the text from your resume here..."
-              className="min-h-32 flex-1 resize-y rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(0,0,0,0.14)] p-4 text-sm leading-6 text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+              className="site-field min-h-32 flex-1 resize-y p-4 text-sm leading-6 disabled:cursor-not-allowed disabled:opacity-40"
             />
           </div>
         </div>
 
         {hasExistingData && !lastImport ? (
-          <p className="mt-3 text-xs leading-5 text-[#FDE68A]">
+          <p className="mt-3 border-l-2 border-site-warning pl-3 text-xs leading-5 text-site-warning">
             Importing another resume will replace the fields currently in this draft.
           </p>
         ) : null}
@@ -237,7 +237,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
         {error ? (
           <p
             role="alert"
-            className="mt-4 rounded-xl border border-[rgba(255,120,120,0.3)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ffaaaa]"
+            className="site-alert-danger mt-4 px-4 py-3 text-sm"
           >
             {error}
           </p>
@@ -246,18 +246,18 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
         {lastImport ? (
           <div
             aria-live="polite"
-            className="mt-4 rounded-xl border border-[rgba(52,211,153,0.24)] bg-[rgba(16,185,129,0.08)] px-4 py-3"
+            className="mt-4 border border-site-success bg-site-surface px-4 py-3"
           >
-            <p className="text-sm font-medium text-[#A7F3D0]">
+            <p className="text-sm font-medium text-site-success">
               Autofilled {lastImport.detectedFields.length} areas from {lastImport.sourceName}.
             </p>
             {lastImport.detectedFields.length > 0 ? (
-              <p className="mt-1 text-xs leading-5 text-[rgba(209,250,229,0.72)]">
+              <p className="mt-1 text-xs leading-5 text-site-secondary">
                 Found {lastImport.detectedFields.map((field) => FIELD_LABELS[field]).join(", ")}.
               </p>
             ) : null}
             {lastImport.warnings.map((warning) => (
-              <p key={warning} className="mt-1 text-xs leading-5 text-[#FDE68A]">
+              <p key={warning} className="mt-1 text-xs leading-5 text-site-warning">
                 {warning}
               </p>
             ))}
@@ -265,7 +265,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
         ) : null}
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-2xl text-xs leading-5 text-[rgba(240,244,255,0.44)]">
+          <p className="max-w-2xl text-xs leading-5 text-site-muted">
             Your resume is processed only for this autofill. It is not sent to an AI provider or
             stored with your published page.
           </p>
@@ -273,7 +273,7 @@ export default function ResumeImport({ hasExistingData, onImported }: ResumeImpo
             type="button"
             onClick={importResume}
             disabled={importing || (!file && pastedText.trim().length < 20)}
-            className="gold-pill shrink-0 px-6 py-3 text-xs font-semibold uppercase tracking-[0.15em] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+            className="site-button site-button-primary shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {importing ? "Autofilling..." : "Autofill my page"}
           </button>

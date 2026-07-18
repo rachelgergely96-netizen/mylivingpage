@@ -95,7 +95,7 @@ export default function TurnstileWidget({
       />
       <div
         ref={containerRef}
-        className="min-h-[66px] overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-3 py-3"
+        className="min-h-[66px] overflow-hidden border border-site-border bg-site-canvas-alt px-3 py-3"
       />
     </>
   );

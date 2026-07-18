@@ -14,7 +14,8 @@
     "test:integration": "vitest run src/lib/pdf/ats-export.test.ts src/app/api/resume/export/route.render.test.ts",
     "test:e2e": "playwright test",
     "check:single-page-schema": "node ./scripts/check-single-page-schema.mjs",
-    "check:analytics-schema": "node ./scripts/check-analytics-schema.mjs"
+    "check:analytics-schema": "node ./scripts/check-analytics-schema.mjs",
+    "check:signal-frame": "node ./scripts/check-signal-frame-ui.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",

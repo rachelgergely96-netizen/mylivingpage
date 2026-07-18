@@ -29,9 +29,9 @@ export default async function LandingPage() {
   const site = await getRequestLegalSite();
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip bg-[#060e1c]">
+    <div className="relative isolate min-h-screen overflow-x-clip bg-site-canvas">
       <SignalFrameHomepage />
-      <div className="relative z-10 bg-[#060e1c]" data-site-ui>
+      <div className="relative z-10 bg-site-canvas" data-site-ui>
         <SiteLegalFooter siteId={site.id} />
       </div>
       <MobileStickyCta

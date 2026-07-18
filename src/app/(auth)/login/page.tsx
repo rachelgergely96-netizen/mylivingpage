@@ -112,69 +112,94 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-16">
-      <div className="glass-card w-full rounded-2xl p-7 md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Welcome Back</p>
-        <h1 className="mt-2 font-heading text-4xl font-bold text-[#F0F4FF]">Sign in to MyLivingPage</h1>
+    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-10 sm:px-6 sm:py-14">
+      <div className="site-panel-raised w-full p-6 sm:p-8">
+        <p className="site-eyebrow">Welcome back</p>
+        <h1 className="site-page-title mt-3">Sign in to MyLivingPage</h1>
+        <p className="mt-3 text-sm leading-6 text-site-secondary">
+          Keep your professional page, résumé PDF, and sharing tools current from one place.
+        </p>
 
         <button
           type="button"
           onClick={onGoogleLogin}
           disabled={status === "loading"}
-          className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.18)] px-5 py-3 text-sm text-[rgba(240,244,255,0.8)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="site-button site-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-50"
         >
           {status === "loading" ? "Redirecting to Google..." : "Continue with Google"}
         </button>
 
-        <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-[rgba(240,244,255,0.25)]">
-          <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
+        <div className="my-5 flex items-center gap-3 text-xs text-site-muted">
+          <div className="h-px flex-1 bg-site-border" />
           Or
-          <div className="h-px flex-1 bg-[rgba(255,255,255,0.1)]" />
+          <div className="h-px flex-1 bg-site-border" />
         </div>
 
-        <form className="space-y-3" onSubmit={onLogin}>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => {
-              clearErrorState();
-              setEmail(event.target.value);
-            }}
-            required
-            placeholder="Email address"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => {
-              clearErrorState();
-              setPassword(event.target.value);
-            }}
-            required
-            placeholder="Password"
-            className="h-12 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
-          />
+        <form className="space-y-4" onSubmit={onLogin}>
+          <div>
+            <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-site-text">
+              Email address
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => {
+                clearErrorState();
+                setEmail(event.target.value);
+              }}
+              required
+              placeholder="Email address"
+              aria-invalid={status === "error"}
+              aria-describedby={message ? "login-message" : undefined}
+              className="site-field px-4"
+            />
+          </div>
+          <div>
+            <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-site-text">
+              Password
+            </label>
+            <input
+              id="login-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => {
+                clearErrorState();
+                setPassword(event.target.value);
+              }}
+              required
+              placeholder="Password"
+              aria-invalid={status === "error"}
+              aria-describedby={message ? "login-message" : undefined}
+              className="site-field px-4"
+            />
+          </div>
           <button
             type="submit"
             disabled={status === "loading"}
-            className="gold-pill mt-2 h-12 w-full text-sm font-semibold transition-all duration-300 ease-soft hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-70"
+            className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
           >
             {status === "loading" ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
-        {message ? <p className="mt-4 text-sm text-[#ff8e8e]">{message}</p> : null}
+        {message ? (
+          <p id="login-message" role="alert" className="mt-4 border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+            {message}
+          </p>
+        ) : null}
 
         <div className="mt-3 text-right">
-          <Link href="/forgot-password" className="text-xs text-[rgba(240,244,255,0.4)] hover:text-[#3B82F6]">
+          <Link href="/forgot-password" className="text-sm font-medium text-site-action hover:text-site-action-hover">
             Forgot password?
           </Link>
         </div>
 
-        <p className="mt-3 text-sm text-[rgba(240,244,255,0.45)]">
+        <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
           New here?{" "}
-          <Link href="/signup" className="text-[#3B82F6] hover:text-[#93C5FD]">
+          <Link href="/signup" className="font-semibold text-site-action hover:text-site-action-hover">
             Create an account
           </Link>
         </p>

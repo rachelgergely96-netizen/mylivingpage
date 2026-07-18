@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import JsonLd from "@/components/seo/JsonLd";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
-import CosmicBackground from "@/components/marketing/CosmicBackground";
+import SiteHeader from "@/components/marketing/SiteHeader";
+import JsonLd from "@/components/seo/JsonLd";
 import { GUIDES, getGuide } from "@/lib/guides";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
@@ -65,165 +65,143 @@ export async function generateMetadata({ params }: GuidePageProps): Promise<Meta
 export default async function GuidePage({ params }: GuidePageProps) {
   const { slug } = await params;
   const guide = getGuide(slug);
-  const site = await getRequestLegalSite();
 
   if (!guide) {
     notFound();
   }
 
+  const site = await getRequestLegalSite();
   const articleJsonLd = buildGuideArticleStructuredData(guide);
-
   const relatedGuides = guide.related
     .map((relatedSlug) => getGuide(relatedSlug))
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-hidden">
-      <CosmicBackground />
-      <div className="relative z-10">
-        <JsonLd data={articleJsonLd} />
+    <div className="site-shell" data-site-ui>
+      <JsonLd data={articleJsonLd} />
+      <SiteHeader
+        brandName={site.brandName}
+        links={[
+          { href: "/examples", label: "Examples" },
+          { href: "/guides", label: "Guides", current: true },
+          { href: "/pricing", label: "Free" },
+        ]}
+        cta={{
+          href: getSignupHref(`guide_${guide.slug}_nav`),
+          label: "Start From My Resume",
+          mobileLabel: "Start free",
+        }}
+      />
 
-        <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
-          <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6 md:px-10">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="font-heading text-xl font-bold text-[#F0F4FF] sm:text-2xl">
-                my<span className="text-[#3B82F6]">living</span>page
-              </Link>
-              <Link
-                href="/guides"
-                className="hidden text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.56)] transition-colors hover:text-[#93C5FD] sm:inline-flex"
-              >
-                Guides
-              </Link>
-            </div>
-            <Link
-              href={getSignupHref(`guide_${guide.slug}_nav`)}
-              className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_8px_28px_rgba(59,130,246,0.3)]"
-            >
-              Start From My Resume
-            </Link>
-          </nav>
-        </header>
+      <main id="main-content" className="site-container py-12 sm:py-16">
+        <article className="site-panel mx-auto max-w-[44rem] px-5 py-9 sm:px-8 sm:py-12">
+          <p className="site-eyebrow">Guide</p>
+          <h1 className="site-page-title mt-4">{guide.title}</h1>
+          <p className="mt-5 text-base leading-8 text-site-secondary sm:text-lg">
+            {guide.description}
+          </p>
 
-        <main className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16 md:px-10">
-          <article className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-10 sm:px-10 sm:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Guide</p>
-            <h1 className="mt-3 font-heading text-4xl font-bold leading-[1.04] tracking-[-0.04em] text-[#F0F4FF] sm:text-5xl">
-              {guide.title}
-            </h1>
-            <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(240,244,255,0.66)] sm:text-lg">
-              {guide.description}
-            </p>
+          <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-site-muted">
+            <span className="site-badge">{guide.decisionStage}</span>
+            <span className="site-badge">By {guide.author}</span>
+            <span className="site-badge">
+              Updated <time className="ml-1" dateTime={guide.updatedAt}>{formatGuideDate(guide.updatedAt)}</time>
+            </span>
+          </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.45)]">
-              <span className="rounded-full border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-3 py-1.5 text-[#93C5FD]">
-                {guide.decisionStage}
-              </span>
-              <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-                By {guide.author}
-              </span>
-              <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.02)] px-3 py-1.5">
-                Updated <time dateTime={guide.updatedAt}>{formatGuideDate(guide.updatedAt)}</time>
-              </span>
-            </div>
+          <aside className="site-callout mt-8 px-5 py-5" aria-label="Short answer">
+            <p className="site-eyebrow">Short answer</p>
+            <p className="mt-3 text-base leading-8 text-site-text">{guide.answer}</p>
+          </aside>
 
-            <div className="mt-8 rounded-[1.75rem] border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] px-6 py-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#93C5FD]">Short answer</p>
-              <p className="mt-3 text-base leading-8 text-[#F0F4FF]">{guide.answer}</p>
-            </div>
-
-            <div className="mt-10 space-y-10">
-              {guide.sections.map((section) => (
-                <section key={section.title}>
-                  <h2 className="font-heading text-3xl font-bold text-[#F0F4FF]">{section.title}</h2>
-                  <div className="mt-4 space-y-4 text-base leading-8 text-[rgba(240,244,255,0.66)]">
-                    {section.paragraphs.map((paragraph) => (
-                      <p key={paragraph}>{paragraph}</p>
+          <div className="mt-10 space-y-12">
+            {guide.sections.map((section) => (
+              <section key={section.title}>
+                <h2 className="site-section-title text-[1.75rem]">{section.title}</h2>
+                <div className="mt-4 space-y-4 text-base leading-8 text-site-secondary">
+                  {section.paragraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+                {section.bullets?.length ? (
+                  <ul className="mt-5 divide-y divide-site-border border-y border-site-border">
+                    {section.bullets.map((bullet) => (
+                      <li key={bullet} className="flex items-start gap-3 py-4 text-sm leading-7 text-site-secondary">
+                        <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 bg-site-action" />
+                        <span>{bullet}</span>
+                      </li>
                     ))}
-                  </div>
-                  {section.bullets?.length ? (
-                    <ul className="mt-5 space-y-2">
-                      {section.bullets.map((bullet) => (
-                        <li
-                          key={bullet}
-                          className="flex items-start gap-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm leading-7 text-[rgba(240,244,255,0.68)]"
-                        >
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3B82F6]" />
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </section>
+                  </ul>
+                ) : null}
+              </section>
+            ))}
+          </div>
+        </article>
+
+        <section aria-label="Next steps" className="mx-auto mt-10 grid max-w-5xl gap-4 lg:grid-cols-3">
+          <Link
+            href={getSignupHref(`guide_${guide.slug}_build`)}
+            className="site-panel block p-6 transition-colors hover:border-site-action"
+          >
+            <p className="site-eyebrow">Build</p>
+            <h2 className="site-panel-title mt-3">Start from the resume you already use</h2>
+            <p className="mt-3 text-sm leading-7 text-site-secondary">
+              Start from the information you already use, then publish one page that is easier to
+              scan once a person wants more context.
+            </p>
+          </Link>
+          <Link
+            href={`/pricing?ref=guide_${guide.slug}_pricing`}
+            className="site-panel block p-6 transition-colors hover:border-site-action"
+          >
+            <p className="site-eyebrow">Export</p>
+            <h2 className="site-panel-title mt-3">See PDF export and QR-ready share card options</h2>
+            <p className="mt-3 text-sm leading-7 text-site-secondary">
+              Use the same uploaded information to create a fresh PDF, a PNG share card, and a
+              page link you can keep reusing.
+            </p>
+          </Link>
+          <Link
+            href={`/examples?ref=guide_${guide.slug}_examples`}
+            className="site-panel block p-6 transition-colors hover:border-site-action"
+          >
+            <p className="site-eyebrow">Examples</p>
+            <h2 className="site-panel-title mt-3">See sample pages recruiters can scan quickly</h2>
+            <p className="mt-3 text-sm leading-7 text-site-secondary">
+              Review real page shapes for follow-up, recruiter-click, and referral moments before
+              you build your own.
+            </p>
+          </Link>
+        </section>
+
+        {relatedGuides.length ? (
+          <section className="site-panel mx-auto mt-10 max-w-5xl px-5 py-8 sm:px-8">
+            <p className="site-eyebrow">Related guides</p>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {relatedGuides.map((relatedGuide) => (
+                <article key={relatedGuide.slug} className="border border-site-border bg-site-canvas-alt p-5">
+                  <Link
+                    href={`/guides/${relatedGuide.slug}`}
+                    className="site-panel-title transition-colors hover:text-site-action-hover"
+                  >
+                    {relatedGuide.title}
+                  </Link>
+                  <p className="site-eyebrow mt-3">{relatedGuide.decisionStage}</p>
+                  <p className="mt-3 text-sm leading-7 text-site-secondary">{relatedGuide.summary}</p>
+                  <Link
+                    href={`/guides/${relatedGuide.slug}`}
+                    className="mt-5 inline-flex text-sm font-semibold text-site-action transition-colors hover:text-site-action-hover"
+                  >
+                    Read {relatedGuide.title}
+                  </Link>
+                </article>
               ))}
             </div>
-          </article>
-
-          <section className="mt-10 grid gap-4 lg:grid-cols-3">
-            <Link
-              href={getSignupHref(`guide_${guide.slug}_build`)}
-              className="glass-card rounded-[1.75rem] border border-[rgba(59,130,246,0.18)] px-6 py-6 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.35)]"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Build</p>
-              <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">Start from the resume you already use</h2>
-              <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-                Start from the information you already use, then publish one page that is easier to scan once a person wants more context.
-              </p>
-            </Link>
-            <Link
-              href={`/pricing?ref=guide_${guide.slug}_pricing`}
-              className="glass-card rounded-[1.75rem] border border-[rgba(255,255,255,0.08)] px-6 py-6 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.24)]"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Export</p>
-              <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">See PDF export and QR-ready share card options</h2>
-              <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-                Use the same uploaded information to create a fresh PDF, a PNG share card, and a page link you can keep reusing.
-              </p>
-            </Link>
-            <Link
-              href={`/examples?ref=guide_${guide.slug}_examples`}
-              className="glass-card rounded-[1.75rem] border border-[rgba(255,255,255,0.08)] px-6 py-6 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.24)]"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3B82F6]">Examples</p>
-              <h2 className="mt-3 font-heading text-2xl font-bold text-[#F0F4FF]">See sample pages recruiters can scan quickly</h2>
-              <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">
-                Review real page shapes for follow-up, recruiter-click, and referral moments before you build your own.
-              </p>
-            </Link>
           </section>
+        ) : null}
+      </main>
 
-          <section className="mt-10">
-            <div className="glass-card rounded-[2rem] border border-[rgba(255,255,255,0.08)] px-6 py-8 sm:px-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#3B82F6]">Related guides</p>
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                {relatedGuides.map((relatedGuide) => (
-                  <article
-                    key={relatedGuide.slug}
-                    className="rounded-[1.5rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5"
-                  >
-                    <Link
-                      href={`/guides/${relatedGuide.slug}`}
-                      className="font-heading text-2xl font-bold leading-tight text-[#F0F4FF] transition-colors hover:text-[#BFDBFE]"
-                    >
-                      {relatedGuide.title}
-                    </Link>
-                    <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">{relatedGuide.decisionStage}</p>
-                    <p className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.62)]">{relatedGuide.summary}</p>
-                    <Link
-                      href={`/guides/${relatedGuide.slug}`}
-                      className="mt-5 inline-flex text-sm font-semibold text-[#93C5FD] transition-colors hover:text-[#BFDBFE]"
-                    >
-                      Read {relatedGuide.title}
-                    </Link>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </section>
-        </main>
-
-        <SiteLegalFooter siteId={site.id} />
-      </div>
+      <SiteLegalFooter siteId={site.id} />
     </div>
   );
 }

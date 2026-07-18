@@ -134,13 +134,14 @@ export default async function AnalyticsPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:px-10">
+    <main className="site-container py-6 sm:py-10">
       <div className="mb-6 sm:mb-8">
         <Link
           href="/dashboard"
-          className="mb-3 inline-flex items-center gap-1.5 text-xs text-[rgba(240,244,255,0.5)] transition-colors hover:text-[#93C5FD]"
+          className="site-button site-button-secondary mb-3 px-3 py-2 text-xs"
         >
           <svg
+            aria-hidden="true"
             className="h-3.5 w-3.5"
             fill="none"
             viewBox="0 0 24 24"

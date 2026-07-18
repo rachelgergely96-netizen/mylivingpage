@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import FeedbackWidget from "@/components/FeedbackWidget";
-import SignOutButton from "@/components/ui/SignOutButton";
+import AppNavigation from "@/components/ui/AppNavigation";
 import { ADMIN_EMAIL } from "@/lib/admin";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -22,44 +22,17 @@ export default async function AuthenticatedLayout({
   await ensureUserProfile(admin, user);
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6 md:px-10">
-          <Link href="/" className="font-heading text-xl font-bold">
-            my<span className="text-[#3B82F6]">living</span>page
+    <div className="site-shell" data-site-ui>
+      <a href="#site-content" className="site-skip-link">Skip to main content</a>
+      <header className="site-header">
+        <div className="site-container-wide flex h-16 items-center justify-between gap-4">
+          <Link href="/" className="site-wordmark shrink-0">
+            my<span>living</span>page
           </Link>
-          <nav className="flex items-center gap-3">
-            {user.email === ADMIN_EMAIL && (
-              <Link
-                href="/admin"
-                className="rounded-full border border-[rgba(239,68,68,0.3)] px-4 py-2 text-xs uppercase tracking-[0.16em] text-[#ff8e8e] transition-colors hover:border-[rgba(239,68,68,0.5)] hover:text-[#fca5a5]"
-              >
-                Admin
-              </Link>
-            )}
-            <Link
-              href="/dashboard"
-              className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"
-            >
-              Your Page
-            </Link>
-            <Link
-              href="/create"
-              className="gold-pill px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-soft hover:shadow-[0_10px_32px_rgba(59,130,246,0.3)]"
-            >
-              Create
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              className="rounded-full px-4 py-2 text-xs uppercase tracking-[0.16em] text-[rgba(240,244,255,0.7)] transition-colors hover:text-[#93C5FD]"
-            >
-              Settings
-            </Link>
-            <SignOutButton />
-          </nav>
+          <AppNavigation variant="product" showAdmin={user.email === ADMIN_EMAIL} />
         </div>
       </header>
-      <div>{children}</div>
+      <div id="site-content" tabIndex={-1}>{children}</div>
       <FeedbackWidget />
     </div>
   );

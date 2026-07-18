@@ -12,19 +12,19 @@ interface ResumeEditorFieldsProps {
   mode?: "living" | "compact";
 }
 
-const fieldsetClass = "glass-card space-y-3 rounded-2xl p-4 sm:p-5";
-const legendClass = "text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]";
+const fieldsetClass = "site-panel space-y-3 rounded-none p-4 sm:p-5";
+const legendClass = "site-eyebrow px-1";
 const inputClass =
-  "w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none";
+  "site-field w-full rounded-none px-3 py-2 text-sm";
 const textAreaClass =
-  "w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm leading-6 text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none";
+  "site-field w-full rounded-none px-3 py-2 text-sm leading-6";
 const subtleTextAreaClass =
-  "w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-xs leading-5 text-[rgba(240,244,255,0.6)] focus:border-[#3B82F6] focus:outline-none";
+  "site-field w-full rounded-none px-3 py-2 text-xs leading-5 text-site-secondary";
 const removeButtonClass =
-  "rounded-lg border border-[rgba(255,120,120,0.2)] px-3 py-2 text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]";
-const textRemoveButtonClass = "text-xs text-[rgba(255,120,120,0.6)] hover:text-[#ff8e8e]";
+  "site-button site-button-danger rounded-none px-3 py-2 text-xs";
+const textRemoveButtonClass = "site-button site-button-danger px-3 text-xs";
 const addButtonClass =
-  "rounded-full border border-dashed border-[rgba(59,130,246,0.3)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] transition-all hover:border-[rgba(59,130,246,0.5)] hover:bg-[rgba(59,130,246,0.06)] hover:text-[#93C5FD]";
+  "site-button site-button-secondary rounded-none border-dashed px-4 py-2 text-xs";
 
 export default function ResumeEditorFields({
   data,
@@ -48,6 +48,7 @@ export default function ResumeEditorFields({
             type="text"
             value={data.name}
             onChange={(event) => updateField("name", event.target.value)}
+            aria-label="Full name"
             placeholder="Full name"
             className={inputClass}
           />
@@ -55,6 +56,7 @@ export default function ResumeEditorFields({
             type="text"
             value={data.headline}
             onChange={(event) => updateField("headline", event.target.value)}
+            aria-label="Headline"
             placeholder="Headline"
             className={inputClass}
           />
@@ -62,6 +64,7 @@ export default function ResumeEditorFields({
             type="text"
             value={data.location}
             onChange={(event) => updateField("location", event.target.value)}
+            aria-label="Location"
             placeholder="Location"
             className={inputClass}
           />
@@ -69,6 +72,7 @@ export default function ResumeEditorFields({
             type="email"
             value={data.email ?? ""}
             onChange={(event) => updateField("email", event.target.value || null)}
+            aria-label="Email"
             placeholder="Email"
             className={inputClass}
           />
@@ -76,6 +80,7 @@ export default function ResumeEditorFields({
             type="text"
             value={data.linkedin ?? ""}
             onChange={(event) => updateField("linkedin", event.target.value || null)}
+            aria-label="LinkedIn URL"
             placeholder="LinkedIn URL"
             className={inputClass}
           />
@@ -83,6 +88,7 @@ export default function ResumeEditorFields({
             type="text"
             value={data.github ?? ""}
             onChange={(event) => updateField("github", event.target.value || null)}
+            aria-label="GitHub URL or username"
             placeholder="GitHub URL or username"
             className={inputClass}
           />
@@ -90,8 +96,9 @@ export default function ResumeEditorFields({
             type="text"
             value={data.website ?? ""}
             onChange={(event) => updateField("website", event.target.value || null)}
+            aria-label="Website"
             placeholder="Website"
-            className="sm:col-span-2 w-full rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+            className="sm:col-span-2 w-full rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
           />
         </div>
       </fieldset>
@@ -99,6 +106,7 @@ export default function ResumeEditorFields({
       <fieldset className={fieldsetClass}>
         <legend className={legendClass}>Summary</legend>
         <textarea
+          aria-label="Professional summary"
           value={data.summary}
           onChange={(event) => updateField("summary", event.target.value)}
           rows={mode === "living" ? 4 : 5}
@@ -110,7 +118,7 @@ export default function ResumeEditorFields({
         <fieldset className={fieldsetClass}>
           <legend className={legendClass}>Stats</legend>
           {data.stats.map((stat, index) => (
-            <div key={`${stat.label}-${index}`} className="flex gap-3">
+            <div key={index} className="flex gap-3">
               <input
                 type="text"
                 value={stat.value}
@@ -119,8 +127,9 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], value: event.target.value };
                   updateField("stats", next);
                 }}
+                aria-label="Value"
                 placeholder="Value"
-                className="w-28 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD] focus:border-[#3B82F6] focus:outline-none"
+                className="w-28 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-action focus:border-site-focus"
               />
               <input
                 type="text"
@@ -130,11 +139,13 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], label: event.target.value };
                   updateField("stats", next);
                 }}
+                aria-label="Label"
                 placeholder="Label"
-                className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+                className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
               />
               <button
                 type="button"
+                aria-label={`Remove stat ${index + 1}`}
                 onClick={() => updateField("stats", data.stats.filter((_, itemIndex) => itemIndex !== index))}
                 className={removeButtonClass}
               >
@@ -158,8 +169,8 @@ export default function ResumeEditorFields({
         <legend className={legendClass}>Experience</legend>
         {data.experience.map((experience, index) => (
           <div
-            key={`${experience.title}-${experience.company}-${index}`}
-            className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+            key={index}
+            className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
           >
             <div className="grid gap-2 sm:grid-cols-3">
               <input
@@ -170,6 +181,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], title: event.target.value };
                   updateField("experience", next);
                 }}
+                aria-label="Title"
                 placeholder="Title"
                 className={inputClass}
               />
@@ -181,6 +193,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], company: event.target.value };
                   updateField("experience", next);
                 }}
+                aria-label="Company"
                 placeholder="Company"
                 className={inputClass}
               />
@@ -192,8 +205,9 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], dates: event.target.value };
                   updateField("experience", next);
                 }}
+                aria-label="Dates"
                 placeholder="Dates"
-                className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+                className="rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
               />
             </div>
             <input
@@ -204,6 +218,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], url: event.target.value || null };
                 updateField("experience", next);
               }}
+              aria-label="Company website URL (optional)"
               placeholder="Company website URL (optional)"
               className={inputClass}
             />
@@ -213,16 +228,29 @@ export default function ResumeEditorFields({
                 const next = [...data.experience];
                 next[index] = {
                   ...next[index],
-                  highlights: event.target.value.split("\n").map((item) => item.trim()).filter(Boolean),
+                  highlights: event.target.value.split("\n"),
+                };
+                updateField("experience", next);
+              }}
+              onBlur={(event) => {
+                const next = [...data.experience];
+                next[index] = {
+                  ...next[index],
+                  highlights: event.target.value
+                    .split("\n")
+                    .map((item) => item.trim())
+                    .filter(Boolean),
                 };
                 updateField("experience", next);
               }}
               rows={3}
+              aria-label="Highlights (one per line)"
               placeholder="Highlights (one per line)"
               className={subtleTextAreaClass}
             />
             <button
               type="button"
+              aria-label={`Remove experience ${index + 1}`}
               onClick={() => updateField("experience", data.experience.filter((_, itemIndex) => itemIndex !== index))}
               className={textRemoveButtonClass}
             >
@@ -247,7 +275,7 @@ export default function ResumeEditorFields({
       <fieldset className={fieldsetClass}>
         <legend className={legendClass}>Education</legend>
         {data.education.map((education, index) => (
-          <div key={`${education.school}-${index}`} className="flex flex-wrap gap-2">
+          <div key={index} className="flex flex-wrap gap-2">
             <input
               type="text"
               value={education.degree}
@@ -256,8 +284,9 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], degree: event.target.value };
                 updateField("education", next);
               }}
+              aria-label="Degree"
               placeholder="Degree"
-              className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
             />
             <input
               type="text"
@@ -267,8 +296,9 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], school: event.target.value };
                 updateField("education", next);
               }}
+              aria-label="School"
               placeholder="School"
-              className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
             />
             <input
               type="text"
@@ -278,11 +308,13 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], year: event.target.value };
                 updateField("education", next);
               }}
+              aria-label="Year"
               placeholder="Year"
-              className="w-24 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+              className="w-24 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
             />
             <button
               type="button"
+              aria-label={`Remove education ${index + 1}`}
               onClick={() => updateField("education", data.education.filter((_, itemIndex) => itemIndex !== index))}
               className={removeButtonClass}
             >
@@ -303,8 +335,8 @@ export default function ResumeEditorFields({
         <legend className={legendClass}>Skills</legend>
         {data.skills.map((group, index) => (
           <div
-            key={`${group.category}-${index}`}
-            className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+            key={index}
+            className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
           >
             <input
               type="text"
@@ -314,6 +346,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], category: event.target.value };
                 updateField("skills", next);
               }}
+              aria-label="Category (e.g. Languages, Tools)"
               placeholder="Category (e.g. Languages, Tools)"
               className={inputClass}
             />
@@ -326,16 +359,28 @@ export default function ResumeEditorFields({
                   ...next[index],
                   items: event.target.value
                     .split(",")
+                    .map((item) => item.trimStart()),
+                };
+                updateField("skills", next);
+              }}
+              onBlur={(event) => {
+                const next = [...data.skills];
+                next[index] = {
+                  ...next[index],
+                  items: event.target.value
+                    .split(",")
                     .map((item) => item.trim())
                     .filter(Boolean),
                 };
                 updateField("skills", next);
               }}
+              aria-label="TypeScript, React, Node.js"
               placeholder="TypeScript, React, Node.js"
               className={inputClass}
             />
             <button
               type="button"
+              aria-label={`Remove skill category ${index + 1}`}
               onClick={() => updateField("skills", data.skills.filter((_, itemIndex) => itemIndex !== index))}
               className={textRemoveButtonClass}
             >
@@ -356,8 +401,8 @@ export default function ResumeEditorFields({
         <legend className={legendClass}>Projects</legend>
         {data.projects.map((project, index) => (
           <div
-            key={`${project.name}-${index}`}
-            className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+            key={index}
+            className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
           >
             <input
               type="text"
@@ -367,6 +412,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], name: event.target.value };
                 updateField("projects", next);
               }}
+              aria-label="Project name"
               placeholder="Project name"
               className={inputClass}
             />
@@ -378,6 +424,7 @@ export default function ResumeEditorFields({
                 updateField("projects", next);
               }}
               rows={2}
+              aria-label="Brief description"
               placeholder="Brief description"
               className={subtleTextAreaClass}
             />
@@ -390,11 +437,22 @@ export default function ResumeEditorFields({
                   ...next[index],
                   tech: event.target.value
                     .split(",")
+                    .map((item) => item.trimStart()),
+                };
+                updateField("projects", next);
+              }}
+              onBlur={(event) => {
+                const next = [...data.projects];
+                next[index] = {
+                  ...next[index],
+                  tech: event.target.value
+                    .split(",")
                     .map((item) => item.trim())
                     .filter(Boolean),
                 };
                 updateField("projects", next);
               }}
+              aria-label="Technologies (comma separated)"
               placeholder="Technologies (comma separated)"
               className={inputClass}
             />
@@ -406,11 +464,13 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], url: event.target.value || null };
                 updateField("projects", next);
               }}
+              aria-label="Project URL (optional)"
               placeholder="Project URL (optional)"
               className={inputClass}
             />
             <button
               type="button"
+              aria-label={`Remove project ${index + 1}`}
               onClick={() => updateField("projects", data.projects.filter((_, itemIndex) => itemIndex !== index))}
               className={textRemoveButtonClass}
             >
@@ -435,16 +495,17 @@ export default function ResumeEditorFields({
       {mode === "living" ? (
         <fieldset className={fieldsetClass}>
           <legend className={legendClass}>Proof</legend>
-          <p className="text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+          <p className="text-sm leading-6 text-site-secondary">
             Add proof blocks that show work, outcomes, and artifacts directly on the page.
           </p>
           {proofs.map((proof, index) => (
             <div
-              key={proof.id || `${proof.title}-${index}`}
-              className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+              key={proof.id || index}
+              className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
             >
               <div className="grid gap-2 sm:grid-cols-2">
                 <select
+                  aria-label="Proof type"
                   value={proof.type}
                   onChange={(event) => {
                     const next = [...proofs];
@@ -467,6 +528,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], source_label: event.target.value || null };
                     updateField("proofs", next);
                   }}
+                  aria-label="Label (optional)"
                   placeholder="Label (optional)"
                   className={inputClass}
                 />
@@ -479,6 +541,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], title: event.target.value };
                   updateField("proofs", next);
                 }}
+                aria-label="Proof title"
                 placeholder="Proof title"
                 className={inputClass}
               />
@@ -490,6 +553,7 @@ export default function ResumeEditorFields({
                   updateField("proofs", next);
                 }}
                 rows={3}
+                aria-label="What was the work?"
                 placeholder="What was the work?"
                 className={subtleTextAreaClass}
               />
@@ -501,6 +565,7 @@ export default function ResumeEditorFields({
                   updateField("proofs", next);
                 }}
                 rows={2}
+                aria-label="What changed, improved, or shipped?"
                 placeholder="What changed, improved, or shipped?"
                 className={subtleTextAreaClass}
               />
@@ -512,11 +577,13 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], url: event.target.value || null };
                   updateField("proofs", next);
                 }}
+                aria-label="Supporting URL (optional)"
                 placeholder="Supporting URL (optional)"
                 className={inputClass}
               />
               <button
                 type="button"
+                aria-label={`Remove proof block ${index + 1}`}
                 onClick={() => updateField("proofs", proofs.filter((_, itemIndex) => itemIndex !== index))}
                 className={textRemoveButtonClass}
               >
@@ -537,13 +604,13 @@ export default function ResumeEditorFields({
       {mode === "living" ? (
         <fieldset className={fieldsetClass}>
           <legend className={legendClass}>Testimonials</legend>
-          <p className="text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+          <p className="text-sm leading-6 text-site-secondary">
             Collect and approve quotes here. Only approved testimonials appear on the public page.
           </p>
           {testimonials.map((testimonial, index) => (
             <div
-              key={testimonial.id || `${testimonial.name}-${index}`}
-              className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+              key={testimonial.id || index}
+              className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
             >
               <div className="grid gap-2 sm:grid-cols-3">
                 <input
@@ -554,6 +621,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], name: event.target.value };
                     updateField("testimonials", next);
                   }}
+                  aria-label="Name"
                   placeholder="Name"
                   className={inputClass}
                 />
@@ -565,6 +633,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], role: event.target.value };
                     updateField("testimonials", next);
                   }}
+                  aria-label="Role"
                   placeholder="Role"
                   className={inputClass}
                 />
@@ -576,6 +645,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], company: event.target.value };
                     updateField("testimonials", next);
                   }}
+                  aria-label="Company"
                   placeholder="Company"
                   className={inputClass}
                 />
@@ -589,10 +659,12 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], relationship: event.target.value || null };
                     updateField("testimonials", next);
                   }}
+                  aria-label="Relationship"
                   placeholder="Relationship"
                   className={inputClass}
                 />
                 <input
+                  aria-label="Testimonial request date"
                   type="date"
                   value={testimonial.requested_at ?? ""}
                   onChange={(event) => {
@@ -603,6 +675,7 @@ export default function ResumeEditorFields({
                   className={inputClass}
                 />
                 <select
+                  aria-label="Testimonial status"
                   value={testimonial.status}
                   onChange={(event) => {
                     const next = [...testimonials];
@@ -617,6 +690,7 @@ export default function ResumeEditorFields({
                 </select>
               </div>
               <input
+                aria-label="Testimonial approval date"
                 type="date"
                 value={testimonial.approved_at ?? ""}
                 onChange={(event) => {
@@ -634,11 +708,13 @@ export default function ResumeEditorFields({
                   updateField("testimonials", next);
                 }}
                 rows={3}
+                aria-label="What should appear on the page once approved?"
                 placeholder="What should appear on the page once approved?"
                 className={subtleTextAreaClass}
               />
               <button
                 type="button"
+                aria-label={`Remove testimonial ${index + 1}`}
                 onClick={() =>
                   updateField(
                     "testimonials",
@@ -669,7 +745,7 @@ export default function ResumeEditorFields({
       <fieldset className={fieldsetClass}>
         <legend className={legendClass}>Certifications</legend>
         {data.certifications.map((certification, index) => (
-          <div key={`${certification.name}-${index}`} className="flex flex-wrap gap-2">
+          <div key={index} className="flex flex-wrap gap-2">
             <input
               type="text"
               value={certification.name}
@@ -678,8 +754,9 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], name: event.target.value };
                 updateField("certifications", next);
               }}
+              aria-label="Certification name"
               placeholder="Certification name"
-              className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
             />
             <input
               type="text"
@@ -689,8 +766,9 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], issuer: event.target.value || null };
                 updateField("certifications", next);
               }}
+              aria-label="Issuer"
               placeholder="Issuer"
-              className="flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
             />
             <input
               type="text"
@@ -700,11 +778,13 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], date: event.target.value || null };
                 updateField("certifications", next);
               }}
+              aria-label="Date"
               placeholder="Date"
-              className="w-24 rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+              className="w-24 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
             />
             <button
               type="button"
+              aria-label={`Remove certification ${index + 1}`}
               onClick={() =>
                 updateField("certifications", data.certifications.filter((_, itemIndex) => itemIndex !== index))
               }

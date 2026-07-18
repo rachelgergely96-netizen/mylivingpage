@@ -33,6 +33,21 @@ interface Profile {
   hasPassword: boolean;
 }
 
+interface UsernameAvailability {
+  available: boolean;
+  reason: string | null;
+  slug: string;
+}
+
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 function isLivePublicPage(
   page:
     | {
@@ -53,6 +68,10 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const deleteInputRef = useRef<HTMLInputElement>(null);
+  const deleteDialogRef = useRef<HTMLDivElement>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const toastTimerRef = useRef<number | null>(null);
   const [billingAction, setBillingAction] = useState<"portal" | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -61,7 +80,7 @@ export default function SettingsPage() {
   // Profile fields
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
-  const [usernameAvail, setUsernameAvail] = useState<{ available: boolean; reason: string | null } | null>(null);
+  const [usernameAvail, setUsernameAvail] = useState<UsernameAvailability | null>(null);
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -85,8 +104,14 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    toastTimerRef.current = window.setTimeout(() => {
+      toastTimerRef.current = null;
+      setToast(null);
+    }, 3000);
   }, []);
 
   const billingLoading = billingAction !== null;
@@ -175,7 +200,7 @@ export default function SettingsPage() {
     const validation = validateUsernameSlug(username);
     if (validation.error) {
       setUsernameChecking(false);
-      setUsernameAvail({ available: false, reason: validation.error });
+      setUsernameAvail({ available: false, reason: validation.error, slug: validation.slug });
       clearTimeout(checkTimeoutRef.current);
       return;
     }
@@ -187,22 +212,90 @@ export default function SettingsPage() {
       return;
     }
 
+    const requestedSlug = validation.slug;
+    const controller = new AbortController();
+    setUsernameAvail(null);
     setUsernameChecking(true);
     clearTimeout(checkTimeoutRef.current);
     checkTimeoutRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/username?slug=${encodeURIComponent(validation.slug)}`);
+        const res = await fetch(`/api/username?slug=${encodeURIComponent(validation.slug)}`, {
+          signal: controller.signal,
+        });
         const data = await res.json();
-        setUsernameAvail({ available: data.available, reason: data.reason });
+        if (controller.signal.aborted) return;
+        setUsernameAvail({ available: data.available, reason: data.reason, slug: requestedSlug });
       } catch {
-        setUsernameAvail({ available: false, reason: "Could not check username availability." });
+        if (controller.signal.aborted) return;
+        setUsernameAvail({ available: false, reason: "Could not check username availability.", slug: requestedSlug });
       } finally {
-        setUsernameChecking(false);
+        if (!controller.signal.aborted) {
+          setUsernameChecking(false);
+        }
       }
     }, 400);
 
-    return () => clearTimeout(checkTimeoutRef.current);
+    return () => {
+      clearTimeout(checkTimeoutRef.current);
+      controller.abort();
+    };
   }, [username, profile]);
+
+  useEffect(() => {
+    if (!showDeleteModal) {
+      return;
+    }
+
+    const trigger = deleteTriggerRef.current;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowDeleteModal(false);
+        setDeleteConfirmText("");
+        return;
+      }
+
+      if (event.key !== "Tab" || !deleteDialogRef.current) {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        deleteDialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => element.getClientRects().length > 0);
+      if (!focusableElements.length) {
+        event.preventDefault();
+        deleteDialogRef.current.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    deleteInputRef.current?.focus();
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      trigger?.focus();
+    };
+  }, [showDeleteModal]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   // Save full name
   const onSaveName = async () => {
@@ -227,7 +320,7 @@ export default function SettingsPage() {
       return;
     }
     const slug = validation.slug;
-    if (!usernameAvail?.available) return;
+    if (!usernameAvail?.available || usernameAvail.slug !== validation.slug) return;
     setSavingUsername(true);
     const res = await fetch("/api/username", {
       method: "PATCH",
@@ -311,16 +404,16 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-10 md:px-10">
-        <p className="text-sm text-[rgba(240,244,255,0.5)]">Loading settings...</p>
+      <main className="site-container py-10" id="main-content">
+        <p className="site-muted text-sm" role="status">Loading settings...</p>
       </main>
     );
   }
 
   if (!profile) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-10 md:px-10">
-        <p className="text-sm text-[#ff8e8e]">Unable to load profile.</p>
+      <main className="site-container py-10" id="main-content">
+        <p className="text-sm text-site-danger" role="alert">Unable to load profile.</p>
       </main>
     );
   }
@@ -358,26 +451,26 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 sm:py-10 md:px-10">
+    <main className="site-container max-w-3xl py-8 sm:py-12" id="main-content">
       {/* Toast */}
       {toast && (
-        <div className="fixed top-4 right-4 z-50 rounded-xl border border-[rgba(59,130,246,0.3)] bg-[rgba(10,22,40,0.9)] px-5 py-3 text-sm text-[#93C5FD] backdrop-blur-xl">
+        <div className="site-panel-raised fixed right-4 top-4 z-50 px-5 py-3 text-sm text-site-action" role="status">
           {toast}
         </div>
       )}
 
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Settings</p>
-        <h1 className="mt-2 font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#F0F4FF]">Account Settings</h1>
+        <p className="site-eyebrow">Settings</p>
+        <h1 className="site-page-title mt-2">Account settings</h1>
       </div>
 
       {/* ── Profile Section ── */}
-      <section className="glass-card rounded-2xl p-5 sm:p-7 mb-5">
-        <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-5">Profile</h2>
+      <section className="site-panel mb-5 p-5 sm:p-7">
+        <h2 className="site-panel-title mb-5">Profile</h2>
 
         {/* Avatar */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)]">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-none border border-site-border bg-site-canvas-alt">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -387,7 +480,7 @@ export default function SettingsPage() {
                 className="object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-xl text-[rgba(240,244,255,0.3)]">
+              <div className="flex h-full w-full items-center justify-center text-xl text-site-muted">
                 {(profile.full_name?.[0] ?? profile.username?.[0] ?? "?").toUpperCase()}
               </div>
             )}
@@ -397,7 +490,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="rounded-full border border-[rgba(59,130,246,0.35)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] disabled:opacity-50"
+              className="site-button site-button-secondary px-4 py-2 text-xs disabled:opacity-50"
             >
               {uploadingAvatar ? "Uploading..." : "Upload"}
             </button>
@@ -406,7 +499,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={onAvatarRemove}
                 disabled={uploadingAvatar}
-                className="rounded-full border border-[rgba(255,255,255,0.12)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.5)] hover:text-[#ff8e8e] disabled:opacity-50"
+                className="site-button site-button-danger px-4 py-2 text-xs disabled:opacity-50"
               >
                 Remove
               </button>
@@ -417,20 +510,21 @@ export default function SettingsPage() {
 
         {/* Full Name */}
         <div className="mb-5">
-          <label className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Full Name</label>
+          <label htmlFor="settings-full-name" className="mb-1.5 block text-sm font-semibold text-site-secondary">Full name</label>
           <div className="flex gap-2">
             <input
+              id="settings-full-name"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               maxLength={100}
-              className="h-11 flex-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
+              className="site-field h-12 min-w-0 flex-1 px-4 text-sm"
             />
             <button
               type="button"
               onClick={onSaveName}
               disabled={savingName || fullName === (profile.full_name ?? "")}
-              className="rounded-xl border border-[rgba(59,130,246,0.35)] px-5 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] disabled:opacity-40"
+              className="site-button site-button-primary min-h-12 px-5 text-xs disabled:opacity-40"
             >
               {savingName ? "Saving..." : "Save"}
             </button>
@@ -439,122 +533,129 @@ export default function SettingsPage() {
 
         {/* Username */}
         <div className="mb-5">
-          <label className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Username</label>
-          <div className="flex gap-2">
-            <div className="flex flex-1 items-center gap-0 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] focus-within:border-[#3B82F6]">
-              <span className="pl-4 text-sm text-[rgba(240,244,255,0.3)]">mylivingpage.com/</span>
+          <label htmlFor="settings-username" className="mb-1.5 block text-sm font-semibold text-site-secondary">Username</label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex min-h-12 min-w-0 flex-1 items-center gap-0 rounded-none border border-site-border-strong bg-site-canvas-alt focus-within:border-site-focus">
+              <span className="pl-4 text-sm text-site-muted">mylivingpage.com/</span>
               <input
+                id="settings-username"
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setUsernameAvail(null);
+                }}
                 maxLength={40}
-                className="h-11 flex-1 bg-transparent px-1 text-sm text-[#F0F4FF] focus:outline-none"
+                className="h-12 min-w-0 flex-1 bg-transparent px-1 text-sm text-site-text focus:outline-none"
               />
             </div>
             <button
               type="button"
               onClick={onSaveUsername}
-              disabled={savingUsername || !usernameChanged || !usernameAvail?.available}
-              className="rounded-xl border border-[rgba(59,130,246,0.35)] px-5 py-2 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] disabled:opacity-40"
+              disabled={savingUsername || usernameChecking || !usernameChanged || !usernameAvail?.available || usernameAvail.slug !== normalizeUsernameSlug(username)}
+              className="site-button site-button-primary min-h-12 px-5 text-xs disabled:opacity-40"
             >
               {savingUsername ? "Saving..." : "Save"}
             </button>
           </div>
-          {usernameChecking && <p className="mt-1.5 text-xs text-[rgba(240,244,255,0.4)]">Checking...</p>}
+          {usernameChecking && <p className="mt-1.5 text-xs text-site-muted" role="status">Checking...</p>}
           {usernameAvail && !usernameChecking && (
-            <p className={`mt-1.5 text-xs ${usernameAvail.available ? "text-[#4ade80]" : "text-[#ff8e8e]"}`}>
+            <p className={`mt-1.5 text-xs ${usernameAvail.available ? "text-site-success" : "text-site-danger"}`} role="status">
               {usernameAvail.available ? "Available" : usernameAvail.reason}
             </p>
           )}
-          <p className="mt-1.5 text-[10px] text-[rgba(240,244,255,0.32)]">
+          <p className="mt-1.5 text-xs text-site-muted">
             This is your public page URL. Use 3-40 letters, numbers, hyphens, underscores, or periods.
           </p>
         </div>
 
         {/* Email (read-only) */}
         <div>
-          <label className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Email</label>
+          <label htmlFor="settings-email" className="mb-1.5 block text-sm font-semibold text-site-secondary">Email</label>
           <input
+            id="settings-email"
             type="email"
             value={profile.email ?? ""}
             disabled
-            className="h-11 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-4 text-sm text-[rgba(240,244,255,0.4)]"
+            className="site-field h-12 w-full px-4 text-sm text-site-muted disabled:opacity-80"
           />
-          <p className="mt-1 text-[10px] text-[rgba(240,244,255,0.3)]">Email changes are not yet supported.</p>
+          <p className="mt-1 text-xs text-site-muted">Email changes are not yet supported.</p>
         </div>
       </section>
 
       {/* ── Account Section (Password) ── */}
       {profile.hasPassword && (
-        <section className="glass-card rounded-2xl p-5 sm:p-7 mb-5">
-          <h2 className="font-heading text-lg font-semibold text-[#F0F4FF] mb-5">Change Password</h2>
+        <section className="site-panel mb-5 p-5 sm:p-7">
+          <h2 className="site-panel-title mb-5">Change password</h2>
           <form className="space-y-3 max-w-sm" onSubmit={onChangePassword}>
             <div>
-              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">New Password</label>
+              <label htmlFor="settings-new-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">New password</label>
               <input
+                id="settings-new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={8}
                 placeholder="Min 8 characters"
-                className="h-11 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
+                className="site-field h-12 w-full px-4 text-sm"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">Confirm Password</label>
+              <label htmlFor="settings-confirm-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">Confirm password</label>
               <input
+                id="settings-confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
                 placeholder="Repeat password"
-                className="h-11 w-full rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.35)] focus:border-[#3B82F6] focus:outline-none"
+                className="site-field h-12 w-full px-4 text-sm"
               />
             </div>
             <button
               type="submit"
               disabled={savingPassword}
-              className="rounded-xl border border-[rgba(59,130,246,0.35)] px-6 py-2.5 text-xs uppercase tracking-[0.14em] text-[#3B82F6] hover:text-[#93C5FD] disabled:opacity-50"
+              className="site-button site-button-primary text-xs disabled:opacity-50"
             >
               {savingPassword ? "Updating..." : "Update Password"}
             </button>
             {passwordMsg && (
-              <p className={`text-xs ${passwordMsg.ok ? "text-[#4ade80]" : "text-[#ff8e8e]"}`}>{passwordMsg.text}</p>
+              <p className={`text-xs ${passwordMsg.ok ? "text-site-success" : "text-site-danger"}`} role="status">{passwordMsg.text}</p>
             )}
           </form>
         </section>
       )}
 
       {/* Universal free access with transitional subscription management. */}
-      <section className="glass-card mb-5 rounded-2xl p-5 sm:p-7">
-        <h2 className="mb-3 font-heading text-lg font-semibold text-[#F0F4FF]">
+      <section className="site-panel mb-5 p-5 sm:p-7">
+        <h2 className="site-panel-title mb-3">
           Access
         </h2>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-full border border-[rgba(74,222,128,0.35)] px-4 py-1.5 text-xs uppercase tracking-[0.14em] text-[#4ade80]">
+          <span className="site-badge site-badge-success">
             Free access
           </span>
-          <span className="text-xs text-[rgba(240,244,255,0.5)]">
+          <span className="text-xs text-site-muted">
             No card or subscription required
           </span>
         </div>
-        <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+        <p className="site-muted mt-3 text-sm leading-6">
           Your living resume, public link, ATS-ready PDF, share card, themes, and page
           analytics are available free.
         </p>
-        <div className="mt-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-4 py-3 text-sm text-[rgba(240,244,255,0.72)]">
+        <div className="site-callout mt-4 px-4 py-3 text-sm">
           {livePageActive
             ? "Your public page is currently live."
             : "Your page is not live yet. Publish it whenever you are ready."}
         </div>
         {accountAccess.hasPaidSubscription ? (
-          <div className="mt-5 rounded-xl border border-[rgba(245,158,11,0.24)] bg-[rgba(245,158,11,0.08)] p-4">
-            <p className="text-sm font-medium text-[#FDE68A]">
+          <div className="site-callout site-callout-warning mt-5 p-4">
+            <p className="text-sm font-medium text-site-warning">
               Existing {accountAccess.publicPlanLabel} subscription detected
             </p>
-            <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.66)]">
+            <p className="site-muted mt-2 text-sm leading-6">
               Publishing is now free, so this subscription is no longer required for your
               page to stay live. It may continue at {activePlanPrice.displayLabel} until you
               cancel it in the billing portal.
@@ -563,7 +664,7 @@ export default function SettingsPage() {
               type="button"
               disabled={billingLoading}
               onClick={() => void openBillingPortal()}
-              className="mt-3 rounded-full border border-[rgba(255,255,255,0.16)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.72)] hover:text-[#F0F4FF] disabled:opacity-50"
+              className="site-button site-button-secondary mt-3 px-4 py-2 text-xs disabled:opacity-50"
             >
               {billingAction === "portal" ? "Loading..." : "Manage Subscription"}
             </button>
@@ -572,15 +673,16 @@ export default function SettingsPage() {
       </section>
 
       {/* ── Danger Zone ── */}
-      <section className="rounded-2xl border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.04)] p-5 sm:p-7">
-        <h2 className="font-heading text-lg font-semibold text-[#ff8e8e] mb-3">Danger Zone</h2>
-        <p className="mb-4 text-sm text-[rgba(240,244,255,0.5)]">
+      <section className="site-danger-panel p-5 sm:p-7">
+        <h2 className="mb-3 font-site text-lg font-semibold text-site-danger">Danger zone</h2>
+        <p className="mb-4 text-sm text-site-secondary">
           Permanently delete your account and all associated data. This action cannot be undone.
         </p>
         <button
+          ref={deleteTriggerRef}
           type="button"
           onClick={() => setShowDeleteModal(true)}
-          className="rounded-xl border border-[rgba(239,68,68,0.4)] px-5 py-2.5 text-xs uppercase tracking-[0.14em] text-[#ff8e8e] hover:bg-[rgba(239,68,68,0.1)]"
+          className="site-button site-button-danger text-xs"
         >
           Delete Account
         </button>
@@ -588,24 +690,26 @@ export default function SettingsPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-[rgba(239,68,68,0.25)] bg-[rgba(10,22,40,0.95)] p-6 sm:p-7">
-            <h3 className="font-heading text-xl font-bold text-[#ff8e8e] mb-3">Delete Account</h3>
-            <p className="mb-4 text-sm text-[rgba(240,244,255,0.6)]">
-              This will permanently delete your profile, all pages, and page activity data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-[#ff8e8e]">{profile.username}</span> to confirm.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div ref={deleteDialogRef} tabIndex={-1} className="site-panel-raised w-full max-w-md border-site-danger p-6 sm:p-7" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title" aria-describedby="delete-account-description">
+            <h3 id="delete-account-title" className="mb-3 font-site text-xl font-semibold text-site-danger">Delete account</h3>
+            <p id="delete-account-description" className="mb-4 text-sm text-site-secondary">
+              This will permanently delete your profile, all pages, and page activity data. If you have an active paid subscription, it will be canceled before deletion and no refund is issued except where required by law. Type <span className="font-mono text-site-danger">{profile.username}</span> to confirm.
             </p>
             <input
+              ref={deleteInputRef}
+              aria-label={`Type ${profile.username} to confirm account deletion`}
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder={profile.username}
-              className="mb-4 h-11 w-full rounded-xl border border-[rgba(239,68,68,0.25)] bg-[rgba(255,255,255,0.03)] px-4 text-sm text-[#F0F4FF] placeholder:text-[rgba(240,244,255,0.25)] focus:border-[#ef4444] focus:outline-none"
+              className="site-field mb-4 h-12 w-full border-site-danger px-4 text-sm"
             />
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
-                className="flex-1 rounded-xl border border-[rgba(255,255,255,0.12)] py-2.5 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#F0F4FF]"
+                className="site-button site-button-secondary flex-1 text-xs"
               >
                 Cancel
               </button>
@@ -613,7 +717,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={onDeleteAccount}
                 disabled={deleteConfirmText !== profile.username || deleting}
-                className="flex-1 rounded-xl border border-[rgba(239,68,68,0.4)] bg-[rgba(239,68,68,0.15)] py-2.5 text-xs uppercase tracking-[0.14em] text-[#ff8e8e] hover:bg-[rgba(239,68,68,0.25)] disabled:opacity-40"
+                className="site-button site-button-danger flex-1 text-xs disabled:opacity-40"
               >
                 {deleting ? "Deleting..." : "Delete Forever"}
               </button>

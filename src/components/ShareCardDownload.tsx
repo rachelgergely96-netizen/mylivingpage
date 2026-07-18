@@ -30,6 +30,15 @@ interface ShareCardDownloadProps {
   className?: string;
 }
 
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 export default function ShareCardDownload({
   pageId,
   pageUserId,
@@ -44,6 +53,9 @@ export default function ShareCardDownload({
   className,
 }: ShareCardDownloadProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -70,13 +82,49 @@ export default function ShareCardDownload({
 
   useEffect(() => {
     if (!open) return;
-    const handleEscape = (event: KeyboardEvent) => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const trigger = triggerRef.current;
+    const previousBodyOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => element.getClientRects().length > 0);
+
+      if (!focusableElements.length) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      (previouslyFocused ?? trigger)?.focus();
+    };
   }, [open]);
 
   if (!isOwner) return null;
@@ -179,23 +227,30 @@ export default function ShareCardDownload({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onClick={() => setOpen(false)}
+          data-site-ui
         >
           <div
-            className="w-full max-w-4xl rounded-[28px] border border-[rgba(255,255,255,0.1)] bg-[rgba(6,14,28,0.95)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+            ref={dialogRef}
+            className="site-panel-raised max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-card-dialog-title"
+            tabIndex={-1}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] px-5 py-4 sm:px-6">
+            <div className="flex items-start justify-between gap-4 border-b border-site-border px-5 py-4 sm:px-6">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-[#3B82F6]">Share Card</p>
-                <h3 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF]">{safeName}</h3>
-                <p className="mt-1 text-sm text-[rgba(240,244,255,0.55)]">
+                <p className="site-eyebrow">Share Card</p>
+                <h3 id="share-card-dialog-title" className="site-panel-title mt-2">{safeName}</h3>
+                <p className="site-muted mt-1 text-sm">
                   Unique QR code and downloadable card for @{slug}
                 </p>
               </div>
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(240,244,255,0.5)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                className="site-icon-button shrink-0"
                 aria-label="Close share card"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -207,6 +262,7 @@ export default function ShareCardDownload({
             <div className="grid gap-5 p-5 sm:grid-cols-[minmax(0,1.25fr)_320px] sm:p-6">
               <div
                 ref={cardRef}
+                data-living-output
                 className="relative overflow-hidden rounded-[26px] border border-[rgba(255,255,255,0.1)] p-5 sm:p-6"
                 style={{
                   background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
@@ -287,32 +343,32 @@ export default function ShareCardDownload({
                 <p className="relative mt-4 font-mono text-xs text-[rgba(240,244,255,0.56)]">{displayUrl}</p>
               </div>
 
-              <div className="flex flex-col justify-between gap-4 rounded-[26px] border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] p-5">
+              <div className="site-panel flex flex-col justify-between gap-4 p-5">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#3B82F6]">Share Actions</p>
-                  <h4 className="mt-3 font-heading text-xl font-bold text-[#F0F4FF]">
+                  <p className="site-eyebrow">Share actions</p>
+                  <h4 className="site-panel-title mt-3 text-xl">
                     Send people straight to {firstName}
                   </h4>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">
+                  <p className="site-muted mt-2 text-sm leading-6">
                     Download the branded PNG, copy the tracked page URL, or let someone scan the QR code on this card.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">Tracked URL</p>
-                  <p className="mt-2 break-all text-sm text-[#F0F4FF]">{livePageUrl}</p>
+                <div className="border border-site-border bg-site-canvas-alt p-4">
+                  <p className="text-xs font-semibold text-site-muted">Tracked URL</p>
+                  <p className="mt-2 break-all font-mono text-sm text-site-text">{livePageUrl}</p>
                 </div>
 
                 {shareFeedback ? (
-                  <div className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.1)] p-4">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#93C5FD]">Proof ready</p>
-                    <p className="mt-2 font-semibold text-[#F0F4FF]">{shareFeedback.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.64)]">
+                  <div className="site-callout p-4" role="status">
+                    <p className="site-eyebrow">Proof ready</p>
+                    <p className="mt-2 font-semibold text-site-text">{shareFeedback.title}</p>
+                    <p className="site-muted mt-2 text-sm leading-6">
                       {shareFeedback.body}
                     </p>
                     <a
                       href={resolvedAnalyticsHref}
-                      className="mt-4 inline-flex rounded-full border border-[rgba(59,130,246,0.32)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#93C5FD] transition-colors hover:border-[rgba(59,130,246,0.46)] hover:text-[#BFDBFE]"
+                      className="site-button site-button-secondary mt-4 px-4 py-2 text-xs"
                     >
                       {analyticsCtaLabel}
                     </a>
@@ -323,7 +379,7 @@ export default function ShareCardDownload({
                   <button
                     type="button"
                     onClick={handleCopyLink}
-                    className="rounded-xl border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-4 py-3 text-sm font-medium text-[#93C5FD] transition-colors hover:bg-[rgba(59,130,246,0.18)]"
+                    className="site-button site-button-primary w-full"
                   >
                     {copied ? "Link copied" : "Copy Tracked Page Link"}
                   </button>
@@ -331,7 +387,7 @@ export default function ShareCardDownload({
                     type="button"
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm font-medium text-[rgba(240,244,255,0.78)] transition-colors hover:bg-[rgba(255,255,255,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="site-button site-button-secondary w-full disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {downloading ? "Downloading..." : "Download PNG Share Card"}
                   </button>
@@ -340,7 +396,7 @@ export default function ShareCardDownload({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={handleOpenLivePage}
-                    className="rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 text-center text-sm font-medium text-[rgba(240,244,255,0.7)] transition-colors hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
+                    className="site-button site-button-secondary w-full text-center"
                   >
                     Open Tracked Live Page
                   </a>
@@ -352,9 +408,10 @@ export default function ShareCardDownload({
       ) : null}
 
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        className={`flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] sm:text-sm ${className ?? ""}`}
+        className={`site-button site-button-secondary ${className ?? ""}`}
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />

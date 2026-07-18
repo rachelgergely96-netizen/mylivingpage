@@ -2,9 +2,21 @@
 
 ## Website design system and homepage improvement plan
 
-Status: Active reference specification; homepage implemented July 17, 2026<br>
+Status: Active reference specification; homepage and production site UI migrated July 17, 2026<br>
 Applies to: MyLivingPage website and product interface<br>
 Does not apply to: the rendered Living Pages or their theme-owned output
+
+---
+
+## Implementation snapshot — July 17, 2026
+
+- The homepage, auth flow, onboarding/create flow, dashboard, editor, ATS tools, analytics, settings, admin, examples, pricing, guides, legal pages, and public-page product chrome now use Signal Frame.
+- Shared semantic tokens and source-owned UI classes live in `src/app/globals.css`; Tailwind exposes matching `site-*` colors and the DM Sans `font-site` family.
+- Product, admin, public-content, and auth navigation now use shared responsive shells instead of route-local headers.
+- `data-site-ui` and `data-living-output` explicitly separate website controls from Living Pages, theme previews, résumé output, and generated Share Card artwork.
+- Default loading, error, and not-found states use the same website system.
+- `npm run check:signal-frame` guards classified production UI against new Playfair headings, legacy glass/gold helpers, rounded website geometry, and raw foundation colors.
+- Native static compilation and source guard reviews pass. Full runtime, visual-regression, accessibility, and performance validation remain part of Phase 6 and release QA.
 
 ---
 
@@ -985,6 +997,8 @@ Scroll depth and animation completion are diagnostics, not business outcomes.
 ---
 
 ## 14. Migration plan
+
+Implementation status: Phases 0–5 are complete for active production UI. The Phase 6 source guard is in place; full browser, accessibility, visual-regression, and performance validation continues as release QA.
 
 ### Phase 0: approve and protect the boundary
 

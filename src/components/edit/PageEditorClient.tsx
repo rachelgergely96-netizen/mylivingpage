@@ -249,10 +249,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:px-10">
-        <div className="glass-card rounded-2xl p-6 text-center sm:p-8">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[rgba(59,130,246,0.2)] border-t-[#3B82F6]" />
-          <p className="mt-4 text-sm text-[rgba(240,244,255,0.5)]">Loading page...</p>
+      <main className="site-container-wide max-w-6xl py-8" id="main-content">
+        <div className="site-panel p-6 text-center sm:p-8">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-site-border border-t-site-action" />
+          <p className="mt-4 text-sm text-site-muted" role="status">Loading page...</p>
         </div>
       </main>
     );
@@ -260,20 +260,20 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
   if (!data) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:px-10">
-        <div className="glass-card rounded-2xl p-6 text-center sm:p-8">
-          <p className="text-sm text-[#ff8e8e]">{error || "Page not found."}</p>
+      <main className="site-container-wide max-w-6xl py-8" id="main-content">
+        <div className="site-panel p-6 text-center sm:p-8">
+          <p className="text-sm text-site-danger" role="alert">{error || "Page not found."}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-10">
+    <main className="site-container-wide max-w-6xl py-8" id="main-content">
       <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-end sm:gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Living Page Editor</p>
-          <h1 className="mt-2 font-heading text-2xl font-bold text-[#F0F4FF] sm:text-3xl">
+          <p className="site-eyebrow">Living Page editor</p>
+          <h1 className="site-page-title mt-2 text-3xl">
             {data.name || "Living Page"}
           </h1>
         </div>
@@ -281,13 +281,13 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
-            className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[rgba(240,244,255,0.6)] hover:text-[#93C5FD] sm:px-5 sm:py-2.5"
+            className="site-button site-button-secondary px-4 py-2 text-xs sm:px-5 sm:py-2.5"
           >
             Back
           </button>
           <Link
             href={`/${publicSlug || page?.slug || "your-username"}`}
-            className="rounded-full border border-[rgba(59,130,246,0.26)] bg-[rgba(59,130,246,0.1)] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#93C5FD] hover:border-[rgba(59,130,246,0.42)] hover:text-[#BFDBFE] sm:px-5 sm:py-2.5"
+            className="site-button site-button-secondary px-4 py-2 text-xs sm:px-5 sm:py-2.5"
           >
             View Live Page
           </Link>
@@ -295,7 +295,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             type="button"
             disabled={saving || !hasChanges}
             onClick={() => void handleSave()}
-            className="gold-pill px-5 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-all hover:shadow-[0_10px_36px_rgba(59,130,246,0.35)] disabled:opacity-60 sm:px-6 sm:py-2.5"
+            className="site-button site-button-primary px-5 py-2 text-xs disabled:opacity-60 sm:px-6 sm:py-2.5"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -303,12 +303,12 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       </div>
 
       {error ? (
-        <p className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#ff8e8e]">
+        <p className="site-alert-danger mb-4 px-4 py-3 text-sm" role="alert">
           {error}
         </p>
       ) : null}
       {success ? (
-        <p className="mb-4 rounded-xl border border-[rgba(100,220,100,0.35)] bg-[rgba(100,220,100,0.08)] px-4 py-3 text-sm text-[#88ee88]">
+        <p className="site-alert-success mb-4 px-4 py-3 text-sm" role="status">
           {success}
         </p>
       ) : null}
@@ -317,31 +317,31 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         <DraftBanner savedAt={pendingDraft.savedAt} onRestore={restoreDraft} onDiscard={dismissDraft} />
       ) : null}
 
-      <div className="mb-4 rounded-xl border border-[rgba(59,130,246,0.18)] bg-[rgba(59,130,246,0.08)] px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-[#93C5FD]">Resume PDF</p>
-        <p className="mt-2 text-sm text-[#F0F4FF]">
+      <div className="site-callout mb-4 px-4 py-3">
+        <p className="site-eyebrow">Résumé PDF</p>
+        <p className="mt-2 text-sm text-site-text">
           The public page always uses this saved information for the downloadable Resume PDF.
         </p>
       </div>
 
       <div className="mb-5">
         <AtsReadinessCard resumeData={data} />
-        <p className="mt-2 px-1 text-xs leading-5 text-[rgba(240,244,255,0.42)]">
+        <p className="mt-2 px-1 text-xs leading-5 text-site-muted">
           The check uses the fields currently in this editor. Save your changes before relying on
           the public PDF.
         </p>
       </div>
 
       <div className="space-y-5">
-        <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-          <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Public URL</legend>
-          <div className="rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-sm text-[#93C5FD]">
+        <fieldset className="site-panel space-y-3 p-4 sm:p-5">
+          <legend className="site-eyebrow px-1">Public URL</legend>
+          <div className="border border-site-border bg-site-canvas-alt px-3 py-2 font-mono text-sm text-site-action">
             mylivingpage.com/{publicSlug || page?.slug || "your-username"}
           </div>
         </fieldset>
 
-        <fieldset className="glass-card space-y-3 rounded-2xl p-4 sm:p-5">
-          <legend className="text-[10px] uppercase tracking-[0.24em] text-[#3B82F6]">Avatar</legend>
+        <fieldset className="site-panel space-y-3 p-4 sm:p-5">
+          <legend className="site-eyebrow px-1">Avatar</legend>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
             {data.avatar_url ? (
               <Image
@@ -350,10 +350,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 width={64}
                 height={64}
                 sizes="(min-width: 640px) 64px, 56px"
-                className="h-14 w-14 rounded-full object-cover ring-2 ring-[#3B82F6] shadow-[0_0_28px_rgba(59,130,246,0.3)] sm:h-16 sm:w-16"
+                className="h-14 w-14 rounded-none border-2 border-site-action object-cover sm:h-16 sm:w-16"
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#E8845C] font-heading text-xl font-bold text-[#0a1628] shadow-[0_0_28px_rgba(59,130,246,0.3)] sm:h-16 sm:w-16 sm:text-2xl">
+              <div className="flex h-14 w-14 items-center justify-center rounded-none bg-site-action font-site text-xl font-bold text-site-action-ink sm:h-16 sm:w-16 sm:text-2xl">
                 {(data.name || "?").slice(0, 1).toUpperCase()}
               </div>
             )}
@@ -375,7 +375,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 type="button"
                 disabled={uploadingAvatar}
                 onClick={() => avatarInputRef.current?.click()}
-                className="rounded-full border border-[rgba(255,255,255,0.15)] px-4 py-1.5 text-xs uppercase tracking-[0.12em] text-[rgba(240,244,255,0.7)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD] disabled:opacity-50"
+                className="site-button site-button-secondary px-4 py-2 text-xs disabled:opacity-50"
               >
                 {uploadingAvatar ? "Uploading..." : data.avatar_url ? "Change Photo" : "Upload Photo"}
               </button>
@@ -383,12 +383,12 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 <button
                   type="button"
                   onClick={removeAvatar}
-                  className="text-xs text-[rgba(240,244,255,0.35)] hover:text-[#ff8e8e]"
+                  className="text-xs text-site-muted hover:text-site-danger"
                 >
                   Remove · use monogram
                 </button>
               ) : (
-                <p className="text-[10px] text-[rgba(240,244,255,0.3)]">Optional · JPEG, PNG, or WebP under 2 MB</p>
+                <p className="text-xs text-site-muted">Optional · JPEG, PNG, or WebP under 2 MB</p>
               )}
             </div>
           </div>
@@ -405,13 +405,13 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           showDescription
         />
 
-        <div className="overflow-hidden rounded-2xl border border-[rgba(59,130,246,0.18)]">
-          <div className="flex items-center gap-2 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(0,0,0,0.35)] px-4 py-3">
+        <div className="overflow-hidden rounded-none border border-site-border-strong">
+          <div className="flex items-center gap-2 border-b border-site-border bg-site-canvas-alt px-4 py-3">
             <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-            <div className="ml-3 rounded-md bg-[rgba(255,255,255,0.06)] px-3 py-1 font-mono text-[11px] text-[rgba(240,244,255,0.5)]">
-              mylivingpage.com/<span className="text-[#93C5FD]">{publicSlug || page?.slug}</span>
+            <div className="ml-3 rounded-none border border-site-border bg-site-surface px-3 py-1 font-mono text-[11px] text-site-muted">
+              mylivingpage.com/<span className="text-site-action">{publicSlug || page?.slug}</span>
             </div>
           </div>
           <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">

@@ -4,11 +4,11 @@ import { AdminDailyChart } from "@/components/admin/AdminCharts";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="glass-card rounded-2xl p-4 sm:p-5">
-      <p className="font-mono text-2xl sm:text-3xl font-bold text-[#93C5FD]">
+    <div className="site-panel p-4 sm:p-5">
+      <p className="text-2xl font-semibold tabular-nums text-site-action sm:text-3xl">
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
-      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+      <p className="mt-1 text-xs font-medium text-site-muted">
         {label}
       </p>
     </div>
@@ -81,11 +81,11 @@ export default async function AdminOverviewPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-8 md:px-10">
+    <main className="site-container-wide py-8">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Admin</p>
-        <h1 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-[#F0F4FF]">Platform Overview</h1>
+        <p className="site-eyebrow">Admin</p>
+        <h1 className="site-page-title mt-2">Platform Overview</h1>
       </div>
 
       {/* Stat cards */}
@@ -107,12 +107,12 @@ export default async function AdminOverviewPage() {
       {/* Recent activity */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Recent signups */}
-        <div className="glass-card rounded-2xl p-4 sm:p-5">
+        <section className="site-panel p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            <h2 className="text-sm font-semibold text-site-text">
               Recent Signups
-            </p>
-            <Link href="/admin/users" className="text-[11px] uppercase tracking-[0.12em] text-[#3B82F6] hover:text-[#93C5FD]">
+            </h2>
+            <Link href="/admin/users" className="text-xs font-semibold text-site-action hover:text-site-action-hover">
               View All
             </Link>
           </div>
@@ -120,30 +120,30 @@ export default async function AdminOverviewPage() {
             {(latestUsers ?? []).map((u) => {
               const user = u as { username: string; full_name: string | null; email: string | null; created_at: string };
               return (
-                <div key={user.username} className="flex items-center justify-between">
+                <div key={user.username} className="flex items-center justify-between gap-4 border-t border-site-border pt-3 first:border-t-0 first:pt-0">
                   <div>
-                    <p className="text-sm text-[#F0F4FF]">{user.full_name || user.username}</p>
-                    <p className="text-[11px] text-[rgba(240,244,255,0.4)]">{user.email}</p>
+                    <p className="text-sm text-site-text">{user.full_name || user.username}</p>
+                    <p className="text-xs text-site-muted">{user.email}</p>
                   </div>
-                  <p className="text-[10px] font-mono text-[rgba(240,244,255,0.3)]">
+                  <p className="shrink-0 font-mono text-[10px] text-site-muted">
                     {new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </p>
                 </div>
               );
             })}
             {(latestUsers ?? []).length === 0 && (
-              <p className="text-sm text-[rgba(240,244,255,0.35)]">No users yet.</p>
+              <p className="text-sm text-site-muted">No users yet.</p>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Recent pages */}
-        <div className="glass-card rounded-2xl p-4 sm:p-5">
+        <section className="site-panel p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+            <h2 className="text-sm font-semibold text-site-text">
               Recent Pages
-            </p>
-            <Link href="/admin/pages" className="text-[11px] uppercase tracking-[0.12em] text-[#3B82F6] hover:text-[#93C5FD]">
+            </h2>
+            <Link href="/admin/pages" className="text-xs font-semibold text-site-action hover:text-site-action-hover">
               View All
             </Link>
           </div>
@@ -151,14 +151,14 @@ export default async function AdminOverviewPage() {
             {(latestPages ?? []).map((p) => {
               const page = p as { slug: string; views: number; created_at: string; resume_data: { name?: string } };
               return (
-                <div key={page.slug} className="flex items-center justify-between">
+                <div key={page.slug} className="flex items-center justify-between gap-4 border-t border-site-border pt-3 first:border-t-0 first:pt-0">
                   <div>
-                    <p className="text-sm text-[#F0F4FF]">{page.resume_data?.name || page.slug}</p>
-                    <p className="text-[11px] text-[rgba(240,244,255,0.4)]">/{page.slug}</p>
+                    <p className="text-sm text-site-text">{page.resume_data?.name || page.slug}</p>
+                    <p className="font-mono text-[11px] text-site-muted">/{page.slug}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono text-sm text-[#93C5FD]">{page.views}</p>
-                    <p className="text-[10px] text-[rgba(240,244,255,0.3)]">
+                    <p className="text-sm tabular-nums text-site-action">{page.views}</p>
+                    <p className="font-mono text-[10px] text-site-muted">
                       {new Date(page.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
                   </div>
@@ -166,35 +166,35 @@ export default async function AdminOverviewPage() {
               );
             })}
             {(latestPages ?? []).length === 0 && (
-              <p className="text-sm text-[rgba(240,244,255,0.35)]">No pages yet.</p>
+              <p className="text-sm text-site-muted">No pages yet.</p>
             )}
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Activity feed */}
       <div className="mt-6">
-        <div className="glass-card rounded-2xl p-4 sm:p-5">
-          <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.4)]">
+        <section className="site-panel p-4 sm:p-5">
+          <h2 className="mb-4 text-sm font-semibold text-site-text">
             Recent Activity
-          </p>
+          </h2>
           <div className="space-y-2.5">
             {(recentEvents ?? []).length === 0 ? (
-              <p className="text-sm text-[rgba(240,244,255,0.35)]">No activity yet.</p>
+              <p className="text-sm text-site-muted">No activity yet.</p>
             ) : (
               (recentEvents ?? []).map((e, i) => {
                 const ev = e as { event_name: string; metadata: Record<string, unknown>; created_at: string; user_id: string | null };
                 return (
-                  <div key={`${ev.created_at}-${i}`} className="flex items-center justify-between rounded-lg bg-[rgba(255,255,255,0.02)] px-3 py-2">
-                    <div>
-                      <p className="text-sm text-[#F0F4FF]">{ev.event_name}</p>
+                  <div key={`${ev.created_at}-${i}`} className="flex items-center justify-between gap-4 border-t border-site-border px-1 py-3 first:border-t-0">
+                    <div className="min-w-0">
+                      <p className="text-sm text-site-text">{ev.event_name}</p>
                       {ev.metadata && Object.keys(ev.metadata).length > 0 && (
-                        <p className="text-[10px] text-[rgba(240,244,255,0.3)] font-mono truncate max-w-xs">
+                        <p className="max-w-xs truncate font-mono text-[10px] text-site-muted">
                           {JSON.stringify(ev.metadata)}
                         </p>
                       )}
                     </div>
-                    <p className="shrink-0 ml-3 text-[10px] font-mono text-[rgba(240,244,255,0.3)]">
+                    <p className="shrink-0 font-mono text-[10px] text-site-muted">
                       {new Date(ev.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{" "}
                       {new Date(ev.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </p>
@@ -203,7 +203,7 @@ export default async function AdminOverviewPage() {
               })
             )}
           </div>
-        </div>
+        </section>
       </div>
     </main>
   );

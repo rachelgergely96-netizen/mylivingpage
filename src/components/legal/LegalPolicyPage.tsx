@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
+import SiteHeader from "@/components/marketing/SiteHeader";
 import { getPolicyDocument, type LegalBlock } from "@/lib/legal/policy-content";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
-import { getLegalNavItems, isPolicyAvailableOnSite, type LegalPolicyId } from "@/lib/legal/site-config";
+import {
+  getLegalNavItems,
+  isPolicyAvailableOnSite,
+  type LegalPolicyId,
+} from "@/lib/legal/site-config";
 
 function renderBlock(block: LegalBlock, key: string) {
   if (block.type === "paragraph") {
     return (
-      <p key={key} className="mt-3 text-sm leading-7 text-[rgba(240,244,255,0.72)] sm:text-base">
+      <p key={key} className="mt-3 text-base leading-8 text-site-secondary">
         {block.text}
       </p>
     );
@@ -18,7 +23,7 @@ function renderBlock(block: LegalBlock, key: string) {
   return (
     <ListTag
       key={key}
-      className={`mt-3 space-y-2 pl-5 text-sm leading-7 text-[rgba(240,244,255,0.72)] sm:text-base ${
+      className={`mt-3 space-y-2 pl-5 text-base leading-8 text-site-secondary ${
         block.ordered ? "list-decimal" : "list-disc"
       }`}
     >
@@ -39,63 +44,46 @@ export default async function LegalPolicyPage({ policyId }: { policyId: LegalPol
   const policyLinks = getLegalNavItems(site.id, false);
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link href="/" className="font-heading text-xl text-[#F0F4FF]">
-              {site.id === "mylivingpage" ? (
-                <>
-                  my<span className="text-[#3B82F6]">living</span>page
-                </>
-              ) : (
-                site.brandName
-              )}
+    <div className="site-shell" data-site-ui>
+      <SiteHeader
+        brandName={site.brandName}
+        links={[{ href: "/legal", label: "Legal center" }]}
+      />
+
+      <main id="main-content" className="site-container py-8 sm:py-12">
+        <nav aria-label="Legal and policy pages" className="mx-auto mb-6 flex max-w-[44rem] flex-wrap gap-2">
+          {policyLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={link.href === `/${policyId}` ? "page" : undefined}
+              className="site-nav-link"
+            >
+              {link.label}
             </Link>
-            <Link href="/legal" className="text-xs uppercase tracking-[0.18em] text-[rgba(240,244,255,0.55)] hover:text-[#93C5FD]">
-              Legal Index
-            </Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {policyLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                  link.href === `/${policyId}`
-                    ? "border-[rgba(59,130,246,0.45)] text-[#93C5FD]"
-                    : "border-[rgba(255,255,255,0.16)] text-[rgba(240,244,255,0.58)] hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </header>
+          ))}
+        </nav>
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-        <article className="glass-card rounded-2xl p-5 sm:p-8 md:p-10">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Last updated: {policy.lastUpdated}</p>
-          <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-4xl">{policy.title}</h1>
-          <p className="mt-4 text-sm leading-7 text-[rgba(240,244,255,0.7)] sm:text-base">{policy.summary}</p>
+        <article className="site-panel mx-auto max-w-[44rem] px-5 py-8 sm:px-8 sm:py-10">
+          <p className="site-eyebrow">Last updated: {policy.lastUpdated}</p>
+          <h1 className="site-page-title mt-4">{policy.title}</h1>
+          <p className="mt-4 text-base leading-8 text-site-secondary">{policy.summary}</p>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            {policy.sections.map((section) => (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                className="rounded-full border border-[rgba(255,255,255,0.14)] px-3 py-1 text-xs text-[rgba(240,244,255,0.58)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
-              >
-                {section.heading}
-              </a>
-            ))}
-          </div>
+          <nav aria-label="On this page" className="mt-7 border-y border-site-border py-4">
+            <p className="site-eyebrow">On this page</p>
+            <div className="mt-3 grid gap-1 sm:grid-cols-2">
+              {policy.sections.map((section) => (
+                <a key={section.id} href={`#${section.id}`} className="site-nav-link w-full">
+                  {section.heading}
+                </a>
+              ))}
+            </div>
+          </nav>
 
-          <div className="mt-8 space-y-8">
+          <div className="mt-10 space-y-12">
             {policy.sections.map((section) => (
               <section key={section.id} id={section.id} className="scroll-mt-24">
-                <h2 className="font-heading text-2xl text-[#F0F4FF]">{section.heading}</h2>
+                <h2 className="site-section-title text-[1.75rem]">{section.heading}</h2>
                 {section.blocks.map((block, index) => renderBlock(block, `${section.id}-${index}`))}
               </section>
             ))}

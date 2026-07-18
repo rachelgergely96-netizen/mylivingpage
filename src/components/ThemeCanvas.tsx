@@ -322,6 +322,7 @@ export default function ThemeCanvas({
   return (
     <div
       ref={containerRef}
+      data-living-output
       data-theme-id={theme.id}
       data-theme-collection={theme.collection}
       className={className}

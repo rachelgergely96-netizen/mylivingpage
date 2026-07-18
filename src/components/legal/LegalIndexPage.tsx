@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
+import SiteHeader from "@/components/marketing/SiteHeader";
 import { LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getLegalNavItems } from "@/lib/legal/site-config";
@@ -9,29 +10,19 @@ export default async function LegalIndexPage() {
   const links = getLegalNavItems(site.id, false);
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.72)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:h-20 sm:px-6">
-          <Link href="/" className="font-heading text-xl text-[#F0F4FF]">
-            {site.id === "mylivingpage" ? (
-              <>
-                my<span className="text-[#3B82F6]">living</span>page
-              </>
-            ) : (
-              site.brandName
-            )}
-          </Link>
-          <p className="text-xs uppercase tracking-[0.2em] text-[rgba(240,244,255,0.55)]">Legal Center</p>
-        </div>
-      </header>
+    <div className="site-shell" data-site-ui>
+      <SiteHeader
+        brandName={site.brandName}
+        links={[{ href: "/legal", label: "Legal center", current: true }]}
+      />
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        <section className="glass-card rounded-3xl p-6 sm:p-10">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#3B82F6]">Last updated: {LEGAL_EFFECTIVE_DATE}</p>
-          <h1 className="mt-3 font-heading text-3xl font-bold text-[#F0F4FF] sm:text-5xl">Legal and Policies</h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.68)] sm:text-base">
-            These policies apply to {site.brandName}. They cover account use, billing, privacy, and how to contact the
-            business about legal or security issues.
+      <main id="main-content" className="site-container py-10 sm:py-14">
+        <section className="site-panel mx-auto max-w-5xl px-5 py-9 sm:px-8 sm:py-12">
+          <p className="site-eyebrow">Last updated: {LEGAL_EFFECTIVE_DATE}</p>
+          <h1 className="site-page-title mt-4">Legal and Policies</h1>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-site-secondary">
+            These policies apply to {site.brandName}. They cover account use, billing, privacy,
+            and how to contact the business about legal or security issues.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -39,10 +30,10 @@ export default async function LegalIndexPage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.02)] p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(59,130,246,0.32)]"
+                className="border border-site-border bg-site-canvas-alt p-5 transition-colors hover:border-site-action"
               >
-                <p className="font-heading text-2xl text-[#F0F4FF]">{link.label}</p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(240,244,255,0.58)]">{link.description}</p>
+                <h2 className="site-panel-title">{link.label}</h2>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">{link.description}</p>
               </Link>
             ))}
           </div>

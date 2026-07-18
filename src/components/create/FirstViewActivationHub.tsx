@@ -242,17 +242,17 @@ export default function FirstViewActivationHub({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-[rgba(59,130,246,0.24)] bg-[rgba(59,130,246,0.08)] p-5 sm:p-6">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-[#93C5FD]">
+      <section className="site-panel-raised p-5 sm:p-6">
+        <p className="site-eyebrow">
           Proof
         </p>
 
         {loopState === "waiting_for_first_view" ? (
           <>
-            <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+            <h3 className="site-panel-title mt-2">
               Waiting for someone to look
             </h3>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
               Send this now. You&apos;ll know when they open it. After you send the copied
               message, come back here and see if someone looked.
             </p>
@@ -261,14 +261,14 @@ export default function FirstViewActivationHub({
                 type="button"
                 onClick={() => void checkForViews()}
                 disabled={checkingProof}
-                className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-60"
+                className="site-button site-button-primary disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {checkingProof ? "Checking..." : "See if someone looked"}
               </button>
               <button
                 type="button"
                 onClick={focusSharePanel}
-                className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                className="site-button site-button-secondary"
               >
                 Copy another message
               </button>
@@ -276,10 +276,10 @@ export default function FirstViewActivationHub({
           </>
         ) : loopState === "first_view_detected" ? (
           <>
-            <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+            <h3 className="site-panel-title mt-2">
               Someone looked at your page.
             </h3>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
               {firstViewRelative
                 ? `The first look after your recent share happened ${firstViewRelative}.`
                 : "The first look after your recent share has landed."}{" "}
@@ -290,17 +290,17 @@ export default function FirstViewActivationHub({
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {proof?.firstViewAfterLatestShareDeviceLabel ? (
-                <span className="rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[rgba(240,244,255,0.76)]">
+                <span className="site-badge">
                   Viewed on {proof.firstViewAfterLatestShareDeviceLabel}
                 </span>
               ) : null}
-              <span className="rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[rgba(240,244,255,0.76)]">
+              <span className="site-badge">
                 {firstViewDuration
                   ? `Read for about ${firstViewDuration}`
                   : "Reading time will appear after they finish browsing"}
               </span>
               {proof?.bestScenarioLast7d ? (
-                <span className="rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[rgba(240,244,255,0.76)]">
+                <span className="site-badge">
                   Best scenario so far: {getShareScenarioLabel(proof.bestScenarioLast7d)}
                 </span>
               ) : null}
@@ -309,20 +309,20 @@ export default function FirstViewActivationHub({
               <button
                 type="button"
                 onClick={focusSharePanel}
-                className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em]"
+                className="site-button site-button-primary"
               >
                 Share again
               </button>
               <Link
                 href={analyticsHref}
-                className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                className="site-button site-button-secondary"
               >
                 {analyticsCtaLabel}
               </Link>
               <Link
                 href={previewSharePath}
                 onClick={handleOpenLivePage}
-                className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+                className="site-button site-button-secondary"
               >
                 Open your page
               </Link>
@@ -330,31 +330,31 @@ export default function FirstViewActivationHub({
           </>
         ) : (
           <>
-            <h3 className="mt-2 font-heading text-2xl font-semibold text-[#F0F4FF]">
+            <h3 className="site-panel-title mt-2">
               {repeatShareHeadline}
             </h3>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.72)]">
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
               {repeatShareBody}
             </p>
           </>
         )}
 
         {proofError ? (
-          <p className="mt-4 rounded-xl border border-[rgba(255,120,120,0.28)] bg-[rgba(255,120,120,0.08)] px-4 py-3 text-sm text-[#FFD5D5]">
+          <p role="alert" className="site-alert-danger mt-4 px-4 py-3 text-sm">
             {proofError}
           </p>
         ) : null}
       </section>
 
       {loopState === "waiting_for_first_view" ? (
-        <section className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5 sm:p-6">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">
+        <section className="site-panel p-5 sm:p-6">
+          <p className="site-eyebrow">
             Test the loop
           </p>
-          <h3 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+          <h3 className="site-panel-title mt-2">
             Want to test it once?
           </h3>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.62)]">
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
             Open the link from another logged-out device or ask one trusted contact to open it
             once. Opening it from this same logged-in owner session will not count.
           </p>
@@ -362,7 +362,7 @@ export default function FirstViewActivationHub({
             <Link
               href={previewSharePath}
               onClick={handleOpenLivePage}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+              className="site-button site-button-secondary"
             >
               Open your page
             </Link>
@@ -370,7 +370,7 @@ export default function FirstViewActivationHub({
               type="button"
               onClick={() => void checkForViews()}
               disabled={checkingProof}
-              className="rounded-full border border-[rgba(59,130,246,0.35)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#93C5FD] transition-colors hover:text-[#BFDBFE] disabled:cursor-not-allowed disabled:opacity-60"
+              className="site-button site-button-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {checkingProof ? "Checking..." : "See if someone looked"}
             </button>
@@ -380,32 +380,33 @@ export default function FirstViewActivationHub({
 
       <section
         ref={sharePanelRef}
-        className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-5 sm:p-6"
+        className="site-panel scroll-mt-24 p-5 sm:p-6"
       >
-        <p className="text-[10px] uppercase tracking-[0.18em] text-[#3B82F6]">
+        <p className="site-eyebrow">
           Send it now
         </p>
-        <h3 className="mt-2 font-heading text-xl font-semibold text-[#F0F4FF]">
+        <h3 className="site-panel-title mt-2">
           Who will you send this to?
         </h3>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-[rgba(240,244,255,0.62)]">
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
           Choose one real follow-up moment. The fastest path is good enough, sent quickly.
         </p>
 
         {variants.length > 0 ? (
           <div className="mt-5">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+            <p className="text-sm font-semibold text-site-secondary">
               Targeted version
             </p>
             <div className="mt-3 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedVariantId(null)}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
+                className={`site-button ${
                   selectedVariantId === null
-                    ? "border-[rgba(59,130,246,0.42)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
-                    : "border-[rgba(255,255,255,0.14)] text-[rgba(240,244,255,0.68)] hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
+                    ? "border-site-action bg-site-selected text-site-text"
+                    : "site-button-secondary"
                 }`}
+                aria-pressed={selectedVariantId === null}
               >
                 Base page
               </button>
@@ -414,11 +415,12 @@ export default function FirstViewActivationHub({
                   key={variant.id}
                   type="button"
                   onClick={() => setSelectedVariantId(variant.id)}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
+                  className={`site-button ${
                     selectedVariantId === variant.id
-                      ? "border-[rgba(59,130,246,0.42)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
-                      : "border-[rgba(255,255,255,0.14)] text-[rgba(240,244,255,0.68)] hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
+                      ? "border-site-action bg-site-selected text-site-text"
+                      : "site-button-secondary"
                   }`}
+                  aria-pressed={selectedVariantId === variant.id}
                 >
                   {variant.label}
                 </button>
@@ -436,11 +438,12 @@ export default function FirstViewActivationHub({
                 key={option.id}
                 type="button"
                 onClick={() => setSelectedScenario(option.id)}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
+                className={`site-button ${
                   active
-                    ? "border-[rgba(59,130,246,0.42)] bg-[rgba(59,130,246,0.12)] text-[#93C5FD]"
-                    : "border-[rgba(255,255,255,0.14)] text-[rgba(240,244,255,0.68)] hover:border-[rgba(59,130,246,0.3)] hover:text-[#93C5FD]"
+                    ? "border-site-action bg-site-selected text-site-text"
+                    : "site-button-secondary"
                 }`}
+                aria-pressed={active}
               >
                 {option.label}
               </button>
@@ -448,45 +451,45 @@ export default function FirstViewActivationHub({
           })}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[rgba(240,244,255,0.42)]">
+        <div className="mt-5 border border-site-border bg-site-canvas-alt p-4">
+          <p className="site-eyebrow text-site-muted">
             Copy and send this
           </p>
-          <p className="text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+          <p className="mt-2 text-sm leading-6 text-site-secondary">
             {
               SHARE_SCENARIO_OPTIONS.find((option) => option.id === selectedScenario)
                 ?.description
             }
           </p>
           {selectedVariant ? (
-            <p className="mt-2 text-sm text-[#93C5FD]">
+            <p className="mt-2 text-sm text-site-action">
               This link will open the &quot;{selectedVariant.label}&quot; version first.
             </p>
           ) : null}
-          <div className="mt-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(8,16,28,0.72)] p-4 font-mono text-sm leading-7 text-[#F0F4FF]">
+          <div className="mt-4 border border-site-border-strong bg-site-canvas p-4 text-sm leading-7 text-site-text">
             {message}
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => void handleTrackedCopy("message_template")}
-              className="gold-pill px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em]"
+              className="site-button site-button-primary"
             >
               {copyState === "copied" ? "Message copied" : "Copy message"}
             </button>
             <button
               type="button"
               onClick={() => void handleTrackedCopy("link_only")}
-              className="rounded-full border border-[rgba(255,255,255,0.15)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[rgba(240,244,255,0.78)] transition-colors hover:border-[rgba(59,130,246,0.35)] hover:text-[#93C5FD]"
+              className="site-button site-button-secondary"
             >
               Copy your link
             </button>
           </div>
-          <p className="mt-3 text-sm leading-6 text-[rgba(240,244,255,0.62)]">
+          <p className="mt-3 text-sm leading-6 text-site-secondary">
             Send this now. You&apos;ll know when they open it.
           </p>
           {copyState === "error" ? (
-            <p className="mt-3 text-sm text-[#FFD5D5]">
+            <p role="alert" className="mt-3 text-sm text-site-danger">
               Could not copy that message. Try again or copy the live URL manually.
             </p>
           ) : null}

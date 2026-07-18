@@ -39,17 +39,25 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
   return (
     <div>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+        <label htmlFor="admin-page-search" className="sr-only">
+          Search pages
+        </label>
         <input
+          id="admin-page-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, slug, or owner..."
-          className="flex-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-2.5 text-sm text-[#F0F4FF] placeholder-[rgba(240,244,255,0.3)] focus:border-[#3B82F6] focus:outline-none"
+          className="site-field flex-1 px-4 py-2.5 text-sm"
         />
+        <label htmlFor="admin-page-status" className="sr-only">
+          Filter pages by status
+        </label>
         <select
+          id="admin-page-status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-2.5 text-sm text-[#F0F4FF] focus:border-[#3B82F6] focus:outline-none"
+          className="site-field w-full px-4 py-2.5 text-sm sm:w-auto"
         >
           <option value="all">All Statuses</option>
           <option value="live">Live</option>
@@ -63,39 +71,40 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
           return (
             <div
               key={p.id}
-              className="glass-card flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="site-panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium text-[#F0F4FF]">{p.pageName}</p>
+                  <p className="truncate text-sm font-semibold text-site-text">{p.pageName}</p>
                   <span
-                    className="shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.1em]"
-                    style={{
-                      background: isLive ? "rgba(74,222,128,0.1)" : "rgba(255,255,255,0.05)",
-                      color: isLive ? "#4ade80" : "rgba(240,244,255,0.4)",
-                      border: `1px solid ${isLive ? "rgba(74,222,128,0.25)" : "rgba(255,255,255,0.1)"}`,
-                    }}
+                    className={`site-badge shrink-0 py-0.5 text-[10px] ${
+                      isLive ? "site-badge-success" : ""
+                    }`}
                   >
                     {isLive ? "live" : (p.status ?? "draft")}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[11px] text-[rgba(240,244,255,0.4)]">
+                <p className="mt-0.5 font-mono text-[11px] text-site-muted">
                   /{p.slug} &middot; by @{p.ownerUsername}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-xs">
-                <span className="rounded-full border border-[rgba(255,255,255,0.1)] px-2 py-0.5 text-[10px] text-[rgba(240,244,255,0.45)]">
+                <span className="site-badge py-0.5 font-mono text-[10px]">
                   {p.theme_id}
                 </span>
-                <span className="font-mono text-[#93C5FD]">{p.views.toLocaleString()} views</span>
-                <span className="text-[10px] font-mono text-[rgba(240,244,255,0.25)]">
+                <span className="tabular-nums text-site-action">{p.views.toLocaleString()} views</span>
+                <time
+                  dateTime={p.created_at}
+                  className="font-mono text-[10px] text-site-muted"
+                >
                   {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </span>
+                </time>
                 {isLive && (
                   <Link
                     href={`/${p.slug}`}
                     target="_blank"
-                    className="text-[11px] uppercase tracking-[0.1em] text-[#3B82F6] hover:text-[#93C5FD]"
+                    rel="noopener noreferrer"
+                    className="site-button site-button-secondary px-3 py-1.5 text-[11px]"
                   >
                     View
                   </Link>
@@ -105,7 +114,7 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
           );
         })}
         {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-[rgba(240,244,255,0.35)]">
+          <p className="py-8 text-center text-sm text-site-muted">
             {search || statusFilter !== "all" ? "No pages match your filters." : "No pages yet."}
           </p>
         )}

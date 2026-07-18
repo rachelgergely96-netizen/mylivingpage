@@ -23,6 +23,65 @@ design guards, a production build, 64 passing Vitest files (320 tests), and the 
 Playwright lane (13 tests). Authenticated browser coverage remains configured but requires
 staging credentials; CI now reports that skip explicitly instead of silently passing it.
 
+## Execution update (second pass) — 2026-07-18
+
+A follow-up pass reviewed the release-pass commit (no high-severity regressions found; two
+low-severity consistency nits fixed — a malformed `/api/events` `scenario` now returns 400,
+and the `/api/username` GET rate-limit failure now returns 503 like its siblings) and then
+executed the remaining safely-verifiable plan items:
+
+- **Theme renderers are lazy-loaded.** `src/themes/registry.ts` is now metadata-only; renderers
+  load on demand via `src/themes/loadRenderer.ts` (`import("./renderers/<id>")`, one chunk each),
+  resolved inside `ThemeCanvas`. First Load JS for the public `/[username]` page dropped from
+  220 kB to 195 kB (the ~58 unused renderers no longer ship to every visitor), and each new
+  theme now adds a lazy chunk instead of page weight.
+- **three.js removed.** `CosmicBackground` is re-implemented in the 2D canvas API (drifting
+  particle constellation, proximity links, pointer parallax), preserving the reduced-motion /
+  off-screen-pause behavior and the `data-ambient` test contract. The `three` and `@types/three`
+  dependencies are gone (~150 KB gzip off every homepage visit).
+- **Public-page paint budget.** `ThemeCanvas` gained an optional `maxFps`; the full-viewport
+  living page renders at 30fps under its blurred surfaces instead of 60.
+- **Dead marketing code deleted** (~1,600 lines, verified zero importers): `LandingUnifiedShowcase`,
+  `LandingSampleShowcase`, `LandingNav`, `ClickMomentDemo`, `LandingStorySystemOverlay`,
+  `WaitlistForm`, the entire `marketing/demo/` directory, and the orphaned `.story-*` /
+  `.landing-focus-wash` CSS.
+- **Route tests added** for 7 previously-untested handlers (41 cases): account/delete,
+  admin/users/[userId], profile, legal/accept, feedback, waitlist, pages/engagement.
+- **Strict lint**: `no-unused-vars` is now an error and `eslint . --max-warnings=0`, so dead
+  code fails CI (the tree was already clean).
+- **Docs corrected** to match code: route-security inventory (3 missing routes added), security
+  protocols (atomic-RPC rate limiter, full policy list, fail-closed export), legal-risk register
+  and job-seeker checklist (paid checkout is 410'd / publishing is free), SEO checklist URL.
+- **Repo hygiene**: untracked 4.4 MB of `.claude/*.png` screenshots and `.claude/settings.local.json`;
+  gitignored those, `*.code-workspace`, and `playwright-report/`.
+
+Second-pass verification: TypeScript clean, `eslint . --max-warnings=0` clean, **361 unit tests
+passing** (up from 320), production build green. Net **−869 lines** plus the removed dependency.
+
+### Deliberately deferred (require a decision or an environment this pass cannot provide)
+
+These plan items were **not** executed, each for a concrete reason — not for lack of time:
+
+1. **Destructive schema migrations** (drop `page_entries`/`page_collaborators`/`access_logs` and
+   collapse the `pages` `user_id`/`status` dual model). Irreversible against production data, and
+   the release pass deliberately *hardened* (locked to service-role, browser-role revoked) rather
+   than dropped the sharing schema — so a drop would reverse recent intentional work. The dead
+   tables are already inaccessible. The `pages` column collapse also needs a synchronized code
+   sweep applied atomically with the migration. Both belong in a reviewed data-migration PR.
+2. **Billing/entitlement simplification.** Only partially dead: `grantUniversalFreeAccess` forces
+   the *entitlement* fields free, but the cohort branches still compute product-visible billing/
+   trial state (plan label, trial dates, subscription flags) that legacy and pro accounts render.
+   Collapsing it changes what real subscribers see — a product decision.
+3. **RLS-first data access** (move owner reads/writes off the service-role client). High value, but
+   verifying that no access path breaks or leaks requires a live database; unsafe to change blind.
+4. **Renderer de-duplication** (extract shared canvas helpers across 59 renderers). Behavior must
+   stay pixel-identical; without visual-regression tooling a subtle math change would pass
+   typecheck yet break themes silently. The bundle win was already captured by lazy-loading.
+5. **Create/edit editor unification.** A large pure-DRY refactor of the two biggest client pages,
+   with no component tests to verify the interactive flows against.
+
+Each is individually scoped and ready to pick up with the right review or environment.
+
 ## Codebase map (as analyzed)
 
 - **Routing groups**: `(auth)` login/signup/callback (PKCE), `(app)` create/dashboard/edit/settings, `(admin)` admin dashboards (email-gated), `[username]` public living page (force-dynamic), root marketing + legal pages, ~24 API routes under `api/*`.

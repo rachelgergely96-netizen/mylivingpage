@@ -12,7 +12,8 @@ Last updated: March 5, 2026
 2. Impact:
    - Weakens enforceability and notice procedures until replaced with real legal-entity details.
 3. Mitigation status:
-   - Paid checkout remains live by product decision.
+   - Paid checkout is disabled/tombstoned. `/api/stripe/checkout` returns `410` with `code=billing_disabled` ("Paid plans are no longer offered. Publishing is free for every account."), and no checkout session is created. Living resumes are free to build, publish, host, and download.
+   - Only legacy Stripe surfaces remain: the customer portal (`/api/stripe/portal`) for existing subscribers and the signed webhook (`/api/webhooks/stripe`).
    - Legal hardening implemented for billing terms, assent capture, and deletion billing safety.
 4. Required follow-up:
    - Replace placeholders with final legal entity, support contact, security contact, and DMCA agent details before broad consumer launch.

@@ -6,298 +6,229 @@ interface CosmicBackgroundProps {
   activeWhileId?: string;
 }
 
+interface Particle {
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  hue: number;
+  alpha: number;
+}
+
+// Deep-space constellation field rendered with the 2D canvas API. This replaces
+// an earlier three.js/WebGL implementation: the effect is decorative, so the
+// ~150KB three.js runtime it used to pull onto every homepage visit was pure
+// weight. A drifting particle field with proximity links and gentle pointer
+// parallax reproduces the look at a fraction of the cost, and keeps the same
+// motion/visibility discipline (reduced-motion static frame, off-screen pause).
 export default function CosmicBackground({ activeWhileId }: CosmicBackgroundProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => void) | undefined;
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+      canvas.dataset.ambient = "static";
+      return;
+    }
 
-    const initialize = async () => {
-      try {
-        const THREE = await import("three");
-        if (disposed || !canvasRef.current) {
-          return;
-        }
+    const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const coarsePointer = coarsePointerQuery.matches;
 
-        const canvas = canvasRef.current;
-        const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-        const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
-        const coarsePointer = coarsePointerQuery.matches;
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 30;
+    const particleCount = coarsePointer ? 90 : 150;
+    const linkDistance = coarsePointer ? 0 : 130;
+    const maxLinksPerParticle = 5;
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: !coarsePointer, alpha: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarsePointer ? 1.25 : 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    let width = 0;
+    let height = 0;
+    let pixelRatio = 1;
+    const particles: Particle[] = [];
+    const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+    let animationId: number | null = null;
+    let elapsed = 0;
+    let lastFrame: number | null = null;
+    let sceneVisible = true;
+    let visibilityObserver: IntersectionObserver | null = null;
 
-        const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
-        const particleCount = coarsePointer ? 480 : 760;
-        const connectedParticleCount = coarsePointer ? 0 : Math.min(particleCount, 145);
-        const maxConnections = coarsePointer ? 0 : 150;
-        const particleGeometry = new THREE.BufferGeometry();
-        const particlePositions = new Float32Array(particleCount * 3);
-        const particleColors = new Float32Array(particleCount * 3);
-        const particleSpeeds = new Float32Array(particleCount);
-
-        for (let index = 0; index < particleCount; index += 1) {
-          const i3 = index * 3;
-          particlePositions[i3] = (Math.random() - 0.5) * 80;
-          particlePositions[i3 + 1] = (Math.random() - 0.5) * 80;
-          particlePositions[i3 + 2] = (Math.random() - 0.5) * 60 - 10;
-
-          const color = new THREE.Color();
-          color.setHSL(
-            0.58 + Math.random() * 0.08,
-            0.4 + Math.random() * 0.5,
-            0.5 + Math.random() * 0.4,
-          );
-          particleColors[i3] = color.r;
-          particleColors[i3 + 1] = color.g;
-          particleColors[i3 + 2] = color.b;
-          particleSpeeds[index] = 0.2 + Math.random() * 0.8;
-        }
-
-        particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
-        particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
-
-        const particleMaterial = new THREE.PointsMaterial({
-          size: coarsePointer ? 1 : 1.2,
-          vertexColors: true,
-          transparent: true,
-          opacity: 0.22,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          sizeAttenuation: true,
+    const seedParticles = () => {
+      particles.length = 0;
+      for (let index = 0; index < particleCount; index += 1) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          z: 0.35 + Math.random() * 0.65,
+          vx: (Math.random() - 0.5) * 0.16,
+          vy: (Math.random() - 0.5) * 0.16,
+          hue: 205 + Math.random() * 45,
+          alpha: 0.35 + Math.random() * 0.5,
         });
-        const particleMesh = new THREE.Points(particleGeometry, particleMaterial);
-        scene.add(particleMesh);
-
-        const lineGeometry = new THREE.BufferGeometry();
-        const linePositions = new Float32Array(Math.max(maxConnections, 1) * 6);
-        lineGeometry.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
-        lineGeometry.setDrawRange(0, 0);
-        const lineMaterial = new THREE.LineBasicMaterial({
-          color: 0x3b82f6,
-          transparent: true,
-          opacity: 0.035,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const lineMesh = new THREE.LineSegments(lineGeometry, lineMaterial);
-        scene.add(lineMesh);
-
-        const accentGroup = new THREE.Group();
-        const accentGeometries = coarsePointer
-          ? []
-          : [
-              new THREE.IcosahedronGeometry(2, 0),
-              new THREE.OctahedronGeometry(1.5, 0),
-              new THREE.TorusGeometry(1.5, 0.3, 8, 6),
-            ];
-        const accentMaterials: Array<{ dispose: () => void }> = [];
-
-        accentGeometries.forEach((geometry) => {
-          const material = new THREE.MeshBasicMaterial({
-            color: new THREE.Color().setHSL(0.6, 0.6, 0.5),
-            wireframe: true,
-            transparent: true,
-            opacity: 0.03 + Math.random() * 0.03,
-          });
-          accentMaterials.push(material);
-          const mesh = new THREE.Mesh(geometry, material);
-          mesh.position.set((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 50, -10 + Math.random() * -10);
-          mesh.userData = {
-            rotX: (Math.random() - 0.5) * 0.003,
-            rotY: (Math.random() - 0.5) * 0.003,
-            rotZ: (Math.random() - 0.5) * 0.003,
-            offset: Math.random() * Math.PI * 2,
-            amp: 0.5 + Math.random() * 1.5,
-          };
-          accentGroup.add(mesh);
-        });
-        scene.add(accentGroup);
-
-        const clock = new THREE.Clock();
-        let animationId: number | null = null;
-        let frameCount = 0;
-        let sceneVisible = true;
-        let visibilityObserver: IntersectionObserver | null = null;
-
-        const handleMouseMove = (event: MouseEvent) => {
-          if (reducedMotionQuery.matches) {
-            return;
-          }
-          mouse.tx = (event.clientX / window.innerWidth) * 2 - 1;
-          mouse.ty = -(event.clientY / window.innerHeight) * 2 + 1;
-        };
-
-        const updateConnections = (positions: Float32Array) => {
-          if (maxConnections === 0 || frameCount % 3 !== 0) {
-            return;
-          }
-
-          let lineIndex = 0;
-          const lines = lineGeometry.attributes.position.array as Float32Array;
-          for (let i = 0; i < connectedParticleCount && lineIndex < maxConnections; i += 1) {
-            for (let j = i + 1; j < connectedParticleCount && lineIndex < maxConnections; j += 1) {
-              const i3 = i * 3;
-              const j3 = j * 3;
-              const dx = positions[i3] - positions[j3];
-              const dy = positions[i3 + 1] - positions[j3 + 1];
-              const dz = positions[i3 + 2] - positions[j3 + 2];
-              const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-              if (distance < 6.2) {
-                const lineOffset = lineIndex * 6;
-                lines[lineOffset] = positions[i3];
-                lines[lineOffset + 1] = positions[i3 + 1];
-                lines[lineOffset + 2] = positions[i3 + 2];
-                lines[lineOffset + 3] = positions[j3];
-                lines[lineOffset + 4] = positions[j3 + 1];
-                lines[lineOffset + 5] = positions[j3 + 2];
-                lineIndex += 1;
-              }
-            }
-          }
-          lineGeometry.attributes.position.needsUpdate = true;
-          lineGeometry.setDrawRange(0, lineIndex * 2);
-        };
-
-        const renderFrame = (elapsed: number, animateScene: boolean) => {
-          if (animateScene) {
-            mouse.x += (mouse.tx - mouse.x) * 0.05;
-            mouse.y += (mouse.ty - mouse.y) * 0.05;
-
-            const positions = particleGeometry.attributes.position.array as Float32Array;
-            for (let index = 0; index < particleCount; index += 1) {
-              const i3 = index * 3;
-              positions[i3 + 1] += Math.sin(elapsed * particleSpeeds[index] + index) * 0.003;
-              positions[i3] += Math.cos(elapsed * particleSpeeds[index] * 0.7 + index) * 0.002;
-            }
-            particleGeometry.attributes.position.needsUpdate = true;
-            updateConnections(positions);
-
-            accentGroup.children.forEach((mesh) => {
-              mesh.rotation.x += mesh.userData.rotX;
-              mesh.rotation.y += mesh.userData.rotY;
-              mesh.rotation.z += mesh.userData.rotZ;
-              mesh.position.y += Math.sin(elapsed * 0.35 + mesh.userData.offset) * 0.003 * mesh.userData.amp;
-            });
-
-            camera.position.x = Math.sin(elapsed * 0.08) * 1.5 + mouse.x * 2;
-            camera.position.y = Math.cos(elapsed * 0.06) * 1 + mouse.y * 1.5;
-            camera.lookAt(0, 0, 0);
-            particleMaterial.opacity = 0.2 + Math.sin(elapsed * 0.4) * 0.05;
-          }
-
-          renderer.render(scene, camera);
-        };
-
-        const animate = () => {
-          frameCount += 1;
-          renderFrame(clock.getElapsedTime(), true);
-          animationId = window.requestAnimationFrame(animate);
-        };
-
-        const stop = () => {
-          if (animationId !== null) {
-            window.cancelAnimationFrame(animationId);
-            animationId = null;
-          }
-        };
-
-        const start = () => {
-          stop();
-          if (document.hidden || reducedMotionQuery.matches || !sceneVisible) {
-            renderFrame(clock.getElapsedTime(), false);
-            return;
-          }
-          animationId = window.requestAnimationFrame(animate);
-        };
-
-        const syncMotionPreference = () => {
-          canvas.dataset.ambient = reducedMotionQuery.matches ? "static" : "full";
-          start();
-        };
-
-        const handleVisibility = () => {
-          if (document.hidden) {
-            stop();
-          } else {
-            start();
-          }
-        };
-
-        const handleResize = () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          renderFrame(clock.getElapsedTime(), false);
-        };
-
-        window.addEventListener("resize", handleResize);
-        document.addEventListener("visibilitychange", handleVisibility);
-        if (!coarsePointer) {
-          window.addEventListener("mousemove", handleMouseMove, { passive: true });
-        }
-        reducedMotionQuery.addEventListener?.("change", syncMotionPreference);
-
-        if (activeWhileId && "IntersectionObserver" in window) {
-          const activeElement = document.getElementById(activeWhileId);
-          if (activeElement) {
-            visibilityObserver = new IntersectionObserver(
-              ([entry]) => {
-                sceneVisible = Boolean(entry?.isIntersecting);
-                if (sceneVisible) {
-                  start();
-                } else {
-                  stop();
-                }
-              },
-              { rootMargin: "120px 0px", threshold: 0 },
-            );
-            visibilityObserver.observe(activeElement);
-          }
-        }
-
-        syncMotionPreference();
-
-        return () => {
-          stop();
-          window.removeEventListener("resize", handleResize);
-          document.removeEventListener("visibilitychange", handleVisibility);
-          window.removeEventListener("mousemove", handleMouseMove);
-          reducedMotionQuery.removeEventListener?.("change", syncMotionPreference);
-          visibilityObserver?.disconnect();
-          scene.clear();
-          renderer.dispose();
-          particleGeometry.dispose();
-          particleMaterial.dispose();
-          lineGeometry.dispose();
-          lineMaterial.dispose();
-          accentGeometries.forEach((geometry) => geometry.dispose());
-          accentMaterials.forEach((material) => material.dispose());
-        };
-      } catch {
-        if (canvasRef.current) {
-          canvasRef.current.dataset.ambient = "static";
-        }
-        return undefined;
       }
     };
 
-    void initialize().then((dispose) => {
-      if (disposed) {
-        dispose?.();
+    const resize = () => {
+      pixelRatio = Math.min(window.devicePixelRatio || 1, coarsePointer ? 1.25 : 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.max(1, Math.floor(width * pixelRatio));
+      canvas.height = Math.max(1, Math.floor(height * pixelRatio));
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      if (particles.length === 0) {
+        seedParticles();
+      }
+    };
+
+    const drawFrame = (animate: boolean) => {
+      if (animate) {
+        mouse.x += (mouse.tx - mouse.x) * 0.05;
+        mouse.y += (mouse.ty - mouse.y) * 0.05;
+      }
+      const parallaxX = mouse.x * 18;
+      const parallaxY = mouse.y * 18;
+
+      context.clearRect(0, 0, width, height);
+      context.globalCompositeOperation = "lighter";
+
+      for (let index = 0; index < particles.length; index += 1) {
+        const particle = particles[index];
+        if (animate) {
+          particle.x += particle.vx + Math.sin(elapsed * 0.4 + index) * 0.02;
+          particle.y += particle.vy + Math.cos(elapsed * 0.32 + index) * 0.02;
+          if (particle.x < -20) particle.x = width + 20;
+          if (particle.x > width + 20) particle.x = -20;
+          if (particle.y < -20) particle.y = height + 20;
+          if (particle.y > height + 20) particle.y = -20;
+        }
+
+        const px = particle.x + parallaxX * particle.z;
+        const py = particle.y + parallaxY * particle.z;
+
+        if (linkDistance > 0) {
+          let links = 0;
+          for (let other = index + 1; other < particles.length && links < maxLinksPerParticle; other += 1) {
+            const neighbor = particles[other];
+            const nx = neighbor.x + parallaxX * neighbor.z;
+            const ny = neighbor.y + parallaxY * neighbor.z;
+            const dx = px - nx;
+            const dy = py - ny;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < linkDistance) {
+              const strength = (1 - distance / linkDistance) * 0.16;
+              context.strokeStyle = `rgba(96, 165, 250, ${strength.toFixed(3)})`;
+              context.lineWidth = 1;
+              context.beginPath();
+              context.moveTo(px, py);
+              context.lineTo(nx, ny);
+              context.stroke();
+              links += 1;
+            }
+          }
+        }
+
+        const radius = particle.z * 1.6;
+        const twinkle = animate ? 0.85 + Math.sin(elapsed * 1.6 + index) * 0.15 : 1;
+        context.fillStyle = `hsla(${particle.hue}, 80%, 72%, ${(particle.alpha * twinkle).toFixed(3)})`;
+        context.beginPath();
+        context.arc(px, py, radius, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.globalCompositeOperation = "source-over";
+    };
+
+    const animateLoop = (now: number) => {
+      if (lastFrame === null) {
+        lastFrame = now;
+      }
+      const delta = Math.min(0.05, (now - lastFrame) * 0.001);
+      lastFrame = now;
+      elapsed += delta;
+      drawFrame(true);
+      animationId = window.requestAnimationFrame(animateLoop);
+    };
+
+    const stop = () => {
+      lastFrame = null;
+      if (animationId !== null) {
+        window.cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+    };
+
+    const start = () => {
+      stop();
+      if (document.hidden || reducedMotionQuery.matches || !sceneVisible) {
+        drawFrame(false);
         return;
       }
-      cleanup = dispose;
-    });
+      animationId = window.requestAnimationFrame(animateLoop);
+    };
+
+    const syncMotionPreference = () => {
+      canvas.dataset.ambient = reducedMotionQuery.matches ? "static" : "full";
+      start();
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (reducedMotionQuery.matches) {
+        return;
+      }
+      mouse.tx = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.ty = -(event.clientY / window.innerHeight) * 2 + 1;
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        start();
+      }
+    };
+
+    const handleResize = () => {
+      resize();
+      drawFrame(false);
+    };
+
+    resize();
+    window.addEventListener("resize", handleResize);
+    document.addEventListener("visibilitychange", handleVisibility);
+    if (!coarsePointer) {
+      window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    }
+    reducedMotionQuery.addEventListener?.("change", syncMotionPreference);
+
+    if (activeWhileId && "IntersectionObserver" in window) {
+      const activeElement = document.getElementById(activeWhileId);
+      if (activeElement) {
+        visibilityObserver = new IntersectionObserver(
+          ([entry]) => {
+            sceneVisible = Boolean(entry?.isIntersecting);
+            if (sceneVisible) {
+              start();
+            } else {
+              stop();
+            }
+          },
+          { rootMargin: "120px 0px", threshold: 0 },
+        );
+        visibilityObserver.observe(activeElement);
+      }
+    }
+
+    syncMotionPreference();
 
     return () => {
-      disposed = true;
-      cleanup?.();
+      stop();
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("mousemove", handleMouseMove);
+      reducedMotionQuery.removeEventListener?.("change", syncMotionPreference);
+      visibilityObserver?.disconnect();
     };
   }, [activeWhileId]);
 

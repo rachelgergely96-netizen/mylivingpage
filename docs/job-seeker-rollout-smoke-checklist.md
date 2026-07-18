@@ -1,38 +1,50 @@
 # Job-Seeker Rollout Smoke Checklist
 
+> **The paid Starter/Pro rollout was cancelled.** There is no plan chooser, no
+> `402 checkout_required`, no live checkout session, and no trial webhook in the
+> publish flow. Publishing a living page is free for every account.
+> `/api/stripe/checkout` is tombstoned and returns `410` with
+> `code=billing_disabled`. This checklist now smoke-tests the **free-publish**
+> flow. The authoritative coverage lives in `tests/e2e/user-ready.spec.ts`
+> ("free users can publish without checkout or a payment method" and "existing
+> users can create, publish, edit, and change their public URL").
+
 ## Preconditions
-- Apply `supabase/migrations/20260325120000_publish_cc_trial_pricing.sql`
-- Apply `supabase/migrations/20260325153000_proof_and_testimonial_analytics.sql`
-- Set both `STRIPE_STARTER_MONTHLY_PRICE_ID` and `STRIPE_PRO_MONTHLY_PRICE_ID`
-- Confirm Stripe webhooks are pointed at `/api/webhooks/stripe`
+- Apply the latest `supabase/migrations` (including the security-hardening
+  migrations `20260718160000_*` and `20260718170000_*`).
+- Set Playwright auth and Supabase service-role env vars so the admin fixture
+  flows run instead of skipping.
+- No Stripe price ids are required to publish; only the legacy customer portal
+  (`/api/stripe/portal`) and signed webhook (`/api/webhooks/stripe`) remain.
 
 ## Automated Checks
 - Run `npm run typecheck`
-- Run targeted Vitest for billing, publish, parse, analytics, and dashboard flows
+- Run `npm run test:unit`
 - Run `npm run check:single-page-schema`
 - Run `npm run check:analytics-schema`
+- Run `npm run check:database-security`
+- Run `npm run check:client-security`
 - Run `npm run test:e2e` in a staging-capable environment
 
 ## Manual API / UI Smoke
-1. As a `publish_cc_trial_v1` user on `spark`, open `/create`, build a page, and confirm publish opens the Starter/Pro chooser instead of publishing directly.
-2. Call `/api/stripe/checkout` for `starter` and `pro` and confirm each creates a subscription checkout session with the expected price id.
-3. Confirm `/api/pages/publish` returns `402` with `code=checkout_required` for a new-cohort `spark` user.
-4. Complete a Starter publish flow and confirm:
-   - return lands back on `/create`
-   - webhook upgrades the profile to Starter trialing
-   - page auto-publishes
-   - settings show Starter trial copy
-   - dashboard shows basic visibility and upgrade-to-Pro prompts instead of full analytics
-5. Upgrade the same user to Pro and confirm:
-   - settings show Pro state
-   - dashboard exposes Page Analytics
-   - `/dashboard/analytics/[pageId]` loads successfully
-6. Cancel or delete the subscription and confirm:
-   - the public page shows the offline holding screen
-   - visiting the offline page creates an owner-facing reactivation banner in the dashboard
+1. Sign in as a `spark` user (any billing cohort, including
+   `publish_cc_trial_v1`), open `/create`, and build a page.
+2. Click **Publish Page** and confirm the page publishes directly to the
+   "Your page is live." confirmation. There is no "Choose Plan to Publish"
+   button and no plan chooser.
+3. Confirm no `POST` to `/api/stripe/checkout` is made during publish, and that
+   `/api/pages/publish` returns `200` with `{ slug, pageId }` (never `402` /
+   `checkout_required`).
+4. Call `/api/stripe/checkout` directly and confirm it returns `410` with
+   `code=billing_disabled`.
+5. In `/dashboard/settings`, confirm the "No card or subscription required" copy
+   appears and that no "Start Starter Trial", "Start Pro Trial", or
+   "Upgrade to Pro" buttons are present.
+6. Confirm the public page is live and that Resume PDF export works for both the
+   signed-in owner and an anonymous viewer.
 
 ## Release Gates
-- Staging smoke passes with real Supabase + Stripe test infrastructure
-- New schema checks pass against the target database
-- Existing `legacy_freemium` and `trial_hosting_v1` flows remain green in automated tests
-- Production rollout waits until at least one full Starter billing smoke passes outside localhost
+- Staging smoke passes with real Supabase infrastructure.
+- Schema and database-security checks pass against the target database.
+- The free-publish e2e coverage in `tests/e2e/user-ready.spec.ts` stays green.
+- No publish path attempts a checkout session or blocks publishing behind payment.

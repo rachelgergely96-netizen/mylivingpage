@@ -11,7 +11,7 @@ Use this checklist after the new sitemap, robots route, structured data, and gui
    - `/examples`
    - `/pricing`
    - `/guides`
-   - `/guides/ats-resume-test`
+   - `/guides/resume-pdf-check`
    - `/guides/recruiter-search-keywords`
    - `/guides/living-page-vs-pdf-resume`
 4. Request indexing for any guide URLs that are not already known to Google.

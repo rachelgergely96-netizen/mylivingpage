@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "check:client-security": "node ./scripts/check-client-security.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -31,15 +31,13 @@
     "qrcode-generator": "^1.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "stripe": "^20.4.0",
-    "three": "^0.183.1"
+    "stripe": "^20.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",
     "@types/node": "^20",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
-    "@types/three": "^0.183.1",
     "autoprefixer": "^10.4.27",
     "eslint": "^8.57.0",
     "eslint-config-next": "^15.5.20",

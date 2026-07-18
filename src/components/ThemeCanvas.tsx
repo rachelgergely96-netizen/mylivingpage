@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { THEME_MAP } from "@/themes/registry";
-import type { ThemeId } from "@/themes/types";
+import { getLoadedRenderer, loadRenderer } from "@/themes/loadRenderer";
+import type { ThemeId, ThemeRenderer } from "@/themes/types";
 
 type ThemeCanvasStyle = React.CSSProperties & {
   "--theme-accent": string;
@@ -26,6 +27,13 @@ interface ThemeCanvasProps {
   interactive?: boolean;
   animated?: boolean;
   mobileAmbientMotion?: boolean;
+  /**
+   * Optional cap on animation frame rate. The public living page renders a
+   * full-viewport canvas underneath blurred backdrop-filter surfaces, where an
+   * uncapped 60fps repaint forces a costly continuous recomposite; 30fps keeps
+   * the motion smooth at roughly half the paint/battery cost.
+   */
+  maxFps?: number;
   children?: React.ReactNode;
 }
 
@@ -37,6 +45,7 @@ export default function ThemeCanvas({
   interactive = true,
   animated = true,
   mobileAmbientMotion = false,
+  maxFps,
   children,
 }: ThemeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -51,6 +60,7 @@ export default function ThemeCanvas({
   const ambientResumeAtRef = useRef(0);
   const ambientEnabledRef = useRef(false);
   const reducedMotionRef = useRef(false);
+  const rendererRef = useRef<ThemeRenderer | null>(null);
   const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
   const themeStyle = useMemo<ThemeCanvasStyle>(() => {
     const presentation = theme.presentation;
@@ -153,8 +163,14 @@ export default function ThemeCanvas({
     const renderFrame = (elapsed: number) => {
       context.fillStyle = theme.background;
       context.fillRect(0, 0, canvas.width, canvas.height);
+      const renderer = rendererRef.current;
+      if (!renderer) {
+        // Renderer chunk hasn't resolved yet — the solid background stands in so
+        // there is no flash of empty canvas before the animation appears.
+        return;
+      }
       try {
-        theme.renderer(context, canvas.width, canvas.height, elapsed, mouseRef.current.x, mouseRef.current.y);
+        renderer(context, canvas.width, canvas.height, elapsed, mouseRef.current.x, mouseRef.current.y);
       } catch {
         // Prevent a single renderer error from killing the animation loop
       }
@@ -175,19 +191,24 @@ export default function ThemeCanvas({
       }
     };
 
+    const minFrameMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0;
     const draw = (now: number) => {
       if (!runningRef.current) {
         return;
       }
+      animationRef.current = requestAnimationFrame(draw);
       if (lastFrameRef.current === null) {
         lastFrameRef.current = now;
+      }
+      if (minFrameMs > 0 && now - lastFrameRef.current < minFrameMs) {
+        // Below the frame budget — keep the rAF loop alive but skip this paint.
+        return;
       }
       const delta = Math.min(0.05, (now - lastFrameRef.current) * 0.001);
       lastFrameRef.current = now;
       elapsedRef.current += delta;
       applyAmbientPointer(elapsedRef.current, now);
       renderFrame(elapsedRef.current);
-      animationRef.current = requestAnimationFrame(draw);
     };
 
     const start = () => {
@@ -258,6 +279,22 @@ export default function ThemeCanvas({
       mediaQueryDisposers.push(() => legacyQuery.removeListener?.(handleChange));
     };
 
+    let cancelled = false;
+    rendererRef.current = getLoadedRenderer(themeId);
+    if (!rendererRef.current) {
+      void loadRenderer(themeId).then((renderer) => {
+        if (cancelled || !renderer) {
+          return;
+        }
+        rendererRef.current = renderer;
+        // Repaint now that the renderer exists. If the rAF loop is already
+        // running it will pick this up on its own; this covers the static
+        // (non-animated / reduced-motion) case where nothing repaints otherwise.
+        renderFrame(elapsedRef.current);
+        start();
+      });
+    }
+
     syncAmbientMode();
     resize();
     applyAmbientPointer(elapsedRef.current, performance.now());
@@ -305,6 +342,7 @@ export default function ThemeCanvas({
     start();
 
     return () => {
+      cancelled = true;
       stop();
       window.removeEventListener("resize", handleResize);
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -319,7 +357,7 @@ export default function ThemeCanvas({
         container.removeEventListener("touchcancel", handleTouchEnd);
       }
     };
-  }, [animated, interactive, mobileAmbientMotion, theme]);
+  }, [animated, interactive, mobileAmbientMotion, maxFps, theme, themeId]);
 
   return (
     <div

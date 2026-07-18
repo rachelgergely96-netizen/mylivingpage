@@ -212,6 +212,7 @@ export default async function PublicLivingPage({
         height="100dvh"
         className="rounded-none min-h-screen"
         mobileAmbientMotion
+        maxFps={30}
       >
         <PageOwnerBar pageId={page.id} pageUserId={pageUserId}>
           <div className="h-full">

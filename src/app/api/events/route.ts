@@ -66,6 +66,11 @@ function sanitizeMetadata(value: unknown) {
   }
 
   const scenario = optionalBoundedString(value.scenario, 40);
+  // undefined means present-but-malformed (wrong type / over length); reject it
+  // like the other bounded fields instead of silently discarding the value.
+  if (scenario === undefined) {
+    return null;
+  }
   if (scenario && !ALLOWED_SCENARIOS.has(scenario as ShareScenario)) {
     return null;
   }

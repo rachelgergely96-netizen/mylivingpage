@@ -5,8 +5,8 @@ import { FREE_THEMES } from "@/lib/plans";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import type {
   ThemeCollectionFilterId,
-  ThemeDefinition,
   ThemeId,
+  ThemeMeta,
 } from "@/themes/types";
 import {
   THEME_COLLECTION_FILTER_IDS,
@@ -15,7 +15,7 @@ import {
 } from "@/themes/types";
 
 interface ThemePickerProps {
-  themes: ThemeDefinition[];
+  themes: ThemeMeta[];
   selectedThemeId: ThemeId;
   onSelectTheme: (themeId: ThemeId) => void;
   premium?: boolean;

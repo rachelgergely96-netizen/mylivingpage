@@ -11,13 +11,20 @@ const routeTrustLevel = {
 
 /** GET /api/username?slug=desired-slug — check availability */
 export async function GET(request: Request) {
-  const rateLimit = await enforceRateLimit({
-    request,
-    policy: "username_check",
-    route: "/api/username",
-  });
-  if (rateLimit.limited) {
-    return rateLimit.response;
+  try {
+    const rateLimit = await enforceRateLimit({
+      request,
+      policy: "username_check",
+      route: "/api/username",
+    });
+    if (rateLimit.limited) {
+      return rateLimit.response;
+    }
+  } catch {
+    return NextResponse.json(
+      { available: false, reason: "Username checks are temporarily unavailable." },
+      { status: 503 },
+    );
   }
 
   const { searchParams } = new URL(request.url);

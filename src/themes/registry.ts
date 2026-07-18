@@ -1,66 +1,7 @@
-import { renderBloom } from "./renderers/bloom";
-import { renderObsidian } from "./renderers/obsidian";
-import { renderSilk } from "./renderers/silk";
-import { renderTempest } from "./renderers/tempest";
-import { renderApex } from "./renderers/apex";
-import { renderAxiom } from "./renderers/axiom";
-import { renderAtelier } from "./renderers/atelier";
-import { renderAurora } from "./renderers/aurora";
-import { renderAtlas } from "./renderers/atlas";
-import { renderBastion } from "./renderers/bastion";
-import { renderBiolume } from "./renderers/biolume";
-import { renderCaliber } from "./renderers/caliber";
-import { renderCameo } from "./renderers/cameo";
-import { renderCarbon } from "./renderers/carbon";
-import { renderCircuit } from "./renderers/circuit";
-import { renderCitadel } from "./renderers/citadel";
-import { renderCoral } from "./renderers/coral";
-import { renderCosmic } from "./renderers/cosmic";
-import { renderDusk } from "./renderers/dusk";
-import { renderEchelon } from "./renderers/echelon";
-import { renderEmber } from "./renderers/ember";
-import { renderFiligree } from "./renderers/filigree";
-import { renderFresco } from "./renderers/fresco";
-import { renderFluid } from "./renderers/fluid";
-import { renderForge } from "./renderers/forge";
-import { renderGlacier } from "./renderers/glacier";
-import { renderGossamer } from "./renderers/gossamer";
-import { renderHalo } from "./renderers/halo";
-import { renderHarbor } from "./renderers/harbor";
-import { renderHelix } from "./renderers/helix";
-import { renderInk } from "./renderers/ink";
-import { renderJetstream } from "./renderers/jetstream";
-import { renderLustre } from "./renderers/lustre";
-import { renderLuxe } from "./renderers/luxe";
-import { renderMatrix } from "./renderers/matrix";
-import { renderMeridian } from "./renderers/meridian";
-import { renderMonolith } from "./renderers/monolith";
-import { renderMosaic } from "./renderers/mosaic";
-import { renderNeon } from "./renderers/neon";
-import { renderNocturne } from "./renderers/nocturne";
-import { renderOpaline } from "./renderers/opaline";
-import { renderParasol } from "./renderers/parasol";
-import { renderPorcelain } from "./renderers/porcelain";
-import { renderPrism } from "./renderers/prism";
-import { renderQuarry } from "./renderers/quarry";
-import { renderRelay } from "./renderers/relay";
-import { renderRosaline } from "./renderers/rosaline";
-import { renderSakura } from "./renderers/sakura";
-import { renderSonata } from "./renderers/sonata";
-import { renderSolstice } from "./renderers/solstice";
-import { renderStardust } from "./renderers/stardust";
-import { renderTerracotta } from "./renderers/terracotta";
-import { renderTopo } from "./renderers/topo";
-import { renderTulle } from "./renderers/tulle";
-import { renderVector } from "./renderers/vector";
-import { renderVerdant } from "./renderers/verdant";
-import { renderVault } from "./renderers/vault";
-import { renderVellum } from "./renderers/vellum";
-import { renderVelvet } from "./renderers/velvet";
 import type {
   ThemeCollectionId,
-  ThemeDefinition,
   ThemeId,
+  ThemeMeta,
   ThemePresentation,
 } from "./types";
 
@@ -257,7 +198,7 @@ const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresent
   },
 };
 
-const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentation">> = [
+const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> = [
   {
     id: "cosmic",
     name: "Cosmic",
@@ -265,7 +206,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Deep space constellation field with golden star-links drifting through nebula clouds.",
     vibe: "Visionary & Bold",
     background: "#06061A",
-    renderer: renderCosmic,
   },
   {
     id: "fluid",
@@ -274,7 +214,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Noise-driven flow field with trailing particles that carve luminous rivers through a deep ocean canvas.",
     vibe: "Creative & Approachable",
     background: "#050E18",
-    renderer: renderFluid,
   },
   {
     id: "ember",
@@ -283,7 +222,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Rising ember sparks with heat distortion, fading trails, and a molten base glow that shifts with the wind.",
     vibe: "Passionate & Driven",
     background: "#110605",
-    renderer: renderEmber,
   },
   {
     id: "monolith",
@@ -292,7 +230,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Rotating concentric wireframes pulse over a dot matrix grid in minimalist geometric motion.",
     vibe: "Executive & Minimal",
     background: "#060606",
-    renderer: renderMonolith,
   },
   {
     id: "aurora",
@@ -302,7 +239,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Layered spectral curtains ripple with noise-driven displacement while shimmer particles rain through the bands.",
     vibe: "Innovative & Fresh",
     background: "#060D1F",
-    renderer: renderAurora,
   },
   {
     id: "terracotta",
@@ -311,7 +247,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Warm organic noise blobs drift like clay on water with fine grain texture and earthy color evolution.",
     vibe: "Grounded & Authentic",
     background: "#100C07",
-    renderer: renderTerracotta,
   },
   {
     id: "prism",
@@ -320,7 +255,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Refracting light shards rotate through spectral color splits while rainbow caustics dance on a dark surface.",
     vibe: "Daring & Expressive",
     background: "#08080F",
-    renderer: renderPrism,
   },
   {
     id: "biolume",
@@ -329,7 +263,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Deep sea bioluminescent organisms pulse and drift with cyan-green phosphorescence.",
     vibe: "Thoughtful & Unique",
     background: "#030D0D",
-    renderer: renderBiolume,
   },
   {
     id: "circuit",
@@ -338,7 +271,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Data streams pulse along circuit traces while nodes light up as information flows through the network.",
     vibe: "Technical & Sharp",
     background: "#050A0A",
-    renderer: renderCircuit,
   },
   {
     id: "sakura",
@@ -347,7 +279,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Soft petals drift and tumble through gentle air currents as watercolor washes bloom and dissolve.",
     vibe: "Elegant & Refined",
     background: "#0F0A0D",
-    renderer: renderSakura,
   },
   {
     id: "glacier",
@@ -356,7 +287,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Slow-drifting ice crystals and frost particles float through frozen mist with pale blue luminance.",
     vibe: "Calm & Focused",
     background: "#040810",
-    renderer: renderGlacier,
   },
   {
     id: "verdant",
@@ -365,7 +295,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Organic vine tendrils grow and branch across the canvas while firefly particles drift through a lush canopy.",
     vibe: "Balanced & Growth-Minded",
     background: "#050D06",
-    renderer: renderVerdant,
   },
   {
     id: "neon",
@@ -374,7 +303,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Pulsing neon grid lines recede into perspective while light streaks race along the horizon in synthwave style.",
     vibe: "Dynamic & Ambitious",
     background: "#08050E",
-    renderer: renderNeon,
   },
   {
     id: "topo",
@@ -383,7 +311,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Animated topographic contour lines shift and morph with noise, creating living elevation maps.",
     vibe: "Analytical & Precise",
     background: "#070808",
-    renderer: renderTopo,
   },
   {
     id: "luxe",
@@ -392,7 +319,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Golden light rays slowly sweep through darkness while metallic flecks drift and catch the light.",
     vibe: "Prestigious & Confident",
     background: "#0A0808",
-    renderer: renderLuxe,
   },
   {
     id: "dusk",
@@ -401,7 +327,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Warm sunset gradient bands drift horizontally with floating dust motes caught in the fading light.",
     vibe: "Warm & Reflective",
     background: "#0E0710",
-    renderer: renderDusk,
   },
   {
     id: "matrix",
@@ -410,7 +335,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Falling code rain columns with glowing lead characters and faint scanline overlay.",
     vibe: "Hacker & Cryptic",
     background: "#020804",
-    renderer: renderMatrix,
   },
   {
     id: "coral",
@@ -419,7 +343,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Underwater coral reef with swaying tendrils, caustic light patterns, and rising bubbles.",
     vibe: "Deep & Immersive",
     background: "#040A0D",
-    renderer: renderCoral,
   },
   {
     id: "stardust",
@@ -428,7 +351,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Spiraling galaxy arms with dense particle fields and softly glowing nebula clouds.",
     vibe: "Cosmic & Expansive",
     background: "#050510",
-    renderer: renderStardust,
   },
   {
     id: "ink",
@@ -437,7 +359,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Ink drops spreading through water with blooming organic shapes and delicate tendrils.",
     vibe: "Artistic & Contemplative",
     background: "#080A10",
-    renderer: renderInk,
   },
   {
     id: "bloom",
@@ -446,7 +367,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Generative botanical flowers open and breathe with Bézier-curve petals while golden pollen drifts upward.",
     vibe: "Lush & Radiant",
     background: "#0a0514",
-    renderer: renderBloom,
   },
   {
     id: "silk",
@@ -455,7 +375,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Iridescent flowing fabric threads undulate across a midnight canvas with interference color and fluid mouse response.",
     vibe: "Iridescent & Fluid",
     background: "#040612",
-    renderer: renderSilk,
   },
   {
     id: "tempest",
@@ -464,7 +383,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Atmospheric storm with FBM cloud masses, fractal forking lightning, and relentless diagonal rain.",
     vibe: "Electric & Relentless",
     background: "#020306",
-    renderer: renderTempest,
   },
   {
     id: "obsidian",
@@ -473,7 +391,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Volcanic glass fractured by glowing magma veins that pulse and breathe while heat particles rise from the cracks.",
     vibe: "Fierce & Primal",
     background: "#040100",
-    renderer: renderObsidian,
   },
   {
     id: "apex",
@@ -482,7 +399,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Architectural light towers rise from a precision floor grid while beacon lines sweep toward a moving horizon.",
     vibe: "Decisive & Elite",
     background: "#03060B",
-    renderer: renderApex,
   },
   {
     id: "atlas",
@@ -492,7 +408,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Luminous globe meridians, latitude bands, and route signals pulse through a dark cartographic field.",
     vibe: "Strategic & Worldly",
     background: "#03070B",
-    renderer: renderAtlas,
   },
   {
     id: "forge",
@@ -501,7 +416,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Forged steel rings orbit a heated core while disciplined sparks rise through industrial darkness.",
     vibe: "Powerful & Driven",
     background: "#020101",
-    renderer: renderForge,
   },
   {
     id: "vector",
@@ -510,7 +424,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Blueprint grids, targeting reticles, and scanning measurement lines animate like a living design system.",
     vibe: "Precise & Technical",
     background: "#040811",
-    renderer: renderVector,
   },
   {
     id: "vault",
@@ -519,7 +432,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Monumental arches recede through atmospheric light shafts with dust drifting down a central aisle.",
     vibe: "Stately & Monumental",
     background: "#030406",
-    renderer: renderVault,
   },
   {
     id: "velvet",
@@ -529,7 +441,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Plush jewel-toned folds breathe with soft sheen and floating gold dust across a dark editorial stage.",
     vibe: "Rich & Poised",
     background: "#080307",
-    renderer: renderVelvet,
   },
   {
     id: "opaline",
@@ -538,7 +449,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Pearlescent opal discs drift through iridescent haze with subtle refraction and crystalline sparkles.",
     vibe: "Luminous & Graceful",
     background: "#060813",
-    renderer: renderOpaline,
   },
   {
     id: "halo",
@@ -547,7 +457,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Rose-gold halos pulse in layered ellipses with atmospheric bloom and refined floating particles.",
     vibe: "Polished & Magnetic",
     background: "#050204",
-    renderer: renderHalo,
   },
   {
     id: "sonata",
@@ -556,7 +465,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Elegant ribbon staves sweep across the frame while luminous notes travel in choreographed motion.",
     vibe: "Expressive & Composed",
     background: "#060205",
-    renderer: renderSonata,
   },
   {
     id: "mosaic",
@@ -565,7 +473,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Faceted glass tiles shimmer with caustic light sweeps and polished editorial color transitions.",
     vibe: "Artful & Modern",
     background: "#05060B",
-    renderer: renderMosaic,
   },
   {
     id: "bastion",
@@ -574,7 +481,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Hex-armored shield cells pulse with seam lights and tactical energy sweeps across a steel-dark field.",
     vibe: "Commanding & Secure",
     background: "#040507",
-    renderer: renderBastion,
   },
   {
     id: "carbon",
@@ -583,7 +489,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Woven carbon-fiber texture catches chrome highlights as diagonal specular bands glide across the surface.",
     vibe: "High-Performance & Refined",
     background: "#050608",
-    renderer: renderCarbon,
   },
   {
     id: "caliber",
@@ -592,7 +497,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Precision instrument rings, tick marks, and sweeping indicators spin like a luxury control dial.",
     vibe: "Measured & Elite",
     background: "#03050A",
-    renderer: renderCaliber,
   },
   {
     id: "quarry",
@@ -602,7 +506,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Layered stone terraces breathe with mineral shadow, warm seam glints, and drifting quarry dust.",
     vibe: "Solid & Grounded",
     background: "#050403",
-    renderer: renderQuarry,
   },
   {
     id: "harbor",
@@ -611,7 +514,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Night watch beams skim over dark water while beacon lights ripple across reflective harbor waves.",
     vibe: "Calm & Commanding",
     background: "#04070B",
-    renderer: renderHarbor,
   },
   {
     id: "relay",
@@ -620,7 +522,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Signal towers trade luminous packets through arcing links over a dark infrastructure horizon.",
     vibe: "Connected & Future-Ready",
     background: "#03070A",
-    renderer: renderRelay,
   },
   {
     id: "meridian",
@@ -629,7 +530,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Compass spokes, bearing arcs, and orbital markers turn like a living navigation instrument.",
     vibe: "Directed & Global",
     background: "#04070B",
-    renderer: renderMeridian,
   },
   {
     id: "atelier",
@@ -639,7 +539,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Painterly ribbon strokes sweep across the canvas with layered pigment trails and luminous droplets.",
     vibe: "Curated & Creative",
     background: "#06070B",
-    renderer: renderAtelier,
   },
   {
     id: "porcelain",
@@ -648,7 +547,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Ceramic glaze blooms beneath fine crack lines and soft gilded kintsugi shimmer.",
     vibe: "Delicate & Polished",
     background: "#11161F",
-    renderer: renderPorcelain,
   },
   {
     id: "filigree",
@@ -657,7 +555,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Ornamental metallic curls unfurl from the center in elegant looping arabesques.",
     vibe: "Intricate & Regal",
     background: "#05060A",
-    renderer: renderFiligree,
   },
   {
     id: "cameo",
@@ -666,7 +563,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Floating medallions reveal layered relief ovals, pearl highlights, and soft shadow depth.",
     vibe: "Classic & Feminine",
     background: "#060508",
-    renderer: renderCameo,
   },
   {
     id: "solstice",
@@ -675,7 +571,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Radiant sun discs, flare halos, and warm atmospheric dust bathe the frame in golden light.",
     vibe: "Warm & Radiant",
     background: "#0A0605",
-    renderer: renderSolstice,
   },
   {
     id: "tulle",
@@ -684,7 +579,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Translucent mesh drapes sway with pearl nodes and airy couture structure.",
     vibe: "Airy & Couture",
     background: "#06070B",
-    renderer: renderTulle,
   },
   {
     id: "parasol",
@@ -693,7 +587,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Pleated fan arcs open in layered jewel tones with delicate rib lines and drifting dust.",
     vibe: "Elegant & Playful",
     background: "#060306",
-    renderer: renderParasol,
   },
   {
     id: "gossamer",
@@ -702,7 +595,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Dewy web structures glimmer with fine threads, suspended droplets, and lunar glow.",
     vibe: "Ethereal & Refined",
     background: "#04070C",
-    renderer: renderGossamer,
   },
   {
     id: "citadel",
@@ -711,7 +603,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Brutalist tower canyons rise around a vanishing corridor while slit-window sweeps scan the walls.",
     vibe: "Architectural & Commanding",
     background: "#030508",
-    renderer: renderCitadel,
   },
   {
     id: "axiom",
@@ -720,7 +611,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Theorem lines, proof arcs, and luminous node pulses map across a disciplined analytical field.",
     vibe: "Intellectual & Precise",
     background: "#040713",
-    renderer: renderAxiom,
   },
   {
     id: "helix",
@@ -729,7 +619,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Chrome double-helix ribbons twist through orbital beads and cool laboratory light.",
     vibe: "Advanced & Kinetic",
     background: "#04060D",
-    renderer: renderHelix,
   },
   {
     id: "jetstream",
@@ -738,7 +627,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Contrails, turbulence ribbons, and speed streaks cut across a high-altitude cinematic sky.",
     vibe: "Fast & Aerodynamic",
     background: "#040913",
-    renderer: renderJetstream,
   },
   {
     id: "echelon",
@@ -747,7 +635,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Staggered chevron planes advance in formation as tactical sweep lights rake across the stack.",
     vibe: "Strategic & Elite",
     background: "#04070D",
-    renderer: renderEchelon,
   },
   {
     id: "vellum",
@@ -756,7 +643,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Translucent paper layers drift in soft overlap with shadowed edges and couture calm.",
     vibe: "Editorial & Airy",
     background: "#09080D",
-    renderer: renderVellum,
   },
   {
     id: "nocturne",
@@ -766,7 +652,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Moonlit crescents, indigo haze, and floating dust motes unfold like a midnight stage set.",
     vibe: "Dreamlike & Poised",
     background: "#050713",
-    renderer: renderNocturne,
   },
   {
     id: "lustre",
@@ -775,7 +660,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Molten champagne-metal ribbons pour through darkness with polished glints and warm bloom.",
     vibe: "Luxurious & Fluid",
     background: "#090608",
-    renderer: renderLustre,
   },
   {
     id: "fresco",
@@ -784,7 +668,6 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Mineral plaster washes breathe with soft cracking, chalk bloom, and painterly pigment drift.",
     vibe: "Textural & Collected",
     background: "#0D0907",
-    renderer: renderFresco,
   },
   {
     id: "rosaline",
@@ -793,11 +676,14 @@ const THEME_DEFINITIONS: Array<Omit<ThemeDefinition, "collection" | "presentatio
       "Rose-quartz facets refract blush halos and soft crystalline gleam across an elegant frame.",
     vibe: "Radiant & Refined",
     background: "#09060A",
-    renderer: renderRosaline,
   },
 ];
 
-export const THEME_REGISTRY: ThemeDefinition[] = THEME_DEFINITIONS.map((theme) => ({
+// Theme metadata only — no renderer code. Renderers are loaded on demand from
+// ./renderers/<id> via loadRenderer(), so importing the registry (for names,
+// collections, and presentation colors) never pulls the ~59 canvas modules into
+// a consumer's bundle. ThemeCanvas resolves the matching renderer lazily.
+export const THEME_REGISTRY: ThemeMeta[] = THEME_DEFINITIONS.map((theme) => ({
   ...theme,
   collection: THEME_COLLECTIONS[theme.id],
   presentation: {
@@ -806,11 +692,11 @@ export const THEME_REGISTRY: ThemeDefinition[] = THEME_DEFINITIONS.map((theme) =
   },
 }));
 
-export const THEME_MAP = THEME_REGISTRY.reduce<Record<ThemeId, ThemeDefinition>>((acc, theme) => {
+export const THEME_MAP = THEME_REGISTRY.reduce<Record<ThemeId, ThemeMeta>>((acc, theme) => {
   acc[theme.id] = theme;
   return acc;
-}, {} as Record<ThemeId, ThemeDefinition>);
+}, {} as Record<ThemeId, ThemeMeta>);
 
-export function getTheme(themeId: string): ThemeDefinition | undefined {
+export function getTheme(themeId: string): ThemeMeta | undefined {
   return THEME_REGISTRY.find((theme) => theme.id === themeId);
 }

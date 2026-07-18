@@ -60,8 +60,9 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 
 ## Stripe Setup
 
-- In Stripe Dashboard, set live Terms of Service and Privacy Policy URLs for Checkout business details.
-- Confirm customer portal cancellation is enabled for subscriptions.
+- Paid checkout is disabled: `/api/stripe/checkout` returns `410` (`billing_disabled`) and creates no session. Publishing is free for every account.
+- Only legacy Stripe surfaces remain in use: the customer portal (`/api/stripe/portal`) for existing subscribers and the signed webhook (`/api/webhooks/stripe`).
+- Confirm customer portal cancellation is enabled for existing subscriptions.
 
 ## Key Routes
 

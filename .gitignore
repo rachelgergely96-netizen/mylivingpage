@@ -43,4 +43,8 @@ supabase/.temp/
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# editor / local agent artifacts
+*.code-workspace
+.claude/settings.local.json
+.claude/*.png
+playwright-report/

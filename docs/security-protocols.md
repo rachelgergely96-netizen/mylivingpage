@@ -28,18 +28,26 @@ Secret rotation checklist:
   - verified webhook signature.
 - Shared helpers live in `src/lib/security/route-security.ts`.
 - Public ATS download is page-bound and server-fetched from approved page data.
+- Cross-site request forgery is mitigated by the Supabase auth cookies being set with `SameSite=Lax` (see `src/lib/supabase/cookies.ts`), so a cross-site POST does not carry the session.
 
 ## 3. Abuse and Rate Limiting
 
-- Shared policies live in `src/lib/security/rate-limit.ts`.
+- Shared policies live in `src/lib/security/rate-limit.ts` (`RATE_LIMIT_POLICIES`).
 - The current mandatory policies cover:
-  - waitlist submission,
-  - username availability checks,
-  - public page view tracking,
-  - public page engagement tracking,
-  - public ATS download.
-- Rate limits persist through the existing `events` table so serverless instances share the same window.
-- Blocked attempts are logged as `security.rate_limit.blocked`.
+  - waitlist submission (`waitlist_submit`),
+  - username availability checks (`username_check`),
+  - public page view tracking (`public_page_view`),
+  - public page engagement tracking (`public_page_engagement`),
+  - public ATS download (`ats_export_download`),
+  - resume preview (`ats_export_preview`),
+  - resume validation (`ats_export_check`),
+  - resume import (`resume_import`),
+  - client analytics event (`client_event`).
+- Enforcement is an atomic database RPC, `enforce_rate_limit` (see `supabase/migrations/20260718160000_database_security_hardening.sql` and `20260718170000_rate_limit_write_hardening.sql`). The RPC takes a per-policy/identifier `pg_advisory_xact_lock`, counts the sliding-window `security.rate_limit.request` events, and writes the request/block row in the same transaction. This replaces the earlier count-then-insert application logic, which had a race between counting and writing.
+- The RPC is `SECURITY DEFINER` and executable only by the service role; browser roles cannot insert into `events` or call the limiter directly.
+- Rate-limit state persists through the existing `events` table so serverless instances share the same sliding window.
+- Blocked attempts are logged as `security.rate_limit.blocked`, capped at one audit row per identifier/window so a rejected flood cannot become an unbounded write path.
+- The public PDF export endpoint (`/api/resume/export`) fails **closed**: if the limiter RPC errors, the request returns `503` instead of proceeding. `/api/resume/import` fails closed the same way.
 
 Production auth checklist:
 

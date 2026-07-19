@@ -49,7 +49,7 @@ export default function RecruiterSkimPanel({
       data-testid="recruiter-skim-panel"
       className="resume-theme mx-auto max-w-4xl px-4 pt-6 sm:px-6 md:px-8"
     >
-      <div className="theme-surface-strong rounded-[2rem] border px-4 py-4 sm:px-5 sm:py-4">
+      <div className="theme-surface-strong rounded-none border px-4 py-4 sm:px-5 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="resume-theme-accent text-[10px] uppercase tracking-[0.18em]">
@@ -61,7 +61,7 @@ export default function RecruiterSkimPanel({
                 {visibleChips.map((point) => (
                   <span
                     key={`collapsed-${point}`}
-                    className="theme-tag rounded-full border px-3 py-1.5 text-xs"
+                    className="theme-tag rounded-none border px-3 py-1.5 text-xs"
                   >
                     {point}
                   </span>
@@ -74,7 +74,7 @@ export default function RecruiterSkimPanel({
             aria-expanded={expanded}
             aria-controls={contentId}
             onClick={() => setExpanded((current) => !current)}
-            className="theme-surface resume-theme-link inline-flex items-center gap-2 self-start rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors sm:self-center"
+            className="theme-surface resume-theme-link inline-flex items-center gap-2 self-start rounded-none border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors sm:self-center"
           >
             <span>{expanded ? "Collapse recruiter skim" : "Expand recruiter skim"}</span>
             <svg
@@ -119,7 +119,7 @@ export default function RecruiterSkimPanel({
                   </div>
                 ) : null}
                 {ctaEmphasis ? (
-                  <p className="theme-tag inline-flex rounded-full border px-3 py-1.5 text-xs">
+                  <p className="theme-tag inline-flex rounded-none border px-3 py-1.5 text-xs">
                     {ctaEmphasis}
                   </p>
                 ) : null}
@@ -135,7 +135,7 @@ export default function RecruiterSkimPanel({
                 {resumeData.email ? (
                   <a
                     href={`mailto:${resumeData.email}`}
-                    className="theme-surface-strong theme-link rounded-full border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
+                    className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                   >
                     Email
                   </a>
@@ -145,14 +145,14 @@ export default function RecruiterSkimPanel({
                     href={toHref(resumeData.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="theme-surface-strong theme-link rounded-full border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
+                    className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                   >
                     LinkedIn
                   </a>
                 ) : null}
                 <a
                   href={publicPath}
-                  className="theme-surface-strong theme-link rounded-full border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
+                  className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                 >
                   Open current page
                 </a>
@@ -160,7 +160,7 @@ export default function RecruiterSkimPanel({
             </div>
 
             {featuredProject ? (
-              <div className="theme-surface mt-5 rounded-2xl border p-4">
+              <div className="theme-surface mt-5 rounded-none border p-4">
                 <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
                   Featured work sample
                 </p>
@@ -175,7 +175,7 @@ export default function RecruiterSkimPanel({
                         {featuredProject.tech.slice(0, 4).map((tech) => (
                           <span
                             key={tech}
-                            className="theme-tag rounded-full border px-3 py-1 text-xs"
+                            className="theme-tag rounded-none border px-3 py-1 text-xs"
                           >
                             {tech}
                           </span>
@@ -188,7 +188,7 @@ export default function RecruiterSkimPanel({
                       href={toHref(featuredProject.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="theme-link rounded-full border border-[var(--theme-accent-border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors"
+                      className="theme-link rounded-none border border-[var(--theme-accent-border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors"
                     >
                       Open project
                     </a>

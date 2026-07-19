@@ -123,7 +123,7 @@ export default function ResumeLayout({
                 ) : null}
                 {data.linkedin ? (
                   disableExternalLinks ? (
-                    <span title="LinkedIn" aria-label="LinkedIn profile" className="resume-theme-muted flex items-center justify-center rounded-md p-1">
+                    <span title="LinkedIn" aria-label="LinkedIn profile" className="resume-theme-muted flex items-center justify-center rounded-none p-1">
                       <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                     </span>
                   ) : (
@@ -135,7 +135,7 @@ export default function ResumeLayout({
                       aria-label="LinkedIn profile"
                       data-analytics-target-key="linkedin"
                       data-analytics-target-label="LinkedIn"
-                      className="resume-theme-link pointer-events-auto flex items-center justify-center rounded-md p-1 transition-colors"
+                      className="resume-theme-link pointer-events-auto flex items-center justify-center rounded-none p-1 transition-colors"
                     >
                       <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                     </a>
@@ -191,10 +191,10 @@ export default function ResumeLayout({
               width={56}
               height={56}
               sizes="(min-width: 640px) 56px, 44px"
-              className="resume-theme-avatar h-11 w-11 shrink-0 rounded-full object-cover sm:h-14 sm:w-14"
+              className="resume-theme-avatar h-11 w-11 shrink-0 rounded-none object-cover sm:h-14 sm:w-14"
             />
           ) : (
-            <div className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-heading text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl">
+            <div className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-heading text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl">
               {(data.name || "?").slice(0, 1).toUpperCase()}
             </div>
           )}
@@ -215,7 +215,7 @@ export default function ResumeLayout({
             {data.stats.slice(0, 4).map((stat) => (
               <article
                 key={`${stat.label}-${stat.value}`}
-                className="resume-theme-card rounded-xl border p-2.5 text-center sm:p-3"
+                className="resume-theme-card rounded-none border p-2.5 text-center sm:p-3"
               >
                 <div className="resume-theme-accent-bright font-mono text-base sm:text-xl">{stat.value}</div>
                 <div className="resume-theme-subtle mt-0.5 text-[8px] uppercase leading-tight tracking-[0.14em] sm:mt-1 sm:text-[9px]">{stat.label}</div>
@@ -248,10 +248,10 @@ export default function ResumeLayout({
                 return (
                   <article
                     key={proof.id}
-                    className="resume-theme-card-accent rounded-xl border p-3 sm:p-4"
+                    className="resume-theme-card-accent rounded-none border p-3 sm:p-4"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="resume-theme-pill rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.14em]">
+                      <span className="resume-theme-pill rounded-none border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.14em]">
                         {formatProofTypeLabel(proof.type)}
                       </span>
                       {proof.source_label ? (
@@ -301,7 +301,7 @@ export default function ResumeLayout({
               {testimonials.map((testimonial) => (
                 <article
                   key={testimonial.id}
-                  className="resume-theme-card rounded-xl border p-3 sm:p-4"
+                  className="resume-theme-card rounded-none border p-3 sm:p-4"
                 >
                   <p className="resume-theme-muted text-sm leading-6">
                     &ldquo;{testimonial.quote}&rdquo;
@@ -327,7 +327,7 @@ export default function ResumeLayout({
               {experience.map((exp) => (
                 <article
                   key={`${exp.company}-${exp.title}-${exp.dates}`}
-                  className={`resume-theme-card rounded-xl border ${compact ? "p-2.5 sm:p-3" : "p-3 sm:p-4"}`}
+                  className={`resume-theme-card rounded-none border ${compact ? "p-2.5 sm:p-3" : "p-3 sm:p-4"}`}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-1.5 sm:gap-2">
                     <p className="text-xs font-medium sm:text-sm">
@@ -358,7 +358,7 @@ export default function ResumeLayout({
                       {exp.highlights.map((highlight) => (
                         <span
                           key={`${exp.company}-${highlight}`}
-                          className="resume-theme-chip rounded-md px-2 py-1 text-[11px]"
+                          className="resume-theme-chip rounded-none px-2 py-1 text-[11px]"
                         >
                           {highlight}
                         </span>
@@ -381,7 +381,7 @@ export default function ResumeLayout({
                   ? (project.url.startsWith("http") ? project.url : `https://${project.url}`)
                   : null;
 
-                const cardClassName = `block rounded-xl border p-3 transition-all duration-200 sm:p-4 ${
+                const cardClassName = `block rounded-none border p-3 transition-all duration-200 sm:p-4 ${
                   projectUrl
                     ? "resume-theme-card-accent pointer-events-auto hover:brightness-110"
                     : "resume-theme-card"
@@ -412,7 +412,7 @@ export default function ResumeLayout({
                             {project.tech.map((t) => (
                               <span
                                 key={`${project.name}-${t}`}
-                                className="resume-theme-pill rounded-md border px-2 py-0.5 text-[10px]"
+                                className="resume-theme-pill rounded-none border px-2 py-0.5 text-[10px]"
                               >
                                 {t}
                               </span>
@@ -433,7 +433,7 @@ export default function ResumeLayout({
                             {project.tech.map((t) => (
                               <span
                                 key={`${project.name}-${t}`}
-                                className="resume-theme-pill rounded-md border px-2 py-0.5 text-[10px]"
+                                className="resume-theme-pill rounded-none border px-2 py-0.5 text-[10px]"
                               >
                                 {t}
                               </span>
@@ -457,7 +457,7 @@ export default function ResumeLayout({
               {data.education.map((education) => (
                 <article
                   key={`${education.school}-${education.degree}-${education.year}`}
-                  className="resume-theme-card rounded-xl border p-3"
+                  className="resume-theme-card rounded-none border p-3"
                 >
                   <p className="text-sm font-medium">
                     {education.degree} <span className="resume-theme-subtle">· {education.school}</span>
@@ -488,7 +488,7 @@ export default function ResumeLayout({
                     {group.items.map((skill) => (
                       <span
                         key={skill}
-                        className="resume-theme-pill rounded-full border px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-xs"
+                        className="resume-theme-pill rounded-none border px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-xs"
                       >
                         {skill}
                       </span>
@@ -508,9 +508,9 @@ export default function ResumeLayout({
               {certs.map((cert) => (
                 <div
                   key={cert.name}
-                  className="resume-theme-card flex items-center gap-2.5 rounded-xl border px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
+                  className="resume-theme-card flex items-center gap-2.5 rounded-none border px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
                 >
-                  <div className="resume-theme-icon-badge flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8">
+                  <div className="resume-theme-icon-badge flex h-7 w-7 shrink-0 items-center justify-center rounded-none sm:h-8 sm:w-8">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" /></svg>
                   </div>
                   <div className="min-w-0">

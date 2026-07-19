@@ -217,7 +217,10 @@ export default function ResumeLayout({
 
         {/* ── Stats Bar ──────────────────────────────────────────── */}
         {data.stats?.length ? (
-          <section className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4`}>
+          <section
+            data-motion-section="stats"
+            className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4`}
+          >
             {data.stats.slice(0, 4).map((stat) => (
               <article
                 key={`${stat.label}-${stat.value}`}

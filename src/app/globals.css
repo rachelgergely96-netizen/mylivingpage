@@ -580,7 +580,8 @@ a {
   transform: translate3d(2px, -2px, 0);
 }
 
-[data-motion-aware="true"] .resume-theme [data-analytics-section][data-motion-active="true"]
+[data-motion-aware="true"] .resume-theme
+  :is([data-motion-section], [data-analytics-section])[data-motion-active="true"]
   :is(.resume-theme-card, .resume-theme-card-accent) {
   border-color: color-mix(in srgb, var(--theme-accent, #93c5fd) 34%, transparent);
 }

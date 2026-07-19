@@ -4,8 +4,19 @@ import { useEffect } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import type { ThemeMotionContext } from "@/themes/types";
 
-const SECTION_SELECTOR = "[data-analytics-section]";
+const SECTION_SELECTOR = "[data-motion-section], [data-analytics-section]";
 const MOTION_ITEM_SELECTOR = "[data-motion-item]";
+
+export function getMotionSectionId(
+  dataset: { motionSection?: string; analyticsSection?: string },
+  fallbackIndex: number,
+): string {
+  return (
+    dataset.motionSection?.trim() ||
+    dataset.analyticsSection?.trim() ||
+    `section-${fallbackIndex}`
+  );
+}
 
 export interface MotionSectionGeometry {
   id: string;
@@ -207,13 +218,19 @@ export function useLivingMotionBridge({
       frame = null;
       const now = performance.now();
       const scrollRect = scrollRoot.getBoundingClientRect();
-      const sectionElements = Array.from(
+      const seenSectionIds = new Set<string>();
+      const sectionEntries = Array.from(
         scrollRoot.querySelectorAll<HTMLElement>(SECTION_SELECTOR),
-      );
-      const sections = sectionElements.map((section, index) => {
-        const rect = section.getBoundingClientRect();
+      ).flatMap((element, index) => {
+        const id = getMotionSectionId(element.dataset, index);
+        if (seenSectionIds.has(id)) return [];
+        seenSectionIds.add(id);
+        return [{ element, id }];
+      });
+      const sections = sectionEntries.map(({ element, id }) => {
+        const rect = element.getBoundingClientRect();
         return {
-          id: section.dataset.analyticsSection || `section-${index}`,
+          id,
           top: rect.top,
           height: rect.height,
         };
@@ -247,7 +264,7 @@ export function useLivingMotionBridge({
       lastScrollTop = scrollRoot.scrollTop;
       lastScrollAt = now;
 
-      const nextActiveElement = sectionElements[snapshot.activeSectionIndex] ?? null;
+      const nextActiveElement = sectionEntries[snapshot.activeSectionIndex]?.element ?? null;
       if (nextActiveElement !== activeSectionElement) {
         activeSectionElement?.removeAttribute("data-motion-active");
         nextActiveElement?.setAttribute("data-motion-active", "true");

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import LivingPageSectionRail from "@/components/public/LivingPageSectionRail";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { getLivingPageSectionIds } from "@/lib/living-page-sections";
 import type { ResolvedMarketingSample } from "@/lib/marketing-samples";
 import { THEME_MAP } from "@/themes/registry";
 
@@ -34,6 +36,7 @@ export default function SamplePageCard({
   previewHeight = 380,
 }: SamplePageCardProps) {
   const theme = THEME_MAP[sample.demo.themeId];
+  const sectionIds = getLivingPageSectionIds(sample.demo.data);
   const [openPreview, setOpenPreview] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -210,8 +213,16 @@ export default function SamplePageCard({
                   interactive
                   motionAware
                 >
-                  <div className="h-full">
-                    <ResumeLayout data={sample.demo.data} disableExternalLinks />
+                  <div
+                    data-analytics-scroll-root="true"
+                    className="h-full overflow-y-auto scrollbar-hide"
+                  >
+                    <LivingPageSectionRail sectionIds={sectionIds} />
+                    <ResumeLayout
+                      data={sample.demo.data}
+                      disableExternalLinks
+                      useExternalScrollRoot
+                    />
                   </div>
                 </ThemeCanvas>
               </div>

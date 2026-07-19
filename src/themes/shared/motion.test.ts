@@ -3,12 +3,14 @@ import {
   calculateScrollMotion,
   calculateScrollVelocity,
   createInitialThemeMotionContext,
+  getMotionSectionId,
 } from "@/hooks/useLivingMotionBridge";
 import {
   clearTransientThemeMotion,
   decayTransientThemeMotion,
   finiteClamp,
   resolveThemeMotion,
+  storyStepWeight,
 } from "@/themes/shared/motion";
 import type { ThemeRenderer } from "@/themes/types";
 
@@ -80,6 +82,19 @@ describe("Living Page motion model", () => {
     expect(snapshot.activeSection).toBe("projects");
   });
 
+  it("prefers dedicated motion chapters over analytics IDs", () => {
+    expect(
+      getMotionSectionId(
+        { motionSection: "stats", analyticsSection: "summary" },
+        0,
+      ),
+    ).toBe("stats");
+    expect(getMotionSectionId({ analyticsSection: "experience" }, 1)).toBe(
+      "experience",
+    );
+    expect(getMotionSectionId({}, 2)).toBe("section-2");
+  });
+
   it("reports signed viewport velocity and caps extreme input", () => {
     expect(calculateScrollVelocity(250, 100, 100, 500)).toBe(3);
     expect(calculateScrollVelocity(0, 500, 10, 500)).toBe(-4);
@@ -93,16 +108,54 @@ describe("Living Page motion model", () => {
     motion.interactionImpulse = 1;
     motion.pointerSpeed = Number.POSITIVE_INFINITY;
     motion.focusedItem = "project-example";
+    motion.activeSectionIndex = 1;
+    motion.sectionCount = 4;
+    motion.sectionProgress = 0.5;
     motion.reducedMotion = true;
 
     expect(resolveThemeMotion(motion)).toMatchObject({
       scrollProgress: 0,
       scrollVelocity: 0,
+      storyProgress: 0.375,
       hasFocus: true,
       interactionImpulse: 0,
       pointerSpeed: 0,
     });
     expect(finiteClamp(Number.NaN, -1, 1, 0.5)).toBe(0.5);
+  });
+
+  it("derives a continuous normalized position through the ordered page story", () => {
+    const motion = createInitialThemeMotionContext();
+    motion.scrollProgress = 0.9;
+    motion.activeSectionIndex = 2;
+    motion.sectionCount = 4;
+    motion.sectionProgress = 0.5;
+
+    expect(resolveThemeMotion(motion)).toMatchObject({
+      activeSectionIndex: 2,
+      sectionCount: 4,
+      sectionProgress: 0.5,
+      storyProgress: 0.625,
+    });
+
+    motion.activeSectionIndex = 99;
+    motion.sectionProgress = 9;
+    expect(resolveThemeMotion(motion).storyProgress).toBe(1);
+
+    motion.sectionCount = Number.NaN;
+    expect(resolveThemeMotion(motion).storyProgress).toBe(0.9);
+  });
+
+  it("crossfades adjacent visual story steps without overshoot", () => {
+    const weights = [0, 1, 2].map((index) =>
+      storyStepWeight(0.25, index, 3),
+    );
+
+    expect(weights).toEqual([0.5, 0.5, 0]);
+    expect(weights.reduce((sum, weight) => sum + weight, 0)).toBe(1);
+    expect(storyStepWeight(-1, 0, 3)).toBe(1);
+    expect(storyStepWeight(2, 2, 3)).toBe(1);
+    expect(storyStepWeight(0.5, 0, 1)).toBe(1);
   });
 
   it("decays motion by elapsed time and can clear it immediately", () => {

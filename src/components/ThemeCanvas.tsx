@@ -489,6 +489,7 @@ export default function ThemeCanvas({
     >
       <canvas
         ref={canvasRef}
+        aria-hidden="true"
         style={{
           width: "100%",
           height,

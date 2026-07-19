@@ -1,5 +1,9 @@
 import type { ThemeRenderer } from "../types";
-import { finiteClamp, resolveThemeMotion } from "../shared/motion";
+import {
+  finiteClamp,
+  resolveThemeMotion,
+  storyStepWeight,
+} from "../shared/motion";
 
 const TAU = Math.PI * 2;
 
@@ -33,6 +37,36 @@ const EDGES: Array<[number, number]> = [
   [6, 7],
 ];
 
+export const AXIOM_STORY_PATH = [0, 1, 2, 3, 7, 6, 5, 4] as const;
+
+const STORY_INDEX_BY_NODE = AXIOM_STORY_PATH.reduce<number[]>((indices, node, index) => {
+  indices[node] = index;
+  return indices;
+}, []);
+
+export interface AxiomStoryPosition {
+  fromNode: number;
+  toNode: number;
+  segmentProgress: number;
+}
+
+/** Locates a continuous page-story position along Axiom's connected graph path. */
+export function resolveAxiomStoryPosition(
+  storyProgress: number,
+): AxiomStoryPosition {
+  const position =
+    finiteClamp(storyProgress, 0, 1) * (AXIOM_STORY_PATH.length - 1);
+  const segmentIndex = Math.min(
+    AXIOM_STORY_PATH.length - 2,
+    Math.floor(position),
+  );
+  return {
+    fromNode: AXIOM_STORY_PATH[segmentIndex],
+    toNode: AXIOM_STORY_PATH[segmentIndex + 1],
+    segmentProgress: position - segmentIndex,
+  };
+}
+
 export function nodeForSection(section: string | null): number | null {
   switch (section) {
     case "summary":
@@ -60,6 +94,13 @@ export const renderAxiom: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
   const pageMotion = resolveThemeMotion(motion);
   const velocity = finiteClamp(pageMotion.scrollVelocity / 3, -1, 1);
   const activeNode = nodeForSection(pageMotion.activeSection);
+  const semanticStoryIndex =
+    activeNode === null ? undefined : STORY_INDEX_BY_NODE[activeNode];
+  const storyProgress =
+    pageMotion.sectionCount > 0 || semanticStoryIndex === undefined
+      ? pageMotion.storyProgress
+      : semanticStoryIndex / (AXIOM_STORY_PATH.length - 1);
+  const storyPosition = resolveAxiomStoryPosition(storyProgress);
   const bg = ctx.createLinearGradient(0, 0, w, h);
   bg.addColorStop(0, "#07111A");
   bg.addColorStop(0.55, "#071019");
@@ -75,7 +116,7 @@ export const renderAxiom: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
     ctx.lineTo(x, h);
     ctx.stroke();
   }
-  const gridYOffset = (pageMotion.scrollProgress * 36) % 36;
+  const gridYOffset = (storyProgress * 36) % 36;
   for (let y = gridYOffset; y <= h; y += 36) {
     ctx.beginPath();
     ctx.moveTo(0, y);
@@ -88,33 +129,57 @@ export const renderAxiom: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
       w * node.x +
       Math.sin(t * (0.25 + index * 0.02) + index) * 10 +
       (mx - 0.5) * 14 +
-      velocity * (node.y - 0.5) * 18,
+      velocity * (node.y - 0.5) * 18 +
+      (storyProgress - 0.5) * (node.y - 0.5) * 10,
     y:
       h * node.y +
       Math.cos(t * (0.2 + index * 0.03) + index) * 8 +
       (my - 0.5) * 12 +
-      velocity * (node.x - 0.5) * 10,
+      velocity * (node.x - 0.5) * 10 +
+      (storyProgress - 0.5) * (node.x - 0.5) * 8,
   }));
+
+  const storyFrom = points[storyPosition.fromNode];
+  const storyTo = points[storyPosition.toNode];
+  const storyX =
+    storyFrom.x + (storyTo.x - storyFrom.x) * storyPosition.segmentProgress;
+  const storyY =
+    storyFrom.y + (storyTo.y - storyFrom.y) * storyPosition.segmentProgress;
 
   for (const [fromIndex, toIndex] of EDGES) {
     const from = points[fromIndex];
     const to = points[toIndex];
-    const touchesActiveNode = fromIndex === activeNode || toIndex === activeNode;
+    const isStorySegment =
+      (fromIndex === storyPosition.fromNode &&
+        toIndex === storyPosition.toNode) ||
+      (fromIndex === storyPosition.toNode &&
+        toIndex === storyPosition.fromNode);
+    const endpointWeight = Math.max(
+      storyStepWeight(
+        storyProgress,
+        STORY_INDEX_BY_NODE[fromIndex],
+        AXIOM_STORY_PATH.length,
+      ),
+      storyStepWeight(
+        storyProgress,
+        STORY_INDEX_BY_NODE[toIndex],
+        AXIOM_STORY_PATH.length,
+      ),
+    );
+    const chapterWeight = Math.max(endpointWeight * 0.5, Number(isStorySegment));
     const rawPulse =
       t * 0.18 +
       fromIndex * 0.13 +
       toIndex * 0.09 +
-      pageMotion.scrollProgress * 0.85 +
+      storyProgress * 1.1 +
       velocity * 0.025;
     const pulse = ((rawPulse % 1) + 1) % 1;
 
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(to.x, to.y);
-    ctx.strokeStyle = touchesActiveNode
-      ? "rgba(142,186,255,0.34)"
-      : "rgba(142,186,255,0.14)";
-    ctx.lineWidth = touchesActiveNode ? 1.5 : 1;
+    ctx.strokeStyle = `rgba(142,186,255,${0.14 + chapterWeight * 0.22})`;
+    ctx.lineWidth = 1 + chapterWeight * 0.55;
     ctx.stroke();
 
     const px = from.x + (to.x - from.x) * pulse;
@@ -125,12 +190,21 @@ export const renderAxiom: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
     ctx.fill();
   }
 
-  if (pageMotion.hasFocus && activeNode !== null) {
-    const from = points[activeNode];
+  ctx.save();
+  ctx.translate(storyX, storyY);
+  ctx.rotate(Math.PI * 0.25);
+  ctx.fillStyle = "rgba(235,245,255,0.9)";
+  ctx.fillRect(-3, -3, 6, 6);
+  ctx.strokeStyle = "rgba(137,194,255,0.48)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-7, -7, 14, 14);
+  ctx.restore();
+
+  if (pageMotion.hasFocus) {
     const focusX = pageMotion.focusX * w;
     const focusY = pageMotion.focusY * h;
     ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
+    ctx.moveTo(storyX, storyY);
     ctx.lineTo(focusX, focusY);
     ctx.strokeStyle = `rgba(164, 207, 255, ${0.18 + pageMotion.interactionImpulse * 0.28})`;
     ctx.lineWidth = 1.1;
@@ -162,14 +236,18 @@ export const renderAxiom: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
 
   for (let i = 0; i < points.length; i += 1) {
     const point = points[i];
-    const isActive = i === activeNode;
+    const chapterWeight = storyStepWeight(
+      storyProgress,
+      STORY_INDEX_BY_NODE[i],
+      AXIOM_STORY_PATH.length,
+    );
     const glow = 0.08 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.2 + i * 1.4));
     ctx.beginPath();
-    ctx.arc(point.x, point.y, isActive ? 10 : 6, 0, TAU);
-    ctx.fillStyle = `rgba(130,180,255,${glow * 0.25})`;
+    ctx.arc(point.x, point.y, 6 + chapterWeight * 4, 0, TAU);
+    ctx.fillStyle = `rgba(130,180,255,${glow * (0.25 + chapterWeight * 0.2)})`;
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(point.x, point.y, isActive ? 3.4 : 2.4, 0, TAU);
+    ctx.arc(point.x, point.y, 2.4 + chapterWeight, 0, TAU);
     ctx.fillStyle = "rgba(235,245,255,0.8)";
     ctx.fill();
   }

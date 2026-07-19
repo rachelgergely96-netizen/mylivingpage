@@ -5,12 +5,14 @@ import { notFound } from "next/navigation";
 import MadeWithBadge from "@/components/MadeWithBadge";
 import PageOwnerBar from "@/components/PageOwnerBar";
 import PublicPageActionDock from "@/components/PublicPageActionDock";
+import LivingPageSectionRail from "@/components/public/LivingPageSectionRail";
 import RecruiterSkimPanel from "@/components/public/RecruiterSkimPanel";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { getAccountAccessState } from "@/lib/account-access";
 import { isPubliclyAvailablePage } from "@/lib/hosting-state";
+import { getLivingPageSectionIds } from "@/lib/living-page-sections";
 import {
   applyPageVariant,
   buildRecruiterSkimModel,
@@ -204,6 +206,7 @@ export default async function PublicLivingPage({
     stripe_subscription_status: ownerProfile?.stripe_subscription_status ?? null,
     stripe_trial_ends_at: ownerProfile?.stripe_trial_ends_at ?? null,
   });
+  const livingPageSectionIds = getLivingPageSectionIds(variantResumeData);
 
   return (
     <main className="min-h-screen">
@@ -228,6 +231,7 @@ export default async function PublicLivingPage({
               data-analytics-scroll-root="true"
               className="h-full overflow-y-auto scrollbar-hide"
             >
+              <LivingPageSectionRail sectionIds={livingPageSectionIds} />
               {recruiterSkim ? (
                 <RecruiterSkimPanel
                   pageId={page.id}

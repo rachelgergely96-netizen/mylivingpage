@@ -1,5 +1,9 @@
 import { fbm } from "../shared/noise";
-import { finiteClamp, resolveThemeMotion } from "../shared/motion";
+import {
+  finiteClamp,
+  resolveThemeMotion,
+  storyStepWeight,
+} from "../shared/motion";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -12,17 +16,20 @@ function drawAuroraRibbon(
   band: number,
   mx: number,
   my: number,
-  scrollProgress: number,
+  storyProgress: number,
   scrollVelocity: number,
-  active: boolean,
+  chapterWeight: number,
 ) {
-  const phaseTime = t + scrollProgress * 1.8 + scrollVelocity * 0.08;
-  const baseY = h * (0.1 + band * 0.065) + scrollProgress * h * 0.018;
+  const phaseTime = t + storyProgress * 2.4 + scrollVelocity * 0.08;
+  const baseY =
+    h * (0.1 + band * 0.065) +
+    storyProgress * h * 0.024 -
+    chapterWeight * h * 0.008;
   const hue =
     148 +
     band * 24 +
     Math.sin(t * 0.16 + band * 0.8) * 12 +
-    scrollProgress * 28;
+    storyProgress * 38;
   const points: Array<[number, number]> = [];
 
   for (let x = -8; x <= w + 8; x += 5) {
@@ -42,8 +49,8 @@ function drawAuroraRibbon(
   ctx.closePath();
 
   const fill = ctx.createLinearGradient(0, baseY - 36, 0, h * 0.74);
-  fill.addColorStop(0, `hsla(${hue}, 86%, 68%, ${0.13 - band * 0.009 + (active ? 0.025 : 0)})`);
-  fill.addColorStop(0.18, `hsla(${hue + 10}, 78%, 53%, ${0.095 - band * 0.006 + (active ? 0.018 : 0)})`);
+  fill.addColorStop(0, `hsla(${hue}, 86%, 68%, ${0.13 - band * 0.009 + chapterWeight * 0.035})`);
+  fill.addColorStop(0.18, `hsla(${hue + 10}, 78%, 53%, ${0.095 - band * 0.006 + chapterWeight * 0.025})`);
   fill.addColorStop(0.6, `hsla(${hue + 24}, 70%, 37%, 0.022)`);
   fill.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = fill;
@@ -54,39 +61,17 @@ function drawAuroraRibbon(
     if (index === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
-  ctx.strokeStyle = `hsla(${hue}, 92%, 78%, ${0.24 - band * 0.015 + (active ? 0.08 : 0)})`;
-  ctx.lineWidth = 1.2 + (band % 2) * 0.5 + (active ? 0.35 : 0);
+  ctx.strokeStyle = `hsla(${hue}, 92%, 78%, ${0.24 - band * 0.015 + chapterWeight * 0.1})`;
+  ctx.lineWidth = 1.2 + (band % 2) * 0.5 + chapterWeight * 0.42;
   ctx.shadowColor = `hsla(${hue}, 90%, 65%, 0.32)`;
   ctx.shadowBlur = 12;
   ctx.stroke();
   ctx.shadowBlur = 0;
 }
 
-function bandForSection(section: string | null): number | null {
-  switch (section) {
-    case "summary":
-      return 0;
-    case "proof":
-      return 1;
-    case "testimonials":
-    case "experience":
-      return 2;
-    case "projects":
-      return 3;
-    case "education":
-      return 4;
-    case "skills":
-    case "certifications":
-      return 5;
-    default:
-      return null;
-  }
-}
-
 export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, motion) => {
   const pageMotion = resolveThemeMotion(motion);
   const velocity = finiteClamp(pageMotion.scrollVelocity / 3, -1, 1);
-  const activeBand = bandForSection(pageMotion.activeSection);
   const targetX = pageMotion.hasFocus ? mx * 0.25 + pageMotion.focusX * 0.75 : mx;
   const targetY = pageMotion.hasFocus ? my * 0.25 + pageMotion.focusY * 0.75 : my;
   const sky = ctx.createLinearGradient(0, 0, 0, h);
@@ -97,7 +82,7 @@ export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds,
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
-  const horizonX = w * (0.72 - pageMotion.scrollProgress * 0.12);
+  const horizonX = w * (0.72 - pageMotion.storyProgress * 0.12);
   const horizon = ctx.createRadialGradient(horizonX, h * 0.38, 0, horizonX, h * 0.4, w * 0.68);
   horizon.addColorStop(0, "rgba(47, 202, 185, 0.12)");
   horizon.addColorStop(0.5, "rgba(60, 100, 205, 0.06)");
@@ -148,9 +133,9 @@ export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds,
       band,
       targetX,
       targetY,
-      pageMotion.scrollProgress,
+      pageMotion.storyProgress,
       velocity,
-      band === activeBand,
+      storyStepWeight(pageMotion.storyProgress, band, 6),
     );
   }
   ctx.restore();
@@ -170,7 +155,7 @@ export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds,
     const y = waterY + (Math.cos(seed * 5.1) * 0.5 + 0.5) * (h - waterY);
     const width = w * (0.012 + (i % 4) * 0.01);
     const alpha = 0.03 + (0.5 + 0.5 * Math.sin(t * 0.9 + seed * 8)) * 0.08;
-    const hue = 158 + (i % 5) * 22;
+    const hue = 158 + (i % 5) * 22 + pageMotion.storyProgress * 34;
     const reflection = ctx.createLinearGradient(x - width, 0, x + width, 0);
     reflection.addColorStop(0, `hsla(${hue}, 80%, 68%, 0)`);
     reflection.addColorStop(0.5, `hsla(${hue}, 80%, 68%, ${alpha})`);

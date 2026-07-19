@@ -1,5 +1,9 @@
 import type { ThemeRenderer } from "../types";
-import { finiteClamp, resolveThemeMotion } from "../shared/motion";
+import {
+  finiteClamp,
+  resolveThemeMotion,
+  storyStepWeight,
+} from "../shared/motion";
 
 const TAU = Math.PI * 2;
 
@@ -64,7 +68,7 @@ export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
   const yaw =
     t * 0.08 +
     (mx - 0.5) * 0.72 +
-    pageMotion.scrollProgress * 0.9 +
+    pageMotion.storyProgress * 1.18 +
     velocity * 0.14;
 
   const halo = ctx.createRadialGradient(cx, cy, radius * 0.08, cx, cy, radius * 1.55);
@@ -133,22 +137,30 @@ export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
     [0.12, -0.5, 2.24, 0.18],
     [1.28, 0.34, 3.26, -0.34],
   ];
-  let activeRouteEnd: [number, number] | null = null;
+  let storyAnchorX = 0;
+  let storyAnchorY = 0;
+  let storyAnchorWeight = 0;
   routes.forEach(([startLon, startLat, endLon, endLat], index) => {
     const isActive = index === activeRoute;
+    const chapterWeight =
+      pageMotion.sectionCount > 0
+        ? storyStepWeight(pageMotion.storyProgress, index, routes.length)
+        : Number(isActive);
     const start = routePoint(cx, cy, radius * 0.94, startLon, startLat, yaw);
     const end = routePoint(cx, cy, radius * 0.94, endLon, endLat, yaw);
-    if (isActive) activeRouteEnd = end;
+    storyAnchorX += end[0] * chapterWeight;
+    storyAnchorY += end[1] * chapterWeight;
+    storyAnchorWeight += chapterWeight;
     const lift = radius * (0.32 + index * 0.035);
     ctx.beginPath();
     ctx.moveTo(start[0], start[1]);
     ctx.quadraticCurveTo((start[0] + end[0]) / 2, Math.min(start[1], end[1]) - lift, end[0], end[1]);
-    ctx.strokeStyle = `rgba(113, 222, 255, ${0.2 + index * 0.025 + (isActive ? 0.18 : 0)})`;
-    ctx.lineWidth = isActive ? 1.7 : 1.1;
+    ctx.strokeStyle = `rgba(113, 222, 255, ${0.2 + index * 0.025 + chapterWeight * 0.2})`;
+    ctx.lineWidth = 1.1 + chapterWeight * 0.65;
     ctx.setLineDash([4, 6]);
     ctx.lineDashOffset =
       -t * (7 + index) -
-      pageMotion.scrollProgress * 18 -
+      pageMotion.storyProgress * 26 -
       velocity * 3;
     ctx.stroke();
     ctx.setLineDash([]);
@@ -156,24 +168,28 @@ export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
     const rawPhase =
       t * (0.11 + index * 0.012) +
       index * 0.23 +
-      pageMotion.scrollProgress * 0.25 +
+      pageMotion.storyProgress * 0.42 +
       velocity * 0.025;
     const phase = ((rawPhase % 1) + 1) % 1;
     const inv = 1 - phase;
     const qx = inv * inv * start[0] + 2 * inv * phase * ((start[0] + end[0]) / 2) + phase * phase * end[0];
     const qy = inv * inv * start[1] + 2 * inv * phase * (Math.min(start[1], end[1]) - lift) + phase * phase * end[1];
     ctx.beginPath();
-    ctx.arc(qx, qy, isActive ? 3.2 : 2.2, 0, TAU);
-    ctx.fillStyle = "rgba(210, 248, 255, 0.9)";
+    ctx.arc(qx, qy, 2.2 + chapterWeight, 0, TAU);
+    ctx.fillStyle = `rgba(210, 248, 255, ${0.76 + chapterWeight * 0.18})`;
     ctx.fill();
   });
 
-  if (pageMotion.hasFocus && activeRouteEnd) {
+  if (pageMotion.hasFocus && storyAnchorWeight > 0) {
+    const storyAnchor: [number, number] = [
+      storyAnchorX / storyAnchorWeight,
+      storyAnchorY / storyAnchorWeight,
+    ];
     const focusX = pageMotion.focusX * w;
     const focusY = pageMotion.focusY * h;
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(activeRouteEnd[0], activeRouteEnd[1]);
+    ctx.moveTo(storyAnchor[0], storyAnchor[1]);
     ctx.lineTo(focusX, focusY);
     ctx.setLineDash([3, 7]);
     ctx.strokeStyle = `rgba(157, 231, 255, ${0.16 + pageMotion.interactionImpulse * 0.16})`;

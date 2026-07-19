@@ -5,7 +5,10 @@ export interface ResolvedThemeMotion {
   scrollVelocity: number;
   activeSection: string | null;
   activeSectionIndex: number;
+  sectionCount: number;
   sectionProgress: number;
+  /** Continuous position through the ordered page story, normalized to [0, 1]. */
+  storyProgress: number;
   hasFocus: boolean;
   focusX: number;
   focusY: number;
@@ -24,21 +27,57 @@ export function finiteClamp(
     : fallback;
 }
 
+/**
+ * Returns a smooth influence for one visual step in an ordered story.
+ * Adjacent steps crossfade linearly and the weights always remain bounded.
+ */
+export function storyStepWeight(
+  storyProgress: number,
+  stepIndex: number,
+  stepCount: number,
+): number {
+  const count = Math.max(1, Math.round(finiteClamp(stepCount, 1, 100)));
+  const index = Math.round(finiteClamp(stepIndex, 0, count - 1));
+  if (count === 1) return index === 0 ? 1 : 0;
+
+  const position = finiteClamp(storyProgress, 0, 1) * (count - 1);
+  return 1 - finiteClamp(Math.abs(position - index), 0, 1);
+}
+
 /** Converts event-driven page state into safe values for visual formulas. */
 export function resolveThemeMotion(
   motion: Readonly<ThemeMotionContext> | undefined,
 ): ResolvedThemeMotion {
   const reducedMotion = motion?.reducedMotion ?? false;
+  const scrollProgress = finiteClamp(motion?.scrollProgress, 0, 1);
+  const sectionCount = Math.round(finiteClamp(motion?.sectionCount, 0, 100));
+  const activeSectionIndex = Math.round(
+    finiteClamp(
+      motion?.activeSectionIndex,
+      0,
+      Math.max(0, sectionCount - 1),
+    ),
+  );
+  const sectionProgress = finiteClamp(motion?.sectionProgress, 0, 1);
+  const storyProgress =
+    sectionCount > 0
+      ? finiteClamp(
+          (activeSectionIndex + sectionProgress) / sectionCount,
+          0,
+          1,
+        )
+      : scrollProgress;
+
   return {
-    scrollProgress: finiteClamp(motion?.scrollProgress, 0, 1),
+    scrollProgress,
     scrollVelocity: reducedMotion
       ? 0
       : finiteClamp(motion?.scrollVelocity, -4, 4),
     activeSection: motion?.activeSection ?? null,
-    activeSectionIndex: Math.round(
-      finiteClamp(motion?.activeSectionIndex, 0, 100),
-    ),
-    sectionProgress: finiteClamp(motion?.sectionProgress, 0, 1),
+    activeSectionIndex,
+    sectionCount,
+    sectionProgress,
+    storyProgress,
     hasFocus: Boolean(motion?.focusedItem || motion?.focusKind),
     focusX: finiteClamp(motion?.focusX, 0, 1, 0.5),
     focusY: finiteClamp(motion?.focusY, 0, 1, 0.5),

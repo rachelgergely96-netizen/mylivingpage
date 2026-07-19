@@ -23,14 +23,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Missing user id." }, { status: 400 });
   }
 
+  if (userId === user.id) {
+    return NextResponse.json({ error: "The admin account cannot be deleted from this flow." }, { status: 403 });
+  }
+
   try {
     const profile = await getDeletionTargetProfile(userId);
     if (!profile) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
-    }
-
-    if (profile.email === user.email) {
-      return NextResponse.json({ error: "The admin account cannot be deleted from this flow." }, { status: 403 });
     }
 
     await deleteUserAccount({

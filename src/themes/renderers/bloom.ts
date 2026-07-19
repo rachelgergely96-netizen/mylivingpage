@@ -1,4 +1,5 @@
 import type { ThemeRenderer } from "../types";
+import { frameScaleFromDelta } from "../shared/timing";
 
 // Pollen particle state
 interface Pollen {
@@ -71,8 +72,9 @@ function drawPetal(
   ctx.restore();
 }
 
-export const renderBloom: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
+export const renderBloom: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY, deltaSeconds) => {
   const { pollen } = getBloomState(ctx, width, height);
+  const frameScale = frameScaleFromDelta(deltaSeconds);
 
   // Clear
   ctx.fillStyle = "#0a0514";
@@ -144,8 +146,8 @@ export const renderBloom: ThemeRenderer = (ctx, width, height, time, mouseX, mou
   // Pollen particles
   for (let pollenIndex = 0; pollenIndex < pollen.length; pollenIndex += 1) {
     const p = pollen[pollenIndex];
-    p.x += p.vx + Math.sin(time * 0.8 + p.y * 0.005) * 0.3;
-    p.y += p.vy;
+    p.x += (p.vx + Math.sin(time * 0.8 + p.y * 0.005) * 0.3) * frameScale;
+    p.y += p.vy * frameScale;
 
     if (p.y < -10) {
       const fi = pollenIndex % flowerCount;

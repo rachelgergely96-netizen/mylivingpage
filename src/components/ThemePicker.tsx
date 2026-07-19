@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FREE_THEMES } from "@/lib/plans";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import type {
@@ -24,6 +24,106 @@ interface ThemePickerProps {
   showDescription?: boolean;
 }
 
+interface ThemePickerPreviewProps {
+  theme: ThemeMeta;
+  selected: boolean;
+  requested: boolean;
+}
+
+function StaticThemePreview({ theme }: { theme: ThemeMeta }) {
+  const { presentation } = theme;
+
+  return (
+    <div
+      aria-hidden="true"
+      data-theme-preview-static={theme.id}
+      className="relative overflow-hidden rounded-none"
+      style={{
+        height: 120,
+        backgroundColor: theme.background,
+        backgroundImage: [
+          `radial-gradient(circle at 10% 0%, ${presentation.accentSoft} 0%, transparent 38%)`,
+          `radial-gradient(circle at 90% 100%, ${presentation.accentSoft} 0%, transparent 42%)`,
+          `linear-gradient(135deg, ${theme.background} 0%, ${presentation.surfaceStrong} 52%, ${theme.background} 100%)`,
+        ].join(", "),
+      }}
+    >
+      <div
+        className="absolute inset-x-5 top-1/2 h-px -rotate-6"
+        style={{ background: presentation.accentBorder }}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rotate-45 border"
+        style={{
+          borderColor: presentation.accentBorder,
+          boxShadow: `0 0 28px ${presentation.accentSoft}`,
+        }}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2"
+        style={{ background: presentation.accentBright }}
+      />
+    </div>
+  );
+}
+
+function ThemePickerPreview({ theme, selected, requested }: ThemePickerPreviewProps) {
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [rendererRequested, setRendererRequested] = useState(selected || requested);
+  const shouldRenderCanvas = selected || requested || rendererRequested;
+
+  useEffect(() => {
+    if (selected || requested) {
+      setRendererRequested(true);
+    }
+  }, [requested, selected]);
+
+  useEffect(() => {
+    const preview = previewRef.current;
+    if (shouldRenderCanvas || !preview || !("IntersectionObserver" in window)) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
+        setRendererRequested(true);
+        observer.disconnect();
+      },
+      {
+        // Fetch roughly two preview rows ahead so scrolling never exposes a
+        // placeholder while keeping the rest of the 59 renderers untouched.
+        rootMargin: "240px 0px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(preview);
+    return () => observer.disconnect();
+  }, [shouldRenderCanvas]);
+
+  return (
+    <div
+      ref={previewRef}
+      data-theme-preview={theme.id}
+    >
+      {shouldRenderCanvas ? (
+        <ThemeCanvas
+          themeId={theme.id}
+          height={120}
+          interactive={false}
+          animated={selected}
+          className="rounded-none"
+        />
+      ) : (
+        <StaticThemePreview theme={theme} />
+      )}
+    </div>
+  );
+}
+
 export default function ThemePicker({
   themes,
   selectedThemeId,
@@ -34,6 +134,19 @@ export default function ThemePicker({
   showDescription = false,
 }: ThemePickerProps) {
   const [activeCollection, setActiveCollection] = useState<ThemeCollectionFilterId>("all");
+  const [requestedThemeIds, setRequestedThemeIds] = useState<ReadonlySet<ThemeId>>(
+    () => new Set([selectedThemeId]),
+  );
+  const requestThemeRenderer = (themeId: ThemeId) => {
+    setRequestedThemeIds((current) => {
+      if (current.has(themeId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(themeId);
+      return next;
+    });
+  };
   const selectableThemeIds =
     allowedThemeIds === undefined
       ? premium
@@ -98,6 +211,8 @@ export default function ThemePicker({
                     type="button"
                     aria-pressed={selectedThemeId === theme.id}
                     aria-disabled={locked}
+                    onFocus={() => requestThemeRenderer(theme.id)}
+                    onPointerEnter={() => requestThemeRenderer(theme.id)}
                     onClick={() => {
                       if (!locked) {
                         onSelectTheme(theme.id);
@@ -106,11 +221,10 @@ export default function ThemePicker({
                     className={`site-panel rounded-none p-3 text-left transition-colors duration-200 ${selectedThemeId === theme.id ? "border-site-action bg-site-selected" : ""} ${locked ? "cursor-not-allowed opacity-60" : "hover:border-site-border-strong hover:bg-site-surface-raised"}`}
                   >
                     <div className="relative">
-                      <ThemeCanvas
-                        themeId={theme.id}
-                        height={120}
-                        interactive={false}
-                        animated={selectedThemeId === theme.id}
+                      <ThemePickerPreview
+                        theme={theme}
+                        selected={selectedThemeId === theme.id}
+                        requested={requestedThemeIds.has(theme.id)}
                       />
                       {theme.signature ? (
                         <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2.5 py-1 text-[9px] font-semibold text-site-warning">

@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { frameScaleFromDelta } from "../shared/timing";
 import type { ThemeRenderer } from "../types";
 
 interface Bolt {
@@ -119,8 +120,9 @@ function drawBoltPath(ctx: CanvasRenderingContext2D, points: Array<[number, numb
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _mouseY) => {
+export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _mouseY, deltaSeconds) => {
   const state = getTempestState(ctx, width, height);
+  const frameScale = frameScaleFromDelta(deltaSeconds);
 
   // Background
   ctx.fillStyle = "#020306";
@@ -160,7 +162,7 @@ export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _
   const decayRate = 0.055;
   for (let bi = state.bolts.length - 1; bi >= 0; bi--) {
     const bolt = state.bolts[bi];
-    bolt.life -= decayRate;
+    bolt.life -= decayRate * frameScale;
     bolt.alpha = Math.max(0, bolt.life);
 
     if (bolt.alpha <= 0) {

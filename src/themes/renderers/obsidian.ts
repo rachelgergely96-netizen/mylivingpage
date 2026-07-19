@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { frameScaleFromDelta } from "../shared/timing";
 import type { ThemeRenderer } from "../types";
 
 // Crack path (array of [x,y] points)
@@ -157,8 +158,9 @@ function drawCrack(
   ctx.restore();
 }
 
-export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY) => {
+export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY, deltaSeconds) => {
   const state = getObsidianState(ctx, width, height);
+  const frameScale = frameScaleFromDelta(deltaSeconds);
 
   const mx = mouseX * width;
   const my = mouseY * height;
@@ -206,9 +208,9 @@ export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, 
 
   // ── Heat particles ───────────────────────────────────────────────
   for (const p of state.particles) {
-    p.y += p.vy;
-    p.x += Math.sin(time * 1.1 + p.y * 0.02) * 0.4;
-    p.alpha -= 0.004;
+    p.y += p.vy * frameScale;
+    p.x += Math.sin(time * 1.1 + p.y * 0.02) * 0.4 * frameScale;
+    p.alpha -= 0.004 * frameScale;
 
     if (p.alpha <= 0 || p.y < -10) {
       resetParticle(p, width, state.cracks);
@@ -217,7 +219,7 @@ export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, 
     // Particles near mouse rise faster
     const dist = Math.hypot(mx - p.x, my - p.y);
     if (dist < 100) {
-      p.vy -= 0.02 * (1 - dist / 100);
+      p.vy -= 0.02 * (1 - dist / 100) * frameScale;
     }
 
     const hue = 20 + (p.crackIdx % 7) * 3;

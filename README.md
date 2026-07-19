@@ -7,7 +7,7 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 - Next.js 15.5 + React 18 + TypeScript + Tailwind CSS
 - Supabase (`@supabase/ssr` and `@supabase/supabase-js`) for auth, DB, and storage
 - Stripe for legacy subscription management and webhooks
-- React PDF and Three.js for export and living theme rendering
+- React PDF for ATS-safe résumé exports and Canvas 2D for living themes and marketing effects
 
 ## Quick Start
 

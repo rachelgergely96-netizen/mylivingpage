@@ -85,18 +85,31 @@ describe("DELETE /api/admin/users/[userId]", () => {
     });
   });
 
-  it("blocks an admin from deleting their own account", async () => {
-    mocks.getDeletionTargetProfile.mockResolvedValueOnce(
-      buildProfile({ email: "admin@example.com" }),
-    );
-
+  it("blocks self-deletion by authenticated id before any profile lookup", async () => {
     const response = await callDelete("admin-1");
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
       error: "The admin account cannot be deleted from this flow.",
     });
+    expect(mocks.getDeletionTargetProfile).not.toHaveBeenCalled();
     expect(mocks.deleteUserAccount).not.toHaveBeenCalled();
+  });
+
+  it("does not mistake another account with a stale matching email for the admin", async () => {
+    mocks.getDeletionTargetProfile.mockResolvedValueOnce(
+      buildProfile({ id: "target-1", email: "admin@example.com" }),
+    );
+
+    const response = await callDelete("target-1");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(mocks.deleteUserAccount).toHaveBeenCalledWith({
+      targetUserId: "target-1",
+      actorUserId: "admin-1",
+      auditEventName: "admin.user_deleted",
+    });
   });
 
   it("returns 404 when the target user does not exist", async () => {

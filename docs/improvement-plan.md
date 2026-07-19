@@ -1,6 +1,6 @@
 # MyLivingPage — Comprehensive Improvement Plan
 
-_Prepared 2026-07-18 from a full-codebase analysis (architecture/data model, API security, frontend/themes, testing/CI). ~47k lines of TS/TSX, 151 commits, Next.js 15 App Router + Supabase + Stripe (decommissioned) + React-PDF + canvas themes, deployed on Vercel._
+_Prepared 2026-07-18 from a full-codebase analysis (architecture/data model, API security, frontend/themes, testing/CI). ~47k lines of TS/TSX, 151 commits, Next.js 15 App Router + Supabase + Stripe (new checkout disabled; legacy portal/webhooks retained) + React-PDF + canvas themes, deployed on Vercel._
 
 ## Execution update — 2026-07-18
 
@@ -14,9 +14,9 @@ It also completed the highest-value CI and UX safeguards from later phases: Node
 production-mode browser tests with diagnostics, explicit database/design gates, static
 unselected theme previews, consolidated résumé-import review, accessible form labels and
 dialogs, consent-based analytics, local-draft cleanup at sign-out/deletion, and sitewide
-security headers. The larger deletion/refactor and renderer-splitting items below remain a
-staged roadmap; they should not be bundled into this release without separate product and
-data-migration review.
+security headers. At that release checkpoint, the larger deletion/refactor and
+renderer-splitting items below remained a staged roadmap. The second pass documented below
+subsequently completed the safely verifiable subset.
 
 Release verification completed with ESLint, TypeScript, client-boundary and Signal Frame
 design guards, a production build, 64 passing Vitest files (320 tests), and the public
@@ -56,7 +56,8 @@ executed the remaining safely-verifiable plan items:
   gitignored those, `*.code-workspace`, and `playwright-report/`.
 
 Second-pass verification: TypeScript clean, `eslint . --max-warnings=0` clean, **361 unit tests
-passing** (up from 320), production build green. Net **−869 lines** plus the removed dependency.
+passing** (up from 320), production build green. The tracked diff from the preceding commit was
+net **−810 lines**, plus the removed dependency.
 
 ### Deliberately deferred (require a decision or an environment this pass cannot provide)
 
@@ -82,7 +83,10 @@ These plan items were **not** executed, each for a concrete reason — not for l
 
 Each is individually scoped and ready to pick up with the right review or environment.
 
-## Codebase map (as analyzed)
+## Original codebase map (pre-execution audit snapshot)
+
+_The map and phase lists below preserve the original audit baseline. Completed work remains
+listed as a historical record; the execution updates above are the current status._
 
 - **Routing groups**: `(auth)` login/signup/callback (PKCE), `(app)` create/dashboard/edit/settings, `(admin)` admin dashboards (email-gated), `[username]` public living page (force-dynamic), root marketing + legal pages, ~24 API routes under `api/*`.
 - **Data flow**: create (842-line client page, local drafts) → `POST /api/pages/publish` (service-role upsert, one page per owner enforced by DB) → public render via `fetchPublicLivePage` → `ViewTracker` posts view + engagement beacons → analytics dashboards read via service-role.

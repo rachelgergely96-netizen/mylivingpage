@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { THEME_MAP } from "@/themes/registry";
 import { getLoadedRenderer, loadRenderer } from "@/themes/loadRenderer";
+import { hasFrameIntervalElapsed } from "@/themes/shared/timing";
 import type { ThemeId, ThemeRenderer } from "@/themes/types";
 
 type ThemeCanvasStyle = React.CSSProperties & {
@@ -160,7 +161,7 @@ export default function ThemeCanvas({
     };
 
     const container = containerRef.current;
-    const renderFrame = (elapsed: number) => {
+    const renderFrame = (elapsed: number, deltaSeconds = 0) => {
       context.fillStyle = theme.background;
       context.fillRect(0, 0, canvas.width, canvas.height);
       const renderer = rendererRef.current;
@@ -170,7 +171,15 @@ export default function ThemeCanvas({
         return;
       }
       try {
-        renderer(context, canvas.width, canvas.height, elapsed, mouseRef.current.x, mouseRef.current.y);
+        renderer(
+          context,
+          canvas.width,
+          canvas.height,
+          elapsed,
+          mouseRef.current.x,
+          mouseRef.current.y,
+          deltaSeconds,
+        );
       } catch {
         // Prevent a single renderer error from killing the animation loop
       }
@@ -200,7 +209,7 @@ export default function ThemeCanvas({
       if (lastFrameRef.current === null) {
         lastFrameRef.current = now;
       }
-      if (minFrameMs > 0 && now - lastFrameRef.current < minFrameMs) {
+      if (!hasFrameIntervalElapsed(now, lastFrameRef.current, minFrameMs)) {
         // Below the frame budget — keep the rAF loop alive but skip this paint.
         return;
       }
@@ -208,11 +217,15 @@ export default function ThemeCanvas({
       lastFrameRef.current = now;
       elapsedRef.current += delta;
       applyAmbientPointer(elapsedRef.current, now);
-      renderFrame(elapsedRef.current);
+      renderFrame(elapsedRef.current, delta);
     };
 
     const start = () => {
       if (runningRef.current || document.hidden || !visibleRef.current) {
+        return;
+      }
+      if (!rendererRef.current) {
+        renderFrame(elapsedRef.current);
         return;
       }
       if (!animated || reducedMotionRef.current) {
@@ -280,19 +293,66 @@ export default function ThemeCanvas({
     };
 
     let cancelled = false;
+    let rendererLoading = false;
+    let retryTimer: number | null = null;
+    const setRendererStatus = (status: "loading" | "ready" | "fallback") => {
+      container?.setAttribute("data-theme-renderer-status", status);
+    };
+    const requestRenderer = (attempt = 0) => {
+      if (cancelled || rendererLoading) {
+        return;
+      }
+      rendererLoading = true;
+      setRendererStatus("loading");
+      void loadRenderer(themeId)
+        .then((renderer) => {
+          if (cancelled) {
+            return;
+          }
+          rendererRef.current = renderer;
+          setRendererStatus("ready");
+          // Repaint now that the renderer exists. If the rAF loop is already
+          // running it will pick this up on its own; this covers the static
+          // (non-animated / reduced-motion) case where nothing repaints otherwise.
+          renderFrame(elapsedRef.current);
+          start();
+        })
+        .catch((error: unknown) => {
+          if (cancelled) {
+            return;
+          }
+          if (attempt === 0) {
+            retryTimer = window.setTimeout(() => {
+              retryTimer = null;
+              requestRenderer(1);
+            }, 300);
+            return;
+          }
+          setRendererStatus("fallback");
+          stop();
+          renderFrame(elapsedRef.current);
+          console.error(`[ThemeCanvas] Falling back to the ${themeId} background.`, error);
+        })
+        .finally(() => {
+          rendererLoading = false;
+        });
+    };
+    const handleOnline = () => {
+      if (rendererRef.current) {
+        return;
+      }
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      requestRenderer();
+    };
+
     rendererRef.current = getLoadedRenderer(themeId);
-    if (!rendererRef.current) {
-      void loadRenderer(themeId).then((renderer) => {
-        if (cancelled || !renderer) {
-          return;
-        }
-        rendererRef.current = renderer;
-        // Repaint now that the renderer exists. If the rAF loop is already
-        // running it will pick this up on its own; this covers the static
-        // (non-animated / reduced-motion) case where nothing repaints otherwise.
-        renderFrame(elapsedRef.current);
-        start();
-      });
+    if (rendererRef.current) {
+      setRendererStatus("ready");
+    } else {
+      requestRenderer();
     }
 
     syncAmbientMode();
@@ -300,6 +360,7 @@ export default function ThemeCanvas({
     applyAmbientPointer(elapsedRef.current, performance.now());
     renderFrame(elapsedRef.current);
     window.addEventListener("resize", handleResize);
+    window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibility);
     watchMediaQuery(pointerCoarseQuery);
     watchMediaQuery(pointerFineQuery);
@@ -343,8 +404,12 @@ export default function ThemeCanvas({
 
     return () => {
       cancelled = true;
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+      }
       stop();
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
       mediaQueryDisposers.forEach((dispose) => dispose());
       observer?.disconnect();
@@ -365,6 +430,7 @@ export default function ThemeCanvas({
       data-living-output
       data-theme-id={theme.id}
       data-theme-collection={theme.collection}
+      data-theme-renderer-status="loading"
       className={className}
       style={{
         position: "relative",

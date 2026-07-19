@@ -98,6 +98,8 @@ export type ThemeRenderer = (
   time: number,
   mouseX: number,
   mouseY: number,
+  /** Seconds elapsed since the last painted frame. Undefined preserves the legacy 60fps step. */
+  deltaSeconds?: number,
 ) => void;
 
 export interface ThemePresentation {
@@ -124,8 +126,4 @@ export interface ThemeMeta {
   background: string;
   presentation: ThemePresentation;
   signature?: boolean;
-}
-
-export interface ThemeDefinition extends ThemeMeta {
-  renderer: ThemeRenderer;
 }

@@ -13,6 +13,24 @@ export interface RateLimitPolicy {
 }
 
 export const RATE_LIMIT_POLICIES = {
+  client_error: {
+    label: "Client error report",
+    maxRequests: 10,
+    windowMs: 10 * 60 * 1000,
+    scope: "ip",
+  },
+  account_delete: {
+    label: "Account deletion",
+    maxRequests: 3,
+    windowMs: 60 * 60 * 1000,
+    scope: "user",
+  },
+  password_change: {
+    label: "Password change",
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000,
+    scope: "user",
+  },
   waitlist_submit: {
     label: "Waitlist submit",
     maxRequests: 5,

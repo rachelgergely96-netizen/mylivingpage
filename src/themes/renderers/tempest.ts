@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { createSeededRandom, type RandomSource } from "../shared/random";
 import { frameScaleFromDelta } from "../shared/timing";
 import type { ThemeRenderer } from "../types";
 
@@ -23,6 +24,7 @@ interface TempestState {
   bolts: Bolt[];
   lastLightningTick: number;
   rain: Raindrop[];
+  random: RandomSource;
 }
 
 const tempestStates = new WeakMap<CanvasRenderingContext2D, TempestState>();
@@ -58,6 +60,7 @@ function getTempestState(
     bolts: [],
     lastLightningTick: -1,
     rain: createRain(width),
+    random: createSeededRandom(0x7e4e57),
   };
   tempestStates.set(ctx, next);
   return next;
@@ -69,38 +72,40 @@ function buildBoltPoints(
   depth: number,
   points: Array<[number, number]>,
   bolts: Bolt[],
+  random: RandomSource,
 ) {
   if (depth === 0) {
     points.push([x2, y2]);
     return;
   }
-  const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 60 * depth;
-  const my = (y1 + y2) / 2 + (Math.random() - 0.5) * 20;
+  const mx = (x1 + x2) / 2 + (random() - 0.5) * 60 * depth;
+  const my = (y1 + y2) / 2 + (random() - 0.5) * 20;
 
-  buildBoltPoints(x1, y1, mx, my, depth - 1, points, bolts);
+  buildBoltPoints(x1, y1, mx, my, depth - 1, points, bolts, random);
 
   // Occasional fork
-  if (depth >= 2 && Math.random() < 0.45) {
+  if (depth >= 2 && random() < 0.45) {
     const forkPoints: Array<[number, number]> = [[mx, my]];
-    const forkX = mx + (Math.random() - 0.5) * 120;
+    const forkX = mx + (random() - 0.5) * 120;
     const forkY = my + (y2 - y1) * 0.5;
-    buildBoltPoints(mx, my, forkX, forkY, depth - 2, forkPoints, bolts);
+    buildBoltPoints(mx, my, forkX, forkY, depth - 2, forkPoints, bolts, random);
     bolts.push({ points: forkPoints, alpha: 1, life: 1 });
   }
 
-  buildBoltPoints(mx, my, x2, y2, depth - 1, points, bolts);
+  buildBoltPoints(mx, my, x2, y2, depth - 1, points, bolts, random);
 }
 
-function spawnLightning(targetX: number, h: number, bolts: Bolt[]) {
+function spawnLightning(targetX: number, h: number, bolts: Bolt[], random: RandomSource) {
   const boltPoints: Array<[number, number]> = [[targetX, 0]];
   buildBoltPoints(
     targetX,
     0,
-    targetX + (Math.random() - 0.5) * 80,
+    targetX + (random() - 0.5) * 80,
     h * 0.85,
     4,
     boltPoints,
     bolts,
+    random,
   );
   bolts.push({ points: boltPoints, alpha: 1, life: 1 });
 }
@@ -150,11 +155,11 @@ export const renderTempest: ThemeRenderer = (ctx, width, height, time, mouseX, _
   const tick = Math.floor(time * 1.54);
   if (tick !== state.lastLightningTick) {
     state.lastLightningTick = tick;
-    if (Math.random() < 0.72) {
+    if (state.random() < 0.72) {
       // bias strike x toward mouse
-      const baseX = Math.random() * width;
+      const baseX = state.random() * width;
       const targetX = baseX + (mouseX * width - baseX) * 0.65;
-      spawnLightning(targetX, height, state.bolts);
+      spawnLightning(targetX, height, state.bolts, state.random);
     }
   }
 

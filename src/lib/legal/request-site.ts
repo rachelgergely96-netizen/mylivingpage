@@ -1,9 +1,11 @@
-import { headers } from "next/headers";
-import { getLegalSiteConfig, resolveLegalSiteFromHost } from "@/lib/legal/site-config";
+import { getLegalSiteConfig, type LegalSiteId } from "@/lib/legal/site-config";
 
-export async function getRequestLegalSite() {
-  const headerStore = await headers();
-  const host = headerStore.get("host");
-  const siteId = resolveLegalSiteFromHost(host);
-  return getLegalSiteConfig(siteId);
+function getBuildLegalSiteId(): LegalSiteId {
+  return process.env.NEXT_PUBLIC_LEGAL_SITE === "second-site"
+    ? "second-site"
+    : "mylivingpage";
+}
+
+export function getRequestLegalSite() {
+  return getLegalSiteConfig(getBuildLegalSiteId());
 }

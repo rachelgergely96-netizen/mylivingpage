@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-export default function MadeWithBadge() {
+export default function MadeWithBadge({ isSignedIn }: { isSignedIn: boolean }) {
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -12,22 +11,14 @@ export default function MadeWithBadge() {
     let active = true;
     let showTimer: number | null = null;
 
-    const check = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.id) {
-        return;
-      }
-
+    const check = () => {
+      if (isSignedIn) return;
       if (active) {
         showTimer = window.setTimeout(() => setShow(true), 800);
       }
     };
 
-    void check();
+    check();
 
     return () => {
       active = false;
@@ -35,7 +26,7 @@ export default function MadeWithBadge() {
         window.clearTimeout(showTimer);
       }
     };
-  }, []);
+  }, [isSignedIn]);
 
   if (!show || dismissed) return null;
 

@@ -2,7 +2,6 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from "react";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { ShareIntentEventName } from "@/lib/analytics/proofSummary";
 import {
   buildQrDataUrl,
@@ -18,7 +17,7 @@ import type { ResumeData } from "@/types/resume";
 
 interface ShareCardDownloadProps {
   pageId: string;
-  pageUserId: string;
+  isOwner: boolean;
   slug: string;
   themeId: string;
   resumeData: ResumeData;
@@ -41,7 +40,7 @@ const FOCUSABLE_SELECTOR = [
 
 export default function ShareCardDownload({
   pageId,
-  pageUserId,
+  isOwner,
   slug,
   themeId,
   resumeData,
@@ -56,7 +55,6 @@ export default function ShareCardDownload({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
@@ -65,15 +63,6 @@ export default function ShareCardDownload({
     title: string;
     body: string;
   } | null>(null);
-
-  useEffect(() => {
-    const check = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id === pageUserId) setIsOwner(true);
-    };
-    check();
-  }, [pageUserId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

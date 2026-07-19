@@ -1,14 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 interface PageOwnerBarProps {
   pageId: string;
-  pageUserId: string;
+  isOwner: boolean;
   children: ReactNode;
 }
 
@@ -16,21 +15,9 @@ const ownerBarSafeAreaStyle = {
   paddingTop: "env(safe-area-inset-top, 0px)",
 };
 
-export default function PageOwnerBar({ pageId, pageUserId, children }: PageOwnerBarProps) {
+export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBarProps) {
   const router = useRouter();
-  const [isOwner, setIsOwner] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    const check = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id === pageUserId) {
-        setIsOwner(true);
-      }
-    };
-    check();
-  }, [pageUserId]);
 
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this page? This action cannot be undone.")) return;

@@ -4,13 +4,14 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 
 | Route | Methods | Trust | Owner | Abuse Cost | Required Controls |
 | --- | --- | --- | --- | --- | --- |
-| `/api/account/change-password` | `POST` | `authenticated_user` | Account | Medium | Authenticated user session |
-| `/api/account/delete` | `POST` | `authenticated_user` | Account | High | Authenticated user session, billing-safe delete flow |
+| `/api/account/change-password` | `POST` | `authenticated_user` | Account | Medium | Authenticated session, user rate limit, current-password reauthentication |
+| `/api/account/delete` | `POST` | `authenticated_user` | Account | High | Authenticated session, user rate limit, current-password or recent-provider reauthentication, billing-safe delete flow |
 | `/api/admin/users/[userId]` | `DELETE` | `admin_only` | Admin Ops | High | Admin auth, protected account check |
 | `/api/auth/google` | `GET` | `public_read` | Auth | Low | OAuth start only, sanitized internal redirect target, no-store headers |
 | `/api/auth/track-login` | `POST` | `authenticated_user` | Auth | Low | Authenticated user session |
 | `/api/avatar` | `POST`, `DELETE` | `authenticated_user` | Profile | Medium | Authenticated user session, file validation |
 | `/api/events` | `POST` | `authenticated_user` | Product Analytics | Low | Authenticated user session |
+| `/api/errors` | `POST` | `public_write` | Observability | Medium | Shared IP rate limit, bounded sanitized payload, structured server log only |
 | `/api/feedback` | `POST` | `authenticated_user` | Product | Low | Authenticated user session |
 | `/api/generate/parse` | `POST` | `authenticated_user` | Create Flow | Low | Authenticated user session, permanently disabled response, no provider call |
 | `/api/legal/accept` | `POST` | `authenticated_user` | Legal/Auth | Low | Authenticated user session |
@@ -32,6 +33,7 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 ## High-Priority Public Compute Paths
 
 - `/api/resume/export`
+- `/api/errors`
 - `/api/username`
 - `/api/waitlist`
 - `/api/pages/view`

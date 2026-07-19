@@ -1,11 +1,12 @@
 import { fbm } from "../shared/noise";
+import { createSeededRandom, type RandomSource } from "../shared/random";
 import { frameScaleFromDelta } from "../shared/timing";
 import type { ThemeRenderer } from "../types";
 
 // Crack path (array of [x,y] points)
 type CrackPath = Array<[number, number]>;
 
-function buildCracks(w: number, h: number): CrackPath[] {
+function buildCracks(w: number, h: number, random: RandomSource): CrackPath[] {
   const cracks: CrackPath[] = [];
   const count = 18;
 
@@ -32,7 +33,7 @@ function buildCracks(w: number, h: number): CrackPath[] {
 
     for (let step = 0; step < steps; step++) {
       // Wander direction with noise
-      const angle = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 0.7;
+      const angle = Math.atan2(dirY, dirX) + (random() - 0.5) * 0.7;
       dirX = Math.cos(angle);
       dirY = Math.sin(angle);
       x += dirX * stepLen;
@@ -62,35 +63,36 @@ interface ObsidianState {
   height: number;
   cracks: CrackPath[];
   particles: Particle[];
+  random: RandomSource;
 }
 
 const obsidianStates = new WeakMap<CanvasRenderingContext2D, ObsidianState>();
 
-function resetParticle(p: Particle, w: number, cracks: CrackPath[]) {
+function resetParticle(p: Particle, w: number, cracks: CrackPath[], random: RandomSource) {
   const crack = cracks[p.crackIdx];
   if (!crack || crack.length === 0) {
-    p.x = Math.random() * w;
-    p.y = Math.random() * 200 + 200;
+    p.x = random() * w;
+    p.y = random() * 200 + 200;
   } else {
-    const pt = crack[Math.floor(Math.random() * crack.length)];
-    p.x = pt[0] + (Math.random() - 0.5) * 6;
+    const pt = crack[Math.floor(random() * crack.length)];
+    p.x = pt[0] + (random() - 0.5) * 6;
     p.y = pt[1];
   }
-  p.vy = -(0.4 + Math.random() * 0.8);
-  p.alpha = 0.5 + Math.random() * 0.5;
-  p.r = 0.8 + Math.random() * 1.4;
+  p.vy = -(0.4 + random() * 0.8);
+  p.alpha = 0.5 + random() * 0.5;
+  p.r = 0.8 + random() * 1.4;
 }
 
-function createParticles(w: number, cracks: CrackPath[]): Particle[] {
+function createParticles(w: number, cracks: CrackPath[], random: RandomSource): Particle[] {
   const particles: Particle[] = [];
   for (let i = 0; i < 90; i++) {
     const p: Particle = {
       x: 0, y: 0, vy: 0, alpha: 0, r: 1,
       crackIdx: i % cracks.length,
     };
-    resetParticle(p, w, cracks);
+    resetParticle(p, w, cracks, random);
     // Scatter starting y
-    p.y += Math.random() * 600;
+    p.y += random() * 600;
     particles.push(p);
   }
   return particles;
@@ -106,12 +108,14 @@ function getObsidianState(
     return current;
   }
 
-  const cracks = buildCracks(width, height);
+  const random = createSeededRandom(0x0b51d1a4);
+  const cracks = buildCracks(width, height, random);
   const next: ObsidianState = {
     width,
     height,
     cracks,
-    particles: createParticles(width, cracks),
+    particles: createParticles(width, cracks, random),
+    random,
   };
   obsidianStates.set(ctx, next);
   return next;
@@ -213,7 +217,7 @@ export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, 
     p.alpha -= 0.004 * frameScale;
 
     if (p.alpha <= 0 || p.y < -10) {
-      resetParticle(p, width, state.cracks);
+      resetParticle(p, width, state.cracks, state.random);
     }
 
     // Particles near mouse rise faster

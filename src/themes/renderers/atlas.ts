@@ -1,4 +1,5 @@
 import type { ThemeRenderer } from "../types";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 
 const TAU = Math.PI * 2;
 
@@ -18,7 +19,29 @@ function routePoint(
   ];
 }
 
-export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+function routeForSection(section: string | null): number | null {
+  switch (section) {
+    case "summary":
+    case "proof":
+      return 0;
+    case "testimonials":
+    case "experience":
+      return 1;
+    case "projects":
+      return 2;
+    case "education":
+    case "skills":
+    case "certifications":
+      return 3;
+    default:
+      return null;
+  }
+}
+
+export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, motion) => {
+  const pageMotion = resolveThemeMotion(motion);
+  const velocity = finiteClamp(pageMotion.scrollVelocity / 3, -1, 1);
+  const activeRoute = routeForSection(pageMotion.activeSection);
   const background = ctx.createLinearGradient(0, 0, w, h);
   background.addColorStop(0, "#020A10");
   background.addColorStop(0.52, "#04121C");
@@ -38,7 +61,11 @@ export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   const cx = w * (w > h * 0.9 ? 0.73 : 0.68) + (mx - 0.5) * w * 0.045;
   const cy = h * 0.47 + (my - 0.5) * h * 0.035;
   const radius = Math.min(w * 0.34, h * 0.39);
-  const yaw = t * 0.08 + (mx - 0.5) * 0.72;
+  const yaw =
+    t * 0.08 +
+    (mx - 0.5) * 0.72 +
+    pageMotion.scrollProgress * 0.9 +
+    velocity * 0.14;
 
   const halo = ctx.createRadialGradient(cx, cy, radius * 0.08, cx, cy, radius * 1.55);
   halo.addColorStop(0, "rgba(65, 203, 255, 0.2)");
@@ -106,29 +133,68 @@ export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     [0.12, -0.5, 2.24, 0.18],
     [1.28, 0.34, 3.26, -0.34],
   ];
+  let activeRouteEnd: [number, number] | null = null;
   routes.forEach(([startLon, startLat, endLon, endLat], index) => {
+    const isActive = index === activeRoute;
     const start = routePoint(cx, cy, radius * 0.94, startLon, startLat, yaw);
     const end = routePoint(cx, cy, radius * 0.94, endLon, endLat, yaw);
+    if (isActive) activeRouteEnd = end;
     const lift = radius * (0.32 + index * 0.035);
     ctx.beginPath();
     ctx.moveTo(start[0], start[1]);
     ctx.quadraticCurveTo((start[0] + end[0]) / 2, Math.min(start[1], end[1]) - lift, end[0], end[1]);
-    ctx.strokeStyle = `rgba(113, 222, 255, ${0.2 + index * 0.025})`;
-    ctx.lineWidth = 1.1;
+    ctx.strokeStyle = `rgba(113, 222, 255, ${0.2 + index * 0.025 + (isActive ? 0.18 : 0)})`;
+    ctx.lineWidth = isActive ? 1.7 : 1.1;
     ctx.setLineDash([4, 6]);
-    ctx.lineDashOffset = -t * (7 + index);
+    ctx.lineDashOffset =
+      -t * (7 + index) -
+      pageMotion.scrollProgress * 18 -
+      velocity * 3;
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const phase = (t * (0.11 + index * 0.012) + index * 0.23) % 1;
+    const rawPhase =
+      t * (0.11 + index * 0.012) +
+      index * 0.23 +
+      pageMotion.scrollProgress * 0.25 +
+      velocity * 0.025;
+    const phase = ((rawPhase % 1) + 1) % 1;
     const inv = 1 - phase;
     const qx = inv * inv * start[0] + 2 * inv * phase * ((start[0] + end[0]) / 2) + phase * phase * end[0];
     const qy = inv * inv * start[1] + 2 * inv * phase * (Math.min(start[1], end[1]) - lift) + phase * phase * end[1];
     ctx.beginPath();
-    ctx.arc(qx, qy, 2.2, 0, TAU);
+    ctx.arc(qx, qy, isActive ? 3.2 : 2.2, 0, TAU);
     ctx.fillStyle = "rgba(210, 248, 255, 0.9)";
     ctx.fill();
   });
+
+  if (pageMotion.hasFocus && activeRouteEnd) {
+    const focusX = pageMotion.focusX * w;
+    const focusY = pageMotion.focusY * h;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(activeRouteEnd[0], activeRouteEnd[1]);
+    ctx.lineTo(focusX, focusY);
+    ctx.setLineDash([3, 7]);
+    ctx.strokeStyle = `rgba(157, 231, 255, ${0.16 + pageMotion.interactionImpulse * 0.16})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(202, 244, 255, 0.68)";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(focusX - 5, focusY - 5, 10, 10);
+    if (pageMotion.interactionImpulse > 0.01) {
+      const echoSize = 10 + (1 - pageMotion.interactionImpulse) * 28;
+      ctx.strokeStyle = `rgba(128, 223, 255, ${pageMotion.interactionImpulse * 0.38})`;
+      ctx.strokeRect(
+        focusX - echoSize * 0.5,
+        focusY - echoSize * 0.5,
+        echoSize,
+        echoSize,
+      );
+    }
+    ctx.restore();
+  }
 
   for (let ring = 0; ring < 3; ring += 1) {
     ctx.beginPath();

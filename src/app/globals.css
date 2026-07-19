@@ -563,6 +563,35 @@ a {
   color: var(--theme-accent, #93c5fd);
 }
 
+/* Living Page content and its canvas share the same motion model. The tiny
+   square offset makes cards feel spatial without turning the resume into a
+   motion demo, and is scoped to surfaces that explicitly opt into the bridge. */
+[data-motion-aware="true"] .resume-theme [data-motion-item] {
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 180ms ease,
+    outline-color 180ms ease;
+}
+
+[data-motion-aware="true"] .resume-theme [data-motion-item]:focus-within {
+  outline: 1px solid var(--theme-accent-border, rgba(147, 197, 253, 0.42));
+  outline-offset: 2px;
+  transform: translate3d(2px, -2px, 0);
+}
+
+[data-motion-aware="true"] .resume-theme [data-analytics-section][data-motion-active="true"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  border-color: color-mix(in srgb, var(--theme-accent, #93c5fd) 34%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover {
+    filter: brightness(1.06);
+    transform: translate3d(2px, -2px, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;
@@ -578,6 +607,13 @@ a {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  [data-motion-aware="true"] .resume-theme [data-motion-item],
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover,
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:focus-within {
+    filter: none;
+    transform: none;
   }
 
   [data-site-ui],

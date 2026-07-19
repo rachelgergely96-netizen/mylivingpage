@@ -82,6 +82,35 @@ export const THEME_COLLECTION_FILTER_IDS = [
 export type ThemeCollectionId = (typeof THEME_COLLECTION_IDS)[number];
 export type ThemeCollectionFilterId = (typeof THEME_COLLECTION_FILTER_IDS)[number];
 
+/**
+ * A small, renderer-agnostic model of what is happening on a Living Page.
+ *
+ * The object is mutated outside React's render cycle and sampled by the canvas
+ * renderer, so scroll and pointer movement do not cause component re-renders.
+ * Values that represent coordinates or progress are normalized to the [0, 1]
+ * range unless noted otherwise.
+ */
+export interface ThemeMotionContext {
+  scrollProgress: number;
+  /** Viewport-heights per second, clamped to [-4, 4]. */
+  scrollVelocity: number;
+  scrollDirection: -1 | 0 | 1;
+  activeSection: string | null;
+  activeSectionIndex: number;
+  sectionCount: number;
+  sectionProgress: number;
+  focusedItem: string | null;
+  focusKind: string | null;
+  focusX: number;
+  focusY: number;
+  interactionImpulse: number;
+  /** Normalized canvas-widths / canvas-heights per second. */
+  pointerVelocityX: number;
+  pointerVelocityY: number;
+  pointerSpeed: number;
+  reducedMotion: boolean;
+}
+
 export const THEME_COLLECTION_META = {
   all: { label: "All" },
   "executive-tech": { label: "Executive Tech" },
@@ -100,6 +129,8 @@ export type ThemeRenderer = (
   mouseY: number,
   /** Seconds elapsed since the last painted frame. Undefined preserves the legacy 60fps step. */
   deltaSeconds?: number,
+  /** Optional page-level motion model. Legacy renderers can safely ignore it. */
+  motion?: Readonly<ThemeMotionContext>,
 ) => void;
 
 export interface ThemePresentation {

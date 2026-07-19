@@ -68,6 +68,9 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
             filters[field] = value;
             return this;
           },
+          or() {
+            return this;
+          },
           order() {
             return this;
           },

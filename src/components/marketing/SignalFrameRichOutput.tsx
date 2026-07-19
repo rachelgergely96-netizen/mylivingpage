@@ -26,7 +26,13 @@ export default function SignalFrameRichOutput({ mode, themeId }: SignalFrameRich
           <span className={styles.liveStatus}>Sample</span>
         </div>
         <div className={styles.livingViewport}>
-          <ThemeCanvas themeId={themeId} height="100%" className={styles.themeCanvas} interactive={false}>
+          <ThemeCanvas
+            themeId={themeId}
+            height="100%"
+            className={styles.themeCanvas}
+            interactive={false}
+            motionAware
+          >
             <div className={styles.themeContent}>
               <ResumeLayout
                 data={SIGNAL_FRAME_SAMPLE}

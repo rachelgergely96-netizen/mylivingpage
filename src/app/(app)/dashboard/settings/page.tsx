@@ -94,6 +94,7 @@ export default function SettingsPage() {
 
   // Password fields
   const [newPassword, setNewPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -101,6 +102,7 @@ export default function SettingsPage() {
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteCurrentPassword, setDeleteCurrentPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   // Feedback
@@ -411,13 +413,14 @@ export default function SettingsPage() {
       const res = await fetch("/api/account/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify({ password: newPassword, currentPassword }),
       });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
         throw new Error(data?.error ?? "Failed to update password.");
       }
       setNewPassword("");
+      setCurrentPassword("");
       setConfirmPassword("");
       setPasswordMsg({ ok: true, text: "Password updated successfully." });
     } catch (error) {
@@ -436,7 +439,11 @@ export default function SettingsPage() {
     deletingRef.current = true;
     setDeleting(true);
     try {
-      const res = await fetch("/api/account/delete", { method: "POST" });
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: deleteCurrentPassword }),
+      });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
         throw new Error(data?.error ?? "Failed to delete account.");
@@ -662,6 +669,18 @@ export default function SettingsPage() {
               />
             </div>
             <div>
+              <label htmlFor="settings-current-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">Current password</label>
+              <input
+                id="settings-current-password"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                className="site-field h-12 w-full px-4 text-sm"
+              />
+            </div>
+            <div>
               <label htmlFor="settings-confirm-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">Confirm password</label>
               <input
                 id="settings-confirm-password"
@@ -765,6 +784,21 @@ export default function SettingsPage() {
               placeholder={profile.username}
               className="site-field mb-4 h-12 w-full border-site-danger px-4 text-sm"
             />
+            {profile.hasPassword ? (
+              <input
+                aria-label="Current password"
+                type="password"
+                autoComplete="current-password"
+                value={deleteCurrentPassword}
+                onChange={(e) => setDeleteCurrentPassword(e.target.value)}
+                placeholder="Current password"
+                className="site-field mb-4 h-12 w-full border-site-danger px-4 text-sm"
+              />
+            ) : (
+              <p className="mb-4 text-xs text-site-muted">
+                Provider accounts must have signed in within the last 10 minutes.
+              </p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -772,6 +806,7 @@ export default function SettingsPage() {
                   if (!deleting) {
                     setShowDeleteModal(false);
                     setDeleteConfirmText("");
+                    setDeleteCurrentPassword("");
                   }
                 }}
                 disabled={deleting}
@@ -782,7 +817,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={onDeleteAccount}
-                disabled={deleteConfirmText !== profile.username || deleting}
+                disabled={deleteConfirmText !== profile.username || (profile.hasPassword && !deleteCurrentPassword) || deleting}
                 className="site-button site-button-danger flex-1 text-xs disabled:opacity-40"
               >
                 {deleting ? "Deleting..." : "Delete Forever"}

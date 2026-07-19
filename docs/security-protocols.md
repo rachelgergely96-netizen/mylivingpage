@@ -34,6 +34,9 @@ Secret rotation checklist:
 
 - Shared policies live in `src/lib/security/rate-limit.ts` (`RATE_LIMIT_POLICIES`).
 - The current mandatory policies cover:
+  - client error reporting (`client_error`),
+  - account deletion (`account_delete`),
+  - password changes (`password_change`),
   - waitlist submission (`waitlist_submit`),
   - username availability checks (`username_check`),
   - public page view tracking (`public_page_view`),
@@ -48,6 +51,7 @@ Secret rotation checklist:
 - Rate-limit state persists through the existing `events` table so serverless instances share the same sliding window.
 - Blocked attempts are logged as `security.rate_limit.blocked`, capped at one audit row per identifier/window so a rejected flood cannot become an unbounded write path.
 - The public PDF export endpoint (`/api/resume/export`) fails **closed**: if the limiter RPC errors, the request returns `503` instead of proceeding. `/api/resume/import` fails closed the same way.
+- Account deletion and password changes fail closed when rate-limit storage is unavailable and require fresh authentication in addition to the session cookie.
 
 Production auth checklist:
 

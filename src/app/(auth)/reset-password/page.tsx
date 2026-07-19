@@ -37,13 +37,6 @@ export default function ResetPasswordPage() {
         markReady();
       }
     });
-    // Also check if already in a session (page reload)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) markReady();
-    }).catch(() => {
-      // The bounded verification timer provides a stable recovery state.
-    });
-
     return () => {
       active = false;
       window.clearTimeout(verificationTimer);
@@ -77,9 +70,9 @@ export default function ResetPasswordPage() {
       setStatus("success");
       setMessage("Password updated! Redirecting...");
       redirectTimerRef.current = window.setTimeout(() => router.replace("/dashboard"), 2000);
-    } catch (error) {
+    } catch {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Failed to reset password.");
+      setMessage("Unable to reset the password. Request a new reset link and try again.");
     }
   };
 

@@ -414,7 +414,12 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               mylivingpage.com/<span className="text-site-action">{publicSlug || page?.slug}</span>
             </div>
           </div>
-          <ThemeCanvas themeId={themeId} height="min(600px, calc(100dvh - 250px))" className="rounded-none">
+          <ThemeCanvas
+            themeId={themeId}
+            height="min(600px, calc(100dvh - 250px))"
+            className="rounded-none"
+            motionAware
+          >
             <div className="h-full">
               <ResumeLayout data={data} />
             </div>

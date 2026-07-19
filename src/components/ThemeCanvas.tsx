@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import {
+  createInitialThemeMotionContext,
+  useLivingMotionBridge,
+} from "@/hooks/useLivingMotionBridge";
 import { THEME_MAP } from "@/themes/registry";
 import { getLoadedRenderer, loadRenderer } from "@/themes/loadRenderer";
+import {
+  clearTransientThemeMotion,
+  decayTransientThemeMotion,
+} from "@/themes/shared/motion";
 import { hasFrameIntervalElapsed } from "@/themes/shared/timing";
-import type { ThemeId, ThemeRenderer } from "@/themes/types";
+import type { ThemeId, ThemeMotionContext, ThemeRenderer } from "@/themes/types";
 
 type ThemeCanvasStyle = React.CSSProperties & {
   "--theme-accent": string;
@@ -28,11 +36,11 @@ interface ThemeCanvasProps {
   interactive?: boolean;
   animated?: boolean;
   mobileAmbientMotion?: boolean;
+  /** Let supported renderers react to page sections, scroll, and focused cards. */
+  motionAware?: boolean;
   /**
-   * Optional cap on animation frame rate. The public living page renders a
-   * full-viewport canvas underneath blurred backdrop-filter surfaces, where an
-   * uncapped 60fps repaint forces a costly continuous recomposite; 30fps keeps
-   * the motion smooth at roughly half the paint/battery cost.
+   * Animation frame-rate cap. Callers may override the 30fps default for a
+   * deliberately higher- or lower-frequency presentation.
    */
   maxFps?: number;
   children?: React.ReactNode;
@@ -46,7 +54,8 @@ export default function ThemeCanvas({
   interactive = true,
   animated = true,
   mobileAmbientMotion = false,
-  maxFps,
+  motionAware = false,
+  maxFps = 30,
   children,
 }: ThemeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -62,6 +71,7 @@ export default function ThemeCanvas({
   const ambientEnabledRef = useRef(false);
   const reducedMotionRef = useRef(false);
   const rendererRef = useRef<ThemeRenderer | null>(null);
+  const motionRef = useRef<ThemeMotionContext>(createInitialThemeMotionContext());
   const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
   const themeStyle = useMemo<ThemeCanvasStyle>(() => {
     const presentation = theme.presentation;
@@ -82,6 +92,8 @@ export default function ThemeCanvas({
           : "var(--font-dm-sans), sans-serif",
     };
   }, [theme]);
+
+  useLivingMotionBridge({ containerRef, motionRef, enabled: motionAware });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -120,6 +132,10 @@ export default function ThemeCanvas({
       const prefersReducedMotion = reducedMotionQuery?.matches ?? false;
 
       reducedMotionRef.current = prefersReducedMotion;
+      motionRef.current.reducedMotion = prefersReducedMotion;
+      if (prefersReducedMotion) {
+        clearTransientThemeMotion(motionRef.current);
+      }
 
       ambientEnabledRef.current =
         mobileAmbientMotion &&
@@ -131,14 +147,30 @@ export default function ThemeCanvas({
       }
     };
 
+    let lastPointerSample = {
+      x: mouseRef.current.x,
+      y: mouseRef.current.y,
+      at: performance.now(),
+    };
     const updatePointer = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(rect.width, 1);
       const height = Math.max(rect.height, 1);
-      mouseRef.current = {
+      const nextPointer = {
         x: clamp((clientX - rect.left) / width, 0, 1),
         y: clamp((clientY - rect.top) / height, 0, 1),
       };
+      mouseRef.current = nextPointer;
+
+      const now = performance.now();
+      const elapsedSeconds = clamp((now - lastPointerSample.at) * 0.001, 1 / 120, 0.25);
+      const velocityX = clamp((nextPointer.x - lastPointerSample.x) / elapsedSeconds, -4, 4);
+      const velocityY = clamp((nextPointer.y - lastPointerSample.y) / elapsedSeconds, -4, 4);
+      const motion = motionRef.current;
+      motion.pointerVelocityX = velocityX;
+      motion.pointerVelocityY = velocityY;
+      motion.pointerSpeed = clamp(Math.hypot(velocityX, velocityY), 0, 4);
+      lastPointerSample = { ...nextPointer, at: now };
     };
 
     const applyAmbientPointer = (elapsed: number, now: number) => {
@@ -161,6 +193,7 @@ export default function ThemeCanvas({
     };
 
     const container = containerRef.current;
+    let consecutiveRenderFailures = 0;
     const renderFrame = (elapsed: number, deltaSeconds = 0) => {
       context.fillStyle = theme.background;
       context.fillRect(0, 0, canvas.width, canvas.height);
@@ -179,9 +212,21 @@ export default function ThemeCanvas({
           mouseRef.current.x,
           mouseRef.current.y,
           deltaSeconds,
+          motionAware ? motionRef.current : undefined,
         );
-      } catch {
-        // Prevent a single renderer error from killing the animation loop
+        consecutiveRenderFailures = 0;
+      } catch (error) {
+        consecutiveRenderFailures += 1;
+        if (consecutiveRenderFailures < 3) return;
+
+        rendererRef.current = null;
+        container?.setAttribute("data-theme-renderer-status", "fallback");
+        runningRef.current = false;
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+          animationRef.current = null;
+        }
+        console.error(`[ThemeCanvas] Renderer for ${themeId} failed repeatedly; using fallback.`, error);
       }
     };
 
@@ -216,6 +261,7 @@ export default function ThemeCanvas({
       const delta = Math.min(0.05, (now - lastFrameRef.current) * 0.001);
       lastFrameRef.current = now;
       elapsedRef.current += delta;
+      decayTransientThemeMotion(motionRef.current, delta);
       applyAmbientPointer(elapsedRef.current, now);
       renderFrame(elapsedRef.current, delta);
     };
@@ -422,7 +468,7 @@ export default function ThemeCanvas({
         container.removeEventListener("touchcancel", handleTouchEnd);
       }
     };
-  }, [animated, interactive, mobileAmbientMotion, maxFps, theme, themeId]);
+  }, [animated, interactive, mobileAmbientMotion, motionAware, maxFps, theme, themeId]);
 
   return (
     <div
@@ -431,6 +477,7 @@ export default function ThemeCanvas({
       data-theme-id={theme.id}
       data-theme-collection={theme.collection}
       data-theme-renderer-status="loading"
+      data-motion-aware={motionAware ? "true" : undefined}
       className={className}
       style={{
         position: "relative",

@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -11,17 +12,26 @@ function drawAuroraRibbon(
   band: number,
   mx: number,
   my: number,
+  scrollProgress: number,
+  scrollVelocity: number,
+  active: boolean,
 ) {
-  const baseY = h * (0.1 + band * 0.065);
-  const hue = 148 + band * 24 + Math.sin(t * 0.16 + band * 0.8) * 12;
+  const phaseTime = t + scrollProgress * 1.8 + scrollVelocity * 0.08;
+  const baseY = h * (0.1 + band * 0.065) + scrollProgress * h * 0.018;
+  const hue =
+    148 +
+    band * 24 +
+    Math.sin(t * 0.16 + band * 0.8) * 12 +
+    scrollProgress * 28;
   const points: Array<[number, number]> = [];
 
   for (let x = -8; x <= w + 8; x += 5) {
     const normalizedX = x / Math.max(w, 1);
-    const wave = Math.sin(normalizedX * 5.2 + t * 0.35 + band * 0.78) * (20 + band * 3);
-    const noise = fbm(normalizedX * 2.2 + t * 0.045, band * 1.6 + t * 0.022, 3) * 52;
+    const wave = Math.sin(normalizedX * 5.2 + phaseTime * 0.35 + band * 0.78) * (20 + band * 3);
+    const noise = fbm(normalizedX * 2.2 + phaseTime * 0.045, band * 1.6 + phaseTime * 0.022, 3) * 52;
     const pointer = Math.exp(-Math.pow(normalizedX - mx, 2) * 9) * (my - 0.5) * 32;
-    points.push([x, baseY + wave + noise + pointer]);
+    const scrollShear = scrollVelocity * (normalizedX - 0.5) * 18;
+    points.push([x, baseY + wave + noise + pointer + scrollShear]);
   }
 
   ctx.beginPath();
@@ -32,8 +42,8 @@ function drawAuroraRibbon(
   ctx.closePath();
 
   const fill = ctx.createLinearGradient(0, baseY - 36, 0, h * 0.74);
-  fill.addColorStop(0, `hsla(${hue}, 86%, 68%, ${0.13 - band * 0.009})`);
-  fill.addColorStop(0.18, `hsla(${hue + 10}, 78%, 53%, ${0.095 - band * 0.006})`);
+  fill.addColorStop(0, `hsla(${hue}, 86%, 68%, ${0.13 - band * 0.009 + (active ? 0.025 : 0)})`);
+  fill.addColorStop(0.18, `hsla(${hue + 10}, 78%, 53%, ${0.095 - band * 0.006 + (active ? 0.018 : 0)})`);
   fill.addColorStop(0.6, `hsla(${hue + 24}, 70%, 37%, 0.022)`);
   fill.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = fill;
@@ -44,15 +54,41 @@ function drawAuroraRibbon(
     if (index === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
-  ctx.strokeStyle = `hsla(${hue}, 92%, 78%, ${0.24 - band * 0.015})`;
-  ctx.lineWidth = 1.2 + (band % 2) * 0.5;
+  ctx.strokeStyle = `hsla(${hue}, 92%, 78%, ${0.24 - band * 0.015 + (active ? 0.08 : 0)})`;
+  ctx.lineWidth = 1.2 + (band % 2) * 0.5 + (active ? 0.35 : 0);
   ctx.shadowColor = `hsla(${hue}, 90%, 65%, 0.32)`;
   ctx.shadowBlur = 12;
   ctx.stroke();
   ctx.shadowBlur = 0;
 }
 
-export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+function bandForSection(section: string | null): number | null {
+  switch (section) {
+    case "summary":
+      return 0;
+    case "proof":
+      return 1;
+    case "testimonials":
+    case "experience":
+      return 2;
+    case "projects":
+      return 3;
+    case "education":
+      return 4;
+    case "skills":
+    case "certifications":
+      return 5;
+    default:
+      return null;
+  }
+}
+
+export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, motion) => {
+  const pageMotion = resolveThemeMotion(motion);
+  const velocity = finiteClamp(pageMotion.scrollVelocity / 3, -1, 1);
+  const activeBand = bandForSection(pageMotion.activeSection);
+  const targetX = pageMotion.hasFocus ? mx * 0.25 + pageMotion.focusX * 0.75 : mx;
+  const targetY = pageMotion.hasFocus ? my * 0.25 + pageMotion.focusY * 0.75 : my;
   const sky = ctx.createLinearGradient(0, 0, 0, h);
   sky.addColorStop(0, "#030A1A");
   sky.addColorStop(0.52, "#071329");
@@ -61,12 +97,33 @@ export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
-  const horizon = ctx.createRadialGradient(w * 0.72, h * 0.38, 0, w * 0.72, h * 0.4, w * 0.68);
+  const horizonX = w * (0.72 - pageMotion.scrollProgress * 0.12);
+  const horizon = ctx.createRadialGradient(horizonX, h * 0.38, 0, horizonX, h * 0.4, w * 0.68);
   horizon.addColorStop(0, "rgba(47, 202, 185, 0.12)");
   horizon.addColorStop(0.5, "rgba(60, 100, 205, 0.06)");
   horizon.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = horizon;
   ctx.fillRect(0, 0, w, h);
+
+  if (pageMotion.hasFocus) {
+    const focusX = pageMotion.focusX * w;
+    const focusY = pageMotion.focusY * h;
+    const focusGlow = ctx.createRadialGradient(
+      focusX,
+      focusY,
+      0,
+      focusX,
+      focusY,
+      Math.max(w, h) * 0.24,
+    );
+    focusGlow.addColorStop(
+      0,
+      `rgba(104, 245, 221, ${0.08 + pageMotion.interactionImpulse * 0.14})`,
+    );
+    focusGlow.addColorStop(1, "rgba(54, 142, 218, 0)");
+    ctx.fillStyle = focusGlow;
+    ctx.fillRect(0, 0, w, h);
+  }
 
   for (let i = 0; i < 88; i += 1) {
     const seed = i * 0.679 + 0.17;
@@ -83,7 +140,18 @@ export const renderAurora: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.save();
   ctx.globalCompositeOperation = "screen";
   for (let band = 0; band < 6; band += 1) {
-    drawAuroraRibbon(ctx, w, h, t, band, mx, my);
+    drawAuroraRibbon(
+      ctx,
+      w,
+      h,
+      t,
+      band,
+      targetX,
+      targetY,
+      pageMotion.scrollProgress,
+      velocity,
+      band === activeBand,
+    );
   }
   ctx.restore();
 

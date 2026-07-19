@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => {
   return {
     authGetUser: vi.fn(),
     deleteUserAccount: vi.fn(),
+    enforceRateLimit: vi.fn(),
+    requireRecentReauthentication: vi.fn(),
     AccountDeletionError,
     isAccountDeletionError: (error: unknown) => error instanceof AccountDeletionError,
   };
@@ -30,21 +32,37 @@ vi.mock("@/lib/account/deleteUserAccount", () => ({
   deleteUserAccount: (...args: unknown[]) => mocks.deleteUserAccount(...args),
 }));
 
+vi.mock("@/lib/security/rate-limit", () => ({
+  enforceRateLimit: (...args: unknown[]) => mocks.enforceRateLimit(...args),
+}));
+
+vi.mock("@/lib/auth/reauthentication", () => ({
+  requireRecentReauthentication: (...args: unknown[]) => mocks.requireRecentReauthentication(...args),
+}));
+
 import { POST } from "@/app/api/account/delete/route";
 
 describe("POST /api/account/delete", () => {
+  const request = () => new Request("http://localhost/api/account/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword: "current-password" }),
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authGetUser.mockResolvedValue({
       data: { user: { id: "user-1", email: "rachel@example.com" } },
     });
     mocks.deleteUserAccount.mockResolvedValue(null);
+    mocks.enforceRateLimit.mockResolvedValue({ limited: false });
+    mocks.requireRecentReauthentication.mockResolvedValue({ ok: true });
   });
 
   it("requires authentication", async () => {
     mocks.authGetUser.mockResolvedValueOnce({ data: { user: null } });
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
@@ -52,7 +70,7 @@ describe("POST /api/account/delete", () => {
   });
 
   it("deletes the authenticated user's own account", async () => {
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
@@ -64,7 +82,7 @@ describe("POST /api/account/delete", () => {
       new mocks.AccountDeletionError("Unable to cancel active billing.", 409),
     );
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
@@ -78,7 +96,7 @@ describe("POST /api/account/delete", () => {
       new mocks.AccountDeletionError("Failed to remove avatar files.", 500),
     );
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
@@ -89,7 +107,7 @@ describe("POST /api/account/delete", () => {
   it("returns a generic 500 for unexpected failures", async () => {
     mocks.deleteUserAccount.mockRejectedValueOnce(new Error("boom"));
 
-    const response = await POST();
+    const response = await POST(request());
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({

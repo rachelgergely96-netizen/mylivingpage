@@ -114,6 +114,7 @@ export default function SamplePageCard({
               className="w-full rounded-none"
               style={{ height: previewHeight }}
               interactive={interactivePreview}
+              motionAware
             >
               <div className="h-full">
                 <ResumeLayout data={sample.demo.data} compact headingLevel="h2" disableExternalLinks />
@@ -207,6 +208,7 @@ export default function SamplePageCard({
                   height="min(82vh, 920px)"
                   className="rounded-none"
                   interactive
+                  motionAware
                 >
                   <div className="h-full">
                     <ResumeLayout data={sample.demo.data} disableExternalLinks />

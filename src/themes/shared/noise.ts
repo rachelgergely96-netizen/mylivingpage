@@ -1,3 +1,5 @@
+import { createSeededRandom } from "./random";
+
 const PERM = new Uint8Array(512);
 const GRAD = [
   [1, 1],
@@ -11,12 +13,13 @@ const GRAD = [
 ];
 
 (function initNoise() {
+  const random = createSeededRandom(0x4d4c5001);
   const p: number[] = [];
   for (let i = 0; i < 256; i += 1) {
     p[i] = i;
   }
   for (let i = 255; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [p[i], p[j]] = [p[j], p[i]];
   }
   for (let i = 0; i < 512; i += 1) {

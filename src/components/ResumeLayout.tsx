@@ -188,13 +188,19 @@ export default function ResumeLayout({
             <Image
               src={data.avatar_url}
               alt={data.name}
+              data-motion-item="profile-photo"
+              data-motion-kind="profile"
               width={56}
               height={56}
               sizes="(min-width: 640px) 56px, 44px"
               className="resume-theme-avatar h-11 w-11 shrink-0 rounded-none object-cover sm:h-14 sm:w-14"
             />
           ) : (
-            <div className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-heading text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl">
+            <div
+              data-motion-item="profile-monogram"
+              data-motion-kind="profile"
+              className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-heading text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl"
+            >
               {(data.name || "?").slice(0, 1).toUpperCase()}
             </div>
           )}
@@ -215,6 +221,8 @@ export default function ResumeLayout({
             {data.stats.slice(0, 4).map((stat) => (
               <article
                 key={`${stat.label}-${stat.value}`}
+                data-motion-item={`stat-${stat.label}`}
+                data-motion-kind="stat"
                 className="resume-theme-card rounded-none border p-2.5 text-center sm:p-3"
               >
                 <div className="resume-theme-accent-bright font-mono text-base sm:text-xl">{stat.value}</div>
@@ -248,6 +256,8 @@ export default function ResumeLayout({
                 return (
                   <article
                     key={proof.id}
+                    data-motion-item={`proof-${proof.id}`}
+                    data-motion-kind="proof"
                     className="resume-theme-card-accent rounded-none border p-3 sm:p-4"
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -301,6 +311,8 @@ export default function ResumeLayout({
               {testimonials.map((testimonial) => (
                 <article
                   key={testimonial.id}
+                  data-motion-item={`testimonial-${testimonial.id}`}
+                  data-motion-kind="testimonial"
                   className="resume-theme-card rounded-none border p-3 sm:p-4"
                 >
                   <p className="resume-theme-muted text-sm leading-6">
@@ -327,6 +339,8 @@ export default function ResumeLayout({
               {experience.map((exp) => (
                 <article
                   key={`${exp.company}-${exp.title}-${exp.dates}`}
+                  data-motion-item={`experience-${exp.company}-${exp.title}`}
+                  data-motion-kind="experience"
                   className={`resume-theme-card rounded-none border ${compact ? "p-2.5 sm:p-3" : "p-3 sm:p-4"}`}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-1.5 sm:gap-2">
@@ -388,7 +402,11 @@ export default function ResumeLayout({
                 }`;
 
                 return (
-                  <article key={project.name}>
+                  <article
+                    key={project.name}
+                    data-motion-item={`project-${project.name}`}
+                    data-motion-kind="project"
+                  >
                     {projectUrl ? (
                       <a
                         href={projectUrl}
@@ -457,6 +475,8 @@ export default function ResumeLayout({
               {data.education.map((education) => (
                 <article
                   key={`${education.school}-${education.degree}-${education.year}`}
+                  data-motion-item={`education-${education.school}-${education.degree}`}
+                  data-motion-kind="education"
                   className="resume-theme-card rounded-none border p-3"
                 >
                   <p className="text-sm font-medium">
@@ -488,6 +508,8 @@ export default function ResumeLayout({
                     {group.items.map((skill) => (
                       <span
                         key={skill}
+                        data-motion-item={`skill-${skill}`}
+                        data-motion-kind="skill"
                         className="resume-theme-pill rounded-none border px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-xs"
                       >
                         {skill}
@@ -508,6 +530,8 @@ export default function ResumeLayout({
               {certs.map((cert) => (
                 <div
                   key={cert.name}
+                  data-motion-item={`certification-${cert.name}`}
+                  data-motion-kind="certification"
                   className="resume-theme-card flex items-center gap-2.5 rounded-none border px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
                 >
                   <div className="resume-theme-icon-badge flex h-7 w-7 shrink-0 items-center justify-center rounded-none sm:h-8 sm:w-8">

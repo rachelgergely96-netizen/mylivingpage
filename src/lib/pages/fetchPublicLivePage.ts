@@ -57,6 +57,7 @@ export async function fetchPublicLivePage(
     .select("*")
     .eq("user_id", profile.id)
     .eq("status", "live")
+    .or("visibility.eq.public,visibility.is.null")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

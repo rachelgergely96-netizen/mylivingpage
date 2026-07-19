@@ -7,7 +7,7 @@ import type { ResumeData } from "@/types/resume";
 
 interface PublicPageActionDockProps {
   pageId: string;
-  pageUserId: string;
+  isOwner: boolean;
   slug: string;
   themeId: string;
   resumeData: ResumeData;
@@ -21,7 +21,7 @@ interface PublicPageActionDockProps {
 
 export default function PublicPageActionDock({
   pageId,
-  pageUserId,
+  isOwner,
   slug,
   themeId,
   resumeData,
@@ -86,7 +86,7 @@ export default function PublicPageActionDock({
 
         <ShareCardDownload
           pageId={pageId}
-          pageUserId={pageUserId}
+          isOwner={isOwner}
           slug={slug}
           themeId={themeId}
           resumeData={resumeData}

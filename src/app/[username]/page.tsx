@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import MadeWithBadge from "@/components/MadeWithBadge";
@@ -19,11 +20,15 @@ import {
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
-import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { THEME_IDS, type ThemeId } from "@/themes/types";
 
 const VALID_THEMES: Set<string> = new Set(THEME_IDS);
+const getPublicPage = cache(async (username: string) => {
+  const supabase = createServiceRoleSupabaseClient();
+  return fetchPublicLivePage(supabase, username);
+});
 
 export const dynamic = "force-dynamic";
 
@@ -92,8 +97,7 @@ async function fetchOfflinePageContext(
 export async function generateMetadata({ params }: PublicPageProps): Promise<Metadata> {
   noStore();
   const { username } = await params;
-  const supabase = createServiceRoleSupabaseClient();
-  const page = await fetchPublicLivePage(supabase, username);
+  const page = await getPublicPage(username);
   if (!page) {
     return {
       title: SITE_NAME,
@@ -134,7 +138,7 @@ export default async function PublicLivingPage({
   noStore();
   const [{ username }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const supabase = createServiceRoleSupabaseClient();
-  const page = await fetchPublicLivePage(supabase, username);
+  const page = await getPublicPage(username);
   const publicPageAvailable = isPubliclyAvailablePage(page);
 
   if (!page || !publicPageAvailable) {
@@ -172,6 +176,9 @@ export default async function PublicLivingPage({
 
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
   const pageUserId = page.user_id ?? page.owner_id ?? "";
+  const authClient = await createServerSupabaseClient();
+  const { data: { user: viewer } } = await authClient.auth.getUser();
+  const isOwner = viewer?.id === pageUserId;
   const selectedVariant = getPageVariant(page.page_config, resolvedSearchParams.v ?? null);
   const variantResumeData = applyPageVariant(page.resume_data, selectedVariant);
   const recruiterSkim = buildRecruiterSkimModel(page.resume_data, selectedVariant);
@@ -212,9 +219,10 @@ export default async function PublicLivingPage({
         height="100dvh"
         className="rounded-none min-h-screen"
         mobileAmbientMotion
+        motionAware
         maxFps={30}
       >
-        <PageOwnerBar pageId={page.id} pageUserId={pageUserId}>
+        <PageOwnerBar pageId={page.id} isOwner={isOwner}>
           <div className="h-full">
             <div
               data-analytics-scroll-root="true"
@@ -244,7 +252,7 @@ export default async function PublicLivingPage({
       </ThemeCanvas>
       <PublicPageActionDock
         pageId={page.id}
-        pageUserId={pageUserId}
+        isOwner={isOwner}
         slug={page.slug}
         themeId={themeId}
         resumeData={variantResumeData}
@@ -263,7 +271,7 @@ export default async function PublicLivingPage({
         }
         avoidBadge
       />
-      <MadeWithBadge />
+      <MadeWithBadge isSignedIn={Boolean(viewer)} />
     </main>
   );
 }

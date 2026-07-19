@@ -670,7 +670,12 @@ export default function CreatePage() {
                   mylivingpage.com/<span className="text-site-action">{publicSlug || "your-username"}</span>
                 </div>
               </div>
-              <ThemeCanvas themeId={selectedTheme} height="min(540px, calc(100dvh - 280px))" className="rounded-none">
+              <ThemeCanvas
+                themeId={selectedTheme}
+                height="min(540px, calc(100dvh - 280px))"
+                className="rounded-none"
+                motionAware
+              >
                 <div className="h-full">
                   <ResumeLayout data={previewData} />
                 </div>

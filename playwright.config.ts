@@ -24,11 +24,21 @@ export default defineConfig({
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
-    : {
+      : {
         command: process.env.CI
           ? "npm run build && npm run start"
           : "npm run dev",
-        url: baseURL,
+        env: {
+          ...process.env,
+          ENABLE_EDITOR_PREVIEW: "1",
+          NEXT_PUBLIC_SUPABASE_URL:
+            process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+            process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+            "playwright-public-key",
+        },
+        url: `${baseURL}/dev/editor-preview`,
         reuseExistingServer: !process.env.CI,
         timeout: process.env.CI ? 300_000 : 120_000,
       },

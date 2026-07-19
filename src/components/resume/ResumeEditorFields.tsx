@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   createEmptyProofItem,
   createEmptyTestimonialRecord,
@@ -12,7 +13,8 @@ interface ResumeEditorFieldsProps {
   mode?: "living" | "compact";
 }
 
-const fieldsetClass = "site-panel space-y-3 rounded-none p-4 sm:p-5";
+const fieldsetClass =
+  "site-panel scroll-mt-72 space-y-3 rounded-none p-4 sm:p-5 xl:scroll-mt-40";
 const legendClass = "site-eyebrow px-1";
 const inputClass =
   "site-field w-full rounded-none px-3 py-2 text-sm";
@@ -20,11 +22,37 @@ const textAreaClass =
   "site-field w-full rounded-none px-3 py-2 text-sm leading-6";
 const subtleTextAreaClass =
   "site-field w-full rounded-none px-3 py-2 text-xs leading-5 text-site-secondary";
-const removeButtonClass =
-  "site-button site-button-danger rounded-none px-3 py-2 text-xs";
 const textRemoveButtonClass = "site-button site-button-danger px-3 text-xs";
 const addButtonClass =
   "site-button site-button-secondary rounded-none border-dashed px-4 py-2 text-xs";
+
+interface RecordHeaderProps {
+  id: string;
+  label: string;
+  removeLabel: string;
+  onRemove: () => void;
+}
+
+function RecordHeader({ id, label, removeLabel, onRemove }: RecordHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p
+        id={id}
+        className="text-xs font-semibold tracking-[0.06em] text-site-secondary"
+      >
+        {label}
+      </p>
+      <button
+        type="button"
+        aria-label={removeLabel}
+        onClick={onRemove}
+        className={textRemoveButtonClass}
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
 
 export default function ResumeEditorFields({
   data,
@@ -41,7 +69,11 @@ export default function ResumeEditorFields({
 
   return (
     <div className="space-y-5">
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-profile"
+        data-editor-section="profile"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Profile</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <input
@@ -103,7 +135,11 @@ export default function ResumeEditorFields({
         </div>
       </fieldset>
 
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-summary"
+        data-editor-section="summary"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Summary</legend>
         <textarea
           aria-label="Professional summary"
@@ -115,42 +151,56 @@ export default function ResumeEditorFields({
       </fieldset>
 
       {includeStats ? (
-        <fieldset className={fieldsetClass}>
+        <fieldset
+          id="editor-section-stats"
+          data-editor-section="stats"
+          className={fieldsetClass}
+        >
           <legend className={legendClass}>Stats</legend>
           {data.stats.map((stat, index) => (
-            <div key={index} className="flex gap-3">
-              <input
-                type="text"
-                value={stat.value}
-                onChange={(event) => {
-                  const next = [...data.stats];
-                  next[index] = { ...next[index], value: event.target.value };
-                  updateField("stats", next);
-                }}
-                aria-label="Value"
-                placeholder="Value"
-                className="w-28 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-action focus:border-site-focus"
+            <div
+              key={index}
+              role="group"
+              aria-labelledby={`editor-stat-${index + 1}-title`}
+              className="space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4"
+            >
+              <RecordHeader
+                id={`editor-stat-${index + 1}-title`}
+                label={`Stat ${index + 1}`}
+                removeLabel={`Remove stat ${index + 1}`}
+                onRemove={() =>
+                  updateField(
+                    "stats",
+                    data.stats.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
               />
-              <input
-                type="text"
-                value={stat.label}
-                onChange={(event) => {
-                  const next = [...data.stats];
-                  next[index] = { ...next[index], label: event.target.value };
-                  updateField("stats", next);
-                }}
-                aria-label="Label"
-                placeholder="Label"
-                className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-              />
-              <button
-                type="button"
-                aria-label={`Remove stat ${index + 1}`}
-                onClick={() => updateField("stats", data.stats.filter((_, itemIndex) => itemIndex !== index))}
-                className={removeButtonClass}
-              >
-                Remove
-              </button>
+              <div className="grid min-w-0 gap-2 sm:grid-cols-[7rem_minmax(0,1fr)]">
+                <input
+                  type="text"
+                  value={stat.value}
+                  onChange={(event) => {
+                    const next = [...data.stats];
+                    next[index] = { ...next[index], value: event.target.value };
+                    updateField("stats", next);
+                  }}
+                  aria-label="Value"
+                  placeholder="Value"
+                  className="site-field min-w-0 rounded-none px-3 py-2 text-sm text-site-action"
+                />
+                <input
+                  type="text"
+                  value={stat.label}
+                  onChange={(event) => {
+                    const next = [...data.stats];
+                    next[index] = { ...next[index], label: event.target.value };
+                    updateField("stats", next);
+                  }}
+                  aria-label="Label"
+                  placeholder="Label"
+                  className="site-field min-w-0 rounded-none px-3 py-2 text-sm"
+                />
+              </div>
             </div>
           ))}
           {data.stats.length < 4 ? (
@@ -165,13 +215,30 @@ export default function ResumeEditorFields({
         </fieldset>
       ) : null}
 
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-experience"
+        data-editor-section="experience"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Experience</legend>
         {data.experience.map((experience, index) => (
           <div
             key={index}
+            role="group"
+            aria-labelledby={`editor-experience-${index + 1}-title`}
             className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
           >
+            <RecordHeader
+              id={`editor-experience-${index + 1}-title`}
+              label={`Experience ${index + 1}`}
+              removeLabel={`Remove experience ${index + 1}`}
+              onRemove={() =>
+                updateField(
+                  "experience",
+                  data.experience.filter((_, itemIndex) => itemIndex !== index),
+                )
+              }
+            />
             <div className="grid gap-2 sm:grid-cols-3">
               <input
                 type="text"
@@ -248,14 +315,6 @@ export default function ResumeEditorFields({
               placeholder="Highlights (one per line)"
               className={subtleTextAreaClass}
             />
-            <button
-              type="button"
-              aria-label={`Remove experience ${index + 1}`}
-              onClick={() => updateField("experience", data.experience.filter((_, itemIndex) => itemIndex !== index))}
-              className={textRemoveButtonClass}
-            >
-              Remove
-            </button>
           </div>
         ))}
         <button
@@ -272,54 +331,68 @@ export default function ResumeEditorFields({
         </button>
       </fieldset>
 
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-education"
+        data-editor-section="education"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Education</legend>
         {data.education.map((education, index) => (
-          <div key={index} className="flex flex-wrap gap-2">
-            <input
-              type="text"
-              value={education.degree}
-              onChange={(event) => {
-                const next = [...data.education];
-                next[index] = { ...next[index], degree: event.target.value };
-                updateField("education", next);
-              }}
-              aria-label="Degree"
-              placeholder="Degree"
-              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
+          <div
+            key={index}
+            role="group"
+            aria-labelledby={`editor-education-${index + 1}-title`}
+            className="space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4"
+          >
+            <RecordHeader
+              id={`editor-education-${index + 1}-title`}
+              label={`Education ${index + 1}`}
+              removeLabel={`Remove education ${index + 1}`}
+              onRemove={() =>
+                updateField(
+                  "education",
+                  data.education.filter((_, itemIndex) => itemIndex !== index),
+                )
+              }
             />
-            <input
-              type="text"
-              value={education.school}
-              onChange={(event) => {
-                const next = [...data.education];
-                next[index] = { ...next[index], school: event.target.value };
-                updateField("education", next);
-              }}
-              aria-label="School"
-              placeholder="School"
-              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-            />
-            <input
-              type="text"
-              value={education.year}
-              onChange={(event) => {
-                const next = [...data.education];
-                next[index] = { ...next[index], year: event.target.value };
-                updateField("education", next);
-              }}
-              aria-label="Year"
-              placeholder="Year"
-              className="w-24 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-            />
-            <button
-              type="button"
-              aria-label={`Remove education ${index + 1}`}
-              onClick={() => updateField("education", data.education.filter((_, itemIndex) => itemIndex !== index))}
-              className={removeButtonClass}
-            >
-              Remove
-            </button>
+            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem]">
+              <input
+                type="text"
+                value={education.degree}
+                onChange={(event) => {
+                  const next = [...data.education];
+                  next[index] = { ...next[index], degree: event.target.value };
+                  updateField("education", next);
+                }}
+                aria-label="Degree"
+                placeholder="Degree"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={education.school}
+                onChange={(event) => {
+                  const next = [...data.education];
+                  next[index] = { ...next[index], school: event.target.value };
+                  updateField("education", next);
+                }}
+                aria-label="School"
+                placeholder="School"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={education.year}
+                onChange={(event) => {
+                  const next = [...data.education];
+                  next[index] = { ...next[index], year: event.target.value };
+                  updateField("education", next);
+                }}
+                aria-label="Year"
+                placeholder="Year"
+                className={inputClass}
+              />
+            </div>
           </div>
         ))}
         <button
@@ -331,13 +404,30 @@ export default function ResumeEditorFields({
         </button>
       </fieldset>
 
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-skills"
+        data-editor-section="skills"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Skills</legend>
         {data.skills.map((group, index) => (
           <div
             key={index}
+            role="group"
+            aria-labelledby={`editor-skill-category-${index + 1}-title`}
             className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
           >
+            <RecordHeader
+              id={`editor-skill-category-${index + 1}-title`}
+              label={`Skill category ${index + 1}`}
+              removeLabel={`Remove skill category ${index + 1}`}
+              onRemove={() =>
+                updateField(
+                  "skills",
+                  data.skills.filter((_, itemIndex) => itemIndex !== index),
+                )
+              }
+            />
             <input
               type="text"
               value={group.category}
@@ -378,14 +468,6 @@ export default function ResumeEditorFields({
               placeholder="TypeScript, React, Node.js"
               className={inputClass}
             />
-            <button
-              type="button"
-              aria-label={`Remove skill category ${index + 1}`}
-              onClick={() => updateField("skills", data.skills.filter((_, itemIndex) => itemIndex !== index))}
-              className={textRemoveButtonClass}
-            >
-              Remove
-            </button>
           </div>
         ))}
         <button
@@ -397,13 +479,30 @@ export default function ResumeEditorFields({
         </button>
       </fieldset>
 
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-projects"
+        data-editor-section="projects"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Projects</legend>
         {data.projects.map((project, index) => (
           <div
             key={index}
+            role="group"
+            aria-labelledby={`editor-project-${index + 1}-title`}
             className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
           >
+            <RecordHeader
+              id={`editor-project-${index + 1}-title`}
+              label={`Project ${index + 1}`}
+              removeLabel={`Remove project ${index + 1}`}
+              onRemove={() =>
+                updateField(
+                  "projects",
+                  data.projects.filter((_, itemIndex) => itemIndex !== index),
+                )
+              }
+            />
             <input
               type="text"
               value={project.name}
@@ -468,14 +567,6 @@ export default function ResumeEditorFields({
               placeholder="Project URL (optional)"
               className={inputClass}
             />
-            <button
-              type="button"
-              aria-label={`Remove project ${index + 1}`}
-              onClick={() => updateField("projects", data.projects.filter((_, itemIndex) => itemIndex !== index))}
-              className={textRemoveButtonClass}
-            >
-              Remove
-            </button>
           </div>
         ))}
         <button
@@ -493,7 +584,11 @@ export default function ResumeEditorFields({
       </fieldset>
 
       {mode === "living" ? (
-        <fieldset className={fieldsetClass}>
+        <fieldset
+          id="editor-section-proof"
+          data-editor-section="proof"
+          className={fieldsetClass}
+        >
           <legend className={legendClass}>Proof</legend>
           <p className="text-sm leading-6 text-site-secondary">
             Add proof blocks that show work, outcomes, and artifacts directly on the page.
@@ -501,8 +596,21 @@ export default function ResumeEditorFields({
           {proofs.map((proof, index) => (
             <div
               key={proof.id || index}
+              role="group"
+              aria-labelledby={`editor-proof-${index + 1}-title`}
               className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
             >
+              <RecordHeader
+                id={`editor-proof-${index + 1}-title`}
+                label={`Proof block ${index + 1}`}
+                removeLabel={`Remove proof block ${index + 1}`}
+                onRemove={() =>
+                  updateField(
+                    "proofs",
+                    proofs.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
+              />
               <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   aria-label="Proof type"
@@ -581,14 +689,6 @@ export default function ResumeEditorFields({
                 placeholder="Supporting URL (optional)"
                 className={inputClass}
               />
-              <button
-                type="button"
-                aria-label={`Remove proof block ${index + 1}`}
-                onClick={() => updateField("proofs", proofs.filter((_, itemIndex) => itemIndex !== index))}
-                className={textRemoveButtonClass}
-              >
-                Remove
-              </button>
             </div>
           ))}
           <button
@@ -602,7 +702,11 @@ export default function ResumeEditorFields({
       ) : null}
 
       {mode === "living" ? (
-        <fieldset className={fieldsetClass}>
+        <fieldset
+          id="editor-section-testimonials"
+          data-editor-section="testimonials"
+          className={fieldsetClass}
+        >
           <legend className={legendClass}>Testimonials</legend>
           <p className="text-sm leading-6 text-site-secondary">
             Collect and approve quotes here. Only approved testimonials appear on the public page.
@@ -610,8 +714,21 @@ export default function ResumeEditorFields({
           {testimonials.map((testimonial, index) => (
             <div
               key={testimonial.id || index}
+              role="group"
+              aria-labelledby={`editor-testimonial-${index + 1}-title`}
               className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
             >
+              <RecordHeader
+                id={`editor-testimonial-${index + 1}-title`}
+                label={`Testimonial ${index + 1}`}
+                removeLabel={`Remove testimonial ${index + 1}`}
+                onRemove={() =>
+                  updateField(
+                    "testimonials",
+                    testimonials.filter((_, itemIndex) => itemIndex !== index),
+                  )
+                }
+              />
               <div className="grid gap-2 sm:grid-cols-3">
                 <input
                   type="text"
@@ -712,19 +829,6 @@ export default function ResumeEditorFields({
                 placeholder="What should appear on the page once approved?"
                 className={subtleTextAreaClass}
               />
-              <button
-                type="button"
-                aria-label={`Remove testimonial ${index + 1}`}
-                onClick={() =>
-                  updateField(
-                    "testimonials",
-                    testimonials.filter((_, itemIndex) => itemIndex !== index),
-                  )
-                }
-                className={textRemoveButtonClass}
-              >
-                Remove
-              </button>
             </div>
           ))}
           <button
@@ -742,56 +846,68 @@ export default function ResumeEditorFields({
         </fieldset>
       ) : null}
 
-      <fieldset className={fieldsetClass}>
+      <fieldset
+        id="editor-section-certifications"
+        data-editor-section="certifications"
+        className={fieldsetClass}
+      >
         <legend className={legendClass}>Certifications</legend>
         {data.certifications.map((certification, index) => (
-          <div key={index} className="flex flex-wrap gap-2">
-            <input
-              type="text"
-              value={certification.name}
-              onChange={(event) => {
-                const next = [...data.certifications];
-                next[index] = { ...next[index], name: event.target.value };
-                updateField("certifications", next);
-              }}
-              aria-label="Certification name"
-              placeholder="Certification name"
-              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-            />
-            <input
-              type="text"
-              value={certification.issuer ?? ""}
-              onChange={(event) => {
-                const next = [...data.certifications];
-                next[index] = { ...next[index], issuer: event.target.value || null };
-                updateField("certifications", next);
-              }}
-              aria-label="Issuer"
-              placeholder="Issuer"
-              className="flex-1 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-            />
-            <input
-              type="text"
-              value={certification.date ?? ""}
-              onChange={(event) => {
-                const next = [...data.certifications];
-                next[index] = { ...next[index], date: event.target.value || null };
-                updateField("certifications", next);
-              }}
-              aria-label="Date"
-              placeholder="Date"
-              className="w-24 rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-            />
-            <button
-              type="button"
-              aria-label={`Remove certification ${index + 1}`}
-              onClick={() =>
-                updateField("certifications", data.certifications.filter((_, itemIndex) => itemIndex !== index))
+          <div
+            key={index}
+            role="group"
+            aria-labelledby={`editor-certification-${index + 1}-title`}
+            className="space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4"
+          >
+            <RecordHeader
+              id={`editor-certification-${index + 1}-title`}
+              label={`Certification ${index + 1}`}
+              removeLabel={`Remove certification ${index + 1}`}
+              onRemove={() =>
+                updateField(
+                  "certifications",
+                  data.certifications.filter((_, itemIndex) => itemIndex !== index),
+                )
               }
-              className={removeButtonClass}
-            >
-              Remove
-            </button>
+            />
+            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem]">
+              <input
+                type="text"
+                value={certification.name}
+                onChange={(event) => {
+                  const next = [...data.certifications];
+                  next[index] = { ...next[index], name: event.target.value };
+                  updateField("certifications", next);
+                }}
+                aria-label="Certification name"
+                placeholder="Certification name"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={certification.issuer ?? ""}
+                onChange={(event) => {
+                  const next = [...data.certifications];
+                  next[index] = { ...next[index], issuer: event.target.value || null };
+                  updateField("certifications", next);
+                }}
+                aria-label="Issuer"
+                placeholder="Issuer"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={certification.date ?? ""}
+                onChange={(event) => {
+                  const next = [...data.certifications];
+                  next[index] = { ...next[index], date: event.target.value || null };
+                  updateField("certifications", next);
+                }}
+                aria-label="Date"
+                placeholder="Date"
+                className={inputClass}
+              />
+            </div>
           </div>
         ))}
         <button

@@ -20,6 +20,7 @@ interface ThemePickerProps {
   onSelectTheme: (themeId: ThemeId) => void;
   premium?: boolean;
   allowedThemeIds?: ThemeId[] | null;
+  initialCollection?: ThemeCollectionFilterId;
   lockedLabel?: string;
   showDescription?: boolean;
 }
@@ -130,10 +131,13 @@ export default function ThemePicker({
   onSelectTheme,
   premium = false,
   allowedThemeIds,
+  initialCollection = "all",
   lockedLabel = "Locked",
   showDescription = false,
 }: ThemePickerProps) {
-  const [activeCollection, setActiveCollection] = useState<ThemeCollectionFilterId>("all");
+  const [activeCollection, setActiveCollection] = useState<ThemeCollectionFilterId>(
+    initialCollection,
+  );
   const [requestedThemeIds, setRequestedThemeIds] = useState<ReadonlySet<ThemeId>>(
     () => new Set([selectedThemeId]),
   );

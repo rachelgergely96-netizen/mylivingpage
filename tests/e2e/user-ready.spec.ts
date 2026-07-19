@@ -155,7 +155,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Edit Page" }).click();
-    const headlineInput = page.locator('input[type="text"]').nth(1);
+    const headlineInput = page.getByLabel("Headline");
     await headlineInput.fill(`Updated headline ${Date.now()}`);
     await page.getByRole("button", { name: "Save Changes" }).click();
     await expect(page.getByText("Saved successfully!")).toBeVisible();

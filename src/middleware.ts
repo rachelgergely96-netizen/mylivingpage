@@ -2,9 +2,11 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { isAdminEmail } from "@/lib/admin";
+import { isEditorPreviewEnabled } from "@/lib/editor-preview";
 
 const PROTECTED_PATHS = ["/create", "/dashboard", "/admin"];
 const ADMIN_PATHS = ["/admin"];
+const EDITOR_PREVIEW_PATH = "/dev/editor-preview";
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PATHS.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -15,8 +17,15 @@ function isAdminPath(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  const { response, userId, userEmail } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
+
+  if (pathname === EDITOR_PREVIEW_PATH) {
+    return isEditorPreviewEnabled()
+      ? NextResponse.next()
+      : new NextResponse(null, { status: 404 });
+  }
+
+  const { response, userId, userEmail } = await updateSession(request);
 
   if (isProtectedPath(pathname) && !userId) {
     const loginUrl = new URL("/login", request.url);

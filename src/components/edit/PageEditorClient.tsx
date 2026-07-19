@@ -10,6 +10,7 @@ import {
 } from "@/lib/account-access";
 import AtsReadinessCard from "@/components/AtsReadinessCard";
 import DraftBanner from "@/components/DraftBanner";
+import EditorSectionNav from "@/components/edit/EditorSectionNav";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ThemePicker from "@/components/ThemePicker";
@@ -61,8 +62,12 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [data, setData] = useState<ResumeData | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
   const [publicSlug, setPublicSlug] = useState("");
+  const [savedSnapshot, setSavedSnapshot] = useState("");
+  const [mobileWorkspaceView, setMobileWorkspaceView] = useState<"edit" | "preview">("edit");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const successTimerRef = useRef<number | null>(null);
+  const latestEditorSnapshotRef = useRef("");
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({
       plan: "spark",
@@ -73,17 +78,30 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<EditDraft>(
     `mlp-draft-edit-${pageId}-living-page`,
   );
-  const initialSnapshotRef = useRef<string>("");
-
   const hasChanges = useMemo(() => {
-    if (!data || !initialSnapshotRef.current) {
+    if (!data || !savedSnapshot) {
       return false;
     }
 
-    return JSON.stringify({ data, themeId }) !== initialSnapshotRef.current;
+    return JSON.stringify({ data, themeId }) !== savedSnapshot;
+  }, [data, savedSnapshot, themeId]);
+
+  useEffect(() => {
+    latestEditorSnapshotRef.current = data
+      ? JSON.stringify({ data, themeId })
+      : "";
   }, [data, themeId]);
 
   useUnsavedChanges(hasChanges);
+
+  useEffect(
+    () => () => {
+      if (successTimerRef.current !== null) {
+        window.clearTimeout(successTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!hasChanges || !data) {
@@ -128,7 +146,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         setData(livingData);
         setThemeId(row.theme_id as ThemeId);
         setPublicSlug(row.slug);
-        initialSnapshotRef.current = JSON.stringify({ data: livingData, themeId: row.theme_id });
+        setSavedSnapshot(JSON.stringify({ data: livingData, themeId: row.theme_id }));
 
         const profileResponse = await fetch("/api/profile");
         if (profileResponse.ok) {
@@ -180,6 +198,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       setError("");
       setSuccess("");
 
+      const submittedSnapshot = JSON.stringify({
+        data: nextData,
+        themeId: nextThemeId,
+      });
+
       try {
         const payload: Record<string, unknown> = {
           resume_data: nextData,
@@ -196,12 +219,23 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           throw new Error(body?.error ?? "Save failed.");
         }
 
-        setData(nextData);
-        setThemeId(nextThemeId);
-        clearDraft();
-        initialSnapshotRef.current = JSON.stringify({ data: nextData, themeId: nextThemeId });
-        setSuccess("Saved successfully!");
-        setTimeout(() => setSuccess(""), 3000);
+        const hasNewerEdits = latestEditorSnapshotRef.current !== submittedSnapshot;
+        setSavedSnapshot(submittedSnapshot);
+        if (!hasNewerEdits) {
+          clearDraft();
+        }
+        setSuccess(
+          hasNewerEdits
+            ? "Saved. Newer edits are still unsaved."
+            : "Saved successfully!",
+        );
+        if (successTimerRef.current !== null) {
+          window.clearTimeout(successTimerRef.current);
+        }
+        successTimerRef.current = window.setTimeout(() => {
+          setSuccess("");
+          successTimerRef.current = null;
+        }, 3000);
         return true;
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : "Unable to save.");
@@ -247,11 +281,30 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     setData((prev) => (prev ? { ...prev, avatar_url: null } : prev));
   };
 
+  const selectedTheme = THEME_REGISTRY.find((theme) => theme.id === themeId);
+  const themePickerCollection =
+    accountAccess.allowedThemeIds && !accountAccess.allowedThemeIds.includes(themeId)
+      ? THEME_REGISTRY.find((theme) => theme.id === accountAccess.allowedThemeIds?.[0])
+          ?.collection
+      : selectedTheme?.collection;
+
+  const showMobileWorkspaceView = (view: "edit" | "preview") => {
+    setMobileWorkspaceView(view);
+    window.requestAnimationFrame(() => {
+      document.getElementById("editor-workspace")?.scrollIntoView({
+        block: "start",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    });
+  };
+
   if (loading) {
     return (
       <main className="site-container-wide max-w-6xl py-8" id="main-content">
         <div className="site-panel p-6 text-center sm:p-8">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-site-border border-t-site-action" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-none border-2 border-site-border border-t-site-action" />
           <p className="mt-4 text-sm text-site-muted" role="status">Loading page...</p>
         </div>
       </main>
@@ -269,162 +322,326 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   }
 
   return (
-    <main className="site-container-wide max-w-6xl py-8" id="main-content">
-      <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-end sm:gap-4">
-        <div>
-          <p className="site-eyebrow">Living Page editor</p>
-          <h1 className="site-page-title mt-2 text-3xl">
-            {data.name || "Living Page"}
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard")}
-            className="site-button site-button-secondary px-4 py-2 text-xs sm:px-5 sm:py-2.5"
-          >
-            Back
-          </button>
-          <Link
-            href={`/${publicSlug || page?.slug || "your-username"}`}
-            className="site-button site-button-secondary px-4 py-2 text-xs sm:px-5 sm:py-2.5"
-          >
-            View Live Page
-          </Link>
-          <button
-            type="button"
-            disabled={saving || !hasChanges}
-            onClick={() => void handleSave()}
-            className="site-button site-button-primary px-5 py-2 text-xs disabled:opacity-60 sm:px-6 sm:py-2.5"
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-      </div>
-
-      {error ? (
-        <p className="site-alert-danger mb-4 px-4 py-3 text-sm" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="site-alert-success mb-4 px-4 py-3 text-sm" role="status">
-          {success}
-        </p>
-      ) : null}
-
-      {pendingDraft ? (
-        <DraftBanner savedAt={pendingDraft.savedAt} onRestore={restoreDraft} onDiscard={dismissDraft} />
-      ) : null}
-
-      <div className="site-callout mb-4 px-4 py-3">
-        <p className="site-eyebrow">Résumé PDF</p>
-        <p className="mt-2 text-sm text-site-text">
-          The public page always uses this saved information for the downloadable Resume PDF.
-        </p>
-      </div>
-
-      <div className="mb-5">
-        <AtsReadinessCard resumeData={data} />
-        <p className="mt-2 px-1 text-xs leading-5 text-site-muted">
-          The check uses the fields currently in this editor. Save your changes before relying on
-          the public PDF.
-        </p>
-      </div>
-
-      <div className="space-y-5">
-        <fieldset className="site-panel space-y-3 p-4 sm:p-5">
-          <legend className="site-eyebrow px-1">Public URL</legend>
-          <div className="border border-site-border bg-site-canvas-alt px-3 py-2 font-mono text-sm text-site-action">
-            mylivingpage.com/{publicSlug || page?.slug || "your-username"}
-          </div>
-        </fieldset>
-
-        <fieldset className="site-panel space-y-3 p-4 sm:p-5">
-          <legend className="site-eyebrow px-1">Avatar</legend>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-            {data.avatar_url ? (
-              <Image
-                src={data.avatar_url}
-                alt="Avatar"
-                width={64}
-                height={64}
-                sizes="(min-width: 640px) 64px, 56px"
-                className="h-14 w-14 rounded-none border-2 border-site-action object-cover sm:h-16 sm:w-16"
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-none bg-site-action font-site text-xl font-bold text-site-action-ink sm:h-16 sm:w-16 sm:text-2xl">
-                {(data.name || "?").slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    void handleAvatarUpload(file);
-                  }
-                  event.target.value = "";
-                }}
-              />
-              <button
-                type="button"
-                disabled={uploadingAvatar}
-                onClick={() => avatarInputRef.current?.click()}
-                className="site-button site-button-secondary px-4 py-2 text-xs disabled:opacity-50"
+    <main className="site-container-wide pb-10 pt-4 sm:pt-6" id="main-content">
+      <section
+        aria-label="Editor commands"
+        data-editor-command-bar
+        className="site-panel-raised sticky top-16 z-30 px-3 py-3 sm:px-4"
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="site-eyebrow">Living Page editor</p>
+            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2.5">
+              <h1 className="truncate font-site text-xl font-semibold tracking-[-0.03em] text-site-text sm:text-2xl">
+                {data.name || "Living Page"}
+              </h1>
+              <span
+                role="status"
+                aria-live="polite"
+                className={`inline-flex items-center gap-2 border px-2.5 py-1 font-mono text-[9px] tracking-[0.08em] ${
+                  saving
+                    ? "border-site-warning text-site-warning"
+                    : hasChanges
+                      ? "border-site-action text-site-action-hover"
+                      : "border-site-border text-site-muted"
+                }`}
               >
-                {uploadingAvatar ? "Uploading..." : data.avatar_url ? "Change Photo" : "Upload Photo"}
-              </button>
-              {data.avatar_url ? (
-                <button
-                  type="button"
-                  onClick={removeAvatar}
-                  className="text-xs text-site-muted hover:text-site-danger"
-                >
-                  Remove · use monogram
-                </button>
-              ) : (
-                <p className="text-xs text-site-muted">Optional · JPEG, PNG, or WebP under 2 MB</p>
-              )}
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 ${
+                    saving
+                      ? "animate-pulse bg-site-warning"
+                      : hasChanges
+                        ? "bg-site-action"
+                        : "bg-site-success"
+                  }`}
+                />
+                {saving ? "Saving changes" : hasChanges ? "Unsaved changes" : "All changes saved"}
+              </span>
             </div>
           </div>
-        </fieldset>
 
-        <ResumeEditorFields data={data} onChange={setData} />
-
-        <ThemePicker
-          themes={THEME_REGISTRY}
-          selectedThemeId={themeId}
-          onSelectTheme={setThemeId}
-          allowedThemeIds={accountAccess.allowedThemeIds}
-          lockedLabel="Not available"
-          showDescription
-        />
-
-        <div className="overflow-hidden rounded-none border border-site-border-strong">
-          <div className="flex items-center gap-2 border-b border-site-border bg-site-canvas-alt px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-            <div className="ml-3 rounded-none border border-site-border bg-site-surface px-3 py-1 font-mono text-[11px] text-site-muted">
-              mylivingpage.com/<span className="text-site-action">{publicSlug || page?.slug}</span>
-            </div>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard")}
+              className="site-button site-button-secondary min-w-0 px-3 py-2 text-xs sm:px-4"
+            >
+              Back
+            </button>
+            <Link
+              href={`/${publicSlug || page?.slug || "your-username"}`}
+              className="site-button site-button-secondary min-w-0 px-3 py-2 text-center text-xs sm:px-4"
+            >
+              View Live Page
+            </Link>
+            <button
+              type="button"
+              disabled={saving || !hasChanges}
+              onClick={() => void handleSave()}
+              className="site-button site-button-primary min-w-0 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
           </div>
-          <ThemeCanvas
-            themeId={themeId}
-            height="min(600px, calc(100dvh - 250px))"
-            className="rounded-none"
-            motionAware
-          >
-            <div className="h-full">
-              <ResumeLayout data={data} />
-            </div>
-          </ThemeCanvas>
         </div>
+
+        <div
+          role="group"
+          aria-label="Editor workspace view"
+          className="mt-3 grid grid-cols-2 border border-site-border xl:hidden"
+        >
+          {(["edit", "preview"] as const).map((view) => {
+            const active = mobileWorkspaceView === view;
+            return (
+              <button
+                key={view}
+                type="button"
+                aria-pressed={active}
+                onClick={() => showMobileWorkspaceView(view)}
+                className={`min-h-10 px-3 py-2 text-xs font-semibold tracking-[0.06em] transition-colors ${
+                  view === "preview" ? "border-l border-site-border" : ""
+                } ${
+                  active
+                    ? "bg-site-selected text-site-action-hover"
+                    : "bg-site-canvas-alt text-site-muted hover:text-site-text"
+                }`}
+              >
+                {view === "edit" ? "Edit content" : "Live preview"}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="mt-4" aria-live="polite">
+        {error ? (
+          <p className="site-alert-danger mb-4 px-4 py-3 text-sm" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {success ? (
+          <p className="site-alert-success mb-4 px-4 py-3 text-sm" role="status">
+            {success}
+          </p>
+        ) : null}
+      </div>
+
+      <div
+        id="editor-workspace"
+        data-editor-workspace
+        className="scroll-mt-72 xl:grid xl:scroll-mt-40 xl:grid-cols-[minmax(0,46rem)_minmax(24rem,1fr)] xl:items-start xl:gap-5"
+      >
+        <section
+          aria-labelledby="editor-content-title"
+          className={`${mobileWorkspaceView === "edit" ? "block" : "hidden"} min-w-0 xl:block`}
+        >
+          <div className="mb-4 flex items-end justify-between gap-4 px-1">
+            <div>
+              <p className="site-eyebrow">Content workspace</p>
+              <h2 id="editor-content-title" className="site-panel-title mt-1.5">
+                Build the page in sections
+              </h2>
+            </div>
+            <p className="hidden max-w-xs text-right text-xs leading-5 text-site-muted sm:block">
+              Changes appear in the preview before you save.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            <EditorSectionNav />
+
+            {pendingDraft ? (
+              <DraftBanner
+                savedAt={pendingDraft.savedAt}
+                onRestore={restoreDraft}
+                onDiscard={dismissDraft}
+              />
+            ) : null}
+
+            <section
+              id="editor-section-setup"
+              data-editor-section="setup"
+              aria-labelledby="editor-setup-title"
+              className="scroll-mt-72 xl:scroll-mt-40"
+            >
+              <div className="mb-3 px-1">
+                <p className="site-eyebrow">Page setup</p>
+                <h2 id="editor-setup-title" className="site-panel-title mt-1.5">
+                  Address and profile photo
+                </h2>
+              </div>
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)]">
+                <fieldset className="site-panel min-w-0 space-y-3 p-4 sm:p-5">
+                  <legend className="site-eyebrow px-1">Public URL</legend>
+                  <div className="min-w-0 break-all border border-site-border bg-site-canvas-alt px-3 py-2 font-mono text-sm leading-6 text-site-action">
+                    mylivingpage.com/{publicSlug || page?.slug || "your-username"}
+                  </div>
+                  <p className="text-xs leading-5 text-site-muted">
+                    This address is shared by your Living Page and downloadable résumé.
+                  </p>
+                </fieldset>
+
+                <fieldset className="site-panel space-y-3 p-4 sm:p-5">
+                  <legend className="site-eyebrow px-1">Profile photo</legend>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    {data.avatar_url ? (
+                      <Image
+                        src={data.avatar_url}
+                        alt="Avatar"
+                        width={64}
+                        height={64}
+                        sizes="(min-width: 640px) 64px, 56px"
+                        className="h-14 w-14 shrink-0 rounded-none border-2 border-site-action object-cover sm:h-16 sm:w-16"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-site-action font-site text-xl font-bold text-site-action-ink sm:h-16 sm:w-16 sm:text-2xl">
+                        {(data.name || "?").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void handleAvatarUpload(file);
+                          }
+                          event.target.value = "";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadingAvatar}
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="site-button site-button-secondary w-full px-3 py-2 text-xs disabled:opacity-50"
+                      >
+                        {uploadingAvatar
+                          ? "Uploading..."
+                          : data.avatar_url
+                            ? "Change Photo"
+                            : "Upload Photo"}
+                      </button>
+                      {data.avatar_url ? (
+                        <button
+                          type="button"
+                          onClick={removeAvatar}
+                          className="w-full text-left text-xs text-site-muted hover:text-site-danger"
+                        >
+                          Remove · use monogram
+                        </button>
+                      ) : (
+                        <p className="text-xs leading-5 text-site-muted">JPEG, PNG, or WebP · 2 MB max</p>
+                      )}
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+            </section>
+
+            <ResumeEditorFields data={data} onChange={setData} />
+
+            <section
+              id="editor-section-design"
+              data-editor-section="design"
+              aria-labelledby="editor-design-title"
+              className="site-panel scroll-mt-72 p-4 sm:p-5 xl:scroll-mt-40"
+            >
+              <div className="mb-5 border-b border-site-border pb-4">
+                <p className="site-eyebrow">Appearance</p>
+                <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3">
+                  <h2 id="editor-design-title" className="site-panel-title">
+                    Choose the page world
+                  </h2>
+                  <span className="border border-site-action bg-site-selected px-2.5 py-1 font-mono text-[10px] tracking-[0.08em] text-site-action-hover">
+                    {selectedTheme?.name ?? themeId}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
+                  Your content stays the same while the visual system changes around it.
+                </p>
+              </div>
+              <ThemePicker
+                themes={THEME_REGISTRY}
+                selectedThemeId={themeId}
+                onSelectTheme={setThemeId}
+                allowedThemeIds={accountAccess.allowedThemeIds}
+                initialCollection={themePickerCollection}
+                lockedLabel="Not available"
+                showDescription
+              />
+            </section>
+
+            <section
+              id="editor-section-ats"
+              data-editor-section="ats"
+              aria-labelledby="editor-tools-title"
+              className="scroll-mt-72 space-y-4 xl:scroll-mt-40"
+            >
+              <div className="px-1">
+                <p className="site-eyebrow">Resume tools</p>
+                <h2 id="editor-tools-title" className="site-panel-title mt-1.5">
+                  Check the saved output
+                </h2>
+              </div>
+              <div className="site-callout px-4 py-3">
+                <p className="site-eyebrow">Résumé PDF</p>
+                <p className="mt-2 text-sm leading-6 text-site-text">
+                  The public page uses this same saved information for the downloadable Resume PDF.
+                </p>
+              </div>
+              <AtsReadinessCard resumeData={data} />
+              <p className="px-1 text-xs leading-5 text-site-muted">
+                The check uses the fields currently in this editor. Save your changes before relying
+                on the public PDF.
+              </p>
+            </section>
+          </div>
+        </section>
+
+        <aside
+          aria-labelledby="editor-preview-title"
+          data-editor-preview
+          className={`${mobileWorkspaceView === "preview" ? "block" : "hidden"} min-w-0 xl:sticky xl:top-36 xl:block`}
+        >
+          <section className="overflow-hidden rounded-none border border-site-border-strong bg-site-surface shadow-[var(--site-shadow-raised)]">
+            <div className="flex items-start justify-between gap-4 border-b border-site-border bg-site-surface-raised px-4 py-3">
+              <div>
+                <p className="site-eyebrow">Live preview</p>
+                <h2 id="editor-preview-title" className="mt-1 font-site text-lg font-semibold text-site-text">
+                  See every edit in context
+                </h2>
+                <p className="mt-1 text-xs text-site-muted">Scroll inside the page to explore it.</p>
+              </div>
+              <span className="shrink-0 border border-site-border bg-site-canvas-alt px-2.5 py-1 font-mono text-[9px] tracking-[0.08em] text-site-action-hover">
+                {selectedTheme?.name ?? themeId}
+              </span>
+            </div>
+
+            <div className="flex min-w-0 items-center gap-2 border-b border-site-border bg-site-canvas-alt px-3 py-2.5">
+              <span aria-hidden="true" className="h-2 w-2 bg-[#FF5F57]" />
+              <span aria-hidden="true" className="h-2 w-2 bg-[#FEBC2E]" />
+              <span aria-hidden="true" className="h-2 w-2 bg-[#28C840]" />
+              <div className="ml-1 min-w-0 flex-1 truncate rounded-none border border-site-border bg-site-surface px-2.5 py-1 font-mono text-[10px] text-site-muted">
+                mylivingpage.com/<span className="text-site-action">{publicSlug || page?.slug}</span>
+              </div>
+            </div>
+
+            <ThemeCanvas
+              themeId={themeId}
+              height="clamp(480px, calc(100dvh - 13rem), 760px)"
+              className="rounded-none"
+              motionAware
+            >
+              <div className="h-full">
+                <ResumeLayout data={data} headingLevel="h2" disableExternalLinks />
+              </div>
+            </ThemeCanvas>
+          </section>
+        </aside>
       </div>
     </main>
   );

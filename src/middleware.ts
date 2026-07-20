@@ -6,7 +6,10 @@ import { isEditorPreviewEnabled } from "@/lib/editor-preview";
 
 const PROTECTED_PATHS = ["/create", "/dashboard", "/admin"];
 const ADMIN_PATHS = ["/admin"];
-const EDITOR_PREVIEW_PATH = "/dev/editor-preview";
+const LOCAL_PREVIEW_PATHS = new Set([
+  "/dev/editor-preview",
+  "/dev/theme-lab",
+]);
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PATHS.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -19,7 +22,7 @@ function isAdminPath(pathname: string) {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  if (pathname === EDITOR_PREVIEW_PATH) {
+  if (LOCAL_PREVIEW_PATHS.has(pathname)) {
     return isEditorPreviewEnabled()
       ? NextResponse.next()
       : new NextResponse(null, { status: 404 });

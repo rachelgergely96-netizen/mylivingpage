@@ -7,4 +7,11 @@ Visual review artifacts for the Signal Frame homepage implementation. These imag
 - `signal-frame-homepage-full.png` — full desktop homepage concept
 - `signal-frame-homepage-artifact-browser.png` — 1440 × 1000 standalone concept capture used during the Signal Frame review
 
-The production homepage now uses the Signal Frame design. `/homepage-preview` remains a `noindex` review mirror so future homepage changes can still be checked in isolation.
+The production homepage uses the Signal Frame design. `/homepage-preview` is now a
+`noindex` Observatory + Living Gallery experiment so future homepage directions can
+be reviewed without replacing `/`.
+
+For local renderer review, run `ENABLE_EDITOR_PREVIEW=1 npm run dev` and open
+`/dev/theme-lab`. The credential-free fixed-frame checks run with
+`npm run test:e2e:visual`; set `UPDATE_THEME_BASELINES=1` while running the theme
+quality spec only when an intentional renderer change requires new reference values.

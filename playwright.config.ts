@@ -25,9 +25,9 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
       : {
-        command: process.env.CI
-          ? "npm run build && npm run start"
-          : "npm run dev",
+        command:
+          process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
+          (process.env.CI ? "npm run build && npm run start" : "npm run dev"),
         env: {
           ...process.env,
           ENABLE_EDITOR_PREVIEW: "1",

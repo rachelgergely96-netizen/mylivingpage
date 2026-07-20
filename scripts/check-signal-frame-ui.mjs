@@ -33,6 +33,7 @@ const IN_SCOPE = [
   "src/components/PublishPageButton.tsx",
   "src/components/ThemePicker.tsx",
   "src/components/marketing/GuideLinkGrid.tsx",
+  "src/components/marketing/LivingHomepagePrototype.tsx",
   "src/components/marketing/MobileStickyCta.tsx",
   "src/components/marketing/SamplePageCard.tsx",
   "src/components/marketing/SignalFrameHomepage.tsx",
@@ -42,6 +43,7 @@ const IN_SCOPE = [
 
 const CSS_IN_SCOPE = [
   "src/app/globals.css",
+  "src/components/marketing/LivingHomepagePrototype.module.css",
   "src/components/marketing/SignalFrameHomepage.module.css",
 ];
 

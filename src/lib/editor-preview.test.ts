@@ -13,4 +13,20 @@ describe("editor preview gate", () => {
       isEditorPreviewEnabled({ ENABLE_EDITOR_PREVIEW: "1", VERCEL: "1" }),
     ).toBe(false);
   });
+
+  it("stays disabled on non-CI production servers", () => {
+    expect(
+      isEditorPreviewEnabled({
+        ENABLE_EDITOR_PREVIEW: "1",
+        NODE_ENV: "production",
+      }),
+    ).toBe(false);
+    expect(
+      isEditorPreviewEnabled({
+        CI: "1",
+        ENABLE_EDITOR_PREVIEW: "1",
+        NODE_ENV: "production",
+      }),
+    ).toBe(true);
+  });
 });

@@ -11,6 +11,16 @@ describe("loadRenderer", () => {
     await expect(loadRenderer("cosmic")).resolves.toBe(renderer);
   });
 
+  it("polishes catalog renderers while preserving bespoke signature renderers", async () => {
+    const [{ renderCosmic }, { renderAurora }] = await Promise.all([
+      import("@/themes/renderers/cosmic"),
+      import("@/themes/renderers/aurora"),
+    ]);
+
+    await expect(loadRenderer("cosmic")).resolves.not.toBe(renderCosmic);
+    await expect(loadRenderer("aurora")).resolves.toBe(renderAurora);
+  });
+
   it("provides a valid loader and export for every registered theme", async () => {
     const renderers = await Promise.all(THEME_IDS.map((id) => loadRenderer(id)));
 

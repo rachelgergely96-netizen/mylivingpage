@@ -145,6 +145,119 @@ const THEME_PRESENTATION_DEFAULTS = {
   },
 } as const satisfies Record<ThemeCollectionId, ThemePresentation>;
 
+type ThemeAccentPalette = Pick<
+  ThemePresentation,
+  "accent" | "accentBright" | "accentSoft" | "accentBorder"
+>;
+
+type ThemeWorldPresentation = Pick<
+  ThemePresentation,
+  "surface" | "surfaceStrong" | "scrim"
+>;
+
+type RgbChannels = `${number}, ${number}, ${number}`;
+
+function accentPalette(
+  accent: string,
+  accentBright: string,
+  softChannels: RgbChannels,
+  borderChannels: RgbChannels,
+  softAlpha = 0.11,
+  borderAlpha = 0.28,
+): ThemeAccentPalette {
+  return {
+    accent,
+    accentBright,
+    accentSoft: `rgba(${softChannels}, ${softAlpha})`,
+    accentBorder: `rgba(${borderChannels}, ${borderAlpha})`,
+  };
+}
+
+function worldPresentation(background: string): ThemeWorldPresentation {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(background);
+  if (!match) {
+    throw new Error(`Theme background must be a six-digit hex color: ${background}`);
+  }
+
+  const channels = match
+    .slice(1)
+    .map((channel) => Number.parseInt(channel, 16))
+    .join(", ");
+
+  return {
+    surface: `rgba(${channels}, 0.56)`,
+    surfaceStrong: `rgba(${channels}, 0.8)`,
+    scrim: `linear-gradient(90deg, rgba(${channels}, 0.8) 0%, rgba(${channels}, 0.52) 50%, rgba(${channels}, 0.12) 100%)`,
+  };
+}
+
+// Each renderer owns an accent family derived from its scene rather than
+// borrowing a collection-wide color. `satisfies Record<ThemeId, ...>` makes a
+// newly registered theme fail type-checking until its palette is intentionally
+// authored. Signature entries mirror their established values exactly; their
+// additional surface and scrim treatments remain below.
+const THEME_ACCENT_PALETTES = {
+  cosmic: accentPalette("#E7C27D", "#FFF0C2", "214, 167, 76", "231, 194, 125"),
+  fluid: accentPalette("#62D6D0", "#D1FAF7", "33, 171, 166", "98, 214, 208"),
+  ember: accentPalette("#FF9A70", "#FFD7C5", "232, 92, 48", "255, 154, 112"),
+  monolith: accentPalette("#BFC7D3", "#F1F4F7", "132, 145, 162", "191, 199, 211"),
+  aurora: accentPalette("#82F3D0", "#D6FFF3", "91, 226, 193", "130, 243, 208", 0.11, 0.28),
+  terracotta: accentPalette("#E69A6B", "#FFDCC2", "188, 91, 49", "230, 154, 107"),
+  prism: accentPalette("#C9B7FF", "#F0EAFF", "151, 109, 255", "201, 183, 255"),
+  biolume: accentPalette("#61E9C5", "#D0FFF3", "29, 190, 153", "97, 233, 197"),
+  circuit: accentPalette("#63E2B7", "#D1FFF0", "31, 184, 137", "99, 226, 183"),
+  sakura: accentPalette("#F0A9BD", "#FFE1E9", "214, 113, 143", "240, 169, 189"),
+  glacier: accentPalette("#A8DDF2", "#E5F7FF", "89, 174, 211", "168, 221, 242"),
+  verdant: accentPalette("#8CD48D", "#E0F7DF", "67, 164, 78", "140, 212, 141"),
+  neon: accentPalette("#F08DFF", "#FAD7FF", "206, 70, 228", "240, 141, 255"),
+  topo: accentPalette("#76D6B4", "#D7F8EC", "45, 166, 126", "118, 214, 180"),
+  luxe: accentPalette("#E8C06A", "#FFF0BB", "195, 147, 49", "232, 192, 106"),
+  dusk: accentPalette("#E9A4A8", "#FFDADD", "188, 89, 102", "233, 164, 168"),
+  matrix: accentPalette("#69E887", "#D5FFDF", "43, 191, 81", "105, 232, 135"),
+  coral: accentPalette("#FF9B82", "#FFDCD3", "221, 91, 61", "255, 155, 130"),
+  stardust: accentPalette("#B6A8FF", "#E9E4FF", "119, 93, 224", "182, 168, 255"),
+  ink: accentPalette("#9AB7DF", "#E1EDFA", "84, 123, 177", "154, 183, 223"),
+  bloom: accentPalette("#E2A3F2", "#F8E0FF", "181, 89, 210", "226, 163, 242"),
+  silk: accentPalette("#A7B9FF", "#E4E9FF", "104, 126, 223", "167, 185, 255"),
+  tempest: accentPalette("#88D8FF", "#D8F3FF", "57, 166, 225", "136, 216, 255"),
+  obsidian: accentPalette("#FF9B62", "#FFD8BF", "232, 77, 24", "255, 155, 98"),
+  apex: accentPalette("#77CFFF", "#D6F1FF", "53, 167, 229", "119, 207, 255"),
+  atlas: accentPalette("#67D6FF", "#C9F3FF", "50, 193, 255", "103, 214, 255", 0.11, 0.3),
+  forge: accentPalette("#FFB36A", "#FFE2BA", "225, 105, 35", "255, 179, 106"),
+  vector: accentPalette("#7DA7FF", "#DBE7FF", "70, 117, 221", "125, 167, 255"),
+  vault: accentPalette("#BACFFF", "#EDF3FF", "113, 147, 222", "186, 207, 255"),
+  velvet: accentPalette("#E8A7B9", "#FFD9E2", "232, 117, 151", "244, 168, 190", 0.12, 0.3),
+  opaline: accentPalette("#C5C8F5", "#F1F2FF", "133, 140, 218", "197, 200, 245"),
+  halo: accentPalette("#E7AD9D", "#FFE1D8", "198, 104, 83", "231, 173, 157"),
+  sonata: accentPalette("#E6A6C5", "#FCE1EF", "190, 87, 137", "230, 166, 197"),
+  mosaic: accentPalette("#82D7DB", "#D7F8F7", "48, 171, 177", "130, 215, 219"),
+  bastion: accentPalette("#A9B8C9", "#E7EDF4", "97, 119, 145", "169, 184, 201"),
+  carbon: accentPalette("#B9CEE0", "#EEF7FF", "113, 147, 174", "185, 206, 224"),
+  caliber: accentPalette("#84BEFF", "#E0EEFF", "65, 139, 222", "132, 190, 255"),
+  quarry: accentPalette("#E9AF72", "#FFE0B8", "217, 143, 72", "233, 175, 114", 0.12, 0.29),
+  harbor: accentPalette("#75CDEB", "#D1F1FC", "49, 158, 199", "117, 205, 235"),
+  relay: accentPalette("#68D7F2", "#D3F7FF", "43, 172, 207", "104, 215, 242"),
+  meridian: accentPalette("#75C7D4", "#D8F4F6", "48, 157, 173", "117, 199, 212"),
+  atelier: accentPalette("#FFB28F", "#FFE0D1", "255, 137, 102", "255, 178, 143", 0.11, 0.28),
+  porcelain: accentPalette("#B9CCE2", "#EEF6FF", "112, 145, 182", "185, 204, 226"),
+  filigree: accentPalette("#DDBB76", "#F8E8BD", "181, 132, 41", "221, 187, 118"),
+  cameo: accentPalette("#D9B1C6", "#F9E6EF", "170, 101, 139", "217, 177, 198"),
+  solstice: accentPalette("#FFC66D", "#FFF0C2", "239, 154, 49", "255, 198, 109"),
+  tulle: accentPalette("#C9BEDD", "#F2ECFA", "144, 123, 173", "201, 190, 221"),
+  parasol: accentPalette("#E4A7CB", "#FCE2F1", "190, 91, 145", "228, 167, 203"),
+  gossamer: accentPalette("#A8D7F0", "#E4F6FF", "88, 167, 207", "168, 215, 240"),
+  citadel: accentPalette("#A7B7D1", "#E6EDF8", "91, 115, 154", "167, 183, 209"),
+  axiom: accentPalette("#8DB5FF", "#DEE9FF", "74, 126, 225", "141, 181, 255"),
+  helix: accentPalette("#91E0EA", "#DDFBFF", "70, 178, 191", "145, 224, 234"),
+  jetstream: accentPalette("#9FD5FF", "#E2F2FF", "78, 161, 226", "159, 213, 255"),
+  echelon: accentPalette("#91AEE8", "#E1E9FA", "74, 108, 177", "145, 174, 232"),
+  vellum: accentPalette("#D8C6AC", "#F7EDDF", "172, 145, 109", "216, 198, 172"),
+  nocturne: accentPalette("#C8D4FF", "#F1F4FF", "151, 171, 255", "200, 212, 255", 0.11, 0.27),
+  lustre: accentPalette("#E6BF8A", "#FFE9CB", "191, 139, 72", "230, 191, 138"),
+  fresco: accentPalette("#D7AE83", "#F5DEC4", "175, 125, 76", "215, 174, 131"),
+  rosaline: accentPalette("#E6AFC2", "#FCE3EC", "191, 100, 136", "230, 175, 194"),
+} as const satisfies Record<ThemeId, ThemeAccentPalette>;
+
 const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresentation>>> = {
   velvet: {
     accent: "#E8A7B9",
@@ -227,7 +340,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     id: "monolith",
     name: "Monolith",
     description:
-      "Rotating concentric wireframes pulse over a dot matrix grid in minimalist geometric motion.",
+      "A faceted obsidian monument rises through architectural wireframes, survey lines, and cool precision light.",
     vibe: "Executive & Minimal",
     background: "#060606",
   },
@@ -292,7 +405,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     id: "verdant",
     name: "Verdant",
     description:
-      "Organic vine tendrils grow and branch across the canvas while firefly particles drift through a lush canopy.",
+      "A luminous botanical portal grows through layered canopy, drifting rain, authored leaves, and firefly light.",
     vibe: "Balanced & Growth-Minded",
     background: "#050D06",
   },
@@ -316,7 +429,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     id: "luxe",
     name: "Luxe",
     description:
-      "Golden light rays slowly sweep through darkness while metallic flecks drift and catch the light.",
+      "A cut-brass Art Deco aperture turns through lacquered depth, architectural facets, and controlled golden glints.",
     vibe: "Prestigious & Confident",
     background: "#0A0808",
   },
@@ -688,6 +801,8 @@ export const THEME_REGISTRY: ThemeMeta[] = THEME_DEFINITIONS.map((theme) => ({
   collection: THEME_COLLECTIONS[theme.id],
   presentation: {
     ...THEME_PRESENTATION_DEFAULTS[THEME_COLLECTIONS[theme.id]],
+    ...THEME_ACCENT_PALETTES[theme.id],
+    ...(theme.signature ? {} : worldPresentation(theme.background)),
     ...THEME_PRESENTATION_OVERRIDES[theme.id],
   },
 }));

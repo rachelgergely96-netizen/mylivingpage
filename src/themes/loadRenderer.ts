@@ -1,4 +1,6 @@
 import type { ThemeId, ThemeRenderer } from "./types";
+import { THEME_MAP } from "./registry";
+import { withWorldPolish } from "./shared/worldPolish";
 
 type RendererModule = Record<string, unknown>;
 type RendererLoader = () => Promise<RendererModule>;
@@ -101,7 +103,7 @@ export function loadRenderer(id: ThemeId): Promise<ThemeRenderer> {
       if (typeof renderer !== "function") {
         throw new Error(`Theme renderer module "${id}" has no ${rendererExportName(id)} export.`);
       }
-      const typed = renderer as ThemeRenderer;
+      const typed = withWorldPolish(THEME_MAP[id], renderer as ThemeRenderer);
       rendererCache.set(id, typed);
       return typed;
     })

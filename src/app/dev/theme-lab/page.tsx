@@ -37,7 +37,7 @@ export default function ThemeLabPage() {
           <p className="site-eyebrow">Renderer quality gate</p>
           <h1 className="site-page-title mt-2">Catalog theme lab</h1>
           <p className="mt-3 text-sm leading-6 text-site-secondary">
-            Fixed-frame review for every non-signature world, with optional motion and focus checks.
+            Full-page review for every Living Resume theme, with optional motion and focus checks.
           </p>
         </div>
         <ThemeQualityLab />

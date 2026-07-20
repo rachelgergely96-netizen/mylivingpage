@@ -476,6 +476,7 @@ export default function ThemeCanvas({
       data-living-output
       data-theme-id={theme.id}
       data-theme-collection={theme.collection}
+      data-theme-detail={theme.contentProfile}
       data-theme-renderer-status="loading"
       data-motion-aware={motionAware ? "true" : undefined}
       className={className}

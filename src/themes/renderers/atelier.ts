@@ -1,135 +1,235 @@
+import {
+  finiteClamp,
+  resolveThemeMotion,
+  storyStepWeight,
+} from "../shared/motion";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-const PALETTE = [
-  [247, 139, 103],
-  [95, 182, 234],
-  [241, 199, 102],
-  [219, 116, 172],
-  [105, 205, 179],
+const INKS = [
+  { color: "#E66F55", x: 0.56, y: 0.16, width: 0.34, height: 0.25, rotation: -0.08 },
+  { color: "#3157C8", x: 0.66, y: 0.34, width: 0.29, height: 0.32, rotation: 0.055 },
+  { color: "#D6A92D", x: 0.51, y: 0.58, width: 0.4, height: 0.22, rotation: -0.035 },
 ] as const;
 
-function drawBrushStroke(
+function stableUnit(seed: number): number {
+  const value = Math.sin(seed * 91.173 + 17.71) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function drawCropMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  directionX: -1 | 1,
+  directionY: -1 | 1,
+  length: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + directionX * length * 0.32, y);
+  ctx.lineTo(x + directionX * length, y);
+  ctx.moveTo(x, y + directionY * length * 0.32);
+  ctx.lineTo(x, y + directionY * length);
+  ctx.stroke();
+}
+
+function drawRegistrationMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+) {
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, TAU);
+  ctx.moveTo(x - radius * 1.5, y);
+  ctx.lineTo(x + radius * 1.5, y);
+  ctx.moveTo(x, y - radius * 1.5);
+  ctx.lineTo(x, y + radius * 1.5);
+  ctx.stroke();
+}
+
+function drawInkPlate(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   index: number,
-  t: number,
-  mx: number,
-  my: number,
+  time: number,
+  pointerX: number,
+  pointerY: number,
+  storyProgress: number,
+  interactionImpulse: number,
 ) {
-  const [r, g, b] = PALETTE[index % PALETTE.length];
-  const seed = index * 0.91 + 0.24;
-  const startX = w * (0.36 + (index % 2) * 0.06);
-  const startY = h * (0.08 + index * 0.125) + Math.sin(t * 0.18 + seed) * 20;
-  const endX = w * 1.08;
-  const endY = h * (0.24 + index * 0.105) + Math.cos(t * 0.14 + seed) * 24;
-  const controlX1 = w * (0.5 + (mx - 0.5) * 0.12);
-  const controlY1 = h * (0.04 + index * 0.14) + (my - 0.5) * 42;
-  const controlX2 = w * (0.76 - (mx - 0.5) * 0.08);
-  const controlY2 = h * (0.38 + index * 0.07) - (my - 0.5) * 38;
-  const width = 24 + index * 7;
+  const plate = INKS[index];
+  const chapterWeight = storyStepWeight(storyProgress, index, INKS.length);
+  const settle = 1 - interactionImpulse * 0.72;
+  const driftX =
+    (pointerX - 0.5) * (4 + index * 1.5) * settle +
+    Math.sin(time * 0.08 + index * 1.7) * 1.5;
+  const driftY =
+    (pointerY - 0.5) * (3 + index) * settle +
+    Math.cos(time * 0.07 + index * 1.2) * 1.2;
+  const x = w * plate.x + driftX;
+  const y = h * plate.y + driftY;
+  const width = w * plate.width;
+  const height = h * plate.height;
 
   ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.bezierCurveTo(controlX1, controlY1, controlX2, controlY2, endX, endY);
-  ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.26 - index * 0.018})`;
-  ctx.lineWidth = width;
-  ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
-  ctx.shadowBlur = 20;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
+  ctx.translate(x + width * 0.5, y + height * 0.5);
+  ctx.rotate(plate.rotation + (storyProgress - 0.5) * 0.025 * (index - 1));
+  ctx.translate(-width * 0.5, -height * 0.5);
 
-  for (let bristle = 0; bristle < 5; bristle += 1) {
-    const offset = (bristle - 2) * width * 0.13;
+  ctx.globalAlpha = 0.19 + chapterWeight * 0.15;
+  ctx.fillStyle = plate.color;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 0.22 + chapterWeight * 0.2;
+  ctx.strokeStyle = plate.color;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
+
+  ctx.globalAlpha = 0.12 + chapterWeight * 0.08;
+  const spacing = Math.max(8, Math.min(w, h) * 0.018);
+  for (let line = -height; line < width + height; line += spacing) {
     ctx.beginPath();
-    ctx.moveTo(startX, startY + offset);
-    ctx.bezierCurveTo(controlX1, controlY1 + offset, controlX2, controlY2 - offset * 0.6, endX, endY - offset * 0.3);
-    ctx.strokeStyle = `rgba(255, 246, 235, ${0.026 + (bristle % 2) * 0.012})`;
-    ctx.lineWidth = 1 + (bristle % 2);
+    ctx.moveTo(line, 0);
+    ctx.lineTo(line - height, height);
     ctx.stroke();
   }
+
+  ctx.globalAlpha = 0.7;
+  drawCropMark(ctx, -5, -5, -1, -1, 12);
+  drawCropMark(ctx, width + 5, -5, 1, -1, 12);
+  drawCropMark(ctx, -5, height + 5, -1, 1, 12);
+  drawCropMark(ctx, width + 5, height + 5, 1, 1, 12);
   ctx.restore();
 }
 
-export const renderAtelier: ThemeRenderer = (ctx, w, h, t, mx, my) => {
-  const background = ctx.createLinearGradient(0, 0, w, h);
-  background.addColorStop(0, "#100A14");
-  background.addColorStop(0.48, "#0D111C");
-  background.addColorStop(1, "#05070B");
-  ctx.fillStyle = background;
+export const renderAtelier: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const pageMotion = resolveThemeMotion(motion);
+  const reducedMotion = motion?.reducedMotion ?? false;
+  const effectiveTime = reducedMotion ? 0 : finiteClamp(t, 0, 1_000_000);
+  const targetX = pageMotion.hasFocus ? mx * 0.3 + pageMotion.focusX * 0.7 : mx;
+  const targetY = pageMotion.hasFocus ? my * 0.3 + pageMotion.focusY * 0.7 : my;
+  const paper = ctx.createLinearGradient(0, 0, w, h);
+  paper.addColorStop(0, "#F2EBDD");
+  paper.addColorStop(0.56, "#E8DFCF");
+  paper.addColorStop(1, "#D7CCB8");
+  ctx.fillStyle = paper;
   ctx.fillRect(0, 0, w, h);
 
-  const paperGlow = ctx.createRadialGradient(w * 0.78, h * 0.3, 0, w * 0.78, h * 0.3, Math.max(w, h) * 0.62);
-  paperGlow.addColorStop(0, "rgba(255, 221, 202, 0.1)");
-  paperGlow.addColorStop(0.5, "rgba(136, 100, 153, 0.045)");
-  paperGlow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = paperGlow;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.strokeStyle = "rgba(235, 222, 215, 0.035)";
-  ctx.lineWidth = 1;
-  for (let x = w * 0.45; x < w; x += Math.max(32, w * 0.055)) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-  for (let y = 0; y < h; y += Math.max(32, h * 0.075)) {
-    ctx.beginPath();
-    ctx.moveTo(w * 0.4, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-
+  // Deterministic paper fibres make the surface tactile without an image asset.
   ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  for (let i = 0; i < 6; i += 1) {
-    drawBrushStroke(ctx, w, h, i, t, mx, my);
+  ctx.lineWidth = 0.6;
+  for (let index = 0; index < 140; index += 1) {
+    const x = stableUnit(index * 2.13) * w;
+    const y = stableUnit(index * 3.71 + 4) * h;
+    const length = 3 + stableUnit(index * 1.43 + 8) * 14;
+    ctx.strokeStyle = index % 3 === 0
+      ? "rgba(58, 47, 38, 0.055)"
+      : "rgba(255, 252, 240, 0.12)";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + length, y + (stableUnit(index + 12) - 0.5) * 1.8);
+    ctx.stroke();
   }
   ctx.restore();
 
-  const blocks = [
-    [0.69, 0.18, 0],
-    [0.86, 0.34, 2],
-    [0.62, 0.68, 4],
-    [0.9, 0.77, 3],
-  ] as const;
-  blocks.forEach(([px, py, colorIndex], index) => {
-    const [r, g, b] = PALETTE[colorIndex];
-    const x = w * px + Math.sin(t * 0.12 + index) * 6;
-    const y = h * py + Math.cos(t * 0.1 + index) * 6;
-    const radius = Math.min(w, h) * (0.055 + index * 0.008);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(index * 0.47 + Math.sin(t * 0.08 + index) * 0.08);
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.075 + index * 0.012})`;
-    ctx.fillRect(-radius, -radius * 0.58, radius * 2, radius * 1.16);
-    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(-radius, -radius * 0.58, radius * 2, radius * 1.16);
-    ctx.restore();
-  });
+  const margin = Math.max(18, Math.min(w, h) * 0.04);
+  ctx.strokeStyle = "rgba(24, 22, 27, 0.25)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(margin + 0.5, margin + 0.5, w - margin * 2 - 1, h - margin * 2 - 1);
 
-  for (let i = 0; i < 72; i += 1) {
-    const seed = i * 0.587 + 0.14;
-    const progress = (t * (0.012 + (i % 4) * 0.003) + seed * 0.18) % 1;
-    const x = w * (0.4 + (Math.sin(seed * 4.2) * 0.5 + 0.5) * 0.62);
-    const y = h * 0.95 - progress * h * 0.9 + Math.cos(seed * 5.1) * 9;
-    const [r, g, b] = PALETTE[i % PALETTE.length];
+  // Printer's ruler and baseline grid stay on the art side of the page.
+  const gridStart = w * 0.46;
+  ctx.save();
+  ctx.strokeStyle = "rgba(24, 22, 27, 0.07)";
+  for (let x = gridStart; x <= w; x += Math.max(24, w * 0.045)) {
     ctx.beginPath();
-    ctx.arc(x, y, 0.6 + (i % 4) * 0.35, 0, TAU);
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(1 - progress) * 0.13})`;
-    ctx.fill();
+    ctx.moveTo(x, margin);
+    ctx.lineTo(x, h - margin);
+    ctx.stroke();
+  }
+  for (let y = margin; y <= h - margin; y += Math.max(24, h * 0.055)) {
+    ctx.beginPath();
+    ctx.moveTo(gridStart, y);
+    ctx.lineTo(w - margin, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  for (let index = 0; index < INKS.length; index += 1) {
+    drawInkPlate(
+      ctx,
+      w,
+      h,
+      index,
+      effectiveTime,
+      targetX,
+      targetY,
+      pageMotion.storyProgress,
+      pageMotion.interactionImpulse,
+    );
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(24, 22, 27, 0.55)";
+  ctx.lineWidth = 1;
+  drawRegistrationMark(ctx, w * 0.9, h * 0.12, Math.max(5, Math.min(w, h) * 0.012));
+  drawRegistrationMark(ctx, w * 0.51, h * 0.86, Math.max(4, Math.min(w, h) * 0.009));
+  drawCropMark(ctx, margin, margin, -1, -1, 13);
+  drawCropMark(ctx, w - margin, margin, 1, -1, 13);
+  drawCropMark(ctx, margin, h - margin, -1, 1, 13);
+  drawCropMark(ctx, w - margin, h - margin, 1, 1, 13);
+  ctx.restore();
+
+  const swatchSize = Math.max(7, Math.min(w, h) * 0.018);
+  INKS.forEach((ink, index) => {
+    ctx.fillStyle = ink.color;
+    ctx.fillRect(
+      w - margin - swatchSize * (INKS.length - index),
+      h - margin - swatchSize,
+      swatchSize,
+      swatchSize,
+    );
+  });
+  ctx.fillStyle = "#18161B";
+  ctx.fillRect(w - margin - swatchSize * 4, h - margin - swatchSize, swatchSize, swatchSize);
+
+  if (pageMotion.hasFocus) {
+    const focusX = pageMotion.focusX * w;
+    const focusY = pageMotion.focusY * h;
+    const size = 8 + (1 - pageMotion.interactionImpulse) * 10;
+    ctx.save();
+    ctx.strokeStyle = "rgba(49, 87, 200, 0.68)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    ctx.moveTo(gridStart, focusY);
+    ctx.lineTo(focusX, focusY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    drawRegistrationMark(ctx, focusX, focusY, size * 0.5);
+    ctx.restore();
   }
 
-  const clearSpace = ctx.createLinearGradient(0, 0, w * 0.52, 0);
-  clearSpace.addColorStop(0, "rgba(5, 5, 10, 0.34)");
-  clearSpace.addColorStop(1, "rgba(5, 5, 10, 0)");
-  ctx.fillStyle = clearSpace;
-  ctx.fillRect(0, 0, w * 0.58, h);
+  // A paper wash protects the semantic text zone without hiding the print proof.
+  const textWash = ctx.createLinearGradient(0, 0, w * 0.58, 0);
+  textWash.addColorStop(0, "rgba(242, 235, 221, 0.9)");
+  textWash.addColorStop(0.76, "rgba(242, 235, 221, 0.62)");
+  textWash.addColorStop(1, "rgba(242, 235, 221, 0)");
+  ctx.fillStyle = textWash;
+  ctx.fillRect(0, 0, w * 0.6, h);
 };

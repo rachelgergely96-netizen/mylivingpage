@@ -1,228 +1,254 @@
-import type { ThemeRenderer } from "../types";
 import {
   finiteClamp,
   resolveThemeMotion,
   storyStepWeight,
 } from "../shared/motion";
+import type { ThemeRenderer } from "../types";
 
-const TAU = Math.PI * 2;
+const ROUTE = [
+  [0.5, 0.72],
+  [0.58, 0.57],
+  [0.69, 0.62],
+  [0.76, 0.42],
+  [0.86, 0.49],
+  [0.92, 0.27],
+] as const;
 
-function routePoint(
-  cx: number,
-  cy: number,
-  radius: number,
-  longitude: number,
-  latitude: number,
-  yaw: number,
-): [number, number] {
-  const rotated = longitude + yaw;
-  const depth = Math.cos(latitude) * Math.cos(rotated);
-  return [
-    cx + Math.cos(latitude) * Math.sin(rotated) * radius,
-    cy + Math.sin(latitude) * radius * 0.76 - depth * radius * 0.05,
-  ];
-}
+const CONTOURS = [
+  { x: 0.74, y: 0.39, width: 0.17, height: 0.1, rotation: -0.16 },
+  { x: 0.74, y: 0.39, width: 0.23, height: 0.145, rotation: -0.16 },
+  { x: 0.74, y: 0.39, width: 0.3, height: 0.19, rotation: -0.16 },
+  { x: 0.82, y: 0.67, width: 0.12, height: 0.075, rotation: 0.18 },
+  { x: 0.82, y: 0.67, width: 0.18, height: 0.11, rotation: 0.18 },
+] as const;
 
 function routeForSection(section: string | null): number | null {
   switch (section) {
     case "summary":
     case "proof":
-      return 0;
+      return 1;
     case "testimonials":
     case "experience":
-      return 1;
-    case "projects":
       return 2;
+    case "projects":
+      return 3;
     case "education":
     case "skills":
     case "certifications":
-      return 3;
+      return 4;
     default:
       return null;
   }
 }
 
-export const renderAtlas: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, motion) => {
+function routePosition(
+  route: readonly (readonly [number, number])[],
+  progress: number,
+): readonly [number, number] {
+  const segmentProgress = finiteClamp(progress, 0, 0.9999) * (route.length - 1);
+  const index = Math.floor(segmentProgress);
+  const local = segmentProgress - index;
+  const start = route[index];
+  const end = route[Math.min(route.length - 1, index + 1)];
+  return [
+    start[0] + (end[0] - start[0]) * local,
+    start[1] + (end[1] - start[1]) * local,
+  ];
+}
+
+export const renderAtlas: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
   const pageMotion = resolveThemeMotion(motion);
-  const velocity = finiteClamp(pageMotion.scrollVelocity / 3, -1, 1);
+  const reducedMotion = motion?.reducedMotion ?? false;
+  const effectiveTime = reducedMotion ? 0 : finiteClamp(t, 0, 1_000_000);
+  const velocity = finiteClamp(pageMotion.scrollVelocity / 4, -1, 1);
   const activeRoute = routeForSection(pageMotion.activeSection);
+  const shiftX = (mx - 0.5) * w * 0.014;
+  const shiftY = (my - 0.5) * h * 0.01 + velocity * h * 0.005;
   const background = ctx.createLinearGradient(0, 0, w, h);
-  background.addColorStop(0, "#020A10");
-  background.addColorStop(0.52, "#04121C");
-  background.addColorStop(1, "#02070C");
+  background.addColorStop(0, "#02090E");
+  background.addColorStop(0.52, "#04131D");
+  background.addColorStop(1, "#010609");
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, w, h);
 
-  for (let i = 0; i < 62; i += 1) {
-    const seed = i * 0.733 + 0.31;
-    const x = (Math.sin(seed * 6.1) * 0.5 + 0.5) * w;
-    const y = (Math.cos(seed * 4.7) * 0.5 + 0.5) * h;
-    const alpha = 0.035 + (0.5 + 0.5 * Math.sin(t * 0.8 + seed * 8)) * 0.09;
-    ctx.fillStyle = `rgba(161, 224, 255, ${alpha})`;
-    ctx.fillRect(x, y, 0.7 + (i % 3) * 0.3, 0.7 + (i % 3) * 0.3);
+  const chartLeft = w * 0.44 + shiftX;
+  const chartTop = h * 0.07 + shiftY;
+  const chartRight = w * 0.96 + shiftX;
+  const chartBottom = h * 0.91 + shiftY;
+  const chartWidth = chartRight - chartLeft;
+  const chartHeight = chartBottom - chartTop;
+
+  const chartWash = ctx.createLinearGradient(chartLeft, chartTop, chartRight, chartBottom);
+  chartWash.addColorStop(0, "rgba(17, 69, 91, 0.14)");
+  chartWash.addColorStop(0.58, "rgba(6, 30, 43, 0.08)");
+  chartWash.addColorStop(1, "rgba(0, 0, 0, 0.08)");
+  ctx.fillStyle = chartWash;
+  ctx.fillRect(chartLeft, chartTop, chartWidth, chartHeight);
+
+  ctx.strokeStyle = "rgba(109, 213, 255, 0.24)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(chartLeft + 0.5, chartTop + 0.5, chartWidth - 1, chartHeight - 1);
+  ctx.strokeStyle = "rgba(109, 213, 255, 0.08)";
+  ctx.strokeRect(chartLeft + 6.5, chartTop + 6.5, chartWidth - 13, chartHeight - 13);
+
+  // Drafting grid: precise and quiet, with stronger major divisions.
+  for (let column = 0; column <= 12; column += 1) {
+    const x = chartLeft + (column / 12) * chartWidth;
+    ctx.strokeStyle = column % 3 === 0
+      ? "rgba(103, 214, 255, 0.11)"
+      : "rgba(103, 214, 255, 0.045)";
+    ctx.beginPath();
+    ctx.moveTo(x, chartTop);
+    ctx.lineTo(x, chartBottom);
+    ctx.stroke();
+  }
+  for (let row = 0; row <= 16; row += 1) {
+    const y = chartTop + (row / 16) * chartHeight;
+    ctx.strokeStyle = row % 4 === 0
+      ? "rgba(103, 214, 255, 0.11)"
+      : "rgba(103, 214, 255, 0.045)";
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, y);
+    ctx.lineTo(chartRight, y);
+    ctx.stroke();
   }
 
-  const cx = w * (w > h * 0.9 ? 0.73 : 0.68) + (mx - 0.5) * w * 0.045;
-  const cy = h * 0.47 + (my - 0.5) * h * 0.035;
-  const radius = Math.min(w * 0.34, h * 0.39);
-  const yaw =
-    t * 0.08 +
-    (mx - 0.5) * 0.72 +
-    pageMotion.storyProgress * 1.18 +
-    velocity * 0.14;
-
-  const halo = ctx.createRadialGradient(cx, cy, radius * 0.08, cx, cy, radius * 1.55);
-  halo.addColorStop(0, "rgba(65, 203, 255, 0.2)");
-  halo.addColorStop(0.48, "rgba(32, 151, 211, 0.08)");
-  halo.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = halo;
-  ctx.fillRect(cx - radius * 1.65, cy - radius * 1.65, radius * 3.3, radius * 3.3);
+  // Registration ticks make the chart feel authored rather than generated.
+  ctx.fillStyle = "rgba(158, 229, 255, 0.28)";
+  for (let tick = 0; tick <= 24; tick += 1) {
+    const x = chartLeft + (tick / 24) * chartWidth;
+    const length = tick % 6 === 0 ? 9 : tick % 2 === 0 ? 5 : 3;
+    ctx.fillRect(x, chartTop - length, 1, length);
+    ctx.fillRect(x, chartBottom, 1, length);
+  }
+  for (let tick = 0; tick <= 20; tick += 1) {
+    const y = chartTop + (tick / 20) * chartHeight;
+    const length = tick % 5 === 0 ? 9 : tick % 2 === 0 ? 5 : 3;
+    ctx.fillRect(chartLeft - length, y, length, 1);
+    ctx.fillRect(chartRight, y, length, 1);
+  }
 
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, TAU);
-  ctx.clip();
-
-  const ocean = ctx.createRadialGradient(cx - radius * 0.34, cy - radius * 0.4, 0, cx, cy, radius * 1.2);
-  ocean.addColorStop(0, "rgba(18, 91, 125, 0.42)");
-  ocean.addColorStop(0.55, "rgba(4, 35, 52, 0.72)");
-  ocean.addColorStop(1, "rgba(1, 12, 20, 0.94)");
-  ctx.fillStyle = ocean;
-  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-
-  for (let lat = -4; lat <= 4; lat += 1) {
-    const latitude = (lat / 5) * 1.15;
-    const y = cy + Math.sin(latitude) * radius * 0.76;
-    const rx = Math.cos(latitude) * radius;
+  ctx.strokeStyle = "rgba(121, 218, 255, 0.14)";
+  ctx.lineWidth = 1;
+  CONTOURS.forEach((contour, index) => {
+    const chapterWeight = storyStepWeight(
+      pageMotion.storyProgress,
+      index,
+      CONTOURS.length,
+    );
+    ctx.globalAlpha = 0.7 + chapterWeight * 0.3;
     ctx.beginPath();
-    ctx.ellipse(cx, y, rx, Math.max(2, rx * 0.13), 0, 0, TAU);
-    ctx.strokeStyle = `rgba(122, 219, 255, ${0.08 + (1 - Math.abs(lat) / 5) * 0.08})`;
-    ctx.lineWidth = 1;
+    ctx.ellipse(
+      contour.x * w + shiftX,
+      contour.y * h + shiftY,
+      contour.width * w,
+      contour.height * h,
+      contour.rotation,
+      0,
+      Math.PI * 1.72,
+    );
     ctx.stroke();
-  }
-
-  for (let lon = 0; lon < 12; lon += 1) {
-    const angle = yaw + (lon / 12) * Math.PI;
-    const rx = Math.max(radius * 0.055, Math.abs(Math.cos(angle)) * radius);
-    const alpha = 0.055 + Math.max(0, Math.sin(angle)) * 0.13;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, radius, 0, 0, TAU);
-    ctx.strokeStyle = `rgba(121, 218, 255, ${alpha})`;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  for (let i = 0; i < 4; i += 1) {
-    const longitude = -1.6 + i * 1.03 + Math.sin(i * 4.2) * 0.35;
-    const latitude = -0.54 + (i % 3) * 0.42;
-    const [x, y] = routePoint(cx, cy, radius, longitude, latitude, yaw);
-    const island = ctx.createRadialGradient(x, y, 0, x, y, radius * (0.18 + (i % 2) * 0.05));
-    island.addColorStop(0, "rgba(101, 218, 218, 0.2)");
-    island.addColorStop(1, "rgba(72, 157, 171, 0)");
-    ctx.fillStyle = island;
-    ctx.fillRect(x - radius * 0.3, y - radius * 0.3, radius * 0.6, radius * 0.6);
-  }
-
+  });
   ctx.restore();
 
+  const route = ROUTE.map(([x, y]) => [x * w + shiftX, y * h + shiftY] as const);
   ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, TAU);
-  ctx.strokeStyle = "rgba(166, 233, 255, 0.34)";
-  ctx.lineWidth = 1.4;
+  route.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = "rgba(103, 214, 255, 0.35)";
+  ctx.lineWidth = 1.15;
+  ctx.setLineDash([5, 7]);
+  ctx.lineDashOffset = -effectiveTime * 3.5 - pageMotion.storyProgress * 18;
   ctx.stroke();
+  ctx.setLineDash([]);
 
-  const routes = [
-    [-1.45, -0.3, 0.75, 0.28],
-    [-0.72, 0.42, 1.74, -0.22],
-    [0.12, -0.5, 2.24, 0.18],
-    [1.28, 0.34, 3.26, -0.34],
-  ];
-  let storyAnchorX = 0;
-  let storyAnchorY = 0;
-  let storyAnchorWeight = 0;
-  routes.forEach(([startLon, startLat, endLon, endLat], index) => {
+  route.forEach(([x, y], index) => {
+    const chapterWeight = storyStepWeight(pageMotion.storyProgress, index, route.length);
     const isActive = index === activeRoute;
-    const chapterWeight =
-      pageMotion.sectionCount > 0
-        ? storyStepWeight(pageMotion.storyProgress, index, routes.length)
-        : Number(isActive);
-    const start = routePoint(cx, cy, radius * 0.94, startLon, startLat, yaw);
-    const end = routePoint(cx, cy, radius * 0.94, endLon, endLat, yaw);
-    storyAnchorX += end[0] * chapterWeight;
-    storyAnchorY += end[1] * chapterWeight;
-    storyAnchorWeight += chapterWeight;
-    const lift = radius * (0.32 + index * 0.035);
-    ctx.beginPath();
-    ctx.moveTo(start[0], start[1]);
-    ctx.quadraticCurveTo((start[0] + end[0]) / 2, Math.min(start[1], end[1]) - lift, end[0], end[1]);
-    ctx.strokeStyle = `rgba(113, 222, 255, ${0.2 + index * 0.025 + chapterWeight * 0.2})`;
-    ctx.lineWidth = 1.1 + chapterWeight * 0.65;
-    ctx.setLineDash([4, 6]);
-    ctx.lineDashOffset =
-      -t * (7 + index) -
-      pageMotion.storyProgress * 26 -
-      velocity * 3;
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    const rawPhase =
-      t * (0.11 + index * 0.012) +
-      index * 0.23 +
-      pageMotion.storyProgress * 0.42 +
-      velocity * 0.025;
-    const phase = ((rawPhase % 1) + 1) % 1;
-    const inv = 1 - phase;
-    const qx = inv * inv * start[0] + 2 * inv * phase * ((start[0] + end[0]) / 2) + phase * phase * end[0];
-    const qy = inv * inv * start[1] + 2 * inv * phase * (Math.min(start[1], end[1]) - lift) + phase * phase * end[1];
-    ctx.beginPath();
-    ctx.arc(qx, qy, 2.2 + chapterWeight, 0, TAU);
-    ctx.fillStyle = `rgba(210, 248, 255, ${0.76 + chapterWeight * 0.18})`;
-    ctx.fill();
+    const size = 5 + chapterWeight * 3 + (isActive ? 2 : 0);
+    ctx.fillStyle = isActive || chapterWeight > 0.5
+      ? "rgba(201, 243, 255, 0.94)"
+      : "rgba(103, 214, 255, 0.44)";
+    ctx.fillRect(x - size * 0.5, y - size * 0.5, size, size);
+    ctx.strokeStyle = `rgba(103, 214, 255, ${0.2 + chapterWeight * 0.35})`;
+    ctx.strokeRect(x - size, y - size, size * 2, size * 2);
   });
 
-  if (pageMotion.hasFocus && storyAnchorWeight > 0) {
-    const storyAnchor: [number, number] = [
-      storyAnchorX / storyAnchorWeight,
-      storyAnchorY / storyAnchorWeight,
-    ];
+  const signalProgress =
+    (effectiveTime * 0.045 + pageMotion.storyProgress * 0.72 + velocity * 0.02 + 1) % 1;
+  const signal = routePosition(ROUTE, signalProgress);
+  const signalX = signal[0] * w + shiftX;
+  const signalY = signal[1] * h + shiftY;
+  ctx.fillStyle = "rgba(218, 248, 255, 0.96)";
+  ctx.fillRect(signalX - 2, signalY - 2, 4, 4);
+  ctx.strokeStyle = "rgba(103, 214, 255, 0.36)";
+  ctx.strokeRect(signalX - 7, signalY - 7, 14, 14);
+
+  // Inset locator and scale rule add practical cartographic hierarchy.
+  const insetX = chartLeft + chartWidth * 0.07;
+  const insetY = chartTop + chartHeight * 0.09;
+  const insetSize = Math.min(chartWidth, chartHeight) * 0.16;
+  ctx.strokeStyle = "rgba(103, 214, 255, 0.2)";
+  ctx.strokeRect(insetX, insetY, insetSize, insetSize);
+  ctx.beginPath();
+  ctx.moveTo(insetX + insetSize * 0.2, insetY + insetSize * 0.72);
+  ctx.lineTo(insetX + insetSize * 0.42, insetY + insetSize * 0.35);
+  ctx.lineTo(insetX + insetSize * 0.58, insetY + insetSize * 0.52);
+  ctx.lineTo(insetX + insetSize * 0.8, insetY + insetSize * 0.22);
+  ctx.stroke();
+  const scaleY = chartBottom - chartHeight * 0.06;
+  const scaleX = chartLeft + chartWidth * 0.08;
+  const unit = chartWidth * 0.045;
+  for (let index = 0; index < 4; index += 1) {
+    ctx.fillStyle = index % 2 === 0
+      ? "rgba(201, 243, 255, 0.5)"
+      : "rgba(103, 214, 255, 0.14)";
+    ctx.fillRect(scaleX + unit * index, scaleY, unit, 3);
+  }
+
+  if (pageMotion.hasFocus) {
     const focusX = pageMotion.focusX * w;
     const focusY = pageMotion.focusY * h;
+    const anchorIndex = activeRoute ?? Math.round(pageMotion.storyProgress * (route.length - 1));
+    const anchor = route[Math.min(route.length - 1, Math.max(0, anchorIndex))];
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(storyAnchor[0], storyAnchor[1]);
-    ctx.lineTo(focusX, focusY);
-    ctx.setLineDash([3, 7]);
-    ctx.strokeStyle = `rgba(157, 231, 255, ${0.16 + pageMotion.interactionImpulse * 0.16})`;
+    ctx.strokeStyle = `rgba(157, 231, 255, ${0.2 + pageMotion.interactionImpulse * 0.28})`;
     ctx.lineWidth = 1;
+    ctx.setLineDash([3, 7]);
+    ctx.beginPath();
+    ctx.moveTo(anchor[0], anchor[1]);
+    ctx.lineTo(focusX, focusY);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.strokeStyle = "rgba(202, 244, 255, 0.68)";
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(focusX - 5, focusY - 5, 10, 10);
-    if (pageMotion.interactionImpulse > 0.01) {
-      const echoSize = 10 + (1 - pageMotion.interactionImpulse) * 28;
-      ctx.strokeStyle = `rgba(128, 223, 255, ${pageMotion.interactionImpulse * 0.38})`;
-      ctx.strokeRect(
-        focusX - echoSize * 0.5,
-        focusY - echoSize * 0.5,
-        echoSize,
-        echoSize,
-      );
-    }
+    const echoSize = 10 + (1 - pageMotion.interactionImpulse) * 24;
+    ctx.strokeRect(
+      focusX - echoSize * 0.5,
+      focusY - echoSize * 0.5,
+      echoSize,
+      echoSize,
+    );
+    ctx.fillStyle = "rgba(201, 243, 255, 0.85)";
+    ctx.fillRect(focusX - 1.5, focusY - 1.5, 3, 3);
     ctx.restore();
   }
 
-  for (let ring = 0; ring < 3; ring += 1) {
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, radius * (1.16 + ring * 0.14), radius * (0.25 + ring * 0.04), -0.2, 0, TAU);
-    ctx.strokeStyle = `rgba(86, 195, 236, ${0.09 - ring * 0.018})`;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = "rgba(102, 213, 255, 0.2)";
-  for (let i = 0; i < 8; i += 1) {
-    const y = h * (0.18 + i * 0.085);
-    ctx.fillRect(w * 0.055, y, w * (0.035 + (i % 3) * 0.012), 1);
-  }
+  // A disciplined left wash keeps text readable without a generic glow.
+  const textWash = ctx.createLinearGradient(0, 0, w * 0.62, 0);
+  textWash.addColorStop(0, "rgba(2, 9, 14, 0.88)");
+  textWash.addColorStop(0.74, "rgba(2, 9, 14, 0.48)");
+  textWash.addColorStop(1, "rgba(2, 9, 14, 0)");
+  ctx.fillStyle = textWash;
+  ctx.fillRect(0, 0, w * 0.64, h);
 };

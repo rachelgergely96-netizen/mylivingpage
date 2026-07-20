@@ -1,5 +1,6 @@
 import type {
   ThemeCollectionId,
+  ThemeContentProfileId,
   ThemeId,
   ThemeMeta,
   ThemePresentation,
@@ -66,6 +67,71 @@ const THEME_COLLECTIONS = {
   fresco: "organic-material",
   rosaline: "editorial-luxe",
 } as const satisfies Record<ThemeId, ThemeCollectionId>;
+
+// A compact set of authored layout languages keeps the resume presentation
+// varied without branching or duplicating its semantic HTML. Every new theme
+// must deliberately choose one before it can compile.
+const THEME_CONTENT_PROFILES = {
+  cosmic: "celestial",
+  fluid: "material",
+  ember: "cinema",
+  monolith: "precision",
+  aurora: "celestial",
+  terracotta: "material",
+  prism: "print-studio",
+  biolume: "material",
+  circuit: "precision",
+  sakura: "botanical",
+  glacier: "night-editorial",
+  verdant: "botanical",
+  neon: "precision",
+  topo: "cartography",
+  luxe: "couture",
+  dusk: "night-editorial",
+  matrix: "precision",
+  coral: "material",
+  stardust: "celestial",
+  ink: "print-studio",
+  bloom: "botanical",
+  silk: "couture",
+  tempest: "cinema",
+  obsidian: "material",
+  apex: "precision",
+  atlas: "cartography",
+  forge: "cinema",
+  vector: "precision",
+  vault: "cinema",
+  velvet: "couture",
+  opaline: "couture",
+  halo: "celestial",
+  sonata: "ornamental",
+  mosaic: "print-studio",
+  bastion: "precision",
+  carbon: "precision",
+  caliber: "precision",
+  quarry: "material",
+  harbor: "cinema",
+  relay: "cartography",
+  meridian: "cartography",
+  atelier: "print-studio",
+  porcelain: "couture",
+  filigree: "ornamental",
+  cameo: "couture",
+  solstice: "celestial",
+  tulle: "couture",
+  parasol: "ornamental",
+  gossamer: "ornamental",
+  citadel: "precision",
+  axiom: "precision",
+  helix: "precision",
+  jetstream: "cinema",
+  echelon: "precision",
+  vellum: "couture",
+  nocturne: "night-editorial",
+  lustre: "couture",
+  fresco: "material",
+  rosaline: "couture",
+} as const satisfies Record<ThemeId, ThemeContentProfileId>;
 
 const THEME_PRESENTATION_DEFAULTS = {
   "executive-tech": {
@@ -302,16 +368,24 @@ const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresent
       "linear-gradient(90deg, rgba(3, 5, 14, 0.72) 0%, rgba(3, 5, 14, 0.42) 52%, rgba(3, 5, 14, 0.1) 100%)",
   },
   atelier: {
-    accent: "#FFB28F",
-    accentBright: "#FFE0D1",
-    accentSoft: "rgba(255, 137, 102, 0.11)",
-    accentBorder: "rgba(255, 178, 143, 0.28)",
+    accent: "#A83D2B",
+    accentBright: "#3157C8",
+    accentSoft: "rgba(230, 111, 85, 0.13)",
+    accentBorder: "rgba(24, 22, 27, 0.34)",
+    text: "#18161B",
+    textMuted: "rgba(24, 22, 27, 0.72)",
+    textSubtle: "rgba(24, 22, 27, 0.52)",
+    surface: "rgba(246, 240, 224, 0.76)",
+    surfaceStrong: "rgba(246, 240, 224, 0.92)",
+    border: "rgba(24, 22, 27, 0.28)",
     scrim:
-      "linear-gradient(90deg, rgba(10, 7, 15, 0.7) 0%, rgba(10, 7, 15, 0.4) 50%, rgba(10, 7, 15, 0.12) 100%)",
+      "linear-gradient(90deg, rgba(232, 223, 207, 0.82) 0%, rgba(232, 223, 207, 0.56) 50%, rgba(232, 223, 207, 0.08) 100%)",
   },
 };
 
-const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> = [
+const THEME_DEFINITIONS: Array<
+  Omit<ThemeMeta, "collection" | "contentProfile" | "presentation">
+> = [
   {
     id: "cosmic",
     name: "Cosmic",
@@ -551,7 +625,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     signature: true,
     name: "Velvet",
     description:
-      "Plush jewel-toned folds breathe with soft sheen and floating gold dust across a dark editorial stage.",
+      "Oxblood velvet, fine brass rules, and a collector's-edition folio frame a poised editorial page.",
     vibe: "Rich & Poised",
     background: "#080307",
   },
@@ -616,7 +690,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     signature: true,
     name: "Quarry",
     description:
-      "Layered stone terraces breathe with mineral shadow, warm seam glints, and drifting quarry dust.",
+      "Cut-stone planes, architectural marks, and one warm mineral seam form a grounded working dossier.",
     vibe: "Solid & Grounded",
     background: "#050403",
   },
@@ -649,9 +723,9 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     signature: true,
     name: "Atelier",
     description:
-      "Painterly ribbon strokes sweep across the canvas with layered pigment trails and luminous droplets.",
+      "An archival print proof with crop marks, layered inks, and numbered project plates.",
     vibe: "Curated & Creative",
-    background: "#06070B",
+    background: "#E8DFCF",
   },
   {
     id: "porcelain",
@@ -762,7 +836,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
     signature: true,
     name: "Nocturne",
     description:
-      "Moonlit crescents, indigo haze, and floating dust motes unfold like a midnight stage set.",
+      "An engraved lunar study, quiet atmosphere bands, and silver editorial rules shape a midnight edition.",
     vibe: "Dreamlike & Poised",
     background: "#050713",
   },
@@ -799,6 +873,7 @@ const THEME_DEFINITIONS: Array<Omit<ThemeMeta, "collection" | "presentation">> =
 export const THEME_REGISTRY: ThemeMeta[] = THEME_DEFINITIONS.map((theme) => ({
   ...theme,
   collection: THEME_COLLECTIONS[theme.id],
+  contentProfile: THEME_CONTENT_PROFILES[theme.id],
   presentation: {
     ...THEME_PRESENTATION_DEFAULTS[THEME_COLLECTIONS[theme.id]],
     ...THEME_ACCENT_PALETTES[theme.id],

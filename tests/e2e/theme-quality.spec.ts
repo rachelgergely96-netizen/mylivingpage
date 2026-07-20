@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { THEME_REGISTRY } from "../../src/themes/registry";
+import { THEME_MAP, THEME_REGISTRY } from "../../src/themes/registry";
 import {
   THEME_FRAME_BASELINES,
   type CatalogThemeId,
@@ -8,6 +8,9 @@ import {
 const CATALOG_THEME_IDS = THEME_REGISTRY.filter((theme) => !theme.signature).map(
   (theme) => theme.id,
 ) as CatalogThemeId[];
+const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter((theme) => theme.signature).map(
+  (theme) => theme.id,
+);
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -29,7 +32,7 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
   await page.goto("/dev/theme-lab");
 
   const select = page.getByLabel("Catalog theme");
-  await expect(select.locator("option")).toHaveCount(CATALOG_THEME_IDS.length);
+  await expect(select.locator("option")).toHaveCount(THEME_REGISTRY.length);
 
   const weakFrames: Array<{ themeId: string; colors: number; range: number }> = [];
   const frameSignatures: Record<
@@ -41,6 +44,10 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
     await select.selectOption(themeId);
     const theme = page.locator(`[data-theme-id="${themeId}"]`);
     await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
+    await expect(theme).toHaveAttribute(
+      "data-theme-detail",
+      THEME_MAP[themeId].contentProfile,
+    );
 
     const detail = await theme.locator("canvas").evaluate((element) => {
       const canvas = element as HTMLCanvasElement;
@@ -162,6 +169,104 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
         `${themeId} mean color channel ${index}`,
       ).toBeLessThanOrEqual(4);
     });
+  }
+});
+
+test("signature themes expose authored content profiles and deterministic detail", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const themeId of SIGNATURE_THEME_IDS) {
+    await select.selectOption(themeId);
+    const theme = page.locator(`[data-theme-id="${themeId}"]`);
+    await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
+    await expect(theme).toHaveAttribute(
+      "data-theme-detail",
+      THEME_MAP[themeId].contentProfile,
+    );
+
+    const canvas = theme.locator("canvas");
+    const firstFrame = await canvas.evaluate((element) =>
+      (element as HTMLCanvasElement).toDataURL(),
+    );
+    await page.waitForTimeout(120);
+    const secondFrame = await canvas.evaluate((element) =>
+      (element as HTMLCanvasElement).toDataURL(),
+    );
+    const detail = await canvas.evaluate((element) => {
+      const canvasElement = element as HTMLCanvasElement;
+      const context = canvasElement.getContext("2d");
+      if (!context) return { colors: 0, range: 0 };
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvasElement.width,
+        canvasElement.height,
+      ).data;
+      const step = Math.max(4, Math.floor(pixels.length / 4 / 640));
+      const colors = new Set<string>();
+      let minimum = 255;
+      let maximum = 0;
+      for (let pixel = 0; pixel < pixels.length / 4; pixel += step) {
+        const offset = pixel * 4;
+        const red = pixels[offset];
+        const green = pixels[offset + 1];
+        const blue = pixels[offset + 2];
+        const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+        minimum = Math.min(minimum, luminance);
+        maximum = Math.max(maximum, luminance);
+        colors.add(`${red >> 4}-${green >> 4}-${blue >> 4}`);
+      }
+      return { colors: colors.size, range: maximum - minimum };
+    });
+
+    expect(secondFrame, `${themeId} static frame`).toBe(firstFrame);
+    expect(detail.colors, `${themeId} visible color detail`).toBeGreaterThan(3);
+    expect(detail.range, `${themeId} visible luminance detail`).toBeGreaterThan(6);
+  }
+});
+
+test("signature themes fit mobile and keep Living Resume surfaces sharp", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const themeId of SIGNATURE_THEME_IDS) {
+    await select.selectOption(themeId);
+    const theme = page.locator(`[data-theme-id="${themeId}"]`);
+    await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
+
+    const geometry = await theme.evaluate((element) => {
+      const surfaces = Array.from(
+        element.querySelectorAll(
+          ".resume-theme-card, .resume-theme-card-accent, .resume-theme-avatar, .resume-theme-monogram, .resume-theme-pill",
+        ),
+      );
+      const sharp = surfaces.every((surface) => {
+        const style = window.getComputedStyle(surface);
+        return [
+          style.borderTopLeftRadius,
+          style.borderTopRightRadius,
+          style.borderBottomRightRadius,
+          style.borderBottomLeftRadius,
+        ].every((radius) => radius === "0px");
+      });
+
+      return {
+        overflow: element.scrollWidth - element.clientWidth,
+        sharp,
+        surfaceCount: surfaces.length,
+      };
+    });
+
+    expect(geometry.overflow, `${themeId} mobile overflow`).toBeLessThanOrEqual(0);
+    expect(geometry.surfaceCount, `${themeId} themed surfaces`).toBeGreaterThan(0);
+    expect(geometry.sharp, `${themeId} sharp corners`).toBe(true);
   }
 });
 

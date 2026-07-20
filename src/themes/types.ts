@@ -82,6 +82,25 @@ export const THEME_COLLECTION_FILTER_IDS = [
 export type ThemeCollectionId = (typeof THEME_COLLECTION_IDS)[number];
 export type ThemeCollectionFilterId = (typeof THEME_COLLECTION_FILTER_IDS)[number];
 
+export const THEME_CONTENT_PROFILE_IDS = [
+  "precision",
+  "cartography",
+  "cinema",
+  "night-editorial",
+  "material",
+  "botanical",
+  "couture",
+  "print-studio",
+  "ornamental",
+  "celestial",
+] as const;
+
+/**
+ * Authored content treatments shared by a small family of compatible themes.
+ * These profiles style the semantic resume without duplicating or reordering it.
+ */
+export type ThemeContentProfileId = (typeof THEME_CONTENT_PROFILE_IDS)[number];
+
 /**
  * A small, renderer-agnostic model of what is happening on a Living Page.
  *
@@ -151,6 +170,7 @@ export interface ThemePresentation {
 export interface ThemeMeta {
   id: ThemeId;
   collection: ThemeCollectionId;
+  contentProfile: ThemeContentProfileId;
   name: string;
   description: string;
   vibe: string;

@@ -38,6 +38,7 @@ function StaticThemePreview({ theme }: { theme: ThemeMeta }) {
     <div
       aria-hidden="true"
       data-theme-preview-static={theme.id}
+      data-theme-detail={theme.contentProfile}
       className="relative overflow-hidden rounded-none"
       style={{
         height: 120,
@@ -49,20 +50,21 @@ function StaticThemePreview({ theme }: { theme: ThemeMeta }) {
         ].join(", "),
       }}
     >
-      <div
-        className="absolute inset-x-5 top-1/2 h-px -rotate-6"
-        style={{ background: presentation.accentBorder }}
-      />
-      <div
-        className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rotate-45 border"
+      <span
+        className="theme-preview-motif theme-preview-motif-primary"
         style={{
           borderColor: presentation.accentBorder,
-          boxShadow: `0 0 28px ${presentation.accentSoft}`,
+          background: presentation.accentSoft,
+          color: presentation.accentBright,
         }}
       />
-      <div
-        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2"
-        style={{ background: presentation.accentBright }}
+      <span
+        className="theme-preview-motif theme-preview-motif-secondary"
+        style={{
+          borderColor: presentation.accentBorder,
+          background: presentation.accent,
+          color: presentation.accentBright,
+        }}
       />
     </div>
   );

@@ -1,25 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { SIGNAL_FRAME_SAMPLE } from "@/lib/signal-frame-sample";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 
-const CATALOG_THEMES = THEME_REGISTRY.filter((theme) => !theme.signature);
+const QUALITY_LAB_THEMES = THEME_REGISTRY;
 
 export function ThemeQualityLab() {
-  const [themeId, setThemeId] = useState<ThemeId>(CATALOG_THEMES[0].id);
+  const [themeId, setThemeId] = useState<ThemeId>(QUALITY_LAB_THEMES[0].id);
   const [animated, setAnimated] = useState(false);
-  const themeIndex = CATALOG_THEMES.findIndex((theme) => theme.id === themeId);
+  const themeIndex = QUALITY_LAB_THEMES.findIndex((theme) => theme.id === themeId);
   const theme = useMemo(
-    () => CATALOG_THEMES[themeIndex] ?? CATALOG_THEMES[0],
+    () => QUALITY_LAB_THEMES[themeIndex] ?? QUALITY_LAB_THEMES[0],
     [themeIndex],
   );
 
   const selectRelativeTheme = (offset: number) => {
     const nextIndex =
-      (themeIndex + offset + CATALOG_THEMES.length) % CATALOG_THEMES.length;
-    setThemeId(CATALOG_THEMES[nextIndex].id);
+      (themeIndex + offset + QUALITY_LAB_THEMES.length) % QUALITY_LAB_THEMES.length;
+    setThemeId(QUALITY_LAB_THEMES[nextIndex].id);
   };
 
   return (
@@ -32,7 +34,7 @@ export function ThemeQualityLab() {
             onChange={(event) => setThemeId(event.target.value as ThemeId)}
             className="site-field rounded-none px-3 py-2 text-sm"
           >
-            {CATALOG_THEMES.map((option) => (
+            {QUALITY_LAB_THEMES.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name} · {option.collection}
               </option>
@@ -77,39 +79,26 @@ export function ThemeQualityLab() {
           motionAware
           mobileAmbientMotion
         >
-          <div
-            data-analytics-scroll-root="true"
-            className="resume-theme flex h-full items-end overflow-y-auto p-5 sm:p-8"
-          >
-            <div className="max-w-lg">
-              <p className="resume-theme-accent font-mono text-[10px] uppercase tracking-[0.2em]">
-                {theme.collection} · catalog quality lab
-              </p>
-              <h1 className="resume-theme-name mt-2 text-3xl font-bold sm:text-5xl">
-                {theme.name}
-              </h1>
-              <p className="resume-theme-muted mt-3 max-w-md text-sm leading-6 sm:text-base">
-                {theme.description}
-              </p>
-              <div
-                data-motion-section="projects"
-                className="mt-5 grid max-w-md grid-cols-2 gap-2 sm:gap-3"
-              >
-                {["Depth", "Motion", "Focus", "Contrast"].map((label, index) => (
-                  <button
-                    key={label}
-                    type="button"
-                    data-motion-item={`${theme.id}-${label.toLowerCase()}`}
-                    data-motion-kind="quality-signal"
-                    className="resume-theme-card pointer-events-auto rounded-none border p-3 text-left"
-                  >
-                    <span className="resume-theme-accent-bright font-mono text-sm">
-                      0{index + 1}
-                    </span>
-                    <span className="resume-theme-muted ml-2 text-xs">{label}</span>
-                  </button>
-                ))}
-              </div>
+          <div data-analytics-scroll-root="true" className="relative h-full overflow-y-auto">
+            <ResumeLayout
+              data={SIGNAL_FRAME_SAMPLE}
+              headingLevel="h1"
+              disableExternalLinks
+              useExternalScrollRoot
+            />
+            <div className="absolute right-3 top-3 z-20 flex border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]">
+              {["Depth", "Motion", "Focus", "Contrast"].map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-label={`${label} theme response`}
+                  data-motion-item={`${theme.id}-${label.toLowerCase()}`}
+                  data-motion-kind="quality-signal"
+                  className="resume-theme-link pointer-events-auto min-h-9 border-l border-[var(--theme-border)] px-2 font-mono text-[9px] uppercase tracking-[0.08em] first:border-l-0"
+                >
+                  0{index + 1}
+                </button>
+              ))}
             </div>
           </div>
         </ThemeCanvas>
@@ -119,7 +108,7 @@ export function ThemeQualityLab() {
         <div className="site-panel p-4">
           <p className="site-eyebrow">Catalog position</p>
           <p className="mt-2 font-mono text-sm text-site-text">
-            {String(themeIndex + 1).padStart(2, "0")} / {CATALOG_THEMES.length}
+            {String(themeIndex + 1).padStart(2, "0")} / {QUALITY_LAB_THEMES.length}
           </p>
         </div>
         <div className="site-panel p-4">

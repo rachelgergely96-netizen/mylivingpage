@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { THEME_MAP, THEME_REGISTRY } from "@/themes/registry";
-import { THEME_IDS, type ThemeId } from "@/themes/types";
+import {
+  THEME_CONTENT_PROFILE_IDS,
+  THEME_IDS,
+  type ThemeId,
+} from "@/themes/types";
 
 const SIGNATURE_PRESENTATION_OVERRIDES = {
   aurora: {
@@ -38,12 +42,14 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
       "linear-gradient(90deg, rgba(12, 8, 5, 0.72) 0%, rgba(12, 8, 5, 0.4) 52%, rgba(12, 8, 5, 0.14) 100%)",
   },
   atelier: {
-    accent: "#FFB28F",
-    accentBright: "#FFE0D1",
-    accentSoft: "rgba(255, 137, 102, 0.11)",
-    accentBorder: "rgba(255, 178, 143, 0.28)",
+    accent: "#A83D2B",
+    accentBright: "#3157C8",
+    accentSoft: "rgba(230, 111, 85, 0.13)",
+    accentBorder: "rgba(24, 22, 27, 0.34)",
+    text: "#18161B",
+    surface: "rgba(246, 240, 224, 0.76)",
     scrim:
-      "linear-gradient(90deg, rgba(10, 7, 15, 0.7) 0%, rgba(10, 7, 15, 0.4) 50%, rgba(10, 7, 15, 0.12) 100%)",
+      "linear-gradient(90deg, rgba(232, 223, 207, 0.82) 0%, rgba(232, 223, 207, 0.56) 50%, rgba(232, 223, 207, 0.08) 100%)",
   },
   nocturne: {
     accent: "#C8D4FF",
@@ -94,6 +100,18 @@ describe("theme registry", () => {
     expect(new Set(paletteKeys).size).toBe(THEME_IDS.length);
   });
 
+  it("assigns every theme an authored content profile", () => {
+    const validProfiles = new Set(THEME_CONTENT_PROFILE_IDS);
+
+    for (const theme of THEME_REGISTRY) {
+      expect(validProfiles.has(theme.contentProfile)).toBe(true);
+    }
+
+    expect(new Set(THEME_REGISTRY.map((theme) => theme.contentProfile))).toEqual(
+      validProfiles,
+    );
+  });
+
   it("derives non-signature surfaces from each theme background", () => {
     for (const theme of THEME_REGISTRY.filter(({ signature }) => !signature)) {
       const channels = backgroundChannels(theme.background);
@@ -126,7 +144,7 @@ describe("theme registry", () => {
     expect(THEME_MAP.atlas.presentation.surface).toBe("rgba(4, 15, 25, 0.5)");
     expect(THEME_MAP.velvet.presentation.surface).toBe("rgba(30, 7, 18, 0.48)");
     expect(THEME_MAP.quarry.presentation.surface).toBe("rgba(19, 13, 9, 0.5)");
-    expect(THEME_MAP.atelier.presentation.surface).toBe("rgba(13, 10, 18, 0.49)");
+    expect(THEME_MAP.atelier.presentation.surface).toBe("rgba(246, 240, 224, 0.76)");
     expect(THEME_MAP.nocturne.presentation.surface).toBe("rgba(7, 9, 20, 0.5)");
   });
 });

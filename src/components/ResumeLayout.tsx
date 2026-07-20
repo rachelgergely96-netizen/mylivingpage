@@ -92,11 +92,11 @@ export default function ResumeLayout({
         useExternalScrollRoot ? "" : "h-full overflow-y-auto scrollbar-hide"
       } ${compact ? "px-3 py-4 sm:px-4 sm:py-5" : "px-4 py-5 sm:p-6 md:p-8"}`}
     >
-      <div className="mx-auto max-w-4xl">
+      <div className="resume-theme-content mx-auto max-w-4xl">
         {/* ── Header ─────────────────────────────────────────────── */}
-        <header className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} flex items-start justify-between gap-3 sm:gap-4`}>
+        <header data-resume-header className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} flex items-start justify-between gap-3 sm:gap-4`}>
           <div className="min-w-0">
-            <NameHeading className={`${headingSize} resume-theme-name font-bold leading-tight`}>
+            <NameHeading data-resume-name className={`${headingSize} resume-theme-name font-bold leading-tight`}>
               {data.name}
             </NameHeading>
             <p className="resume-theme-accent mt-1 text-[10px] uppercase tracking-[0.2em] sm:text-xs">{data.headline}</p>
@@ -208,7 +208,7 @@ export default function ResumeLayout({
 
         {/* ── Summary ─────────────────────────────────────────────── */}
         {data.summary ? (
-          <section data-analytics-section="summary">
+          <section data-resume-summary data-analytics-section="summary">
             <p className={`${summarySize} resume-theme-muted ${compact ? "mb-3 line-clamp-2 leading-5 sm:mb-4" : "mb-5 leading-6 sm:mb-6 sm:leading-7"}`}>
               {data.summary}
             </p>
@@ -218,6 +218,7 @@ export default function ResumeLayout({
         {/* ── Stats Bar ──────────────────────────────────────────── */}
         {data.stats?.length ? (
           <section
+            data-resume-stats
             data-motion-section="stats"
             className={`${compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"} grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4`}
           >
@@ -242,7 +243,7 @@ export default function ResumeLayout({
             className={compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"}
           >
             <div className="mb-2 flex items-center justify-between gap-3">
-              <h2 className="resume-theme-accent text-[10px] uppercase tracking-[0.24em]">Proof</h2>
+              <h2 className="resume-theme-section-title resume-theme-accent text-[10px] uppercase tracking-[0.24em]">Proof</h2>
               {!compact ? (
                 <span className="resume-theme-subtle text-[10px] uppercase tracking-[0.14em]">
                   Proof over claims
@@ -309,7 +310,7 @@ export default function ResumeLayout({
             data-analytics-section="testimonials"
             className={compact ? "mb-3 sm:mb-4" : "mb-5 sm:mb-6"}
           >
-            <h2 className="resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Testimonials</h2>
+            <h2 className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Testimonials</h2>
             <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
               {testimonials.map((testimonial) => (
                 <article
@@ -337,7 +338,7 @@ export default function ResumeLayout({
             data-analytics-section="experience"
             className={compact ? "mb-3 sm:mb-4" : "mb-4 sm:mb-5"}
           >
-            <h2 className="resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Experience</h2>
+            <h2 className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Experience</h2>
             <div className="space-y-2">
               {experience.map((exp) => (
                 <article
@@ -391,7 +392,7 @@ export default function ResumeLayout({
         {/* ── Projects ───────────────────────────────────────────── */}
         {!compact && data.projects?.length ? (
           <section data-analytics-section="projects" className="mb-5">
-            <h2 className="resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Projects</h2>
+            <h2 className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Projects</h2>
             <div className="space-y-2">
               {data.projects.map((project) => {
                 const projectUrl = !disableExternalLinks && project.url
@@ -473,7 +474,7 @@ export default function ResumeLayout({
         {/* ── Education ──────────────────────────────────────────── */}
         {!compact && data.education?.length ? (
           <section data-analytics-section="education" className="mb-5">
-            <h2 className="resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Education</h2>
+            <h2 className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Education</h2>
             <div className="space-y-2">
               {data.education.map((education) => (
                 <article
@@ -500,7 +501,7 @@ export default function ResumeLayout({
             data-analytics-section="skills"
             className={compact ? "mb-3" : "mb-5"}
           >
-            <h2 className="resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Skills</h2>
+            <h2 className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Skills</h2>
             <div className="space-y-3">
               {skills.map((group) => (
                 <div key={group.category}>
@@ -528,7 +529,7 @@ export default function ResumeLayout({
         {/* ── Certifications ─────────────────────────────────────── */}
         {!compact && certs.length ? (
           <section data-analytics-section="certifications">
-            <h2 className="resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Certifications</h2>
+            <h2 className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]">Certifications</h2>
             <div className="space-y-2">
               {certs.map((cert) => (
                 <div

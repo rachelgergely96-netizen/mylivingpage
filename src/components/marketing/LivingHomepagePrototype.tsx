@@ -15,8 +15,6 @@ interface WorldDirection {
   label: string;
   shortLabel: string;
   promise: string;
-  galleryNote: string;
-  size: "wide" | "tall" | "standard";
 }
 
 type WorldStyle = CSSProperties & {
@@ -31,70 +29,111 @@ type WorldStyle = CSSProperties & {
 const WORLD_DIRECTIONS: readonly WorldDirection[] = [
   {
     id: "atlas",
-    label: "Executive systems",
-    shortLabel: "Precise",
-    promise: "A cartographic world for strategic, systems-minded work.",
-    galleryNote: "Leadership, scale, and operating clarity come forward.",
-    size: "wide",
+    label: "Clear and structured",
+    shortLabel: "Clear",
+    promise: "Best when you want leadership, scale, and decisions to stand out.",
   },
   {
     id: "nocturne",
-    label: "Cinematic focus",
-    shortLabel: "Cinematic",
-    promise: "A moonlit stage that gives a career story room to breathe.",
-    galleryNote: "A quieter world for narrative, craft, and considered work.",
-    size: "tall",
+    label: "Calm and focused",
+    shortLabel: "Calm",
+    promise: "Best when your story and craft need room to breathe.",
   },
   {
     id: "quarry",
-    label: "Grounded craft",
-    shortLabel: "Grounded",
-    promise: "Material depth for builders who want substance to lead.",
-    galleryNote: "Experience feels tangible, durable, and earned.",
-    size: "standard",
+    label: "Practical and grounded",
+    shortLabel: "Practical",
+    promise: "Best when you want hands-on work and useful results to lead.",
   },
   {
     id: "velvet",
-    label: "Editorial presence",
-    shortLabel: "Editorial",
-    promise: "Rich editorial pacing for confident, people-first leadership.",
-    galleryNote: "Personality appears without competing with the facts.",
-    size: "standard",
+    label: "Warm and editorial",
+    shortLabel: "Warm",
+    promise: "Best when personality and people-first leadership matter.",
   },
   {
     id: "atelier",
-    label: "Creative signal",
-    shortLabel: "Expressive",
-    promise: "Painterly motion for multidisciplinary and creative careers.",
-    galleryNote: "Ideas, experimentation, and range become visible.",
-    size: "wide",
+    label: "Creative and expressive",
+    shortLabel: "Creative",
+    promise: "Best when ideas, experimentation, and range should feel visible.",
   },
 ] as const;
 
-const OUTPUTS = [
+const DEFAULT_WORKFLOW = [
   {
+    stepId: "upload",
     index: "01",
-    name: "Source résumé",
-    note: "Import once. Review every field.",
+    name: "Add your résumé",
+    timing: "1 current résumé",
+    note: "Upload the PDF or paste the text you already send to employers.",
     format: "source",
   },
   {
+    stepId: "review",
     index: "02",
-    name: "Living Page",
-    note: "A professional world people remember.",
+    name: "Check 3 essentials",
+    timing: "3 essential checks",
+    note: "Confirm your name, headline, and most recent result. Leave the rest for later.",
     format: "page",
   },
   {
+    stepId: "publish",
     index: "03",
-    name: "Tailored PDF",
-    note: "Clear, selectable text for applications.",
-    format: "pdf",
+    name: "Publish one link",
+    timing: "1 current link",
+    note: "Preview once, publish, and share it. Your page stays private until then.",
+    format: "share",
+  },
+] as const;
+
+const EVERYDAY_ACTIONS = [
+  {
+    name: "Update your page",
+    timing: "Use it when a role, result, or contact detail changes.",
+    note: "Change the fact once. Your public link stays the same.",
   },
   {
-    index: "04",
-    name: "Share Card + QR",
-    note: "One current story, easy to pass along.",
-    format: "share",
+    name: "Share your link",
+    timing: "Use it when you apply, follow up, or meet someone.",
+    note: "Send the same current link instead of making another version.",
+  },
+] as const;
+
+const OPTIONAL_TOOLS = [
+  {
+    id: "pdf",
+    kind: "Applications · Tailored PDF",
+    name: "Application PDF",
+    timing: "Use it when an application asks for a file.",
+    note: "Skip it when the employer accepts your page link.",
+  },
+  {
+    id: "share-card",
+    kind: "Networking · Share Card",
+    name: "Share Card and QR code",
+    timing: "Use it before an event or in-person conversation.",
+    note: "Ignore it when you are only applying online.",
+  },
+  {
+    id: "reference",
+    kind: "Reference",
+    name: "Examples and guides",
+    timing: "Use them only when you feel stuck.",
+    note: "You do not need to read anything before you start.",
+  },
+  {
+    id: "statistics",
+    kind: "Statistics",
+    name: "Page visit statistics",
+    timing: "Wait until your link has been shared for 7 days.",
+    note: "Ignore early numbers; they do not make the page more useful.",
+  },
+  {
+    id: "advanced",
+    kind: "Advanced",
+    name: "Design and motion controls",
+    timing: "Use these after your content is accurate.",
+    note: "The starting settings already work, so this can wait.",
   },
 ] as const;
 
@@ -168,7 +207,7 @@ function GalleryLivePage({ world, animated }: { world: WorldDirection; animated:
         maxFps={24}
       >
         <div className={styles.galleryLiveContent} aria-hidden="true">
-          <span>Sample profile · live world</span>
+          <span>Sample profile · Living Resume</span>
           <strong>Avery Morgan</strong>
           <p>Senior Product &amp; Platform Lead</p>
           <div>
@@ -186,7 +225,6 @@ export default function LivingHomepagePrototype() {
   const [galleryOwnsMotion, setGalleryOwnsMotion] = useState(false);
   const [motionPaused, setMotionPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const heroControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const galleryControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const galleryRef = useRef<HTMLElement | null>(null);
 
@@ -267,69 +305,80 @@ export default function LivingHomepagePrototype() {
           <Link href="/" className={styles.logo}>
             my<span>living</span>page
           </Link>
-          <span className={styles.previewBadge}>Homepage prototype 01</span>
+          <span className={styles.previewBadge}>Action-first copy prototype</span>
           <div className={styles.navLinks}>
-            <a href="#living-worlds">Living worlds</a>
-            <a href="#one-source">One source</a>
-            <Link href="/">Current homepage</Link>
+            <a href="#how-it-works">How it works</a>
+            <Link href="/examples">View examples</Link>
+            <Link href="/login">Sign in</Link>
           </div>
-          <Link href="/signup?ref=homepage_observatory_nav&next=/create" className={styles.navCta}>
-            Build free
+          <Link
+            href="/signup?ref=homepage_observatory_nav&next=/create"
+            className={styles.navCta}
+            data-start-action
+          >
+            Add my résumé
           </Link>
         </nav>
       </header>
 
       <main id="prototype-content" tabIndex={-1}>
-        <section id="prototype-hero" className={styles.hero}>
+        <section id="prototype-hero" className={styles.hero} data-action-first>
           <div className={styles.heroGlow} aria-hidden="true" />
           <div className={styles.heroGrid}>
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}><span>01</span>The homepage is a Living Page</p>
-              <h1>Your work shouldn&apos;t sit still.</h1>
+              <p className={styles.eyebrow}><span>Start</span>With the résumé you have</p>
+              <h1>Turn your résumé into a page you can share.</h1>
               <p className={styles.heroLead}>
-                Turn the résumé you already have into a living professional world—and the
-                tailored PDF and Share Card you need next.
+                Upload a PDF or paste the text. Check the important details. Publish one link.
               </p>
               <p className={styles.heroBody}>
-                The facts stay true. The presentation, emphasis, and atmosphere respond to
-                the moment.
+                That is the whole first session. We choose a strong look for you, and your
+                page stays private until you publish.
+              </p>
+              <p className={styles.ignoreNote} data-ignore-guidance>
+                For now, ignore themes, statistics, PDFs, QR codes, and motion settings.
               </p>
               <div className={styles.heroActions}>
                 <Link
                   href="/signup?ref=homepage_observatory_primary&next=/create"
                   className={styles.primaryButton}
                   data-testid="homepage-primary-cta"
+                  data-action-priority="primary"
+                  data-start-action
                 >
-                  Build from my résumé — free
+                  Add my résumé
                   <ArrowIcon />
                 </Link>
-                <a href="#living-worlds" className={styles.secondaryButton}>Explore five worlds</a>
+                <a href="#how-it-works" className={styles.secondaryButton}>See the 3 steps</a>
               </div>
               <div className={styles.trustStrip} aria-label="Product assurances">
+                <span>One current résumé</span>
                 <span>Private until published</span>
                 <span>No credit card</span>
-                <span>Review every field</span>
+                <span>Edit anything</span>
               </div>
             </div>
 
             <div className={styles.observatory} data-home-observatory>
               <div className={styles.observatoryTopline}>
                 <div>
-                  <span>Living Page Observatory</span>
-                  <strong>Same facts · new world</strong>
+                  <span>Your professional page</span>
+                  <strong>Living Resume · featured style</strong>
                 </div>
                 <div className={styles.observatoryActions}>
                   <button
                     type="button"
-                    aria-label="Pause ambient motion"
-                    aria-pressed={motionPaused}
+                    aria-label={reducedMotion ? "Motion reduced" : motionPaused ? "Resume motion" : "Pause motion"}
+                    data-motion-paused={motionPaused ? "true" : "false"}
                     data-testid="observatory-motion-toggle"
                     disabled={reducedMotion}
                     onClick={() => setMotionPaused((paused) => !paused)}
                   >
-                    {reducedMotion ? "Motion reduced" : motionPaused ? "Motion paused" : "Motion active"}
+                    {reducedMotion ? "Motion reduced" : motionPaused ? "Resume motion" : "Pause motion"}
                   </button>
-                  <span className={styles.worldCounter}>0{activeIndex + 1} / 05</span>
+                  <span className={styles.worldCounter}>
+                    {activeIndex === 0 ? "Featured" : "Selected look"}
+                  </span>
                 </div>
               </div>
 
@@ -371,30 +420,10 @@ export default function LivingHomepagePrototype() {
               </div>
 
               <div className={styles.observatoryControls}>
-                <div
-                  className={styles.worldRail}
-                  role="radiogroup"
-                  aria-label="Choose a visual direction"
-                >
-                  {WORLD_DIRECTIONS.map((world, index) => {
-                    const selected = world.id === activeWorld.id;
-                    return (
-                      <button
-                        key={world.id}
-                        ref={(node) => { heroControlRefs.current[index] = node; }}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        tabIndex={selected ? 0 : -1}
-                        onClick={() => selectWorld(world, index, heroControlRefs)}
-                        onKeyDown={(event) => handleWorldKeyDown(event, index, heroControlRefs)}
-                        className={selected ? styles.worldButtonActive : undefined}
-                      >
-                        <span>0{index + 1}</span>
-                        <b>{world.shortLabel}</b>
-                      </button>
-                    );
-                  })}
+                <div className={styles.recommendedLook}>
+                  <span>Featured example</span>
+                  <b>{activeWorld.shortLabel} · {activeTheme.name}</b>
+                  <a href="#resume-styles">Explore 5 featured styles</a>
                 </div>
                 <p className={styles.worldPromise}>{activeWorld.promise}</p>
                 <span className={styles.srOnly} role="status" aria-live="polite" data-testid="observatory-status">
@@ -403,146 +432,270 @@ export default function LivingHomepagePrototype() {
               </div>
 
               <div className={styles.sourceSignal}>
-                <span>Source locked</span>
+                <span>Uploaded résumé</span>
                 <b>Avery-Morgan-Resume.pdf</b>
                 <i aria-hidden="true" />
-                <span>World changed</span>
+                <span>Preview updated</span>
               </div>
             </div>
           </div>
         </section>
 
-        <div className={styles.identityBand} aria-label="One identity across every output">
-          <span>One identity</span>
+        <div className={styles.identityBand} aria-label="The three-step default workflow">
+          <span>Add your résumé</span>
           <i />
-          <span>Five worlds</span>
+          <span>Check 3 essentials</span>
           <i />
-          <span>Three useful formats</span>
+          <span>Publish one link</span>
           <i />
-          <span>One current link</span>
+          <span>Done for today</span>
         </div>
 
-        <section
-          ref={galleryRef}
-          id="living-worlds"
-          className={styles.gallerySection}
-          data-living-gallery
-        >
+        <section id="how-it-works" className={styles.sourceSection} data-default-workflow>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>02</span>Worlds, not templates</p>
-            <h2>One career can feel many different ways.</h2>
+            <p className={styles.eyebrow}><span>Plan</span>Your 3-step Living Resume setup</p>
+            <h2>Add. Check. Publish.</h2>
             <p>
-              Choose a direction. Avery&apos;s experience stays fixed while the visual world changes
-              what people feel first.
+              Do one step at a time. Keep the recommended defaults and leave everything else
+              for later.
             </p>
           </div>
 
-          <div
-            className={styles.galleryGrid}
-            role="radiogroup"
-            aria-label="Explore Living Page worlds"
-          >
-            {WORLD_DIRECTIONS.map((world, index) => {
-              const selected = world.id === activeWorld.id;
-              return (
-                <button
-                  key={world.id}
-                  ref={(node) => { galleryControlRefs.current[index] = node; }}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  tabIndex={selected ? 0 : -1}
-                  onClick={() => selectWorld(world, index, galleryControlRefs)}
-                  onKeyDown={(event) => handleWorldKeyDown(event, index, galleryControlRefs)}
-                  className={`${styles.galleryCard} ${styles[`gallery${world.size[0].toUpperCase()}${world.size.slice(1)}`]} ${selected ? styles.galleryCardActive : ""}`}
-                  style={getWorldStyle(world.id)}
-                  data-gallery-card
-                  data-theme-id={world.id}
-                >
-                  <span className={styles.galleryVisual}>
-                    {selected && galleryOwnsMotion ? (
-                      <GalleryLivePage world={world} animated={galleryAnimated} />
-                    ) : (
-                      <WorldPoster world={world} />
-                    )}
-                  </span>
-                  <span className={styles.galleryCaption}>
-                    <span><b>0{index + 1}</b>{world.label}</span>
-                    <strong>{THEME_MAP[world.id].name}</strong>
-                    <small>{world.galleryNote}</small>
-                  </span>
-                  {selected ? <span className={styles.liveBadge}>Live world</span> : null}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={styles.galleryMotionBar}>
-            <div>
-              <span>Selected living world</span>
-              <strong>{activeTheme.name} · {activeWorld.shortLabel}</strong>
-            </div>
-            <button
-              type="button"
-              aria-label="Pause ambient motion"
-              aria-pressed={motionPaused}
-              data-testid="gallery-motion-toggle"
-              disabled={reducedMotion}
-              onClick={() => setMotionPaused((paused) => !paused)}
-            >
-              {reducedMotion ? "Motion reduced" : motionPaused ? "Motion paused" : "Motion active"}
-            </button>
-          </div>
-        </section>
-
-        <section id="one-source" className={styles.sourceSection}>
-          <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>03</span>One source, shaped for the moment</p>
-            <h2>The identity stays. The format moves.</h2>
-            <p>
-              A Living Page is not a decorative résumé. It is one reviewed professional story
-              that can become the right object for the next conversation.
-            </p>
-          </div>
-
-          <div className={styles.outputJourney}>
-            {OUTPUTS.map((output, index) => (
-              <div key={output.format} className={styles.outputStep} data-observatory-format={output.format}>
+          <ol className={styles.outputJourney} aria-label="The simplest way to start">
+            {DEFAULT_WORKFLOW.map((step, index) => (
+              <li
+                key={step.format}
+                className={styles.outputStep}
+                data-workflow-step={step.stepId}
+                data-observatory-format={step.format}
+              >
                 <div className={styles.outputVisual} aria-hidden="true">
-                  <span>{output.index}</span>
-                  <div className={styles[`output${output.format[0].toUpperCase()}${output.format.slice(1)}`]}>
+                  <span>{step.index}</span>
+                  <div className={styles[`output${step.format[0].toUpperCase()}${step.format.slice(1)}`]}>
                     <b>AVERY</b>
                     <i />
                     <i />
                     <i />
                   </div>
                 </div>
-                <strong>{output.name}</strong>
-                <p>{output.note}</p>
-                {index < OUTPUTS.length - 1 ? <span className={styles.journeyArrow}>→</span> : null}
-              </div>
+                <span className={styles.stepTiming}>{step.timing}</span>
+                <strong>{step.name}</strong>
+                <p>{step.note}</p>
+                {index < DEFAULT_WORKFLOW.length - 1 ? <span className={styles.journeyArrow}>→</span> : null}
+              </li>
             ))}
+          </ol>
+
+          <aside id="quick-start" className={styles.minimumPath} data-overwhelmed-shortcut>
+            <div>
+              <p className={styles.minimumLabel}>Minimum path · required checks only</p>
+              <h3>Add your résumé, check your name and headline, keep the recommended style, then publish.</h3>
+              <p data-stopping-point>
+                <strong>You can stop here.</strong> A correct, shareable page is enough for today.
+              </p>
+            </div>
+            <div className={styles.minimumActions}>
+              <Link
+                href="/signup?ref=homepage_overwhelmed_start&next=/create"
+                className={styles.secondaryButton}
+                data-action-priority="primary"
+                data-start-action
+              >
+                Add my résumé
+              </Link>
+              <small data-ignore-guidance>
+                Ignore colors, page styles, statistics, PDFs, QR codes, and advanced settings for now.
+              </small>
+            </div>
+          </aside>
+        </section>
+
+        <section
+          ref={galleryRef}
+          id="resume-styles"
+          className={styles.gallerySection}
+          data-living-gallery
+        >
+          <div className={styles.sectionHeading}>
+            <p className={styles.eyebrow}><span>Optional</span>Choose a page style</p>
+            <h2>Choose a style—or keep this one.</h2>
+            <p>
+              Every option uses the same résumé. Only the presentation changes. Atlas is the
+              starting style, and you can switch anytime.
+            </p>
+          </div>
+
+          <div className={styles.galleryChooser}>
+            <div className={styles.gallerySelectorMeta} id="style-choice-help">
+              <div>
+                <span>5 styles · 1 professional page</span>
+                <strong>Only the design changes.</strong>
+              </div>
+              <p>Choose a style to update the preview. Not sure? Atlas is the recommended start.</p>
+            </div>
+
+            <div
+              className={styles.galleryOptions}
+              role="radiogroup"
+              aria-label="Choose a style for the same professional page"
+              aria-describedby="style-choice-help"
+            >
+              {WORLD_DIRECTIONS.map((world, index) => {
+                const selected = world.id === activeWorld.id;
+                return (
+                  <button
+                    key={world.id}
+                    ref={(node) => { galleryControlRefs.current[index] = node; }}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-controls="style-preview"
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => selectWorld(world, index, galleryControlRefs)}
+                    onKeyDown={(event) => handleWorldKeyDown(event, index, galleryControlRefs)}
+                    className={`${styles.galleryOption} ${selected ? styles.galleryOptionActive : ""}`}
+                    style={getWorldStyle(world.id)}
+                    data-gallery-card
+                    data-theme-id={world.id}
+                    data-action-priority="optional"
+                  >
+                    <span className={styles.galleryOptionSwatch} aria-hidden="true"><i /></span>
+                    <span className={styles.galleryOptionCopy}>
+                      <strong>{world.label}</strong>
+                      <small>
+                        {THEME_MAP[world.id].name}{index === 0 ? " · Recommended" : ""}
+                      </small>
+                    </span>
+                    <span className={styles.galleryOptionState}>
+                      {selected ? "Selected" : "Preview"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              className={styles.galleryPreview}
+              style={getWorldStyle(activeWorld.id)}
+              data-style-preview
+              data-theme-id={activeWorld.id}
+            >
+              <div className={styles.galleryPreviewToolbar}>
+                <div>
+                  <span>Same résumé · Avery Morgan</span>
+                  <strong>mylivingpage.com/avery</strong>
+                </div>
+                <div className={styles.galleryPreviewActions}>
+                  <span aria-hidden="true">
+                    {String(activeIndex + 1).padStart(2, "0")} / {String(WORLD_DIRECTIONS.length).padStart(2, "0")}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={reducedMotion ? "Motion reduced" : motionPaused ? "Resume motion" : "Pause motion"}
+                    data-motion-paused={motionPaused ? "true" : "false"}
+                    data-testid="gallery-motion-toggle"
+                    disabled={reducedMotion}
+                    onClick={() => setMotionPaused((paused) => !paused)}
+                  >
+                    {reducedMotion ? "Motion reduced" : motionPaused ? "Resume motion" : "Pause motion"}
+                  </button>
+                </div>
+              </div>
+
+              <div id="style-preview" className={styles.galleryPreviewViewport}>
+                {galleryOwnsMotion ? (
+                  <GalleryLivePage world={activeWorld} animated={galleryAnimated} />
+                ) : (
+                  <WorldPoster world={activeWorld} />
+                )}
+              </div>
+
+              <div className={styles.galleryPreviewCaption} aria-live="polite" aria-atomic="true">
+                <div>
+                  <span>Selected style</span>
+                  <strong>{activeWorld.label} · {activeTheme.name}</strong>
+                </div>
+                <p>{activeWorld.promise}</p>
+                <span className={styles.gallerySameContent}>Same information</span>
+              </div>
+            </div>
           </div>
         </section>
 
+        <section id="use-later" className={styles.laterSection}>
+          <div className={styles.sectionHeading}>
+            <p className={styles.eyebrow}><span>Later</span>Use these only when needed</p>
+            <h2>Your page is useful before you use every tool.</h2>
+            <p>
+              Most days, update one fact or share your link—and ignore everything else. Reference
+              material, statistics, and advanced controls stay out of your way until you need them.
+            </p>
+          </div>
+
+          <div className={styles.everydayBlock} data-everyday-actions>
+            <div className={styles.everydayHeading}>
+              <span>Everyday</span>
+              <h3>Keep one page current.</h3>
+              <p>These are the only two actions to remember after you publish.</p>
+            </div>
+            <div className={styles.everydayGrid}>
+              {EVERYDAY_ACTIONS.map((action) => (
+                <article key={action.name} className={styles.everydayCard} data-action-priority="normal">
+                  <h4>{action.name}</h4>
+                  <strong>{action.timing}</strong>
+                  <p>{action.note}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <details className={styles.optionalDisclosure} data-optional-tools>
+            <summary>
+              <span>Optional tools</span>
+              <strong>Open these only when you need them</strong>
+            </summary>
+            <div className={styles.toolGrid}>
+              {OPTIONAL_TOOLS.map((tool) => (
+                <article
+                  key={tool.id}
+                  className={styles.toolCard}
+                  data-later-tool
+                  data-tool-kind={tool.id}
+                  data-reference-tools={tool.id === "reference" ? "true" : undefined}
+                  data-action-priority="optional"
+                >
+                  <span>{tool.kind}</span>
+                  <h3>{tool.name}</h3>
+                  <strong>{tool.timing}</strong>
+                  <p>{tool.note}</p>
+                </article>
+              ))}
+            </div>
+          </details>
+        </section>
+
         <section className={styles.finalCta}>
-          <p className={styles.eyebrow}><span>04</span>Your experience belongs here</p>
-          <h2>One career. A world built around it.</h2>
-          <p>Build, publish, host, download, and keep it current for free.</p>
+          <p className={styles.eyebrow}><span>Done</span>Stop after the basics</p>
+          <h2>Publish the useful version. Improve it later.</h2>
+          <p>Upload your résumé, check three essentials, and publish one link. That is a complete first session.</p>
           <div className={styles.heroActions}>
-            <Link href="/signup?ref=homepage_observatory_final&next=/create" className={styles.primaryButton}>
-              Build from my résumé — free
+            <Link
+              href="/signup?ref=homepage_observatory_final&next=/create"
+              className={styles.primaryButton}
+              data-start-action
+            >
+              Add my résumé
               <ArrowIcon />
             </Link>
-            <Link href="/examples" className={styles.secondaryButton}>View sample pages</Link>
+            <a href="#quick-start" className={styles.secondaryButton}>See the minimum path</a>
           </div>
-          <small>No credit card. No trial. No hidden publishing or download fee.</small>
+          <small>You do not need to choose a style, read guides, check statistics, or make a PDF first.</small>
         </section>
       </main>
 
       <footer className={styles.footer}>
         <Link href="/" className={styles.logo}>my<span>living</span>page</Link>
-        <span>Homepage prototype · Sample profiles only</span>
+        <span>Action-first copy prototype · Sample profiles only</span>
         <nav aria-label="Prototype footer">
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>

@@ -8,8 +8,11 @@ Visual review artifacts for the Signal Frame homepage implementation. These imag
 - `signal-frame-homepage-artifact-browser.png` — 1440 × 1000 standalone concept capture used during the Signal Frame review
 
 The production homepage uses the Signal Frame design. `/homepage-preview` is now a
-`noindex` Observatory + Living Gallery experiment so future homepage directions can
-be reviewed without replacing `/`.
+`noindex` action-first homepage experiment: one primary action, a three-step default
+workflow, a required-checks-only minimum path, an optional single-preview style chooser, and clearly
+separated later-use tools. The style chooser keeps one résumé in a fixed preview and
+uses five equal controls so the presentation changes without suggesting five different
+pages. It can be reviewed without replacing `/`.
 
 For local renderer review, run `ENABLE_EDITOR_PREVIEW=1 npm run dev` and open
 `/dev/theme-lab`. The credential-free fixed-frame checks run with

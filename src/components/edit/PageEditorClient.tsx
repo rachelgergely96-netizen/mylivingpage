@@ -330,10 +330,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="site-eyebrow">Living Page editor</p>
+            <p className="site-eyebrow">Your professional page</p>
             <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2.5">
               <h1 className="truncate font-site text-xl font-semibold tracking-[-0.03em] text-site-text sm:text-2xl">
-                {data.name || "Living Page"}
+                {data.name || "Living Resume"}
               </h1>
               <span
                 role="status"
@@ -478,7 +478,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                     mylivingpage.com/{publicSlug || page?.slug || "your-username"}
                   </div>
                   <p className="text-xs leading-5 text-site-muted">
-                    This address is shared by your Living Page and downloadable résumé.
+                    This address is shared by your professional page and downloadable résumé.
                   </p>
                 </fieldset>
 
@@ -554,14 +554,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 <p className="site-eyebrow">Appearance</p>
                 <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3">
                   <h2 id="editor-design-title" className="site-panel-title">
-                    Choose the page world
+                    Choose your page style
                   </h2>
                   <span className="border border-site-action bg-site-selected px-2.5 py-1 font-mono text-[10px] tracking-[0.08em] text-site-action-hover">
                     {selectedTheme?.name ?? themeId}
                   </span>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-site-secondary">
-                  Your content stays the same while the visual system changes around it.
+                  Your professional story stays the same while the style changes.
                 </p>
               </div>
               <ThemePicker

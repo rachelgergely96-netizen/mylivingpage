@@ -4,8 +4,8 @@ import LivingHomepagePrototype from "@/components/marketing/LivingHomepageProtot
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Living Page Observatory Prototype | MyLivingPage",
-  description: "A noindex visual prototype exploring a homepage that behaves like a Living Page.",
+  title: "Turn Your Résumé Into a Page You Can Share | MyLivingPage Prototype",
+  description: "A noindex action-first homepage prototype for creating and publishing your professional page.",
   robots: {
     index: false,
     follow: false,

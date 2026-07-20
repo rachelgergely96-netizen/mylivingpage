@@ -9,14 +9,21 @@ test("action-first prototype presents a professional page and one consistent sta
     page.getByRole("heading", { name: "Turn your résumé into a page you can share." }),
   ).toBeVisible();
   await expect(page.getByText("Add your résumé", { exact: true }).first()).toBeVisible();
-  await expect(page.locator("[data-ignore-guidance]").first()).toContainText(
-    "ignore themes, statistics, PDFs, QR codes, and motion settings",
+  await expect(page.locator("[data-hero-supporting-copy]")).toContainText(
+    "apply for a role, get referred, or make an introduction",
   );
+  await expect(page.getByText("That is the whole first session", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("For now, ignore", { exact: false })).toHaveCount(0);
+  await expect(page.getByLabel("Product assurances")).toContainText("Completely free");
 
   const primaryCta = page.getByTestId("homepage-primary-cta");
   await expect(primaryCta).toHaveAttribute(
     "href",
     "/signup?ref=homepage_observatory_primary&next=/create",
+  );
+  await expect(page.getByRole("link", { name: "Try the live sample" })).toHaveAttribute(
+    "href",
+    "#live-product-story",
   );
   const startActions = page.locator("[data-start-action]");
   await expect(startActions).toHaveCount(4);
@@ -31,31 +38,63 @@ test("action-first prototype presents a professional page and one consistent sta
     ),
   ).toBe(true);
 
-  const heroStage = page.locator("[data-observatory-live-page]");
-  await expect(heroStage.locator('[data-theme-id="atlas"]')).toBeVisible();
-  await expect(heroStage.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
-  const heroStageBox = await heroStage.boundingBox();
-  const heroCanvasBox = await heroStage.locator('[data-theme-renderer-status="ready"]').boundingBox();
-  expect(heroStageBox).not.toBeNull();
-  expect(heroCanvasBox).not.toBeNull();
-  expect(Math.abs(heroStageBox!.height - heroCanvasBox!.height)).toBeLessThanOrEqual(2);
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(1);
-
-  const motionToggle = page.getByTestId("observatory-motion-toggle");
-  await expect(motionToggle).toHaveAccessibleName("Pause motion");
-  await motionToggle.click();
-  await expect(motionToggle).toHaveAttribute("data-motion-paused", "true");
-  await expect(motionToggle).toHaveAccessibleName("Resume motion");
-  await expect(motionToggle).toContainText("Resume motion");
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(0);
-  await motionToggle.click();
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "The three-step default workflow" }))
+    .toHaveAttribute("tabindex", "0");
+  await expect(page.locator("[data-homepage-theme-canvas]")).toHaveCount(0);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
 });
 
-test("prototype defines a three-step path, a minimum path, and a stopping point", async ({ page }) => {
+test("live product story opens on the Share Card and switches among three truthful outputs", async ({ page }) => {
+  await page.goto("/homepage-preview");
+
+  const story = page.locator("[data-live-product-story]");
+  await expect(
+    story.getByRole("heading", { name: "What do you need to be understood for?" }),
+  ).toBeVisible();
+
+  const application = story.getByRole("button", { name: /Applying for a role/ });
+  const referral = story.getByRole("button", { name: /Getting referred/ });
+  const introduction = story.getByRole("button", { name: /Making an introduction/ });
+  await expect(story.locator("[data-story-moment]")).toHaveCount(3);
+  await expect(introduction).toHaveAttribute("aria-pressed", "true");
+  await expect(story.locator("[data-story-output-region]"))
+    .toHaveAttribute("data-story-output-region", "introduction");
+  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
+  const qr = story.getByRole("img", { name: "Sample QR code preview for the professional page" });
+  await expect(qr).toBeVisible();
+
+  const squareElements = [
+    story,
+    introduction,
+    story.locator('[data-story-output="introduction"] > article'),
+    story.locator('[data-story-output="introduction"] article > div:first-child > b'),
+    qr,
+  ];
+  for (const element of squareElements) {
+    expect(await element.evaluate((node) => getComputedStyle(node).borderRadius)).toBe("0px");
+  }
+
+  await application.click();
+  await expect(application).toHaveAttribute("aria-pressed", "true");
+  await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
+  await expect(story.getByText("Avery-Morgan_Product-Lead.pdf")).toBeVisible();
+  await expect(story.getByRole("img", { name: "Avery Morgan source résumé, imported once" }))
+    .toBeVisible();
+
+  await referral.click();
+  await expect(referral).toHaveAttribute("aria-pressed", "true");
+  await expect(story.locator("[data-story-output-region]"))
+    .toHaveAttribute("data-story-output-region", "referral");
+  const livingOutput = story.locator("[data-story-living-output]");
+  await expect(livingOutput).toHaveAttribute("data-theme-id", "atlas");
+  await expect(livingOutput.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
+  await expect(story.getByRole("region", { name: "Sample professional page preview" }))
+    .toHaveAttribute("tabindex", "0");
+});
+
+test("prototype defines a three-step path, a quick start, and a stopping point", async ({ page }) => {
   await page.goto("/homepage-preview");
 
   const workflow = page.locator("[data-default-workflow]");
@@ -70,10 +109,13 @@ test("prototype defines a three-step path, a minimum path, and a stopping point"
   await expect(steps.nth(2)).toContainText("Publish one link");
 
   const shortcut = page.locator("[data-overwhelmed-shortcut]");
-  await expect(shortcut).toContainText("Minimum path · required checks only");
+  await expect(shortcut).toContainText("Quick start · only what you need");
   await expect(shortcut.locator("[data-stopping-point]")).toContainText("You can stop here");
-  await expect(shortcut.locator("[data-ignore-guidance]")).toContainText(
-    "Ignore colors, page styles, statistics, PDFs, QR codes, and advanced settings for now",
+  await expect(shortcut.locator("[data-later-guidance]")).toContainText(
+    "The recommended style is ready to use",
+  );
+  await expect(shortcut.locator("[data-later-guidance]")).toContainText(
+    "available whenever you need them",
   );
   const shortcutLink = shortcut.getByRole("link", { name: "Add my résumé" });
   await expect(shortcutLink).toHaveAttribute(
@@ -85,13 +127,92 @@ test("prototype defines a three-step path, a minimum path, and a stopping point"
   expect(shortcutBox!.height).toBeGreaterThanOrEqual(44);
 });
 
-test("one-page style chooser uses equal controls and supports keyboard selection", async ({ page }) => {
+test("prototype explains ATS and AI readability with an always-free promise", async ({ page }) => {
   await page.goto("/homepage-preview");
 
-  const gallery = page.locator("[data-living-gallery]");
-  await gallery.scrollIntoViewIfNeeded();
-  const directions = gallery.getByRole("radiogroup", {
-    name: "Choose a style for the same professional page",
+  const searchReadiness = page.locator("[data-search-readiness]");
+  await expect(
+    searchReadiness.getByRole("heading", { name: "Built to be easier to find—and understand." }),
+  ).toBeVisible();
+  await expect(searchReadiness).toContainText("ATS tools, recruiter search, search engines");
+  await expect(searchReadiness.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
+  await expect(
+    searchReadiness.getByRole("heading", { name: "Recruiter search + AI readability" }),
+  ).toBeVisible();
+  await expect(
+    searchReadiness.getByRole("heading", { name: "Public professional page" }),
+  ).toBeVisible();
+  await expect(searchReadiness).toContainText(
+    "No tool can guarantee how every system will parse or rank your résumé",
+  );
+
+  const freePromise = searchReadiness.locator("[data-free-promise]");
+  await expect(
+    freePromise.getByRole("heading", { name: "One Living Resume. Completely free. Always." }),
+  )
+    .toBeVisible();
+  await expect(freePromise).toContainText("No card or subscription required");
+  await expect(freePromise).toContainText("No trial. No hidden fees.");
+});
+
+test("style cards sit under the top demo and update that Living Resume immediately", async ({ page }) => {
+  await page.goto("/homepage-preview");
+
+  const story = page.locator("[data-live-product-story]");
+  const chooser = story.locator("[data-story-style-chooser]");
+  await chooser.scrollIntoViewIfNeeded();
+  await expect(page.locator("[data-story-style-chooser]")).toHaveCount(1);
+  await expect(page.locator("#resume-styles")).toHaveCount(0);
+  await expect(page.locator("[data-style-preview]")).toHaveCount(0);
+  await expect(page.getByTestId("gallery-motion-toggle")).toHaveCount(0);
+  await expect(chooser).toContainText(
+    "The Living Resume above opens with that design; your information stays the same",
+  );
+
+  const stageBox = await story.locator("[data-story-stage]").boundingBox();
+  const chooserBox = await chooser.boundingBox();
+  expect(stageBox).not.toBeNull();
+  expect(chooserBox).not.toBeNull();
+  expect(chooserBox!.y).toBeGreaterThanOrEqual(stageBox!.y + stageBox!.height - 1);
+
+  const directions = chooser.getByRole("radiogroup", {
+    name: "Choose a style for the Living Resume above",
+  });
+  const calm = directions.getByRole("radio", { name: /Calm and focused/ });
+  await expect(directions.getByRole("radio")).toHaveCount(5);
+  await expect(calm).toHaveAttribute("aria-controls", "prototype-story-output");
+  await calm.click();
+
+  await expect(calm).toHaveAttribute("aria-checked", "true");
+  await expect(story.getByRole("button", { name: /Getting referred/ }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(story.locator("[data-story-output-region]"))
+    .toHaveAttribute("data-story-output-region", "referral");
+  const livingOutput = story.locator("[data-story-living-output]");
+  await expect(livingOutput).toHaveAttribute("data-theme-id", "nocturne");
+  await expect(livingOutput.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
+  await expect(chooser.locator("[data-style-selection-status]"))
+    .toContainText("Calm and focused · Nocturne");
+  await expect(chooser.locator("[data-style-selection-status]"))
+    .toContainText("Showing above");
+
+  await story.getByRole("button", { name: /Making an introduction/ }).click();
+  await expect(
+    story.getByRole("img", { name: "Sample QR code preview for the professional page" }),
+  ).toBeVisible();
+  await story.getByRole("button", { name: /Getting referred/ }).click();
+  await expect(story.locator("[data-story-living-output]"))
+    .toHaveAttribute("data-theme-id", "nocturne");
+});
+
+test("top style cards are equal and support roving keyboard selection", async ({ page }) => {
+  await page.goto("/homepage-preview");
+
+  const story = page.locator("[data-live-product-story]");
+  const chooser = story.locator("[data-story-style-chooser]");
+  await chooser.scrollIntoViewIfNeeded();
+  const directions = chooser.getByRole("radiogroup", {
+    name: "Choose a style for the Living Resume above",
   });
   const clear = directions.getByRole("radio", { name: /Clear and structured/ });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
@@ -110,53 +231,31 @@ test("one-page style chooser uses equal controls and supports keyboard selection
 
   await expect(calm).toBeFocused();
   await expect(calm).toHaveAttribute("aria-checked", "true");
+  await expect(calm).toHaveAttribute("tabindex", "0");
+  await expect(clear).toHaveAttribute("tabindex", "-1");
   await expect(calm).toHaveAttribute("data-theme-id", "nocturne");
-  await expect(gallery.locator("[data-style-preview]")).toHaveAttribute("data-theme-id", "nocturne");
-  await expect(gallery.locator("[data-style-preview]")).toContainText(
-    "Calm and focused · Nocturne",
-  );
-  await expect(page.getByTestId("observatory-status")).toContainText("Nocturne selected");
-});
+  await expect(story.locator("[data-story-output-region]"))
+    .toHaveAttribute("data-story-output-region", "referral");
+  await expect(story.locator("[data-story-living-output]"))
+    .toHaveAttribute("data-theme-id", "nocturne");
 
-test("style chooser transfers motion to one stable Living Resume preview", async ({ page }) => {
-  await page.goto("/homepage-preview");
-
-  const gallery = page.locator("[data-living-gallery]");
-  await gallery.scrollIntoViewIfNeeded();
-  const preview = gallery.locator("[data-style-preview]");
-
-  const expressive = gallery.getByRole("radio", { name: /Creative and expressive[\s\S]*Atelier/ });
-  await expressive.click();
-
+  await page.keyboard.press("End");
+  const expressive = directions.getByRole("radio", { name: /Creative and expressive/ });
+  await expect(expressive).toBeFocused();
   await expect(expressive).toHaveAttribute("aria-checked", "true");
-  await expect(preview).toHaveAttribute("data-theme-id", "atelier");
-  await expect(preview.locator('[data-theme-id="atelier"]')).toBeVisible();
-  await expect(preview.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
-  const galleryCanvasWrapperBox = await preview.locator("[data-homepage-theme-canvas]").boundingBox();
-  const galleryCanvasBox = await preview.locator('[data-theme-renderer-status="ready"]').boundingBox();
-  expect(galleryCanvasWrapperBox).not.toBeNull();
-  expect(galleryCanvasBox).not.toBeNull();
-  expect(Math.abs(galleryCanvasWrapperBox!.height - galleryCanvasBox!.height)).toBeLessThanOrEqual(2);
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(1);
-  await expect(page.locator("[data-homepage-theme-canvas]")).toHaveCount(1);
-  await expect(gallery.locator("[data-gallery-card]")).toHaveCount(5);
-
-  const galleryMotionToggle = page.getByTestId("gallery-motion-toggle");
-  await expect(galleryMotionToggle).toBeVisible();
-  await galleryMotionToggle.click();
-  await expect(galleryMotionToggle).toHaveAttribute("data-motion-paused", "true");
-  await expect(galleryMotionToggle).toHaveAccessibleName("Resume motion");
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(0);
+  await expect(story.locator("[data-story-living-output]"))
+    .toHaveAttribute("data-theme-id", "atelier");
+  await expect(page.locator('[data-theme-renderer-status="ready"]')).toHaveCount(1);
 });
 
-test("tablet layout stacks before minimum columns can overflow", async ({ page }) => {
+test("tablet layout stacks before narrow columns can overflow", async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 900 });
   await page.goto("/homepage-preview");
 
   const copy = page.getByRole("heading", {
     name: "Turn your résumé into a page you can share.",
   });
-  const observatory = page.locator("[data-home-observatory]");
+  const observatory = page.locator("[data-live-product-story]");
   await expect(copy).toBeVisible();
   await expect(observatory).toBeVisible();
 
@@ -165,6 +264,18 @@ test("tablet layout stacks before minimum columns can overflow", async ({ page }
   expect(copyBox).not.toBeNull();
   expect(observatoryBox).not.toBeNull();
   expect(observatoryBox!.y).toBeGreaterThan(copyBox!.y);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBe(true);
+
+  await page.setViewportSize({ width: 701, height: 900 });
+  const styleRail = observatory.getByRole("radiogroup", {
+    name: "Choose a style for the Living Resume above",
+  });
+  await styleRail.scrollIntoViewIfNeeded();
+  expect(
+    await styleRail.evaluate((node) => node.scrollWidth > node.clientWidth),
+  ).toBe(true);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
@@ -182,21 +293,49 @@ test("reduced motion and mobile preserve the complete prototype", async ({ page 
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Add. Check. Publish." })).toBeAttached();
   await expect(
-    page.getByRole("heading", { name: "Choose a style—or keep this one." }),
+    page.getByRole("heading", { name: "Built to be easier to find—and understand." }),
+  ).toBeAttached();
+  await expect(
+    page.getByRole("heading", { name: "Choose the look of your Living Resume." }),
   ).toBeAttached();
   await expect(
     page.getByRole("heading", { name: "Your page is useful before you use every tool." }),
   ).toBeAttached();
 
-  const warmDirection = page
-    .locator("[data-living-gallery]")
+  const story = page.locator("[data-live-product-story]");
+  const storyButtons = story.locator("[data-story-moment]");
+  await expect(storyButtons).toHaveCount(3);
+  expect(
+    await storyButtons.evaluateAll((buttons) =>
+      buttons.every((button) => button.getBoundingClientRect().height >= 44),
+    ),
+  ).toBe(true);
+  await expect(
+    story.getByRole("img", { name: "Sample QR code preview for the professional page" }),
+  ).toBeVisible();
+
+  const chooser = story.locator("[data-story-style-chooser]");
+  const styleControls = chooser.getByRole("radio");
+  await expect(styleControls).toHaveCount(5);
+  expect(
+    await styleControls.evaluateAll((controls) =>
+      controls.every((control) => control.getBoundingClientRect().height >= 44),
+    ),
+  ).toBe(true);
+
+  const warmDirection = chooser
     .getByRole("radio", { name: /Practical and grounded/ });
   await warmDirection.click();
   await expect(warmDirection).toHaveAttribute("aria-checked", "true");
   await expect(warmDirection).toHaveAttribute("data-theme-id", "quarry");
+  await expect(story.locator("[data-story-output-region]"))
+    .toHaveAttribute("data-story-output-region", "referral");
+  await expect(story.locator("[data-story-living-output]"))
+    .toHaveAttribute("data-theme-id", "quarry");
+  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(0);
 
-  const styleRail = page.locator("[data-living-gallery]").getByRole("radiogroup", {
-    name: "Choose a style for the same professional page",
+  const styleRail = chooser.getByRole("radiogroup", {
+    name: "Choose a style for the Living Resume above",
   });
   expect(
     await styleRail.evaluate((rail) => rail.scrollWidth > rail.clientWidth),
@@ -241,5 +380,6 @@ test("production homepage remains isolated from the prototype", async ({ page })
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("[data-action-first]")).toHaveCount(0);
-  await expect(page.locator("[data-home-observatory]")).toHaveCount(0);
+  await expect(page.locator("[data-live-product-story]")).toHaveCount(0);
+  await expect(page.locator("[data-story-style-chooser]")).toHaveCount(0);
 });

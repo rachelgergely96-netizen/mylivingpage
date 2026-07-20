@@ -54,7 +54,9 @@ test("homepage trust policies are public and render their current documents", as
   await expect(page.getByRole("heading", { name: "Account Deletion" })).toBeVisible();
 
   await page.goto("/terms");
-  await expect(page.getByRole("heading", { name: "Free Service and Legacy Billing" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Always-Free Core Service and Legacy Billing" }),
+  ).toBeVisible();
   await expect(page.getByText("We do not offer new paid plans at this time.")).toBeVisible();
   await expect(page.getByText("Certain features require a paid subscription.")).toHaveCount(0);
 });

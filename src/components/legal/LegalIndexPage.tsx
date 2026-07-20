@@ -1,7 +1,7 @@
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import SiteHeader from "@/components/marketing/SiteHeader";
-import { LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
+import { LATEST_LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getLegalNavItems } from "@/lib/legal/site-config";
 
@@ -18,7 +18,7 @@ export default async function LegalIndexPage() {
 
       <main id="main-content" className="site-container py-10 sm:py-14">
         <section className="site-panel mx-auto max-w-5xl px-5 py-9 sm:px-8 sm:py-12">
-          <p className="site-eyebrow">Last updated: {LEGAL_EFFECTIVE_DATE}</p>
+          <p className="site-eyebrow">Latest policy update: {LATEST_LEGAL_EFFECTIVE_DATE}</p>
           <h1 className="site-page-title mt-4">Legal and Policies</h1>
           <p className="mt-4 max-w-3xl text-base leading-8 text-site-secondary">
             These policies apply to {site.brandName}. They cover account use, billing, privacy,

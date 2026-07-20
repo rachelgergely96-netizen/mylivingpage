@@ -1,6 +1,8 @@
 export const LEGAL_EFFECTIVE_DATE = "July 17, 2026";
+export const TERMS_EFFECTIVE_DATE = "July 20, 2026";
+export const LATEST_LEGAL_EFFECTIVE_DATE = TERMS_EFFECTIVE_DATE;
 
-export const TERMS_VERSION = "2026-07-17";
+export const TERMS_VERSION = "2026-07-20";
 export const PRIVACY_VERSION = "2026-07-17";
 export const COOKIE_VERSION = "2026-03-05";
 

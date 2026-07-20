@@ -1,5 +1,5 @@
 import type { LegalPolicyId, LegalSiteConfig } from "@/lib/legal/site-config";
-import { LEGAL_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
+import { LEGAL_EFFECTIVE_DATE, TERMS_EFFECTIVE_DATE } from "@/lib/legal/legal-version";
 
 export type LegalBlock =
   | {
@@ -42,15 +42,15 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
     return [
       {
         id: "free-service-legacy-billing",
-        heading: "Free Service and Legacy Billing",
+        heading: "Always-Free Core Service and Legacy Billing",
         blocks: [
           {
             type: "paragraph",
-            text: "MyLivingPage currently provides one living resume, public hosting, PDF exports, Share Cards, themes, targeted versions, and analytics without a subscription or payment card. We do not offer new paid plans at this time.",
+            text: "MyLivingPage provides one Living Resume, public hosting, PDF exports, Share Cards, themes, up to three targeted versions, and analytics without a subscription or payment card. These core features are free and will remain free. We do not offer new paid plans at this time.",
           },
           {
             type: "paragraph",
-            text: "If you previously started a paid subscription, Stripe may continue processing its recurring charges until you cancel it in account settings. Current free access does not depend on keeping that legacy subscription.",
+            text: "If you previously started a paid subscription, Stripe may continue processing its recurring charges until you cancel it in account settings. Access to the always-free core Service does not depend on keeping that legacy subscription.",
           },
         ],
       },
@@ -63,7 +63,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
             items: [
               "These billing terms apply only if your account still has a legacy paid subscription.",
               "You may cancel a legacy subscription at any time from the Stripe customer billing portal linked in account settings.",
-              "Cancellation stops future renewals and generally takes effect at the end of the current paid period. Your access to the current free Service remains available.",
+              "Cancellation stops future renewals and generally takes effect at the end of the current paid period. Your access to the always-free core Service remains available.",
               "Except where required by applicable law, previously charged fees are non-refundable and we do not provide prorated refunds for partial billing periods.",
               "If you delete your account, any active legacy subscription is canceled before account deletion is finalized.",
             ],
@@ -76,7 +76,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
         blocks: [
           {
             type: "paragraph",
-            text: "A failed or declined charge may affect only a legacy subscription. It does not remove current free access to the core Service. We may retry a failed legacy charge through our payment processor in accordance with processor rules.",
+            text: "A failed or declined charge may affect only a legacy subscription. It does not remove access to the always-free core Service. We may retry a failed legacy charge through our payment processor in accordance with processor rules.",
           },
         ],
       },
@@ -86,7 +86,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
         blocks: [
           {
             type: "paragraph",
-            text: "If we later introduce an optional paid service, we will clearly disclose its price, billing period, renewal, cancellation, and refund terms before collecting billing information, and we will require your express authorization before charging you. These Terms do not authorize charges for the currently free Service.",
+            text: "If we later introduce an optional paid service, we will clearly disclose its price, billing period, renewal, cancellation, and refund terms before collecting billing information, and we will require your express authorization before charging you. Optional paid services will not replace or restrict the always-free core Service described above, and these Terms do not authorize charges for that core Service.",
           },
         ],
       },
@@ -352,7 +352,9 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
       blocks: [
         {
           type: "paragraph",
-          text: "We may update policies from time to time. Updated versions will be posted with a new Last updated date. Continued use of the Service after updates means you accept the revised terms.",
+          text: site.id === "mylivingpage"
+            ? "We may update policies from time to time. Updated versions will be posted with a new Last updated date. No update to these Terms will revoke the always-free core Service commitment described above. Continued use of the Service after other updates means you accept the revised terms."
+            : "We may update policies from time to time. Updated versions will be posted with a new Last updated date. Continued use of the Service after updates means you accept the revised terms.",
         },
       ],
     },
@@ -378,7 +380,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     policyId: "terms",
     title: "Terms of Service",
     summary: `These Terms govern your use of ${site.brandName} and describe your rights, obligations, and legal relationship with ${site.companyNamePlaceholder}.`,
-    lastUpdated: LAST_UPDATED,
+    lastUpdated: TERMS_EFFECTIVE_DATE,
     sections: [
       {
         id: "service-overview",

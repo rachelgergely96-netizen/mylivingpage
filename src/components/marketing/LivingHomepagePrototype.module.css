@@ -121,6 +121,24 @@
   color: var(--text);
 }
 
+.mobileNavLinks {
+  align-items: center;
+  display: none;
+  gap: 18px;
+  justify-content: flex-end;
+}
+
+.mobileNavLinks a {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.navCtaShort {
+  display: none;
+}
+
 .navCta,
 .primaryButton,
 .secondaryButton {
@@ -1821,12 +1839,19 @@
 
 .footer nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 22px;
 }
 
-.footer nav a {
+.footer nav a,
+.footer nav button {
+  background: transparent;
+  border: 0;
   color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 12px;
+  padding: 0;
 }
 
 @media (max-width: 1180px) {
@@ -1835,7 +1860,11 @@
   }
 
   .nav {
-    grid-template-columns: auto auto 1fr;
+    grid-template-columns: auto auto 1fr auto;
+  }
+
+  .mobileNavLinks {
+    display: flex;
   }
 
   .navCta {
@@ -1928,7 +1957,7 @@
 @media (max-width: 700px) {
   .nav {
     gap: 12px;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr auto;
     height: 64px;
     padding: 0 18px;
   }
@@ -2272,6 +2301,24 @@
 }
 
 @media (max-width: 420px) {
+  .nav {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .mobileNavLinks {
+    gap: 10px;
+  }
+
+  .mobileExamplesLink {
+    display: none;
+  }
+
+  .navCta {
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
   .storyHeader h2 {
     font-size: 15px;
   }
@@ -2309,6 +2356,16 @@
     padding: 10px;
   }
 
+}
+
+@media (max-width: 350px) {
+  .navCtaFull {
+    display: none;
+  }
+
+  .navCtaShort {
+    display: inline;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

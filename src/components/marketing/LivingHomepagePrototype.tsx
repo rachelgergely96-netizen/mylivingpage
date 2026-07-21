@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import CookieSettingsButton from "@/components/privacy/CookieSettingsButton";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { SIGNAL_FRAME_SAMPLE } from "@/lib/signal-frame-sample";
@@ -17,7 +18,26 @@ interface WorldDirection {
   promise: string;
 }
 
+interface LivingHomepagePrototypeProps {
+  mode?: "preview" | "production";
+}
+
 type StoryMomentId = "application" | "referral" | "introduction";
+
+const SIGNUP_REFS = {
+  preview: {
+    nav: "homepage_observatory_nav",
+    primary: "homepage_observatory_primary",
+    quickStart: "homepage_overwhelmed_start",
+    final: "homepage_observatory_final",
+  },
+  production: {
+    nav: "landing_apply_nav",
+    primary: "landing_start_free",
+    quickStart: "landing_quick_start",
+    final: "landing_final_start",
+  },
+} as const;
 
 interface StoryMoment {
   id: StoryMomentId;
@@ -407,7 +427,11 @@ function StoryOutput({ moment, world }: { moment: StoryMomentId; world: WorldDir
   return <StoryShareOutput />;
 }
 
-export default function LivingHomepagePrototype() {
+export default function LivingHomepagePrototype({
+  mode = "preview",
+}: LivingHomepagePrototypeProps) {
+  const isProduction = mode === "production";
+  const signupRefs = SIGNUP_REFS[mode];
   const [activeThemeId, setActiveThemeId] = useState<ThemeId>(WORLD_DIRECTIONS[0].id);
   const [storyMomentId, setStoryMomentId] = useState<StoryMomentId>("introduction");
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -471,23 +495,30 @@ export default function LivingHomepagePrototype() {
       <a className={styles.skipLink} href="#prototype-content">Skip to main content</a>
 
       <header className={styles.header}>
-        <nav className={styles.nav} aria-label="Prototype navigation">
+        <nav className={styles.nav} aria-label={isProduction ? "Primary navigation" : "Prototype navigation"}>
           <Link href="/" className={styles.logo}>
             my<span>living</span>page
           </Link>
-          <span className={styles.previewBadge}>Action-first copy prototype</span>
+          <span className={styles.previewBadge}>
+            {isProduction ? "Completely free · No trial" : "Action-first copy prototype"}
+          </span>
           <div className={styles.navLinks}>
             <a href="#how-it-works">How it works</a>
             <a href="#search-ready">ATS + search</a>
             <Link href="/examples">View examples</Link>
             <Link href="/login">Sign in</Link>
           </div>
+          <div className={styles.mobileNavLinks}>
+            <Link href="/examples" className={styles.mobileExamplesLink}>Examples</Link>
+            <Link href="/login">Sign in</Link>
+          </div>
           <Link
-            href="/signup?ref=homepage_observatory_nav&next=/create"
+            href={`/signup?ref=${signupRefs.nav}&next=/create`}
             className={styles.navCta}
             data-start-action
           >
-            Add my résumé
+            <span className={styles.navCtaFull}>Add my résumé</span>
+            <span className={styles.navCtaShort}>Start free</span>
           </Link>
         </nav>
       </header>
@@ -512,7 +543,7 @@ export default function LivingHomepagePrototype() {
               </p>
               <div className={styles.heroActions}>
                 <Link
-                  href="/signup?ref=homepage_observatory_primary&next=/create"
+                  href={`/signup?ref=${signupRefs.primary}&next=/create`}
                   className={styles.primaryButton}
                   data-testid="homepage-primary-cta"
                   data-action-priority="primary"
@@ -736,7 +767,7 @@ export default function LivingHomepagePrototype() {
             </div>
             <div className={styles.quickStartActions}>
               <Link
-                href="/signup?ref=homepage_overwhelmed_start&next=/create"
+                href={`/signup?ref=${signupRefs.quickStart}&next=/create`}
                 className={styles.secondaryButton}
                 data-action-priority="primary"
                 data-start-action
@@ -885,7 +916,7 @@ export default function LivingHomepagePrototype() {
           <p>Upload your résumé, check three essentials, and publish one link. That is a complete first session.</p>
           <div className={styles.heroActions}>
             <Link
-              href="/signup?ref=homepage_observatory_final&next=/create"
+              href={`/signup?ref=${signupRefs.final}&next=/create`}
               className={styles.primaryButton}
               data-start-action
             >
@@ -903,11 +934,19 @@ export default function LivingHomepagePrototype() {
 
       <footer className={styles.footer}>
         <Link href="/" className={styles.logo}>my<span>living</span>page</Link>
-        <span>Action-first copy prototype · Sample profiles only</span>
-        <nav aria-label="Prototype footer">
+        <span>
+          {isProduction
+            ? "Interactive demo uses sample data"
+            : "Action-first copy prototype · Sample profiles only"}
+        </span>
+        <nav aria-label={isProduction ? "Legal and policy links" : "Prototype footer"}>
+          {isProduction ? <Link href="/legal">Legal</Link> : null}
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
+          {isProduction ? <Link href="/cookies">Cookies</Link> : null}
           <Link href="/security">Security</Link>
+          {isProduction ? <Link href="/delete-account">Delete account</Link> : null}
+          {isProduction ? <CookieSettingsButton /> : null}
         </nav>
       </footer>
     </div>

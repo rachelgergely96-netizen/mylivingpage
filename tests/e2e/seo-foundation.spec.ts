@@ -65,9 +65,9 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
   const cases = [
     {
       path: "/",
-      title: "MyLivingPage | Make your experience easier to understand and harder to forget",
+      title: "Turn Your Résumé Into a Page You Can Share | MyLivingPage",
       description:
-        "Build one living professional page. Shape it for the moment. Share it anywhere.",
+        "Upload your résumé, review a polished private draft, and publish one professional link—completely free.",
       pathname: "/",
     },
     {

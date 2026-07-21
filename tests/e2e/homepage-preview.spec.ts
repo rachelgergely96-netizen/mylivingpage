@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-test("action-first prototype presents a professional page and one consistent start intent", async ({ page }) => {
-  await page.goto("/homepage-preview");
+const productionHomepage = "/";
+
+test("production homepage presents a professional page and one consistent start intent", async ({ page }) => {
+  await page.goto(productionHomepage);
 
   await expect(page).toHaveTitle(/Turn Your Résumé Into a Page You Can Share/);
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Turn your résumé into a page you can share." }),
   ).toBeVisible();
@@ -19,7 +21,7 @@ test("action-first prototype presents a professional page and one consistent sta
   const primaryCta = page.getByTestId("homepage-primary-cta");
   await expect(primaryCta).toHaveAttribute(
     "href",
-    "/signup?ref=homepage_observatory_primary&next=/create",
+    "/signup?ref=landing_start_free&next=/create",
   );
   await expect(page.getByRole("link", { name: "Try the live sample" })).toHaveAttribute(
     "href",
@@ -31,7 +33,7 @@ test("action-first prototype presents a professional page and one consistent sta
     await startActions.evaluateAll((links) =>
       links.every(
         (link) =>
-          link.textContent?.trim() === "Add my résumé" &&
+          link.textContent?.includes("Add my résumé") &&
           link.getAttribute("href")?.startsWith("/signup?") &&
           link.getAttribute("href")?.includes("next=/create"),
       ),
@@ -47,7 +49,7 @@ test("action-first prototype presents a professional page and one consistent sta
 });
 
 test("live product story opens on the Share Card and switches among three truthful outputs", async ({ page }) => {
-  await page.goto("/homepage-preview");
+  await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   await expect(
@@ -94,8 +96,8 @@ test("live product story opens on the Share Card and switches among three truthf
     .toHaveAttribute("tabindex", "0");
 });
 
-test("prototype defines a three-step path, a quick start, and a stopping point", async ({ page }) => {
-  await page.goto("/homepage-preview");
+test("homepage defines a three-step path, a quick start, and a stopping point", async ({ page }) => {
+  await page.goto(productionHomepage);
 
   const workflow = page.locator("[data-default-workflow]");
   const steps = workflow.locator("[data-workflow-step]");
@@ -120,15 +122,15 @@ test("prototype defines a three-step path, a quick start, and a stopping point",
   const shortcutLink = shortcut.getByRole("link", { name: "Add my résumé" });
   await expect(shortcutLink).toHaveAttribute(
     "href",
-    "/signup?ref=homepage_overwhelmed_start&next=/create",
+    "/signup?ref=landing_quick_start&next=/create",
   );
   const shortcutBox = await shortcutLink.boundingBox();
   expect(shortcutBox).not.toBeNull();
   expect(shortcutBox!.height).toBeGreaterThanOrEqual(44);
 });
 
-test("prototype explains ATS and AI readability with an always-free promise", async ({ page }) => {
-  await page.goto("/homepage-preview");
+test("homepage explains ATS and AI readability with an always-free promise", async ({ page }) => {
+  await page.goto(productionHomepage);
 
   const searchReadiness = page.locator("[data-search-readiness]");
   await expect(
@@ -156,7 +158,7 @@ test("prototype explains ATS and AI readability with an always-free promise", as
 });
 
 test("style cards sit under the top demo and update that Living Resume immediately", async ({ page }) => {
-  await page.goto("/homepage-preview");
+  await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
@@ -206,7 +208,7 @@ test("style cards sit under the top demo and update that Living Resume immediate
 });
 
 test("top style cards are equal and support roving keyboard selection", async ({ page }) => {
-  await page.goto("/homepage-preview");
+  await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
@@ -250,7 +252,7 @@ test("top style cards are equal and support roving keyboard selection", async ({
 
 test("tablet layout stacks before narrow columns can overflow", async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 900 });
-  await page.goto("/homepage-preview");
+  await page.goto(productionHomepage);
 
   const copy = page.getByRole("heading", {
     name: "Turn your résumé into a page you can share.",
@@ -281,10 +283,10 @@ test("tablet layout stacks before narrow columns can overflow", async ({ page })
   ).toBe(true);
 });
 
-test("reduced motion and mobile preserve the complete prototype", async ({ page }) => {
+test("reduced motion and mobile preserve the complete homepage", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/homepage-preview");
+  await page.goto(productionHomepage);
 
   await expect(page.locator('[data-motion-state="reduced"]')).toBeVisible();
   await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(0);
@@ -347,7 +349,7 @@ test("reduced motion and mobile preserve the complete prototype", async ({ page 
 });
 
 test("normal actions stay separate from reference, statistics, and advanced tools", async ({ page }) => {
-  await page.goto("/homepage-preview");
+  await page.goto(productionHomepage);
 
   const laterSection = page.locator("#use-later");
   await expect(
@@ -375,11 +377,15 @@ test("normal actions stay separate from reference, statistics, and advanced tool
   await expect(optionalTools.locator('[data-action-priority="primary"]')).toHaveCount(0);
 });
 
-test("production homepage remains isolated from the prototype", async ({ page }) => {
-  await page.goto("/");
+test("homepage preview remains a noindex review mirror", async ({ page }) => {
+  await page.goto("/homepage-preview");
 
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator("[data-action-first]")).toHaveCount(0);
-  await expect(page.locator("[data-live-product-story]")).toHaveCount(0);
-  await expect(page.locator("[data-story-style-chooser]")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/homepage-preview$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /^https:\/\/www\.mylivingpage\.com\/?$/,
+  );
+  await expect(page.locator("[data-action-first]")).toBeVisible();
+  await expect(page.getByText("Action-first copy prototype", { exact: true })).toBeVisible();
 });

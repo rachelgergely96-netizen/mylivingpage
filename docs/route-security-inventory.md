@@ -7,6 +7,7 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/account/change-password` | `POST` | `authenticated_user` | Account | Medium | Authenticated session, user rate limit, current-password reauthentication |
 | `/api/account/delete` | `POST` | `authenticated_user` | Account | High | Authenticated session, user rate limit, current-password or recent-provider reauthentication, billing-safe delete flow |
 | `/api/admin/users/[userId]` | `DELETE` | `admin_only` | Admin Ops | High | Admin auth, protected account check |
+| `/api/admin/pages/[pageId]` | `PATCH` | `admin_only` | Admin Ops | High | Admin auth, validated page id, audit event |
 | `/api/auth/google` | `GET` | `public_read` | Auth | Low | OAuth start only, sanitized internal redirect target, no-store headers |
 | `/api/auth/track-login` | `POST` | `authenticated_user` | Auth | Low | Authenticated user session |
 | `/api/avatar` | `POST`, `DELETE` | `authenticated_user` | Profile | Medium | Authenticated user session, file validation |

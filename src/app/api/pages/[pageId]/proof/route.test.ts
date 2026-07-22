@@ -36,7 +36,7 @@ function createServiceRoleClient(options?: {
             return {
               eq() {
                 return {
-                  or() {
+                  eq() {
                     return {
                       maybeSingle: vi.fn().mockResolvedValue({
                         data: options?.page ?? { id: "page-1" },

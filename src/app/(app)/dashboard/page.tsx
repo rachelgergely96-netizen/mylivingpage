@@ -6,7 +6,7 @@ import {
   SHARE_INTENT_EVENT_NAMES,
 } from "@/lib/analytics/proofSummary";
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
-import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
+import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -158,7 +158,7 @@ export default async function DashboardPage() {
     supabase
       .from("pages")
       .select("*")
-      .or(`user_id.eq.${user?.id ?? ""},owner_id.eq.${user?.id ?? ""}`)
+      .eq("owner_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
   ]);
   const profile = profileResult.data;
@@ -184,7 +184,7 @@ export default async function DashboardPage() {
           .from("events")
           .select("event_name, created_at, metadata")
           .eq("user_id", user?.id ?? "")
-          .in("event_name", [...SHARE_INTENT_EVENT_NAMES, "page.offline_view_attempted"])
+          .in("event_name", [...SHARE_INTENT_EVENT_NAMES])
           .order("created_at", { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }];
@@ -200,22 +200,7 @@ export default async function DashboardPage() {
       }),
     ]),
   );
-  const syncedList = await Promise.all(
-    list.map(async (page) => {
-      const synced = await syncPageHostingState(supabase, page, {
-        plan: profile?.plan ?? null,
-        billing_cohort: profile?.billing_cohort ?? null,
-        hosting_trial_started_at: profile?.hosting_trial_started_at ?? null,
-        stripe_subscription_status: profile?.stripe_subscription_status ?? null,
-        stripe_trial_ends_at: profile?.stripe_trial_ends_at ?? null,
-      });
-      return synced.page as PageRecord;
-    }),
-  );
   const publicSlug = profile?.username ?? list[0]?.slug ?? null;
-  const offlineAttemptEvents = events.filter(
-    (event) => event.event_name === "page.offline_view_attempted",
-  );
   const activePaidPlanPriceLabel =
     accountAccess.publicPlanLabel === "Starter"
       ? STARTER_PLAN_PRICE.displayLabel
@@ -274,15 +259,6 @@ export default async function DashboardPage() {
               )}
             </div>
           ) : null}
-          {offlineAttemptEvents.length > 0 ? (
-            <div className="site-callout site-callout-warning px-4 py-3 text-sm">
-              Someone tried to open your page while it was offline
-              {formatRelativeTime(offlineAttemptEvents[0]?.created_at)
-                ? ` ${formatRelativeTime(offlineAttemptEvents[0]?.created_at)}`
-                : ""}. Use the Publish button on the page card below when you are ready to
-              restore the link.
-            </div>
-          ) : null}
           <div className="site-callout px-4 py-3 text-sm">
             V1 supports one public page per account. Edit your current page, or delete it before creating a replacement.
           </div>
@@ -291,7 +267,7 @@ export default async function DashboardPage() {
               This account still has legacy extra pages. Your public URL resolves through one username, so remove extras before relying on the page publicly.
             </div>
           ) : null}
-          {syncedList.map((page) => {
+          {list.map((page) => {
             const publicViewAvailable = isPubliclyAvailablePage(page);
             const proof = proofByPageId.get(page.id) ?? buildPageProofSummary({
               pageId: page.id,

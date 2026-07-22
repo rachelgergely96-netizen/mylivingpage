@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getClientIp } from "@/lib/security/request";
+import { hashSecurityIdentifier, getClientIp } from "@/lib/security/request";
 
 describe("getClientIp", () => {
   it("prefers Vercel's platform-provided client IP header", () => {
@@ -25,5 +25,21 @@ describe("getClientIp", () => {
       "198.51.100.4",
     );
     expect(getClientIp(new Headers())).toBeNull();
+  });
+});
+
+describe("hashSecurityIdentifier", () => {
+  it("uses the server-only pepper and never returns the raw identifier", () => {
+    const previous = process.env.SECURITY_HASH_PEPPER;
+    process.env.SECURITY_HASH_PEPPER = "test-pepper-one";
+    const first = hashSecurityIdentifier("203.0.113.10");
+    process.env.SECURITY_HASH_PEPPER = "test-pepper-two";
+    const second = hashSecurityIdentifier("203.0.113.10");
+    if (previous === undefined) delete process.env.SECURITY_HASH_PEPPER;
+    else process.env.SECURITY_HASH_PEPPER = previous;
+
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+    expect(first).not.toContain("203.0.113.10");
+    expect(second).not.toBe(first);
   });
 });

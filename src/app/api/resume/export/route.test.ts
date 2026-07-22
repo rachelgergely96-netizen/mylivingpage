@@ -190,6 +190,15 @@ describe("POST /api/resume/export", () => {
     });
   });
 
+  it("rejects malformed JSON", async () => {
+    const response = await POST(new Request("http://localhost/api/resume/export", {
+      method: "POST",
+      body: "{",
+    }));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "Invalid request." });
+  });
+
   it("rejects export when the page is not public and live", async () => {
     mocks.serviceRoleFactory.mockReturnValue(
       createServiceRoleClient({

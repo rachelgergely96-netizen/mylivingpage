@@ -4,7 +4,6 @@ const mocks = vi.hoisted(() => ({
   authGetUser: vi.fn(),
   createServiceRoleSupabaseClient: vi.fn(),
   fetchProfileWithHostingAccess: vi.fn(),
-  syncPageHostingState: vi.fn(),
   getAccountAccessState: vi.fn(),
   onProfileUpdate: vi.fn(),
 }));
@@ -23,9 +22,6 @@ vi.mock("@/lib/profile-access", () => ({
     mocks.fetchProfileWithHostingAccess(...args),
 }));
 
-vi.mock("@/lib/hosting-state", () => ({
-  syncPageHostingState: (...args: unknown[]) => mocks.syncPageHostingState(...args),
-}));
 
 vi.mock("@/lib/account-access", () => ({
   getAccountAccessState: (...args: unknown[]) => mocks.getAccountAccessState(...args),
@@ -159,6 +155,15 @@ describe("/api/profile", () => {
   });
 
   describe("PATCH", () => {
+    it("rejects malformed JSON", async () => {
+      const response = await PATCH(new Request("http://localhost/api/profile", {
+        method: "PATCH",
+        body: "{",
+      }));
+      expect(response.status).toBe(400);
+      expect(mocks.onProfileUpdate).not.toHaveBeenCalled();
+    });
+
     it("requires authentication", async () => {
       mocks.authGetUser.mockResolvedValueOnce({ data: { user: null } });
 

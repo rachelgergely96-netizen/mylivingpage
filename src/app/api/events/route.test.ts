@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase/server", () => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
-          or: vi.fn(() => ({ maybeSingle: mocks.pageMaybeSingle })),
+          eq: vi.fn(() => ({ maybeSingle: mocks.pageMaybeSingle })),
         })),
       })),
     })),

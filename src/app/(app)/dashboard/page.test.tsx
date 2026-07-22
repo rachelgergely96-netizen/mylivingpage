@@ -7,7 +7,6 @@ const createServerSupabaseClientMock = vi.fn();
 const createServiceRoleSupabaseClientMock = vi.fn();
 const fetchProfileWithHostingAccessMock = vi.fn();
 const getAccountAccessStateMock = vi.fn();
-const syncPageHostingStateMock = vi.fn();
 const isPubliclyAvailablePageMock = vi.fn();
 
 vi.mock("next/link", () => ({
@@ -40,7 +39,6 @@ vi.mock("@/lib/account-access", () => ({
 }));
 
 vi.mock("@/lib/hosting-state", () => ({
-  syncPageHostingState: (...args: unknown[]) => syncPageHostingStateMock(...args),
   isPubliclyAvailablePage: (...args: unknown[]) => isPubliclyAvailablePageMock(...args),
 }));
 
@@ -132,7 +130,7 @@ function makeServiceRoleClient(overrides?: {
         return {
           select() {
             return {
-              or() {
+              eq() {
                 return {
                   order: vi.fn().mockResolvedValue({
                     data: pages,
@@ -225,9 +223,6 @@ describe("dashboard page", () => {
       requiresCheckoutToPublish: false,
       isTrialingSubscription: false,
     });
-    syncPageHostingStateMock.mockImplementation(async (_supabase: unknown, page: unknown) => ({
-      page,
-    }));
     isPubliclyAvailablePageMock.mockReturnValue(true);
   });
 
@@ -255,7 +250,7 @@ describe("dashboard page", () => {
     );
   });
 
-  it("surfaces an offline-page reactivation banner when a public link gets opened while hosting is inactive", async () => {
+  it("ignores obsolete offline-hosting events", async () => {
     createServiceRoleSupabaseClientMock.mockReturnValue(
       makeServiceRoleClient({
         events: [
@@ -273,8 +268,6 @@ describe("dashboard page", () => {
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Someone tried to open your page while it was offline");
-    expect(markup).toContain('href="/dashboard/settings"');
-    expect(markup).toContain("Use the Publish button on the page card below");
+    expect(markup).not.toContain("Someone tried to open your page while it was offline");
   });
 });

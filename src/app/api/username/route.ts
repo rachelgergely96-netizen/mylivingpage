@@ -61,7 +61,12 @@ export async function PATCH(request: Request) {
   }
   const { user } = authResult.value;
 
-  const body = (await request.json()) as { slug?: string };
+  let body: { slug?: string };
+  try {
+    body = (await request.json()) as { slug?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
   const { slug, error } = validateUsernameSlug(body.slug ?? "");
 
   if (error) {
@@ -98,7 +103,7 @@ export async function PATCH(request: Request) {
   await supabase
     .from("pages")
     .update({ slug })
-    .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`);
+    .eq("owner_id", user.id);
 
   return NextResponse.json({ success: true, slug });
 }

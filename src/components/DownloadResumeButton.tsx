@@ -37,9 +37,11 @@ export default function DownloadResumeButton({
   appearance = "theme",
 }: DownloadResumeButtonProps) {
   const [generating, setGenerating] = useState(false);
+  const [internalError, setInternalError] = useState<string | null>(null);
 
   const handleDownload = async () => {
     setGenerating(true);
+    setInternalError(null);
     onErrorChange?.(null);
     try {
       const response = await fetch("/api/resume/export", {
@@ -63,17 +65,18 @@ export default function DownloadResumeButton({
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (downloadError) {
-      onErrorChange?.(
-        downloadError instanceof Error
+      const message = downloadError instanceof Error
           ? sanitizeDownloadErrorMessage(downloadError.message)
-          : "PDF generation failed. Try again.",
-      );
+          : "PDF generation failed. Try again.";
+      setInternalError(message);
+      onErrorChange?.(message);
     } finally {
       setGenerating(false);
     }
   };
 
   return (
+    <div className="contents">
     <button
       type="button"
       onClick={handleDownload}
@@ -120,5 +123,7 @@ export default function DownloadResumeButton({
       )}
       <span>{generating ? "Preparing..." : "Download Resume PDF"}</span>
     </button>
+    {internalError ? <p role="alert" aria-live="polite" className="mt-2 text-sm text-red-300">{internalError}</p> : null}
+    </div>
   );
 }

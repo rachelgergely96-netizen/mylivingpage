@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 export function getClientIp(requestHeaders: Headers): string | null {
   const vercelForwardedFor = requestHeaders.get("x-vercel-forwarded-for");
@@ -22,7 +22,13 @@ export function getClientIp(requestHeaders: Headers): string | null {
 }
 
 export function hashSecurityIdentifier(value: string) {
-  return createHash("sha256").update(value).digest("hex");
+  const pepper = process.env.SECURITY_HASH_PEPPER;
+  if (!pepper && process.env.NODE_ENV === "production") {
+    throw new Error("SECURITY_HASH_PEPPER is required in production.");
+  }
+  return createHmac("sha256", pepper ?? "mylivingpage-local-test-pepper")
+    .update(value)
+    .digest("hex");
 }
 
 export function getBestEffortRequestIdentifier(requestHeaders: Headers) {

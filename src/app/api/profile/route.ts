@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getAccountAccessState } from "@/lib/account-access";
-import { syncPageHostingState } from "@/lib/hosting-state";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
@@ -45,16 +44,6 @@ export async function GET() {
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const syncedPage = latestPage
-    ? await syncPageHostingState(supabase, latestPage, {
-        plan: profile.plan,
-        billing_cohort: profile.billing_cohort,
-        hosting_trial_started_at: profile.hosting_trial_started_at,
-        stripe_subscription_status: profile.stripe_subscription_status,
-        stripe_trial_ends_at: profile.stripe_trial_ends_at,
-      })
-    : null;
-
   return NextResponse.json({
     ...profile,
     accountAccess: getAccountAccessState({
@@ -64,7 +53,7 @@ export async function GET() {
       stripe_subscription_status: profile.stripe_subscription_status,
       stripe_trial_ends_at: profile.stripe_trial_ends_at,
     }),
-    latestPage: syncedPage?.page ?? null,
+    latestPage: latestPage ?? null,
     signup_referrer:
       profile.signup_referrer ?? ((user.user_metadata?.signup_referrer as string | undefined) ?? null),
     hasPassword,
@@ -77,7 +66,10 @@ export async function PATCH(request: Request) {
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await request.json()) as Record<string, unknown>;
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
   const updates: Record<string, unknown> = {};
 
   if (typeof body.full_name === "string") {

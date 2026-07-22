@@ -24,6 +24,7 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 - `npm run typecheck` runs `tsc --noEmit`.
 - `npm run test` or `npm run test:unit` runs Vitest.
 - `npm run test:e2e` runs Playwright.
+- Set `PLAYWRIGHT_BROWSER_CHANNEL` only when you intentionally want Playwright to use an installed branded browser such as `chrome`; leave it unset for the bundled Chromium used by CI.
 - `npm run check:client-security` verifies client/server security boundaries.
 - `npm run check:single-page-schema` verifies the one-page-per-account DB contract.
 

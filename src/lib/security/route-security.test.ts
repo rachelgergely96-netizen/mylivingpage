@@ -101,4 +101,25 @@ describe("route security helpers", () => {
       expect(result.value.verified).toEqual({ ok: true });
     }
   });
+
+  it("does not expose signature-provider details", async () => {
+    const result = await assertSignedWebhook({
+      request: new Request("http://localhost/api/test", {
+        method: "POST",
+        headers: { "x-signature": "bad" },
+        body: "payload",
+      }),
+      secret: "secret",
+      signatureHeaderName: "x-signature",
+      verify() {
+        throw new Error("provider detail and payload offset");
+      },
+    });
+    expect("response" in result).toBe(true);
+    if ("response" in result) {
+      await expect(result.response.json()).resolves.toEqual({
+        error: "Webhook signature verification failed.",
+      });
+    }
+  });
 });

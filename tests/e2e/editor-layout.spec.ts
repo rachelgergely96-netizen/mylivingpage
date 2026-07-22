@@ -54,6 +54,14 @@ async function mockEditorRequests(page: Page) {
       }),
     });
   });
+
+  await page.route("**/api/events", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true }),
+    });
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -65,6 +73,9 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/dev/editor-preview");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(page.url()).origin,
+  });
 
   const commandBar = page.locator("[data-editor-command-bar]");
   const workspace = page.locator("[data-editor-workspace]");
@@ -74,12 +85,14 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   await expect(page.getByRole("heading", { name: "Avery Sample", level: 1 })).toBeVisible();
   await expect(commandBar).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Editor sections" })).toBeVisible();
+  await expect(page.locator("[data-editor-readiness]")).toBeVisible();
+  await expect(page.locator("[data-editor-ready-count]")).toContainText("6/6");
   await expect(preview).toBeVisible();
   await expect(commandBar).toHaveCSS("position", "sticky");
   await expect(preview).toHaveCSS("position", "sticky");
 
   const workspaceBox = await workspace.boundingBox();
-  const contentBox = await page.getByRole("heading", { name: "Build the page in sections" }).boundingBox();
+  const contentBox = await page.getByRole("heading", { name: "Shape the signal, section by section" }).boundingBox();
   const previewBox = await preview.boundingBox();
   expect(workspaceBox).not.toBeNull();
   expect(contentBox).not.toBeNull();
@@ -88,11 +101,32 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
 
   await headline.fill("Principal Platform Engineer");
   await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeDisabled();
+  await expect(page.locator("[data-editor-preview-status]")).toHaveText("Unsaved view");
   await expect(preview.getByText("Principal Platform Engineer", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Save Changes" }).click();
   await expect(page.getByText("Saved successfully!", { exact: true })).toBeVisible();
   await expect(page.getByText("All changes saved", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-editor-preview-status]")).toHaveText("Live signal");
+
+  const copyLinkButton = page.getByRole("button", { name: "Copy link" });
+  await expect(copyLinkButton).toBeEnabled();
+  await copyLinkButton.click();
+  await expect(page.getByRole("button", { name: "Link copied" })).toBeVisible();
+
+  const experienceStop = page.locator('[data-editor-nav-id="editor-section-experience"]');
+  await experienceStop.click();
+  await expect(experienceStop).toHaveAttribute("aria-current", "step");
+  await expect(page).toHaveURL(/#editor-section-experience$/);
+  await expect
+    .poll(async () => {
+      const commandBox = await commandBar.boundingBox();
+      const stickyPreviewBox = await preview.boundingBox();
+      if (!commandBox || !stickyPreviewBox) return -1;
+      return Math.round(stickyPreviewBox.y - (commandBox.y + commandBox.height));
+    })
+    .toBeGreaterThanOrEqual(0);
 
   await page.route("**/api/pages/editor-layout-preview", async (route) => {
     if (route.request().method() === "PATCH") {
@@ -120,7 +154,9 @@ test("mobile editor switches cleanly between editing and preview", async ({ page
   const preview = page.locator("[data-editor-preview]");
 
   await expect(editButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("heading", { name: "Build the page in sections" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Shape the signal, section by section" })).toBeVisible();
+  await expect(page.locator("[data-editor-mobile-dock]")).toBeVisible();
+  await expect(page.locator("[data-editor-mobile-peek]")).toBeVisible();
   await expect(preview).toBeHidden();
 
   const editOverflow = await page.evaluate(
@@ -128,10 +164,11 @@ test("mobile editor switches cleanly between editing and preview", async ({ page
   );
   expect(editOverflow).toBeLessThanOrEqual(0);
 
-  await previewButton.click();
+  await page.getByRole("button", { name: "Preview your page" }).click();
   await expect(previewButton).toHaveAttribute("aria-pressed", "true");
   await expect(preview).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Build the page in sections" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Shape the signal, section by section" })).toBeHidden();
+  await expect(page.locator("[data-editor-mobile-peek]")).toBeHidden();
 
   const previewOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,

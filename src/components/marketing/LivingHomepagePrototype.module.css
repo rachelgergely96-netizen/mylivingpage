@@ -19,7 +19,6 @@
 }
 
 .prototype * {
-  border-radius: 0 !important;
   box-sizing: border-box;
 }
 

@@ -2,101 +2,98 @@ import { expect, test } from "@playwright/test";
 
 const productionHomepage = "/";
 
-test("production homepage presents a professional page and one consistent start intent", async ({ page }) => {
+test("production homepage makes the value and first action clear above the fold", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(productionHomepage);
 
   await expect(page).toHaveTitle(/Turn Your Résumé Into a Page You Can Share/);
   await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Turn your résumé into a page you can share." }),
+    page.getByRole("heading", { name: "Your résumé, alive on the web." }),
   ).toBeVisible();
-  await expect(page.getByText("Add your résumé", { exact: true }).first()).toBeVisible();
-  await expect(page.locator("[data-hero-supporting-copy]")).toContainText(
-    "apply for a role, get referred, or make an introduction",
-  );
-  await expect(page.getByText("That is the whole first session", { exact: false })).toHaveCount(0);
-  await expect(page.getByText("For now, ignore", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("professional page you can update", { exact: false })).toBeVisible();
   await expect(page.getByLabel("Product assurances")).toContainText("Completely free");
+  await expect(page.getByLabel("Product assurances")).toContainText("Private until published");
 
   const primaryCta = page.getByTestId("homepage-primary-cta");
   await expect(primaryCta).toHaveAttribute(
     "href",
     "/signup?ref=landing_start_free&next=/create",
   );
-  await expect(page.getByRole("link", { name: "Try the live sample" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "See it transform" })).toHaveAttribute(
     "href",
     "#live-product-story",
   );
+  const primaryBox = await primaryCta.boundingBox();
+  expect(primaryBox).not.toBeNull();
+  expect(primaryBox!.y + primaryBox!.height).toBeLessThanOrEqual(768);
+
   const startActions = page.locator("[data-start-action]");
   await expect(startActions).toHaveCount(4);
   expect(
     await startActions.evaluateAll((links) =>
       links.every(
         (link) =>
-          link.textContent?.includes("Add my résumé") &&
+          link.textContent?.includes("Create my free page") &&
           link.getAttribute("href")?.startsWith("/signup?") &&
           link.getAttribute("href")?.includes("next=/create"),
       ),
     ),
   ).toBe(true);
 
-  await expect(page.getByRole("region", { name: "The three-step default workflow" }))
-    .toHaveAttribute("tabindex", "0");
-  await expect(page.locator("[data-homepage-theme-canvas]")).toHaveCount(0);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(4_500);
 });
 
-test("live product story opens on the Share Card and switches among three truthful outputs", async ({ page }) => {
+test("the transformation opens on the Living Page and keeps one truthful source visible", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   await expect(
-    story.getByRole("heading", { name: "What do you need to be understood for?" }),
+    story.getByRole("heading", { name: "See one résumé become more useful." }),
   ).toBeVisible();
 
-  const application = story.getByRole("button", { name: /Applying for a role/ });
-  const referral = story.getByRole("button", { name: /Getting referred/ });
-  const introduction = story.getByRole("button", { name: /Making an introduction/ });
+  const referral = story.getByRole("button", { name: /Living Page/ });
+  const application = story.getByRole("button", { name: /Application PDF/ });
+  const introduction = story.getByRole("button", { name: /Share Card \+ QR/ });
   await expect(story.locator("[data-story-moment]")).toHaveCount(3);
-  await expect(introduction).toHaveAttribute("aria-pressed", "true");
+  await expect(referral).toHaveAttribute("aria-pressed", "true");
   await expect(story.locator("[data-story-output-region]"))
-    .toHaveAttribute("data-story-output-region", "introduction");
-  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
-  const qr = story.getByRole("img", { name: "Sample QR code preview for the professional page" });
-  await expect(qr).toBeVisible();
-
-  const squareElements = [
-    story,
-    introduction,
-    story.locator('[data-story-output="introduction"] > article'),
-    story.locator('[data-story-output="introduction"] article > div:first-child > b'),
-    qr,
-  ];
-  for (const element of squareElements) {
-    expect(await element.evaluate((node) => getComputedStyle(node).borderRadius)).toBe("0px");
-  }
+    .toHaveAttribute("data-story-output-region", "referral");
+  await expect(story.getByRole("heading", { name: "Professional page" })).toBeVisible();
+  await expect(story.locator("[data-truth-source]")).toBeVisible();
+  await expect(story.locator("[data-truth-destination]")).toBeVisible();
+  await expect(story.locator("[data-transform-motion]")).toContainText("Same facts, new form");
+  expect(
+    await story.locator("[data-transform-motion] b").first().evaluate(
+      (node) => getComputedStyle(node).animationName,
+    ),
+  ).toContain("truthTravel");
 
   await application.click();
   await expect(application).toHaveAttribute("aria-pressed", "true");
   await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
   await expect(story.getByText("Avery-Morgan_Product-Lead.pdf")).toBeVisible();
-  await expect(story.getByRole("img", { name: "Avery Morgan source résumé, imported once" }))
-    .toBeVisible();
 
-  await referral.click();
-  await expect(referral).toHaveAttribute("aria-pressed", "true");
-  await expect(story.locator("[data-story-output-region]"))
-    .toHaveAttribute("data-story-output-region", "referral");
-  const livingOutput = story.locator("[data-story-living-output]");
-  await expect(livingOutput).toHaveAttribute("data-theme-id", "atlas");
-  await expect(livingOutput.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
-  await expect(story.getByRole("region", { name: "Sample professional page preview" }))
-    .toHaveAttribute("tabindex", "0");
+  await introduction.click();
+  await expect(introduction).toHaveAttribute("aria-pressed", "true");
+  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
+  const qr = story.getByRole("img", { name: "Sample QR code preview for the professional page" });
+  await expect(qr).toBeVisible();
+
+  for (const element of [
+    story,
+    introduction,
+    story.locator('[data-story-output="introduction"] > article'),
+    qr,
+  ]) {
+    expect(await element.evaluate((node) => getComputedStyle(node).borderRadius)).toBe("0px");
+  }
 });
 
-test("homepage defines a three-step path, a quick start, and a stopping point", async ({ page }) => {
+test("homepage defines an editable three-step path and a clear stopping point", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const workflow = page.locator("[data-default-workflow]");
@@ -106,20 +103,15 @@ test("homepage defines a three-step path, a quick start, and a stopping point", 
   expect(
     await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workflow-step"))),
   ).toEqual(["upload", "review", "publish"]);
-  await expect(steps.nth(0)).toContainText("Add your résumé");
-  await expect(steps.nth(1)).toContainText("Check 3 essentials");
-  await expect(steps.nth(2)).toContainText("Publish one link");
+  await expect(steps.nth(0)).toContainText("Bring your résumé");
+  await expect(steps.nth(1)).toContainText("Review the truth");
+  await expect(steps.nth(1)).toContainText("Every inferred field stays editable");
+  await expect(steps.nth(2)).toContainText("Share one living link");
 
   const shortcut = page.locator("[data-overwhelmed-shortcut]");
-  await expect(shortcut).toContainText("Quick start · only what you need");
-  await expect(shortcut.locator("[data-stopping-point]")).toContainText("You can stop here");
-  await expect(shortcut.locator("[data-later-guidance]")).toContainText(
-    "The recommended style is ready to use",
-  );
-  await expect(shortcut.locator("[data-later-guidance]")).toContainText(
-    "available whenever you need them",
-  );
-  const shortcutLink = shortcut.getByRole("link", { name: "Add my résumé" });
+  await expect(shortcut).toContainText("A complete first session");
+  await expect(shortcut.locator("[data-stopping-point]")).toContainText("You can stop there");
+  const shortcutLink = shortcut.getByRole("link", { name: "Create my free page" });
   await expect(shortcutLink).toHaveAttribute(
     "href",
     "/signup?ref=landing_quick_start&next=/create",
@@ -129,20 +121,20 @@ test("homepage defines a three-step path, a quick start, and a stopping point", 
   expect(shortcutBox!.height).toBeGreaterThanOrEqual(44);
 });
 
-test("homepage explains ATS and AI readability with an always-free promise", async ({ page }) => {
+test("homepage explains readable content and the always-free promise without overclaiming", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const searchReadiness = page.locator("[data-search-readiness]");
   await expect(
-    searchReadiness.getByRole("heading", { name: "Built to be easier to find—and understand." }),
+    searchReadiness.getByRole("heading", { name: "A memorable page. Recognizable information." }),
   ).toBeVisible();
-  await expect(searchReadiness).toContainText("ATS tools, recruiter search, search engines");
+  await expect(searchReadiness).toContainText("recruiters, ATS tools, search, and AI-assisted tools");
   await expect(searchReadiness.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
   await expect(
-    searchReadiness.getByRole("heading", { name: "Recruiter search + AI readability" }),
+    searchReadiness.getByRole("heading", { name: "Readable by recruiters + AI tools" }),
   ).toBeVisible();
   await expect(
-    searchReadiness.getByRole("heading", { name: "Public professional page" }),
+    searchReadiness.getByRole("heading", { name: "A page with its own address" }),
   ).toBeVisible();
   await expect(searchReadiness).toContainText(
     "No tool can guarantee how every system will parse or rank your résumé",
@@ -151,25 +143,19 @@ test("homepage explains ATS and AI readability with an always-free promise", asy
   const freePromise = searchReadiness.locator("[data-free-promise]");
   await expect(
     freePromise.getByRole("heading", { name: "One Living Resume. Completely free. Always." }),
-  )
-    .toBeVisible();
+  ).toBeVisible();
   await expect(freePromise).toContainText("No card or subscription required");
   await expect(freePromise).toContainText("No trial. No hidden fees.");
 });
 
-test("style cards sit under the top demo and update that Living Resume immediately", async ({ page }) => {
+test("the five-theme rail updates the real Living Page preview immediately", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
-  await expect(page.locator("[data-story-style-chooser]")).toHaveCount(1);
-  await expect(page.locator("#resume-styles")).toHaveCount(0);
-  await expect(page.locator("[data-style-preview]")).toHaveCount(0);
-  await expect(page.getByTestId("gallery-motion-toggle")).toHaveCount(0);
-  await expect(chooser).toContainText(
-    "The Living Resume above opens with that design; your information stays the same",
-  );
+  await expect(chooser).toContainText("59 living themes");
+  await expect(chooser).toContainText("Your information stays the same");
 
   const stageBox = await story.locator("[data-story-stage]").boundingBox();
   const chooserBox = await chooser.boundingBox();
@@ -178,43 +164,36 @@ test("style cards sit under the top demo and update that Living Resume immediate
   expect(chooserBox!.y).toBeGreaterThanOrEqual(stageBox!.y + stageBox!.height - 1);
 
   const directions = chooser.getByRole("radiogroup", {
-    name: "Choose a style for the Living Resume above",
+    name: "Choose a style for the Living Page above",
   });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
   await expect(directions.getByRole("radio")).toHaveCount(5);
-  await expect(calm).toHaveAttribute("aria-controls", "prototype-story-output");
   await calm.click();
 
   await expect(calm).toHaveAttribute("aria-checked", "true");
-  await expect(story.getByRole("button", { name: /Getting referred/ }))
+  await expect(story.getByRole("button", { name: /Living Page/ }))
     .toHaveAttribute("aria-pressed", "true");
-  await expect(story.locator("[data-story-output-region]"))
-    .toHaveAttribute("data-story-output-region", "referral");
   const livingOutput = story.locator("[data-story-living-output]");
   await expect(livingOutput).toHaveAttribute("data-theme-id", "nocturne");
   await expect(livingOutput.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
   await expect(chooser.locator("[data-style-selection-status]"))
     .toContainText("Calm and focused · Nocturne");
-  await expect(chooser.locator("[data-style-selection-status]"))
-    .toContainText("Showing above");
 
-  await story.getByRole("button", { name: /Making an introduction/ }).click();
-  await expect(
-    story.getByRole("img", { name: "Sample QR code preview for the professional page" }),
-  ).toBeVisible();
-  await story.getByRole("button", { name: /Getting referred/ }).click();
+  await story.getByRole("button", { name: /Share Card \+ QR/ }).click();
+  await expect(story.getByRole("img", { name: /Sample QR code/ })).toBeVisible();
+  await story.getByRole("button", { name: /Living Page/ }).click();
   await expect(story.locator("[data-story-living-output]"))
     .toHaveAttribute("data-theme-id", "nocturne");
 });
 
-test("top style cards are equal and support roving keyboard selection", async ({ page }) => {
+test("theme controls are equal and support roving keyboard selection", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
   const directions = chooser.getByRole("radiogroup", {
-    name: "Choose a style for the Living Resume above",
+    name: "Choose a style for the Living Page above",
   });
   const clear = directions.getByRole("radio", { name: /Clear and structured/ });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
@@ -230,14 +209,10 @@ test("top style cards are equal and support roving keyboard selection", async ({
 
   await clear.focus();
   await page.keyboard.press("ArrowRight");
-
   await expect(calm).toBeFocused();
   await expect(calm).toHaveAttribute("aria-checked", "true");
   await expect(calm).toHaveAttribute("tabindex", "0");
   await expect(clear).toHaveAttribute("tabindex", "-1");
-  await expect(calm).toHaveAttribute("data-theme-id", "nocturne");
-  await expect(story.locator("[data-story-output-region]"))
-    .toHaveAttribute("data-story-output-region", "referral");
   await expect(story.locator("[data-story-living-output]"))
     .toHaveAttribute("data-theme-id", "nocturne");
 
@@ -250,131 +225,52 @@ test("top style cards are equal and support roving keyboard selection", async ({
   await expect(page.locator('[data-theme-renderer-status="ready"]')).toHaveCount(1);
 });
 
-test("tablet layout stacks before narrow columns can overflow", async ({ page }) => {
+test("tablet and mobile layouts stay usable without horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 900 });
   await page.goto(productionHomepage);
 
-  const copy = page.getByRole("heading", {
-    name: "Turn your résumé into a page you can share.",
-  });
-  const observatory = page.locator("[data-live-product-story]");
-  await expect(copy).toBeVisible();
-  await expect(observatory).toBeVisible();
-
-  const copyBox = await copy.boundingBox();
-  const observatoryBox = await observatory.boundingBox();
-  expect(copyBox).not.toBeNull();
-  expect(observatoryBox).not.toBeNull();
-  expect(observatoryBox!.y).toBeGreaterThan(copyBox!.y);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
-  ).toBe(true);
-
-  await page.setViewportSize({ width: 701, height: 900 });
-  const styleRail = observatory.getByRole("radiogroup", {
-    name: "Choose a style for the Living Resume above",
-  });
-  await styleRail.scrollIntoViewIfNeeded();
-  expect(
-    await styleRail.evaluate((node) => node.scrollWidth > node.clientWidth),
-  ).toBe(true);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
-  ).toBe(true);
-});
-
-test("reduced motion and mobile preserve the complete homepage", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(productionHomepage);
-
-  await expect(page.locator('[data-motion-state="reduced"]')).toBeVisible();
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(0);
-  await expect(
-    page.getByRole("heading", { name: "Turn your résumé into a page you can share." }),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Add. Check. Publish." })).toBeAttached();
-  await expect(
-    page.getByRole("heading", { name: "Built to be easier to find—and understand." }),
-  ).toBeAttached();
-  await expect(
-    page.getByRole("heading", { name: "Choose the look of your Living Resume." }),
-  ).toBeAttached();
-  await expect(
-    page.getByRole("heading", { name: "Your page is useful before you use every tool." }),
-  ).toBeAttached();
-
+  const copy = page.getByRole("heading", { name: "Your résumé, alive on the web." });
   const story = page.locator("[data-live-product-story]");
-  const storyButtons = story.locator("[data-story-moment]");
-  await expect(storyButtons).toHaveCount(3);
+  const copyBox = await copy.boundingBox();
+  const storyBox = await story.boundingBox();
+  expect(copyBox).not.toBeNull();
+  expect(storyBox).not.toBeNull();
+  expect(storyBox!.y).toBeGreaterThan(copyBox!.y);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByTestId("homepage-primary-cta")).toBeVisible();
+  const storyButtons = page.locator("[data-story-moment]");
   expect(
     await storyButtons.evaluateAll((buttons) =>
       buttons.every((button) => button.getBoundingClientRect().height >= 44),
     ),
   ).toBe(true);
-  await expect(
-    story.getByRole("img", { name: "Sample QR code preview for the professional page" }),
-  ).toBeVisible();
-
-  const chooser = story.locator("[data-story-style-chooser]");
-  const styleControls = chooser.getByRole("radio");
-  await expect(styleControls).toHaveCount(5);
-  expect(
-    await styleControls.evaluateAll((controls) =>
-      controls.every((control) => control.getBoundingClientRect().height >= 44),
-    ),
-  ).toBe(true);
-
-  const warmDirection = chooser
-    .getByRole("radio", { name: /Practical and grounded/ });
-  await warmDirection.click();
-  await expect(warmDirection).toHaveAttribute("aria-checked", "true");
-  await expect(warmDirection).toHaveAttribute("data-theme-id", "quarry");
-  await expect(story.locator("[data-story-output-region]"))
-    .toHaveAttribute("data-story-output-region", "referral");
-  await expect(story.locator("[data-story-living-output]"))
-    .toHaveAttribute("data-theme-id", "quarry");
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]')).toHaveCount(0);
-
-  const styleRail = chooser.getByRole("radiogroup", {
-    name: "Choose a style for the Living Resume above",
-  });
-  expect(
-    await styleRail.evaluate((rail) => rail.scrollWidth > rail.clientWidth),
-  ).toBe(true);
-
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
 });
 
-test("normal actions stay separate from reference, statistics, and advanced tools", async ({ page }) => {
+test("reduced motion keeps the full transformation understandable and interactive", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(productionHomepage);
 
-  const laterSection = page.locator("#use-later");
-  await expect(
-    laterSection.getByRole("heading", { name: "Your page is useful before you use every tool." }),
-  ).toBeAttached();
+  await expect(page.locator('[data-motion-state="reduced"]')).toBeVisible();
+  const story = page.locator("[data-live-product-story]");
+  await expect(story.locator("[data-truth-source]")).toBeVisible();
+  await expect(story.locator("[data-truth-destination]")).toBeVisible();
+  await expect(story.locator("[data-transform-motion] b").first()).toBeHidden();
+  await expect(story.getByRole("heading", { name: "Professional page" })).toBeVisible();
 
-  const everyday = laterSection.locator("[data-everyday-actions]");
-  await expect(everyday.locator('[data-action-priority="normal"]')).toHaveCount(2);
-  await expect(everyday).toContainText("Update your page");
-  await expect(everyday).toContainText("Share your link");
-
-  const optionalTools = laterSection.locator("[data-optional-tools]");
-  await expect(optionalTools).not.toHaveAttribute("open", "");
-  await optionalTools.getByText("Optional tools", { exact: true }).click();
-  await expect(optionalTools).toHaveAttribute("open", "");
-  await expect(optionalTools.locator("[data-later-tool]")).toHaveCount(5);
-  await expect(optionalTools.locator("[data-reference-tools]"))
-    .toContainText("Examples and guides");
-  await expect(optionalTools.locator('[data-tool-kind="statistics"]')).toContainText(
-    "Wait until your link has been shared for 7 days",
-  );
-  await expect(optionalTools.locator('[data-tool-kind="advanced"]')).toContainText(
-    "The starting settings already work",
-  );
-  await expect(optionalTools.locator('[data-action-priority="primary"]')).toHaveCount(0);
+  const practical = story.getByRole("radio", { name: /Practical and grounded/ });
+  await practical.click();
+  await expect(practical).toHaveAttribute("aria-checked", "true");
+  await expect(story.locator("[data-story-living-output]"))
+    .toHaveAttribute("data-theme-id", "quarry");
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBe(true);
 });
 
 test("homepage preview remains a noindex review mirror", async ({ page }) => {
@@ -387,5 +283,5 @@ test("homepage preview remains a noindex review mirror", async ({ page }) => {
     /^https:\/\/www\.mylivingpage\.com\/?$/,
   );
   await expect(page.locator("[data-action-first]")).toBeVisible();
-  await expect(page.getByText("Action-first copy prototype", { exact: true })).toBeVisible();
+  await expect(page.getByText("Homepage conversion prototype", { exact: true })).toBeVisible();
 });

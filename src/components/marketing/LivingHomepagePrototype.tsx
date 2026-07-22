@@ -24,21 +24,6 @@ interface LivingHomepagePrototypeProps {
 
 type StoryMomentId = "application" | "referral" | "introduction";
 
-const SIGNUP_REFS = {
-  preview: {
-    nav: "homepage_observatory_nav",
-    primary: "homepage_observatory_primary",
-    quickStart: "homepage_overwhelmed_start",
-    final: "homepage_observatory_final",
-  },
-  production: {
-    nav: "landing_apply_nav",
-    primary: "landing_start_free",
-    quickStart: "landing_quick_start",
-    final: "landing_final_start",
-  },
-} as const;
-
 interface StoryMoment {
   id: StoryMomentId;
   label: string;
@@ -56,12 +41,27 @@ type WorldStyle = CSSProperties & {
   "--world-surface": string;
 };
 
+const SIGNUP_REFS = {
+  preview: {
+    nav: "homepage_observatory_nav",
+    primary: "homepage_observatory_primary",
+    quickStart: "homepage_overwhelmed_start",
+    final: "homepage_observatory_final",
+  },
+  production: {
+    nav: "landing_apply_nav",
+    primary: "landing_start_free",
+    quickStart: "landing_quick_start",
+    final: "landing_final_start",
+  },
+} as const;
+
 const WORLD_DIRECTIONS: readonly WorldDirection[] = [
   {
     id: "atlas",
     label: "Clear and structured",
     shortLabel: "Clear",
-    promise: "Best when you want leadership, scale, and decisions to stand out.",
+    promise: "Best when leadership, scale, and decisions should stand out.",
   },
   {
     id: "nocturne",
@@ -73,7 +73,7 @@ const WORLD_DIRECTIONS: readonly WorldDirection[] = [
     id: "quarry",
     label: "Practical and grounded",
     shortLabel: "Practical",
-    promise: "Best when you want hands-on work and useful results to lead.",
+    promise: "Best when hands-on work and useful results should lead.",
   },
   {
     id: "velvet",
@@ -91,23 +91,23 @@ const WORLD_DIRECTIONS: readonly WorldDirection[] = [
 
 const STORY_MOMENTS: readonly StoryMoment[] = [
   {
-    id: "application",
-    label: "Applying for a role",
-    output: "ATS-ready PDF",
-    note: "Review matching evidence, choose what to emphasize, then export.",
-  },
-  {
     id: "referral",
-    label: "Getting referred",
+    label: "Living Page",
     output: "Professional page",
     flavor: "Living Resume",
-    note: "Give your referrer one current page with useful context and proof.",
+    note: "Give a recruiter or referrer one current page with useful context and proof.",
+  },
+  {
+    id: "application",
+    label: "Application PDF",
+    output: "ATS-ready PDF",
+    note: "Choose what to emphasize, review every claim, then export a familiar document.",
   },
   {
     id: "introduction",
-    label: "Making an introduction",
+    label: "Share Card + QR",
     output: "Share Card + QR",
-    note: "Offer a memorable way into your story, with the full page one scan away.",
+    note: "Make an introduction memorable, with your complete page one scan away.",
   },
 ] as const;
 
@@ -115,95 +115,41 @@ const DEFAULT_WORKFLOW = [
   {
     stepId: "upload",
     index: "01",
-    name: "Add your résumé",
-    timing: "1 current résumé",
-    note: "Upload the PDF or paste the text you already send to employers.",
-    format: "source",
+    name: "Bring your résumé",
+    timing: "PDF or pasted text",
+    note: "Use the document you already send to employers. No blank profile to build.",
   },
   {
     stepId: "review",
     index: "02",
-    name: "Check 3 essentials",
-    timing: "3 essential checks",
-    note: "Confirm your name, headline, and most recent result. Leave the rest for later.",
-    format: "page",
+    name: "Review the truth",
+    timing: "Name · headline · result",
+    note: "Check what matters first. Every inferred field stays editable before publishing.",
   },
   {
     stepId: "publish",
     index: "03",
-    name: "Publish one link",
-    timing: "1 current link",
-    note: "Preview once, publish, and share it. Your page stays private until then.",
-    format: "share",
-  },
-] as const;
-
-const EVERYDAY_ACTIONS = [
-  {
-    name: "Update your page",
-    timing: "Use it when a role, result, or contact detail changes.",
-    note: "Change the fact once. Your public link stays the same.",
-  },
-  {
-    name: "Share your link",
-    timing: "Use it when you apply, follow up, or meet someone.",
-    note: "Send the same current link instead of making another version.",
-  },
-] as const;
-
-const OPTIONAL_TOOLS = [
-  {
-    id: "pdf",
-    kind: "Applications · Tailored PDF",
-    name: "Application PDF",
-    timing: "Use it when an application asks for a file.",
-    note: "Skip it when the employer accepts your page link.",
-  },
-  {
-    id: "share-card",
-    kind: "Networking · Share Card",
-    name: "Share Card and QR code",
-    timing: "Use it before an event or in-person conversation.",
-    note: "Leave it for later when you are only applying online.",
-  },
-  {
-    id: "reference",
-    kind: "Reference",
-    name: "Examples and guides",
-    timing: "Use them only when you feel stuck.",
-    note: "You do not need to read anything before you start.",
-  },
-  {
-    id: "statistics",
-    kind: "Statistics",
-    name: "Page visit statistics",
-    timing: "Wait until your link has been shared for 7 days.",
-    note: "Wait for a useful pattern; early numbers do not make the page more useful.",
-  },
-  {
-    id: "advanced",
-    kind: "Advanced",
-    name: "Design and motion controls",
-    timing: "Use these after your content is accurate.",
-    note: "The starting settings already work, so this can wait.",
+    name: "Share one living link",
+    timing: "Private until you publish",
+    note: "Change the page later without changing the link you already shared.",
   },
 ] as const;
 
 const SEARCH_BENEFITS = [
   {
-    label: "Applications",
+    label: "Application",
     name: "ATS-ready PDF",
     note: "Real selectable text, familiar sections, and a clear reading order.",
   },
   {
     label: "Discovery",
-    name: "Recruiter search + AI readability",
-    note: "Specific titles, skills, dates, and results stay visible as recognizable text.",
+    name: "Readable by recruiters + AI tools",
+    note: "Specific titles, skills, dates, and results remain recognizable text.",
   },
   {
     label: "Sharing",
-    name: "Public professional page",
-    note: "Your published page is crawlable and has its own title, description, and reusable link.",
+    name: "A page with its own address",
+    note: "Publish once, update anytime, and keep sharing the same current link.",
   },
 ] as const;
 
@@ -234,10 +180,11 @@ function StorySourceResume() {
       className={styles.storySource}
       role="img"
       aria-label="Avery Morgan source résumé, imported once"
+      data-truth-source
     >
       <div aria-hidden="true" className={styles.storySourceInner}>
         <div className={styles.storySourceTopline}>
-          <span>R</span>
+          <span>PDF</span>
           <div>
             <strong>Your résumé</strong>
             <small>Imported once</small>
@@ -248,11 +195,8 @@ function StorySourceResume() {
           <strong>Product + Platform Lead</strong>
           <i />
           <i />
-          <i />
-          <span>EXPERIENCE</span>
-          <i />
-          <i />
-          <i />
+          <span>RECENT RESULT</span>
+          <p>Led a platform serving 2M+ requests daily.</p>
           <span>SKILLS</span>
           <div>
             <em>TypeScript</em>
@@ -265,6 +209,20 @@ function StorySourceResume() {
           One truthful source
         </div>
       </div>
+    </div>
+  );
+}
+
+function TruthTransfer({ motionKey }: { motionKey: number }) {
+  return (
+    <div className={styles.truthTransfer} aria-hidden="true" data-transform-motion>
+      <span className={styles.truthLine} />
+      <div key={motionKey} className={styles.truthTokens}>
+        <b>Name</b>
+        <b>Title</b>
+        <b>Result</b>
+      </div>
+      <small>Same facts, new form</small>
     </div>
   );
 }
@@ -297,11 +255,6 @@ function StoryPdfOutput() {
           <p>
             Led a <mark>TypeScript and SQL</mark> platform serving <mark>2M+ requests daily</mark>.
           </p>
-          <p>Reduced release time by 38% through a shared product and engineering operating model.</p>
-        </section>
-        <section>
-          <span>SKILLS</span>
-          <p>Platform strategy · TypeScript · SQL · Cross-functional leadership</p>
         </section>
       </div>
       <div className={styles.storyOutputBar}>
@@ -319,10 +272,11 @@ function StoryLivingOutput({ world }: { world: WorldDirection }) {
       data-story-output="referral"
       data-story-living-output
       data-theme-id={world.id}
+      data-truth-destination
     >
       <div className={styles.storyBrowserBar}>
         <span>mylivingpage.com/avery</span>
-        <b>Sample</b>
+        <b>Live</b>
       </div>
       <div className={styles.storyLivingViewport}>
         <ThemeCanvas
@@ -392,7 +346,6 @@ function StoryShareOutput() {
         <div className={styles.storyShareTags} aria-label="Featured skills">
           <span>Platform strategy</span>
           <span>TypeScript</span>
-          <span>Product operations</span>
         </div>
         <div className={styles.storyShareQrPanel}>
           <div>
@@ -401,16 +354,7 @@ function StoryShareOutput() {
           </div>
           <StoryQrPreview />
         </div>
-        <div className={styles.storyShareFooter}>
-          <span>Link included</span>
-          <span>PNG export</span>
-        </div>
       </article>
-      <div className={styles.storyShareDestinations} aria-hidden="true">
-        <span>Email</span>
-        <span>Referral</span>
-        <span>In person</span>
-      </div>
     </div>
   );
 }
@@ -433,7 +377,8 @@ export default function LivingHomepagePrototype({
   const isProduction = mode === "production";
   const signupRefs = SIGNUP_REFS[mode];
   const [activeThemeId, setActiveThemeId] = useState<ThemeId>(WORLD_DIRECTIONS[0].id);
-  const [storyMomentId, setStoryMomentId] = useState<StoryMomentId>("introduction");
+  const [storyMomentId, setStoryMomentId] = useState<StoryMomentId>("referral");
+  const [motionKey, setMotionKey] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const styleControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -451,6 +396,11 @@ export default function LivingHomepagePrototype({
     return () => query.removeEventListener("change", syncPreference);
   }, []);
 
+  const selectMoment = (momentId: StoryMomentId) => {
+    setStoryMomentId(momentId);
+    setMotionKey((current) => current + 1);
+  };
+
   const selectWorld = (
     world: WorldDirection,
     index: number,
@@ -459,6 +409,7 @@ export default function LivingHomepagePrototype({
   ) => {
     setActiveThemeId(world.id);
     setStoryMomentId("referral");
+    setMotionKey((current) => current + 1);
     if (moveFocus) {
       window.requestAnimationFrame(() => controls.current[index]?.focus());
     }
@@ -496,20 +447,17 @@ export default function LivingHomepagePrototype({
 
       <header className={styles.header}>
         <nav className={styles.nav} aria-label={isProduction ? "Primary navigation" : "Prototype navigation"}>
-          <Link href="/" className={styles.logo}>
-            my<span>living</span>page
-          </Link>
+          <Link href="/" className={styles.logo}>my<span>living</span>page</Link>
           <span className={styles.previewBadge}>
-            {isProduction ? "Completely free · No trial" : "Action-first copy prototype"}
+            {isProduction ? "Completely free · No trial" : "Homepage conversion prototype"}
           </span>
           <div className={styles.navLinks}>
             <a href="#how-it-works">How it works</a>
             <a href="#search-ready">ATS + search</a>
-            <Link href="/examples">View examples</Link>
+            <Link href="/examples">Examples</Link>
             <Link href="/login">Sign in</Link>
           </div>
           <div className={styles.mobileNavLinks}>
-            <Link href="/examples" className={styles.mobileExamplesLink}>Examples</Link>
             <Link href="/login">Sign in</Link>
           </div>
           <Link
@@ -517,7 +465,7 @@ export default function LivingHomepagePrototype({
             className={styles.navCta}
             data-start-action
           >
-            <span className={styles.navCtaFull}>Add my résumé</span>
+            <span className={styles.navCtaFull}>Create my free page</span>
             <span className={styles.navCtaShort}>Start free</span>
           </Link>
         </nav>
@@ -528,18 +476,15 @@ export default function LivingHomepagePrototype({
           <div className={styles.heroGlow} aria-hidden="true" />
           <div className={styles.heroGrid}>
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}><span>Start</span>With the résumé you have</p>
-              <h1>Turn your résumé into a page you can share.</h1>
+              <p className={styles.eyebrow}><span>Your résumé</span>Alive on the web</p>
+              <h1>Your résumé, alive on the web.</h1>
               <p className={styles.heroLead}>
-                Upload a PDF or paste the text. Check the important details. Publish one link.
+                Turn the résumé you already have into a professional page you can update
+                anytime and share as one link.
               </p>
               <p className={styles.heroBody}>
-                Your résumé opens as a polished private draft. Review it, make any edits,
-                and publish when you are ready.
-              </p>
-              <p className={styles.supportingNote} data-hero-supporting-copy>
-                Use the same reviewed experience to apply for a role, get referred,
-                or make an introduction.
+                Create a free account, upload a PDF or paste text, review the important details,
+                and publish only when you are ready.
               </p>
               <div className={styles.heroActions}>
                 <Link
@@ -549,16 +494,15 @@ export default function LivingHomepagePrototype({
                   data-action-priority="primary"
                   data-start-action
                 >
-                  Add my résumé
+                  Create my free page
                   <ArrowIcon />
                 </Link>
-                <a href="#live-product-story" className={styles.secondaryButton}>Try the live sample</a>
+                <a href="#live-product-story" className={styles.secondaryButton}>See it transform</a>
               </div>
               <div className={styles.trustStrip} aria-label="Product assurances">
-                <span>One current résumé</span>
-                <span>Private until published</span>
                 <span>Completely free</span>
-                <span>Edit anything</span>
+                <span>Private until published</span>
+                <span>Edit anytime</span>
               </div>
             </div>
 
@@ -570,8 +514,8 @@ export default function LivingHomepagePrototype({
             >
               <div className={styles.storyHeader}>
                 <div>
-                  <p>Live product story</p>
-                  <h2 id="live-product-story-title">What do you need to be understood for?</h2>
+                  <p>One truthful source</p>
+                  <h2 id="live-product-story-title">See one résumé become more useful.</h2>
                 </div>
                 <span>Sample data</span>
               </div>
@@ -579,7 +523,7 @@ export default function LivingHomepagePrototype({
               <div
                 className={styles.storyMomentTabs}
                 role="group"
-                aria-label="Choose a professional moment"
+                aria-label="Choose what the résumé becomes"
               >
                 {STORY_MOMENTS.map((moment, index) => {
                   const selected = moment.id === storyMomentId;
@@ -591,7 +535,7 @@ export default function LivingHomepagePrototype({
                       aria-pressed={selected}
                       aria-controls="prototype-story-output"
                       className={selected ? styles.storyMomentActive : undefined}
-                      onClick={() => setStoryMomentId(moment.id)}
+                      onClick={() => selectMoment(moment.id)}
                       data-story-moment={moment.id}
                     >
                       <span>{String(index + 1).padStart(2, "0")}</span>
@@ -601,13 +545,9 @@ export default function LivingHomepagePrototype({
                 })}
               </div>
 
-              <div className={styles.storyStage} data-story-stage>
+              <div className={styles.storyStage} data-story-stage data-transformation-stage>
                 <StorySourceResume />
-                <div className={styles.storyFlow} aria-hidden="true">
-                  <span />
-                  <b>Becomes</b>
-                  <span />
-                </div>
+                <TruthTransfer motionKey={motionKey} />
                 <div
                   id="prototype-story-output"
                   className={styles.storyOutputFrame}
@@ -615,19 +555,15 @@ export default function LivingHomepagePrototype({
                   aria-labelledby={`prototype-story-moment-${storyMomentId}`}
                   data-story-output-region={storyMomentId}
                 >
-                  <div className={styles.storyMobileSource}>
-                    <span>From</span>
-                    <strong>Avery-Morgan-Resume.pdf</strong>
-                  </div>
                   <div className={styles.storyOutputMeta}>
                     <div>
-                      <span>Comes forward</span>
+                      <span>Becomes</span>
                       <h3>{activeStoryMoment.output}</h3>
                       {activeStoryMoment.flavor ? <small>{activeStoryMoment.flavor}</small> : null}
                     </div>
                     <span>{String(activeStoryIndex + 1).padStart(2, "0")}</span>
                   </div>
-                  <div key={storyMomentId} className={styles.storyActiveOutput}>
+                  <div key={`${storyMomentId}-${motionKey}`} className={styles.storyActiveOutput}>
                     <StoryOutput moment={storyMomentId} world={activeWorld} />
                   </div>
                   <p className={styles.storyOutputNote}>{activeStoryMoment.note}</p>
@@ -637,24 +573,19 @@ export default function LivingHomepagePrototype({
               <div className={styles.storyStyleChooser} data-living-gallery data-story-style-chooser>
                 <div className={styles.storyStyleHeader} id="story-style-choice-help">
                   <div>
-                    <span>Your page design</span>
-                    <h3>Choose the look of your Living Resume.</h3>
+                    <span>59 living themes</span>
+                    <h3>Try five directions. Your information stays the same.</h3>
                   </div>
-                  <p>
-                    Select a style below. The Living Resume above opens with that design;
-                    your information stays the same.
-                  </p>
+                  <Link href="/examples">Explore all themes</Link>
                 </div>
-
                 <div
                   className={styles.galleryOptions}
                   role="radiogroup"
-                  aria-label="Choose a style for the Living Resume above"
+                  aria-label="Choose a style for the Living Page above"
                   aria-describedby="story-style-choice-help"
                 >
                   {WORLD_DIRECTIONS.map((world, index) => {
                     const selected = world.id === activeWorld.id;
-                    const shownAbove = selected && storyMomentId === "referral";
                     return (
                       <button
                         key={world.id}
@@ -663,6 +594,7 @@ export default function LivingHomepagePrototype({
                         role="radio"
                         aria-checked={selected}
                         aria-controls="prototype-story-output"
+                        aria-label={`${world.label} · ${THEME_MAP[world.id].name}`}
                         tabIndex={selected ? 0 : -1}
                         onClick={() => selectWorld(world, index, styleControlRefs)}
                         onKeyDown={(event) => handleWorldKeyDown(event, index, styleControlRefs)}
@@ -670,23 +602,13 @@ export default function LivingHomepagePrototype({
                         style={getWorldStyle(world.id)}
                         data-gallery-card
                         data-theme-id={world.id}
-                        data-action-priority="optional"
                       >
                         <span className={styles.galleryOptionSwatch} aria-hidden="true"><i /></span>
-                        <span className={styles.galleryOptionCopy}>
-                          <strong>{world.label}</strong>
-                          <small>
-                            {THEME_MAP[world.id].name}{index === 0 ? " · Recommended" : ""}
-                          </small>
-                        </span>
-                        <span className={styles.galleryOptionState}>
-                          {shownAbove ? "Shown above" : selected ? "Selected" : "Choose"}
-                        </span>
+                        <span>{world.shortLabel}</span>
                       </button>
                     );
                   })}
                 </div>
-
                 <div
                   className={styles.storyStyleStatus}
                   role="status"
@@ -694,154 +616,91 @@ export default function LivingHomepagePrototype({
                   aria-atomic="true"
                   data-style-selection-status
                 >
-                  <span>{storyMomentId === "referral" ? "Showing above" : "Selected style"}</span>
                   <strong>{activeWorld.label} · {THEME_MAP[activeWorld.id].name}</strong>
-                  <p>
-                    {storyMomentId === "referral"
-                      ? activeWorld.promise
-                      : "Choose any style to open the Living Resume above and see it immediately."}
-                  </p>
+                  <span>{activeWorld.promise}</span>
                 </div>
               </div>
             </section>
           </div>
         </section>
 
-        <div
-          className={styles.identityBand}
-          role="region"
-          aria-label="The three-step default workflow"
-          tabIndex={0}
-        >
-          <span>Add your résumé</span>
-          <i />
-          <span>Check 3 essentials</span>
-          <i />
-          <span>Publish one link</span>
-          <i />
-          <span>Done for today</span>
+        <div className={styles.identityBand} aria-label="The Living Page transformation">
+          <span>Résumé</span><i />
+          <span>Review</span><i />
+          <span>Living Page</span><i />
+          <span>One link</span>
         </div>
 
         <section id="how-it-works" className={styles.sourceSection} data-default-workflow>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>Plan</span>Your 3-step Living Resume setup</p>
-            <h2>Add. Check. Publish.</h2>
+            <p className={styles.eyebrow}><span>How it works</span>No blank profile</p>
+            <h2>Start with what is already true.</h2>
             <p>
-              Do one step at a time. Keep the recommended defaults and leave everything else
-              for later.
+              The fastest path is also the clearest: import your existing résumé, check the
+              details that matter, and publish one useful page.
             </p>
           </div>
 
           <ol className={styles.outputJourney} aria-label="The simplest way to start">
-            {DEFAULT_WORKFLOW.map((step, index) => (
-              <li
-                key={step.format}
-                className={styles.outputStep}
-                data-workflow-step={step.stepId}
-                data-observatory-format={step.format}
-              >
-                <div className={styles.outputVisual} aria-hidden="true">
-                  <span>{step.index}</span>
-                  <div className={styles[`output${step.format[0].toUpperCase()}${step.format.slice(1)}`]}>
-                    <b>AVERY</b>
-                    <i />
-                    <i />
-                    <i />
-                  </div>
+            {DEFAULT_WORKFLOW.map((step) => (
+              <li key={step.stepId} className={styles.outputStep} data-workflow-step={step.stepId}>
+                <span className={styles.stepIndex}>{step.index}</span>
+                <div>
+                  <span className={styles.stepTiming}>{step.timing}</span>
+                  <h3>{step.name}</h3>
+                  <p>{step.note}</p>
                 </div>
-                <span className={styles.stepTiming}>{step.timing}</span>
-                <strong>{step.name}</strong>
-                <p>{step.note}</p>
-                {index < DEFAULT_WORKFLOW.length - 1 ? <span className={styles.journeyArrow}>→</span> : null}
               </li>
             ))}
           </ol>
 
           <aside id="quick-start" className={styles.quickStart} data-overwhelmed-shortcut>
             <div>
-              <p className={styles.quickStartLabel}>Quick start · only what you need</p>
-              <h3>Add your résumé, check your name and headline, keep the recommended style, then publish.</h3>
-              <p data-stopping-point>
-                <strong>You can stop here.</strong> A correct, shareable page is enough for today.
-              </p>
+              <p className={styles.quickStartLabel}>A complete first session</p>
+              <h3>Import. Check three essentials. Publish.</h3>
+              <p data-stopping-point><strong>You can stop there.</strong> Your page can grow when your work does.</p>
             </div>
-            <div className={styles.quickStartActions}>
-              <Link
-                href={`/signup?ref=${signupRefs.quickStart}&next=/create`}
-                className={styles.secondaryButton}
-                data-action-priority="primary"
-                data-start-action
-              >
-                Add my résumé
-              </Link>
-              <small data-later-guidance>
-                The recommended style is ready to use. PDFs, statistics, QR codes, and design
-                controls are available whenever you need them.
-              </small>
-            </div>
+            <Link
+              href={`/signup?ref=${signupRefs.quickStart}&next=/create`}
+              className={styles.secondaryButton}
+              data-start-action
+            >
+              Create my free page
+            </Link>
           </aside>
         </section>
 
-        <section
-          id="search-ready"
-          className={styles.visibilitySection}
-          data-search-readiness
-        >
-          <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>Search ready</span>For ATS, recruiters, and AI tools</p>
-            <h2>Built to be easier to find—and understand.</h2>
+        <section id="search-ready" className={styles.visibilitySection} data-search-readiness>
+          <div className={styles.visibilityIntro}>
+            <p className={styles.eyebrow}><span>Clear by design</span>For people and systems</p>
+            <h2>A memorable page. Recognizable information.</h2>
             <p>
-              Your job titles, skills, dates, and results stay as clear text. That gives ATS tools,
-              recruiter search, search engines, and AI-assisted tools recognizable details to work with.
+              Motion and theme live around your content—not instead of it. Titles, dates, skills,
+              and results remain readable text for recruiters, ATS tools, search, and AI-assisted tools.
             </p>
           </div>
 
-          <div className={styles.visibilityStory}>
-            <figure className={styles.searchPanel} aria-labelledby="search-example-title">
-              <figcaption id="search-example-title" className={styles.searchPanelHeader}>
-                <span>Example recruiter search</span>
-                <small>Truthful matches only</small>
-              </figcaption>
-              <div className={styles.searchQuery}>
-                <span>Search</span>
-                <strong>Senior Product Lead · TypeScript · 2M+ requests</strong>
-              </div>
-              <div className={styles.searchMatches}>
-                <article>
-                  <span>Role</span>
-                  <strong>Senior Product Lead</strong>
-                  <small>Clear job title</small>
-                </article>
-                <article>
-                  <span>Skill</span>
-                  <strong>TypeScript</strong>
-                  <small>Recognizable phrase</small>
-                </article>
-                <article>
-                  <span>Result</span>
-                  <strong>2M+ requests daily</strong>
-                  <small>Specific evidence</small>
-                </article>
-              </div>
-            </figure>
+          <div className={styles.searchStatement} aria-label="Example truthful professional facts">
+            <span>Senior Product Lead</span>
+            <span>TypeScript</span>
+            <span>2M+ requests daily</span>
+          </div>
 
-            <div className={styles.visibilityBenefits}>
-              {SEARCH_BENEFITS.map((benefit, index) => (
-                <article key={benefit.name}>
-                  <span>{String(index + 1).padStart(2, "0")} · {benefit.label}</span>
-                  <h3>{benefit.name}</h3>
-                  <p>{benefit.note}</p>
-                </article>
-              ))}
-            </div>
+          <div className={styles.visibilityBenefits}>
+            {SEARCH_BENEFITS.map((benefit, index) => (
+              <article key={benefit.name}>
+                <span>{String(index + 1).padStart(2, "0")} · {benefit.label}</span>
+                <h3>{benefit.name}</h3>
+                <p>{benefit.note}</p>
+              </article>
+            ))}
           </div>
 
           <div className={styles.searchNote}>
-            <strong>What this means:</strong>
+            <strong>Truth before optimization.</strong>
             <p>
-              One truthful story stays clear to people and machines. No tool can guarantee how every
-              system will parse or rank your résumé—or guarantee an interview, index placement, or AI
-              citation. MyLivingPage never invents experience.
+              No tool can guarantee how every system will parse or rank your résumé—or guarantee
+              an interview, index placement, or AI citation. MyLivingPage never invents experience.
             </p>
           </div>
 
@@ -851,84 +710,29 @@ export default function LivingHomepagePrototype({
               <h3>One Living Resume. Completely free. Always.</h3>
             </div>
             <p>
-              Build, publish, host, update, and download it. Every current style, Share Cards,
+              Build, publish, host, update, and download it. All current themes, Share Cards,
               up to three targeted versions, and analytics are included. No card or subscription
               required. No trial. No hidden fees.
             </p>
           </div>
         </section>
 
-        <section id="use-later" className={styles.laterSection}>
-          <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>Later</span>Use these only when needed</p>
-            <h2>Your page is useful before you use every tool.</h2>
-            <p>
-              Most days, update one fact or share your link. That is enough. Reference material,
-              statistics, and advanced controls stay out of your way until you need them.
-            </p>
-          </div>
-
-          <div className={styles.everydayBlock} data-everyday-actions>
-            <div className={styles.everydayHeading}>
-              <span>Everyday</span>
-              <h3>Keep one page current.</h3>
-              <p>These are the only two actions to remember after you publish.</p>
-            </div>
-            <div className={styles.everydayGrid}>
-              {EVERYDAY_ACTIONS.map((action) => (
-                <article key={action.name} className={styles.everydayCard} data-action-priority="normal">
-                  <h4>{action.name}</h4>
-                  <strong>{action.timing}</strong>
-                  <p>{action.note}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <details className={styles.optionalDisclosure} data-optional-tools>
-            <summary>
-              <span>Optional tools</span>
-              <strong>Open these only when you need them</strong>
-            </summary>
-            <div className={styles.toolGrid}>
-              {OPTIONAL_TOOLS.map((tool) => (
-                <article
-                  key={tool.id}
-                  className={styles.toolCard}
-                  data-later-tool
-                  data-tool-kind={tool.id}
-                  data-reference-tools={tool.id === "reference" ? "true" : undefined}
-                  data-action-priority="optional"
-                >
-                  <span>{tool.kind}</span>
-                  <h3>{tool.name}</h3>
-                  <strong>{tool.timing}</strong>
-                  <p>{tool.note}</p>
-                </article>
-              ))}
-            </div>
-          </details>
-        </section>
-
         <section className={styles.finalCta}>
-          <p className={styles.eyebrow}><span>Done</span>Stop after the basics</p>
-          <h2>Publish the useful version. Improve it later.</h2>
-          <p>Upload your résumé, check three essentials, and publish one link. That is a complete first session.</p>
+          <p className={styles.eyebrow}><span>Your next link</span>Starts with your résumé</p>
+          <h2>Make the work you have already done easier to see.</h2>
+          <p>Create a private draft from your résumé. Review everything. Publish when it feels right.</p>
           <div className={styles.heroActions}>
             <Link
               href={`/signup?ref=${signupRefs.final}&next=/create`}
               className={styles.primaryButton}
               data-start-action
             >
-              Add my résumé
+              Create my free page
               <ArrowIcon />
             </Link>
-            <a href="#quick-start" className={styles.secondaryButton}>See the quick start</a>
+            <Link href="/examples" className={styles.secondaryButton}>Explore examples</Link>
           </div>
-          <small>
-            One Living Resume is completely free—always. Build, publish, host, update, and download
-            it with no card or subscription required, no trial, and no hidden fees.
-          </small>
+          <small>No card. No subscription. Private until you publish.</small>
         </section>
       </main>
 
@@ -937,7 +741,7 @@ export default function LivingHomepagePrototype({
         <span>
           {isProduction
             ? "Interactive demo uses sample data"
-            : "Action-first copy prototype · Sample profiles only"}
+            : "Homepage conversion prototype · Sample profiles only"}
         </span>
         <nav aria-label={isProduction ? "Legal and policy links" : "Prototype footer"}>
           {isProduction ? <Link href="/legal">Legal</Link> : null}

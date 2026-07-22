@@ -1,25 +1,21 @@
 import { expect, test } from "@playwright/test";
 
-test("landing page promotes the action-first Living Resume story", async ({ page }) => {
+test("landing page communicates the Living Page outcome and one honest start action", async ({ page }) => {
   await page.goto("/");
 
   const header = page.locator("header");
   const hero = page.locator("#prototype-hero");
 
   await expect(
-    page.getByRole("heading", {
-      name: "Turn your résumé into a page you can share.",
-    }),
+    page.getByRole("heading", { name: "Your résumé, alive on the web." }),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "Upload a PDF or paste the text. Check the important details. Publish one link.",
-    ),
+    page.getByText("Turn the résumé you already have into a professional page", { exact: false }),
   ).toBeVisible();
   await expect(page.getByText("Completely free · No trial", { exact: true })).toBeVisible();
-  await expect(page.getByText("Action-first copy prototype", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Homepage conversion prototype", { exact: true })).toHaveCount(0);
 
-  await expect(hero.getByRole("link", { name: "Try the live sample" })).toHaveAttribute(
+  await expect(hero.getByRole("link", { name: "See it transform" })).toHaveAttribute(
     "href",
     "#live-product-story",
   );
@@ -35,7 +31,7 @@ test("landing page promotes the action-first Living Resume story", async ({ page
     "href",
     "#search-ready",
   );
-  await expect(header.getByRole("link", { name: "View examples" })).toHaveAttribute(
+  await expect(header.getByRole("link", { name: "Examples" })).toHaveAttribute(
     "href",
     "/examples",
   );
@@ -50,57 +46,47 @@ test("landing page promotes the action-first Living Resume story", async ({ page
     "how-it-works",
     "quick-start",
     "search-ready",
-    "use-later",
   ]) {
     await expect(page.locator(`#${id}`)).toBeAttached();
   }
+  await expect(page.locator("#use-later")).toHaveCount(0);
 
   const footer = page.locator("footer");
-  await expect(footer).toHaveCount(1);
   await expect(footer).toContainText("Interactive demo uses sample data");
   await expect(footer.getByRole("link", { name: "Legal" })).toHaveAttribute("href", "/legal");
   await expect(footer.getByRole("button", { name: "Cookie settings" })).toBeVisible();
 });
 
-test("interactive homepage story switches among the three outputs", async ({ page }) => {
+test("interactive homepage story keeps the Living Page primary while offering three outputs", async ({ page }) => {
   await page.goto("/");
 
   const story = page.locator("[data-live-product-story]");
-  const applying = story.getByRole("button", { name: /Applying for a role/ });
-  const referred = story.getByRole("button", { name: /Getting referred/ });
-  const introduction = story.getByRole("button", { name: /Making an introduction/ });
+  const livingPage = story.getByRole("button", { name: /Living Page/ });
+  const application = story.getByRole("button", { name: /Application PDF/ });
+  const introduction = story.getByRole("button", { name: /Share Card \+ QR/ });
 
-  await expect(introduction).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
-
-  await applying.click();
-  await expect(applying).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
-
-  await referred.click();
-  await expect(referred).toHaveAttribute("aria-pressed", "true");
-  await expect(story.locator("[data-story-living-output]")).toHaveAttribute(
-    "data-theme-id",
-    "atlas",
-  );
+  await expect(livingPage).toHaveAttribute("aria-pressed", "true");
+  await expect(story.getByRole("heading", { name: "Professional page" })).toBeVisible();
+  await expect(story.locator("[data-story-living-output]")).toHaveAttribute("data-theme-id", "atlas");
   await expect(story.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
+
+  await application.click();
+  await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
+  await introduction.click();
+  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
 });
 
-test("reduced-motion visitors retain the complete homepage without ambient canvas motion", async ({
-  page,
-}) => {
+test("reduced-motion visitors retain the complete content and static transformation", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
 
   await expect(page.locator('[data-motion-state="reduced"]')).toBeVisible();
-  await expect(page.locator('[data-homepage-theme-canvas][data-canvas-active="true"]'))
-    .toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Add. Check. Publish." })).toBeAttached();
+  await expect(page.locator("[data-transform-motion] b").first()).toBeHidden();
+  await expect(page.locator("[data-truth-source]")).toBeVisible();
+  await expect(page.locator("[data-truth-destination]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start with what is already true." })).toBeAttached();
   await expect(
-    page.getByRole("heading", { name: "Built to be easier to find—and understand." }),
-  ).toBeAttached();
-  await expect(
-    page.getByRole("heading", { name: "Your page is useful before you use every tool." }),
+    page.getByRole("heading", { name: "A memorable page. Recognizable information." }),
   ).toBeAttached();
 });
 
@@ -108,7 +94,7 @@ test("mobile homepage keeps primary actions usable without horizontal overflow",
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  const headerCta = page.locator("header").getByRole("link", { name: "Add my résumé" });
+  const headerCta = page.locator("header").getByRole("link", { name: "Start free" });
   const primaryCta = page.getByTestId("homepage-primary-cta");
   await expect(page.locator("header").getByRole("link", { name: "Sign in" })).toBeVisible();
   await expect(headerCta).toHaveAttribute(
@@ -125,7 +111,6 @@ test("mobile homepage keeps primary actions usable without horizontal overflow",
 
   await page.setViewportSize({ width: 320, height: 720 });
   await page.reload();
-  await expect(page.locator("header").getByRole("link", { name: "Sign in" })).toBeVisible();
   await expect(page.locator("header").getByRole("link", { name: "Start free" })).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),

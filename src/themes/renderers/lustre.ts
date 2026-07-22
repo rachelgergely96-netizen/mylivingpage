@@ -1,299 +1,304 @@
-import {
-  finiteClamp,
-  resolveThemeMotion,
-  storyStepWeight,
-} from "../shared/motion";
+import { fbm } from "../shared/noise";
+import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
-const RIBBON_COUNT = 5;
 
-interface RibbonGeometry {
-  left: number;
-  right: number;
-  y: number;
-  thickness: number;
-  bend: number;
-  shift: number;
+interface LustreGlint {
+  u0: number;
+  sp: number;
+  ph: number;
+  pr: number;
+  sz: number;
 }
 
-function traceRibbon(
-  ctx: CanvasRenderingContext2D,
-  geometry: RibbonGeometry,
-): void {
-  const { left, right, y, thickness, bend, shift } = geometry;
-  const span = right - left;
-
-  ctx.beginPath();
-  ctx.moveTo(left, y - thickness * 0.16);
-  ctx.bezierCurveTo(
-    left + span * 0.24,
-    y - thickness - bend,
-    left + span * 0.49,
-    y + thickness * 0.66 + shift,
-    left + span * 0.7,
-    y - thickness * 0.28,
-  );
-  ctx.bezierCurveTo(
-    left + span * 0.84,
-    y - thickness * 0.86,
-    left + span * 0.94,
-    y + thickness * 0.55,
-    right,
-    y - thickness * 0.14,
-  );
-  ctx.lineTo(right, y + thickness * 0.42);
-  ctx.bezierCurveTo(
-    left + span * 0.93,
-    y + thickness * 1.02,
-    left + span * 0.83,
-    y - thickness * 0.2,
-    left + span * 0.7,
-    y + thickness * 0.42,
-  );
-  ctx.bezierCurveTo(
-    left + span * 0.48,
-    y + thickness * 1.2 + shift,
-    left + span * 0.23,
-    y - thickness * 0.4 - bend,
-    left,
-    y + thickness * 0.3,
-  );
-  ctx.closePath();
+interface LustreRibbon {
+  depth: number;
+  baseY: number;
+  thick: number;
+  speed: number;
+  k1: number;
+  k2: number;
+  amp1: number;
+  amp2: number;
+  phase: number;
+  phase2: number;
+  swellK: number;
+  swellPh: number;
+  chW: number;
+  glints: LustreGlint[];
 }
 
-function traceRibbonGlint(
-  ctx: CanvasRenderingContext2D,
-  geometry: RibbonGeometry,
-): void {
-  const { left, right, y, thickness, bend, shift } = geometry;
-  const span = right - left;
-
-  ctx.beginPath();
-  ctx.moveTo(left + span * 0.04, y - thickness * 0.02);
-  ctx.bezierCurveTo(
-    left + span * 0.27,
-    y - thickness * 0.72 - bend * 0.7,
-    left + span * 0.49,
-    y + thickness * 0.42 + shift,
-    left + span * 0.7,
-    y - thickness * 0.15,
-  );
-  ctx.bezierCurveTo(
-    left + span * 0.84,
-    y - thickness * 0.58,
-    left + span * 0.93,
-    y + thickness * 0.34,
-    right,
-    y - thickness * 0.02,
-  );
-}
-
-/** Molten champagne ribbons fold through a right-biased black-metal stage. */
-export const renderLustre: ThemeRenderer = (
-  ctx,
-  w,
-  h,
-  t,
-  mx,
-  my,
-  _deltaSeconds,
-  motion,
-) => {
-  const pageMotion = resolveThemeMotion(motion);
-  const velocity = finiteClamp(pageMotion.scrollVelocity / 4, -1, 1);
-  const minSide = Math.min(w, h);
-  const maxSide = Math.max(w, h);
-  const ribbonAnchors: Array<{ x: number; y: number }> = [];
-
-  ctx.save();
-
-  const background = ctx.createLinearGradient(0, 0, w, h);
-  background.addColorStop(0, "#120F12");
-  background.addColorStop(0.48, "#0B090B");
-  background.addColorStop(1, "#030304");
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, w, h);
-
-  // Far plane: warm reflected light and a sparse metallic atmosphere.
-  const bloomX = w * (0.79 + (mx - 0.5) * 0.018);
-  const bloomY = h * (0.43 + (my - 0.5) * 0.014);
-  const bloom = ctx.createRadialGradient(
-    bloomX,
-    bloomY,
-    0,
-    bloomX,
-    bloomY,
-    maxSide * 0.57,
-  );
-  bloom.addColorStop(0, "rgba(239, 194, 138, 0.16)");
-  bloom.addColorStop(0.36, "rgba(161, 104, 71, 0.065)");
-  bloom.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = bloom;
-  ctx.fillRect(w * 0.31, 0, w * 0.69, h);
-
-  ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  for (let mote = 0; mote < 36; mote += 1) {
-    const seed = mote * 0.819 + 0.23;
-    const depth = 0.35 + (mote % 4) * 0.18;
-    const x = w * (0.48 + (Math.sin(seed * 6.1) * 0.5 + 0.5) * 0.56);
-    const y =
-      (Math.cos(seed * 4.7) * 0.5 + 0.5) * h +
-      Math.sin(t * (0.045 + depth * 0.025) + seed * 7) * h * 0.008;
-    const radius = minSide * (0.0008 + depth * 0.0012);
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, TAU);
-    ctx.fillStyle = `rgba(255, 224, 184, ${0.025 + depth * 0.04})`;
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // Middle plane: liquid-metal folds with shadowed undersides and sharp
-  // specular creases. Page chapters bring one ribbon gently to the surface.
-  for (let index = 0; index < RIBBON_COUNT; index += 1) {
-    const depth = index / (RIBBON_COUNT - 1);
-    const chapterWeight = storyStepWeight(
-      pageMotion.storyProgress,
-      index,
-      RIBBON_COUNT,
-    );
-    const phase = t * (0.105 + index * 0.011) + index * 1.13;
-    const thickness = minSide * (0.038 - depth * 0.004);
-    const geometry: RibbonGeometry = {
-      left:
-        w * (0.42 + depth * 0.018) + (mx - 0.5) * w * (0.01 + depth * 0.006),
-      right: w + minSide * 0.12,
-      y:
-        h * (0.16 + index * 0.17) +
-        Math.sin(phase) * h * 0.016 +
-        (my - 0.5) * h * 0.012 -
-        chapterWeight * minSide * 0.012,
-      thickness: thickness * (1 + chapterWeight * 0.12),
-      bend: Math.sin(phase * 0.71) * minSide * 0.018,
-      shift: velocity * minSide * (0.02 + depth * 0.008),
-    };
-    ribbonAnchors.push({
-      x: geometry.left + (geometry.right - geometry.left) * 0.68,
-      y: geometry.y,
+const CFG=(function(){
+  const rnd=createSeededRandom(74213);
+  const RN=5;
+  const ribbons: LustreRibbon[]=[];
+  for(let i=0;i<RN;i++){
+    const depth=RN>1?i/(RN-1):0;
+    ribbons.push({
+      depth,
+      baseY:0.17+depth*0.66+(rnd()-0.5)*0.03,
+      thick:0.030+depth*0.016+rnd()*0.006,
+      speed:0.05+depth*0.04+rnd()*0.02,
+      k1:0.6+rnd()*0.5,
+      k2:1.4+rnd()*0.8,
+      amp1:0.016+depth*0.022+rnd()*0.010,
+      amp2:0.004+rnd()*0.006,
+      phase:rnd()*TAU,
+      phase2:rnd()*TAU,
+      swellK:2+Math.floor(rnd()*3),
+      swellPh:rnd()*TAU,
+      chW:0,
+      glints:[]
     });
+  }
+  for(let i=0;i<RN;i++){
+    const r=ribbons[i];
+    const n=2+Math.floor(rnd()*2);
+    for(let g=0;g<n;g++){
+      r.glints.push({u0:rnd(),sp:0.02+rnd()*0.05,ph:rnd()*TAU,pr:0.6+rnd()*1.2,sz:0.6+rnd()*0.8});
+    }
+  }
+  const motes=[];
+  for(let i=0;i<34;i++){
+    motes.push({x:rnd(),y:rnd(),depth:rnd(),ph:rnd()*TAU,r:0.4+rnd()*1.3,bright:rnd()});
+  }
+  const atmos=[];
+  for(let i=0;i<12;i++){
+    atmos.push({x:0.40+rnd()*0.62,y:rnd(),r:0.06+rnd()*0.15,ph:rnd()*TAU,b:rnd()});
+  }
+  return {RN,ribbons,motes,atmos};
+})();
 
-    traceRibbon(ctx, geometry);
-    ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.74)";
-    ctx.shadowBlur = minSide * (0.025 + depth * 0.012);
-    ctx.shadowOffsetY = minSide * 0.016;
-    const metal = ctx.createLinearGradient(
-      geometry.left,
-      geometry.y - geometry.thickness,
-      geometry.right,
-      geometry.y + geometry.thickness,
-    );
-    metal.addColorStop(0, "rgba(102, 65, 45, 0.16)");
-    metal.addColorStop(0.2, "rgba(224, 179, 124, 0.42)");
-    metal.addColorStop(0.42, "rgba(255, 233, 199, 0.72)");
-    metal.addColorStop(0.56, "rgba(129, 83, 57, 0.3)");
-    metal.addColorStop(0.79, "rgba(247, 206, 151, 0.58)");
-    metal.addColorStop(1, "rgba(78, 47, 36, 0.15)");
-    ctx.fillStyle = metal;
-    ctx.globalAlpha = 0.44 + depth * 0.07 + chapterWeight * 0.16;
-    ctx.fill();
-    ctx.restore();
+export const renderLustre: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+  const M=resolveThemeMotion(motion);
+  const minSide=Math.min(w,h);
+  const maxSide=Math.max(w,h);
+  const px=mx-0.5, py=my-0.5;
+  const NSEG=20;
+  const xL=w*0.40, xR=w*1.10;
+  const span=xR-xL;
+  const A=(v: number)=>finiteClamp(v,0,1);
+  const story=A(M.storyProgress);
+  const scrollV=finiteClamp(M.scrollVelocity/4,-1,1);
+  const scrollMag=Math.abs(scrollV);
+  const impulse=A(M.interactionImpulse);
+  const live=M.sectionCount>0?1:0;
+  const storyFlow=story*0.8;
+  const activeIdx=Math.round(story*(CFG.RN-1));
 
-    traceRibbonGlint(ctx, geometry);
-    const glint = ctx.createLinearGradient(geometry.left, 0, geometry.right, 0);
-    glint.addColorStop(0, "rgba(255, 246, 229, 0)");
-    glint.addColorStop(0.23, "rgba(255, 246, 229, 0.34)");
-    glint.addColorStop(0.54, "rgba(255, 255, 248, 0.72)");
-    glint.addColorStop(0.74, "rgba(255, 225, 184, 0.2)");
-    glint.addColorStop(1, "rgba(255, 244, 225, 0)");
-    ctx.strokeStyle = glint;
-    ctx.lineWidth = minSide * (0.0022 + chapterWeight * 0.0013);
-    ctx.lineCap = "round";
-    ctx.stroke();
+  function cy(r: LustreRibbon,u: number){
+    return h*r.baseY
+      +Math.sin(u*r.k1*TAU+r.phase+t*r.speed+storyFlow)*h*r.amp1
+      +Math.sin(u*r.k2*TAU-r.phase2-t*r.speed*1.2)*h*r.amp2
+      +py*minSide*0.03*(0.4+r.depth)
+      -(r.chW||0)*minSide*0.012;
+  }
+  function thAt(r: LustreRibbon,u: number){
+    const taper=0.42+0.58*u;
+    const swell=0.86+0.14*Math.sin(u*r.swellK*TAU+r.swellPh+t*0.3);
+    return minSide*r.thick*taper*swell*(1+(r.chW||0)*0.08);
+  }
+  function px_(u: number,xShift: number){ return xL+span*u+xShift; }
+  function traceRegion(r: LustreRibbon,fTop: number,fBot: number,xShift: number){
+    ctx.beginPath();
+    for(let s=0;s<=NSEG;s++){
+      const u=s/NSEG;
+      const x=px_(u,xShift);
+      const y=cy(r,u)+thAt(r,u)*fTop;
+      if(s===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    for(let s=NSEG;s>=0;s--){
+      const u=s/NSEG;
+      const x=px_(u,xShift);
+      const y=cy(r,u)+thAt(r,u)*fBot;
+      ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+  }
+  function strokeFrac(r: LustreRibbon,frac: number,xShift: number,style: string | CanvasGradient | CanvasPattern,lw: number){
+    ctx.beginPath();
+    for(let s=0;s<=NSEG;s++){
+      const u=s/NSEG;
+      const x=px_(u,xShift);
+      const y=cy(r,u)+thAt(r,u)*frac;
+      if(s===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.strokeStyle=style; ctx.lineWidth=Math.max(0.6,lw); ctx.stroke();
   }
 
-  // Foreground plane: polished caustic and a single chapter-responsive glint.
   ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  const caustic = ctx.createLinearGradient(w * 0.58, 0, w, 0);
-  caustic.addColorStop(0, "rgba(255, 215, 168, 0)");
-  caustic.addColorStop(0.72, "rgba(255, 219, 174, 0.026)");
-  caustic.addColorStop(1, "rgba(255, 239, 216, 0.1)");
-  ctx.fillStyle = caustic;
-  ctx.fillRect(w * 0.55, 0, w * 0.45, h);
 
-  const activeIndex = Math.min(
-    ribbonAnchors.length - 1,
-    Math.round(pageMotion.storyProgress * (ribbonAnchors.length - 1)),
-  );
-  const activeAnchor = ribbonAnchors[activeIndex];
-  if (activeAnchor) {
-    const glintRadius =
-      minSide * (0.012 + pageMotion.interactionImpulse * 0.018);
-    const flare = ctx.createRadialGradient(
-      activeAnchor.x,
-      activeAnchor.y,
-      0,
-      activeAnchor.x,
-      activeAnchor.y,
-      glintRadius * 5,
-    );
-    flare.addColorStop(0, "rgba(255, 255, 244, 0.76)");
-    flare.addColorStop(0.16, "rgba(255, 224, 180, 0.32)");
-    flare.addColorStop(1, "rgba(255, 211, 154, 0)");
-    ctx.fillStyle = flare;
-    ctx.fillRect(
-      activeAnchor.x - glintRadius * 5,
-      activeAnchor.y - glintRadius * 5,
-      glintRadius * 10,
-      glintRadius * 10,
-    );
+  const bg=ctx.createLinearGradient(w,0,0,h);
+  bg.addColorStop(0,"rgba(34,23,17,0.55)");
+  bg.addColorStop(0.42,"rgba(16,11,12,0.34)");
+  bg.addColorStop(1,"rgba(2,1,2,0.5)");
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,w,h);
+
+  const bx=w*(0.80+px*0.02), by=h*(0.40+py*0.02);
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  const bloom=ctx.createRadialGradient(bx,by,0,bx,by,maxSide*0.64);
+  bloom.addColorStop(0,"rgba(240,198,142,0.24)");
+  bloom.addColorStop(0.30,"rgba(178,118,76,0.11)");
+  bloom.addColorStop(0.68,"rgba(78,50,40,0.03)");
+  bloom.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=bloom;
+  ctx.fillRect(0,0,w,h);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  for(let i=0;i<CFG.atmos.length;i++){
+    const a=CFG.atmos[i];
+    const drift=Math.sin(t*0.05+a.ph)*0.02;
+    const ax=w*(a.x+drift)+px*minSide*0.01*(0.5+a.b);
+    const ay=h*(a.y+Math.cos(t*0.04+a.ph)*0.015)+py*minSide*0.01;
+    const n=fbm(a.x*3+t*0.03,a.y*3-t*0.02,3);
+    const amp=Math.max(0,0.5+n*0.5);
+    const rr=minSide*a.r*(0.7+amp*0.6);
+    const al=A((0.010+a.b*0.024)*amp);
+    const g=ctx.createRadialGradient(ax,ay,0,ax,ay,Math.max(1,rr));
+    g.addColorStop(0,"rgba(214,158,102,"+al+")");
+    g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;
+    ctx.fillRect(ax-rr,ay-rr,rr*2,rr*2);
   }
   ctx.restore();
 
-  if (pageMotion.hasFocus && activeAnchor) {
-    const focusX = pageMotion.focusX * w;
-    const focusY = pageMotion.focusY * h;
+  for(let ri=0;ri<CFG.RN;ri++){
+    const r=CFG.ribbons[ri];
+    const dep=r.depth;
+    const chW=live*storyStepWeight(story,ri,CFG.RN);
+    r.chW=chW;
+    const xShift=px*minSide*0.03*(0.35+dep)+scrollV*minSide*(0.02+dep*0.01);
+    const nomTh=minSide*r.thick;
+
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(activeAnchor.x, activeAnchor.y);
-    ctx.bezierCurveTo(
-      w * 0.72,
-      activeAnchor.y,
-      w * 0.66,
-      focusY,
-      focusX,
-      focusY,
-    );
-    ctx.strokeStyle = `rgba(255, 224, 184, ${0.08 + pageMotion.interactionImpulse * 0.12})`;
-    ctx.lineWidth = Math.max(0.7, minSide * 0.0011);
-    ctx.setLineDash([minSide * 0.004, minSide * 0.011]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.shadowColor="rgba(0,0,0,0.55)";
+    ctx.shadowBlur=minSide*(0.012+dep*0.010);
+    ctx.shadowOffsetY=minSide*0.014;
+    traceRegion(r,-1,1,xShift);
+    ctx.fillStyle="rgba(6,4,4,0.5)";
+    ctx.fill();
+    ctx.restore();
+
+    const ba=0.62+dep*0.2+chW*0.10;
+    const body=ctx.createLinearGradient(xL+xShift,0,xR+xShift,0);
+    body.addColorStop(0,"rgba(52,33,23,0)");
+    body.addColorStop(0.14,"rgba(104,66,42,"+A(ba*0.55)+")");
+    body.addColorStop(0.40,"rgba(176,126,80,"+A(ba*0.9)+")");
+    body.addColorStop(0.66,"rgba(224,176,120,"+A(ba)+")");
+    body.addColorStop(0.88,"rgba(246,206,152,"+A(ba)+")");
+    body.addColorStop(1,"rgba(255,232,196,"+A(ba*0.92)+")");
+    traceRegion(r,-1,1,xShift);
+    ctx.fillStyle=body;
+    ctx.fill();
+
+    strokeFrac(r,0.60,xShift,"rgba(34,20,13,"+A(0.34+dep*0.10)+")",nomTh*0.95);
+    strokeFrac(r,0.90,xShift,"rgba(20,11,7,"+A(0.46+dep*0.10)+")",nomTh*0.42);
+
+    ctx.save();
+    ctx.globalCompositeOperation="lighter";
+    const sh=0.5+0.5*Math.sin(t*0.5+r.phase2);
+    const specM=chW*0.05+scrollMag*0.04;
+    const spec=(peak: number)=>{
+      const p=A(peak);
+      const g=ctx.createLinearGradient(xL+xShift,0,xR+xShift,0);
+      g.addColorStop(0,"rgba(255,236,205,0)");
+      g.addColorStop(0.30,"rgba(255,234,200,"+A(p*0.4)+")");
+      g.addColorStop(0.62,"rgba(255,239,208,"+p+")");
+      g.addColorStop(0.90,"rgba(255,230,192,"+A(p*0.6)+")");
+      g.addColorStop(1,"rgba(255,230,192,0)");
+      return g;
+    };
+    strokeFrac(r,-0.30,xShift,spec(0.11+0.05*sh),nomTh*1.25);
+    strokeFrac(r,-0.40,xShift,spec(0.19+0.08*sh),nomTh*0.62);
+    strokeFrac(r,-0.47,xShift,spec(0.29+0.09*sh+specM),nomTh*0.24);
+    const rim=ctx.createLinearGradient(xL+xShift,0,xR+xShift,0);
+    rim.addColorStop(0,"rgba(255,224,178,0)");
+    rim.addColorStop(0.55,"rgba(255,228,186,"+A(0.09+dep*0.05)+")");
+    rim.addColorStop(1,"rgba(255,236,200,"+A(0.12+dep*0.05)+")");
+    strokeFrac(r,-0.88,xShift,rim,nomTh*0.20);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation="lighter";
+    const gAmp=1+(ri===activeIdx?impulse*0.5:0);
+    for(let k=0;k<r.glints.length;k++){
+      const gl=r.glints[k];
+      const u=(gl.u0+t*gl.sp)%1;
+      const x=px_(u,xShift);
+      const y=cy(r,u)+thAt(r,u)*(-0.40);
+      const pulse=0.5+0.5*Math.sin(t*gl.pr+gl.ph);
+      const edge=Math.sin(u*Math.PI);
+      const bright=pulse*pulse*edge*(0.4+0.6*u)*gAmp;
+      if(bright>0.10){
+        const rr=nomTh*(1.0+1.3*gl.sz)*(0.6+0.4*pulse);
+        softGlow(ctx,x,y,rr,"rgba(255,240,208,"+A(0.34*bright)+")","rgba(0,0,0,0)");
+        if(bright>0.34){
+          softGlow(ctx,x,y,rr*0.42,"rgba(255,236,198,"+A(0.42*bright)+")","rgba(0,0,0,0)");
+        }
+      }
+    }
     ctx.restore();
   }
 
-  // Preserve a quiet, high-contrast reading lane on the left.
-  const clearSpace = ctx.createLinearGradient(0, 0, w * 0.62, 0);
-  clearSpace.addColorStop(0, "rgba(4, 3, 4, 0.72)");
-  clearSpace.addColorStop(0.72, "rgba(5, 4, 5, 0.28)");
-  clearSpace.addColorStop(1, "rgba(5, 4, 5, 0)");
-  ctx.fillStyle = clearSpace;
-  ctx.fillRect(0, 0, w * 0.64, h);
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  for(let i=0;i<CFG.motes.length;i++){
+    const m=CFG.motes[i];
+    const dep=0.3+m.depth*0.7;
+    const mxp=w*(0.42+m.x*0.6)-px*minSide*0.02*dep;
+    const myp=m.y*h+Math.sin(t*(0.05+dep*0.04)+m.ph)*h*0.02-py*minSide*0.02*dep;
+    const rad=minSide*(0.0006+m.r*0.0016*dep);
+    const tw=0.4+0.6*(0.5+0.5*Math.sin(t*(0.6+m.bright)+m.ph*3));
+    if(m.bright>0.72){
+      softGlow(ctx,mxp,myp,rad*7,"rgba(255,232,196,"+A(0.10*tw)+")","rgba(0,0,0,0)");
+    }
+    ctx.beginPath();
+    ctx.arc(mxp,myp,Math.max(0.2,rad),0,TAU);
+    ctx.fillStyle="rgba(255,226,188,"+A((0.12+dep*0.16)*tw)+")";
+    ctx.fill();
+  }
+  ctx.restore();
 
-  const vignette = ctx.createRadialGradient(
-    w * 0.79,
-    h * 0.45,
-    minSide * 0.18,
-    w * 0.67,
-    h * 0.48,
-    maxSide * 0.77,
-  );
-  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-  vignette.addColorStop(1, "rgba(0, 0, 0, 0.52)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, w, h);
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  softGlow(ctx,bx,by,maxSide*0.17,"rgba(255,226,180,"+A(0.10+impulse*0.12)+")","rgba(0,0,0,0)");
+  softGlow(ctx,w*0.9,h*0.62,maxSide*0.11,"rgba(240,190,140,0.08)","rgba(0,0,0,0)");
+  softGlow(ctx,w*0.66,h*0.30,maxSide*0.09,"rgba(230,175,120,0.06)","rgba(0,0,0,0)");
+  ctx.restore();
+
+  if(M.hasFocus){
+    const fx=finiteClamp(M.focusX,0,1,0.5)*w;
+    const fy=finiteClamp(M.focusY,0,1,0.5)*h;
+    const fa=0.07+impulse*0.13;
+    ctx.save();
+    ctx.globalCompositeOperation="screen";
+    softGlow(ctx,fx,fy,minSide*0.11,"rgba(255,226,182,"+A(fa)+")","rgba(0,0,0,0)");
+    softGlow(ctx,fx,fy,minSide*0.05,"rgba(255,236,204,"+A(fa*0.85)+")","rgba(0,0,0,0)");
+    ctx.restore();
+  }
+
+  const lane=ctx.createLinearGradient(0,0,w*0.66,0);
+  lane.addColorStop(0,"rgba(6,4,6,0.85)");
+  lane.addColorStop(0.45,"rgba(7,5,7,0.55)");
+  lane.addColorStop(0.78,"rgba(7,5,7,0.2)");
+  lane.addColorStop(1,"rgba(7,5,7,0)");
+  ctx.fillStyle=lane;
+  ctx.fillRect(0,0,w*0.68,h);
+
+  const vig=ctx.createRadialGradient(w*0.78,h*0.44,minSide*0.2,w*0.66,h*0.5,maxSide*0.82);
+  vig.addColorStop(0,"rgba(0,0,0,0)");
+  vig.addColorStop(0.7,"rgba(2,1,2,0.18)");
+  vig.addColorStop(1,"rgba(0,0,0,0.6)");
+  ctx.fillStyle=vig;
+  ctx.fillRect(0,0,w,h);
 
   ctx.restore();
 };

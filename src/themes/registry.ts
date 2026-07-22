@@ -503,7 +503,7 @@ const THEME_DEFINITIONS: Array<
     id: "luxe",
     name: "Luxe",
     description:
-      "A cut-brass Art Deco aperture turns through lacquered depth, architectural facets, and controlled golden glints.",
+      "A slow, heavy river of melted gold flows in broad viscous swells, mirror-bright sheens rolling across the liquid-metal surface under a warm, expensive bloom.",
     vibe: "Prestigious & Confident",
     background: "#0A0808",
   },
@@ -575,7 +575,7 @@ const THEME_DEFINITIONS: Array<
     id: "obsidian",
     name: "Obsidian",
     description:
-      "Volcanic glass fractured by glowing magma veins that pulse and breathe while heat particles rise from the cracks.",
+      "Slabs of polished black volcanic glass turn slowly in the dark, hard cold light sliding across their mirrored planes while molten warmth smolders in the depths and bleeds up through the seams.",
     vibe: "Fierce & Primal",
     background: "#040100",
   },
@@ -747,7 +747,7 @@ const THEME_DEFINITIONS: Array<
     id: "cameo",
     name: "Cameo",
     description:
-      "Floating medallions reveal layered relief ovals, pearl highlights, and soft shadow depth.",
+      "A single carved shell-rose cameo — an ivory bloom in low relief on deep mauve stone, ringed by a soft pearl strand and grounded in calm shadow.",
     vibe: "Classic & Feminine",
     background: "#060508",
   },

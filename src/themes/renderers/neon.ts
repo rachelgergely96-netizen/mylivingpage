@@ -1,102 +1,186 @@
+import { fbm } from "../shared/noise";
+import { createSeededRandom } from "../shared/random";
+import { finiteClamp } from "../shared/motion";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
-export const renderNeon: ThemeRenderer = (ctx, w, h, t, mx, my) => {
-  const vpX = w * (0.5 + (mx - 0.5) * 0.15);
-  const vpY = h * (0.25 + (my - 0.5) * 0.1);
+const TAU = Math.PI * 2;
 
-  // Horizon glow
-  const horizon = ctx.createRadialGradient(vpX, h * 0.65, 0, vpX, h * 0.6, w * 0.7);
-  horizon.addColorStop(0, "hsla(295, 80%, 40%, 0.06)");
-  horizon.addColorStop(0.4, "hsla(280, 70%, 25%, 0.03)");
-  horizon.addColorStop(1, "transparent");
-  ctx.fillStyle = horizon;
-  ctx.fillRect(0, 0, w, h);
+interface NeonStar {
+  x: number;
+  y: number;
+  ph: number;
+  sp: number;
+  br: number;
+}
 
-  // Perspective grid — horizontal lines
-  const horizonY = h * 0.55;
-  for (let i = 1; i <= 14; i += 1) {
-    const ratio = i / 14;
-    const y = horizonY + (h - horizonY) * Math.pow(ratio, 1.8);
-    const spread = ratio * 0.8 + 0.2;
-    const x1 = vpX - (w * spread);
-    const x2 = vpX + (w * spread);
-    const pulse = Math.sin(t * 0.5 + i * 0.4) * 0.02;
-    const alpha = 0.03 + ratio * 0.04 + pulse;
+interface NeonStreak {
+  speed: number;
+  lane: number;
+  hue: number;
+  phase: number;
+  mag: number;
+}
 
-    ctx.beginPath();
-    ctx.moveTo(x1, y);
-    ctx.lineTo(x2, y);
-    ctx.strokeStyle = `hsla(290, 85%, 60%, ${alpha})`;
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
+interface NeonCache {
+  w: number;
+  h: number;
+  sunY: number;
+  sunR: number;
+  sky: CanvasGradient | null;
+  sun: CanvasGradient | null;
+  mtnFill: CanvasGradient | null;
+  refl: CanvasGradient | null;
+  hglow: CanvasGradient | null;
+  ridge: number[] | null;
+}
+
+const _neonRng = createSeededRandom(0x4e454f4e);
+const _neonStars: NeonStar[] = [];
+for (let i = 0; i < 68; i++) {
+  _neonStars.push({ x: _neonRng(), y: _neonRng(), ph: _neonRng() * TAU, sp: 0.7 + _neonRng() * 1.3, br: 0.4 + _neonRng() * 0.6 });
+}
+const _neonStreaks: NeonStreak[] = [];
+for (let i = 0; i < 8; i++) {
+  const r = _neonRng();
+  _neonStreaks.push({ speed: 0.26 + (i % 4) * 0.13, lane: Math.round((r - 0.5) * 9), hue: 165 + r * 150, phase: _neonRng() * 3, mag: 0.55 + _neonRng() * 0.45 });
+}
+const _neonCache: NeonCache = { w: 0, h: 0, sunY: 0, sunR: 0, sky: null, sun: null, mtnFill: null, refl: null, hglow: null, ridge: null };
+
+export const renderNeon: ThemeRenderer = (ctx, w, h, t, mx, _my) => {
+  if (!(w > 0) || !(h > 0)) return;
+  const mxx = finiteClamp(mx, 0, 1, 0.5);
+  const horizonY = h * 0.56;
+  const vpX = w * (0.5 + (mxx - 0.5) * 0.1);
+  const denom = h - horizonY;
+
+  // Rebuild dimension-dependent gradients + the static ridge only on resize.
+  if (_neonCache.w !== w || _neonCache.h !== h) {
+    _neonCache.w = w; _neonCache.h = h;
+    const sunR = Math.min(w, h) * 0.2;
+    const sunY = horizonY - 2;
+    _neonCache.sunR = sunR; _neonCache.sunY = sunY;
+    const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
+    sky.addColorStop(0, "#0a0619"); sky.addColorStop(0.55, "#1a0a2e"); sky.addColorStop(0.85, "#3a1145"); sky.addColorStop(1, "#5a1550");
+    _neonCache.sky = sky;
+    const sg = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
+    sg.addColorStop(0, "#f2bf67"); sg.addColorStop(0.42, "#f0742f"); sg.addColorStop(0.78, "#ff2d95"); sg.addColorStop(1, "#c81fff");
+    _neonCache.sun = sg;
+    const mtn = ctx.createLinearGradient(0, horizonY - h * 0.16, 0, horizonY);
+    mtn.addColorStop(0, "rgba(20,6,30,0.92)"); mtn.addColorStop(1, "rgba(40,10,45,0.4)");
+    _neonCache.mtnFill = mtn;
+    const refl = ctx.createLinearGradient(0, horizonY, 0, h);
+    refl.addColorStop(0, "hsla(320,85%,52%,0.14)"); refl.addColorStop(0.5, "hsla(300,80%,45%,0.05)"); refl.addColorStop(1, "transparent");
+    _neonCache.refl = refl;
+    const hglow = ctx.createLinearGradient(0, horizonY - h * 0.06, 0, horizonY + h * 0.12);
+    hglow.addColorStop(0, "transparent"); hglow.addColorStop(0.4, "hsla(315,80%,56%,0.11)"); hglow.addColorStop(1, "transparent");
+    _neonCache.hglow = hglow;
+    const step = w / 40;
+    const pts: number[] = [];
+    for (let x = 0; x <= w + 0.5; x += step) {
+      const ry = horizonY - Math.max(0, fbm(x * 0.006, 7.7, 3)) * h * 0.16 - Math.abs(Math.sin(x * 0.02)) * 6;
+      pts.push(x, ry);
+    }
+    _neonCache.ridge = pts;
+  }
+  const { sky, sun, mtnFill, refl, hglow, ridge } = _neonCache;
+  if (!sky || !sun || !mtnFill || !refl || !hglow || !ridge) return;
+
+  const sunR = _neonCache.sunR, sunY = _neonCache.sunY;
+
+  // Sky.
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, horizonY);
+
+  // Star field (positions precomputed; only the twinkle animates).
+  for (let i = 0; i < _neonStars.length; i++) {
+    const s = _neonStars[i];
+    const tw = 0.5 + 0.5 * Math.sin(t * s.sp + s.ph);
+    ctx.fillStyle = `hsla(280,38%,82%,${s.br * (0.14 + 0.22 * tw)})`;
+    ctx.fillRect(s.x * w, s.y * horizonY * 0.82, 1.2, 1.2);
   }
 
-  // Perspective grid — vertical lines
-  for (let i = -6; i <= 6; i += 1) {
-    const baseX = vpX + i * (w / 8);
-    const alpha = 0.02 + Math.abs(i) * 0.005;
-
-    ctx.beginPath();
-    ctx.moveTo(vpX, vpY);
-    ctx.lineTo(baseX, h);
-    ctx.strokeStyle = `hsla(310, 80%, 55%, ${alpha})`;
-    ctx.lineWidth = 0.6;
-    ctx.stroke();
-  }
-
-  // Scan line
-  const scanY = horizonY + ((t * 20) % (h - horizonY));
-  const scanGrad = ctx.createLinearGradient(0, scanY - 2, 0, scanY + 2);
-  scanGrad.addColorStop(0, "transparent");
-  scanGrad.addColorStop(0.5, "hsla(180, 90%, 65%, 0.06)");
-  scanGrad.addColorStop(1, "transparent");
-  ctx.fillStyle = scanGrad;
-  ctx.fillRect(0, scanY - 2, w, 4);
-
-  // Light streaks racing along grid
-  for (let i = 0; i < 8; i += 1) {
-    const seed = i * 71.3;
-    const speed = 0.3 + (i % 4) * 0.15;
-    const progress = ((t * speed + seed) % 4) / 4;
-    const lane = Math.floor(Math.sin(seed) * 5);
-    const ratio = 0.1 + progress * 0.9;
-    const y = horizonY + (h - horizonY) * Math.pow(ratio, 1.8);
-    const spread = ratio * 0.6;
-    const x = vpX + lane * (w * spread / 5);
-    const size = 2 + ratio * 3;
-    const hue = 180 + Math.sin(seed) * 120;
-
-    // Streak trail
-    const prevRatio = Math.max(0.1, ratio - 0.05);
-    const prevY = horizonY + (h - horizonY) * Math.pow(prevRatio, 1.8);
-    const grad = ctx.createLinearGradient(x, prevY, x, y);
-    grad.addColorStop(0, "transparent");
-    grad.addColorStop(1, `hsla(${hue}, 90%, 65%, ${0.15 * ratio})`);
-    ctx.beginPath();
-    ctx.moveTo(x, prevY);
-    ctx.lineTo(x, y);
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = size * 0.5;
-    ctx.stroke();
-
-    // Streak head
-    ctx.beginPath();
-    ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${hue}, 85%, 70%, ${0.3 * ratio})`;
-    ctx.fill();
-
-    // Glow
-    ctx.beginPath();
-    ctx.arc(x, y, size * 4, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${0.04 * ratio})`;
-    ctx.fill();
-  }
-
-  // Sun/vanishing point glow
-  const sun = ctx.createRadialGradient(vpX, vpY, 0, vpX, vpY, w * 0.15);
-  sun.addColorStop(0, `hsla(300, 80%, 60%, ${0.06 + Math.sin(t * 0.4) * 0.02})`);
-  sun.addColorStop(0.5, "hsla(280, 70%, 50%, 0.02)");
-  sun.addColorStop(1, "transparent");
+  // Synthwave sun — centered, amber-capped top so the bright-pass cannot blow it white.
+  const sunX = vpX;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(sunX, sunY, sunR, 0, TAU); ctx.clip();
   ctx.fillStyle = sun;
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(sunX - sunR, sunY - sunR, sunR * 2, sunR * 2);
+  for (let i = 0; i < 10; i++) {
+    const gy = sunY - sunR * 0.1 + i * (sunR * 0.12);
+    ctx.fillStyle = "rgba(8,5,20,0.92)";
+    ctx.fillRect(sunX - sunR, gy, sunR * 2, 2 + i * 0.9);
+  }
+  ctx.restore();
+  // Capped bloom (was 0.16-0.24 -> 0.08-0.12); magenta so it never reads as white.
+  softGlow(ctx, sunX, sunY, sunR * 1.7, `hsla(322,88%,58%,${0.1 + Math.sin(t * 0.4) * 0.02})`, "transparent");
+
+  // Soft horizon haze — cheap stand-in for the removed grid shadowBlur, biased below the horizon.
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = hglow;
+  ctx.fillRect(0, horizonY - h * 0.06, w, h * 0.18);
+  ctx.restore();
+
+  // Wireframe mountain ridge (precomputed polyline).
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, horizonY);
+  for (let i = 0; i < ridge.length; i += 2) ctx.lineTo(ridge[i], ridge[i + 1]);
+  ctx.lineTo(w, horizonY);
+  ctx.strokeStyle = "rgba(230,90,200,0.42)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = mtnFill; ctx.fill();
+  ctx.restore();
+
+  // Reflective ground plane.
+  ctx.fillStyle = "#07030f";
+  ctx.fillRect(0, horizonY, w, denom);
+
+  // Sun reflection on the floor (cached gradient).
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = refl;
+  ctx.fillRect(sunX - sunR * 1.1, horizonY, sunR * 2.2, denom);
+  ctx.restore();
+
+  // Glowing perspective grid — screen blend keeps the neon without any shadowBlur.
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.strokeStyle = "rgba(240,120,255,0.5)";
+  for (let i = 1; i <= 18; i++) {
+    const ratio = i / 18;
+    const y = horizonY + denom * Math.pow(ratio, 1.9);
+    ctx.globalAlpha = Math.max(0, 0.05 + ratio * 0.14 + Math.sin(t * 0.6 + i * 0.4) * 0.03);
+    ctx.lineWidth = 0.6 + ratio * 1.2;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  for (let i = -10; i <= 10; i++) {
+    const bx = vpX + i * (w / 9);
+    ctx.globalAlpha = 0.05 + Math.max(0, 1 - Math.abs(i) / 10) * 0.14;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(vpX + i * 2, horizonY); ctx.lineTo(bx + (bx - vpX) * 0.6, h); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
+  // Light streaks racing forward (precomputed lanes; capped, cyan-to-magenta).
+  for (let i = 0; i < _neonStreaks.length; i++) {
+    const s = _neonStreaks[i];
+    const ratio = 0.08 + ((t * s.speed + s.phase) % 3) / 3;
+    const y = horizonY + denom * Math.pow(ratio, 1.9);
+    const x = vpX + s.lane * (w * (ratio * 0.7) / 5);
+    const size = 1.5 + ratio * 4;
+    const pRatio = Math.max(0.08, ratio - 0.09);
+    const pY = horizonY + denom * Math.pow(pRatio, 1.9);
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    const g = ctx.createLinearGradient(x, pY, x, y);
+    g.addColorStop(0, "transparent");
+    g.addColorStop(1, `hsla(${s.hue},85%,62%,${0.42 * ratio * s.mag})`);
+    ctx.strokeStyle = g; ctx.lineWidth = size * 0.6;
+    ctx.beginPath(); ctx.moveTo(x, pY); ctx.lineTo(x, y); ctx.stroke();
+    softGlow(ctx, x, y, size * 4.5, `hsla(${s.hue},80%,58%,${0.12 * ratio})`, "transparent");
+    ctx.restore();
+  }
 };

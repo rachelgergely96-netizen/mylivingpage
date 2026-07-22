@@ -1,71 +1,22 @@
+import { fbm } from "../shared/noise";
+import { createSeededRandom } from "../shared/random";
+import { softGlow, star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-export const renderHelix: ThemeRenderer = (ctx, w, h, t, mx, my) => {
-  const bg = ctx.createLinearGradient(0, 0, 0, h);
-  bg.addColorStop(0, "#090E18");
-  bg.addColorStop(0.56, "#080C14");
-  bg.addColorStop(1, "#030509");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
+interface HelixNode {
+  y: number;
+  s: number;
+  c: number;
+  xA: number;
+  xB: number;
+  dA: number;
+  dB: number;
+  hwA: number;
+  hwB: number;
+}
 
-  const cx = w * (0.5 + (mx - 0.5) * 0.08);
-  const amplitude = w * 0.12;
-  const strandWidth = 4;
+const CFG=(function(){const rnd=createSeededRandom(20240717);const haze=[];for(let i=0;i<10;i++){haze.push({x:rnd(),y:rnd(),r:0.12+rnd()*0.16,drift:0.02+rnd()*0.05,ph:rnd()*TAU,tint:rnd()});}const motes=[];for(let i=0;i<64;i++){motes.push({x:rnd(),y:rnd(),z:rnd(),r:0.5+rnd()*1.6,tw:rnd()*TAU,tws:0.5+rnd()*1.6,spark:rnd()});}const beads=[];for(let i=0;i<10;i++){beads.push({speed:0.045+rnd()*0.05,off:rnd(),orbit:rnd()*TAU,orbitSpd:0.7+rnd()*1.3,size:2.4+rnd()*2.2,hue:rnd()});}const pulses=[];for(let i=0;i<6;i++){pulses.push({speed:0.11+rnd()*0.10,off:rnd(),strand:i%2});}return {haze:haze,motes:motes,beads:beads,pulses:pulses};})();
 
-  const strandA: Array<[number, number]> = [];
-  const strandB: Array<[number, number]> = [];
-
-  for (let y = -20; y <= h + 20; y += 8) {
-    const phase = y * 0.032 - t * 1.8;
-    const xA = cx + Math.sin(phase) * amplitude;
-    const xB = cx - Math.sin(phase) * amplitude;
-    strandA.push([xA, y]);
-    strandB.push([xB, y]);
-
-    if (Math.cos(phase) > 0) {
-      ctx.beginPath();
-      ctx.moveTo(xA, y);
-      ctx.lineTo(xB, y);
-      ctx.strokeStyle = "rgba(196,214,240,0.16)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-  }
-
-  const drawStrand = (points: Array<[number, number]>, stroke: string) => {
-    ctx.beginPath();
-    points.forEach(([x, y], index) => {
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = strandWidth;
-    ctx.stroke();
-  };
-
-  drawStrand(strandA, "rgba(220,228,240,0.72)");
-  drawStrand(strandB, "rgba(124,168,230,0.72)");
-
-  for (let i = 0; i < 6; i += 1) {
-    const progress = (t * (0.08 + i * 0.01) + i * 0.16) % 1;
-    const y = progress * h;
-    const phase = y * 0.032 - t * 1.8;
-    const orbitRadius = 22 + Math.sin(i) * 4 + (my - 0.5) * 10;
-    const orbitAngle = t * 1.6 + i;
-    const x = cx + Math.sin(phase) * amplitude + Math.cos(orbitAngle) * orbitRadius * 0.35;
-    const size = 2 + (0.5 + 0.5 * Math.sin(orbitAngle)) * 2;
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, TAU);
-    ctx.fillStyle = "rgba(240,246,255,0.84)";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x, y, size * 4, 0, TAU);
-    ctx.fillStyle = "rgba(126,182,255,0.08)";
-    ctx.fill();
-  }
-};
+export const renderHelix: ThemeRenderer = (ctx,w,h,t,mx,my)=>{const pxm=(mx-0.5),pym=(my-0.5);const cx=w*0.5+pxm*w*0.05;const cy=h*0.5;const MK=0.026,MSPD=1.35,MAMP=w*0.135,MBW=Math.max(3.2,w*0.0055);const orbTilt=pym*14;ctx.save();ctx.globalCompositeOperation="lighter";const gA=ctx.createLinearGradient(0,0,0,h);gA.addColorStop(0,"rgba(24,60,78,0.36)");gA.addColorStop(0.42,"rgba(12,32,46,0.16)");gA.addColorStop(1,"rgba(2,6,14,0)");ctx.fillStyle=gA;ctx.fillRect(0,0,w,h);softGlow(ctx,cx,h*0.42,w*0.28,"rgba(58,148,168,0.24)","transparent");softGlow(ctx,w*0.16,h*0.30,w*0.30,"rgba(40,110,150,0.14)","transparent");softGlow(ctx,w*0.86,h*0.72,w*0.30,"rgba(48,128,150,0.15)","transparent");ctx.restore();ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<CFG.haze.length;i++){const b=CFG.haze[i];const n=fbm(b.x*3+t*b.drift,b.y*3-t*b.drift*0.6+b.ph,3);const a=0.045+0.085*(0.5+0.5*n);const hx=(b.x+Math.sin(t*b.drift+b.ph)*0.03)*w;const hy=(b.y+Math.cos(t*b.drift*0.8+b.ph)*0.03)*h;const rr=b.r*Math.min(w,h);const col=b.tint<0.5?"rgba(70,170,190,":"rgba(92,150,212,";softGlow(ctx,hx,hy,rr,col+a.toFixed(3)+")","transparent");}ctx.restore();const drawHelixLayer=(cxx: number,amp: number,k: number,spd: number,ph0: number,bw: number,aMul: number,isMain: boolean)=>{const stp=isMain?12:16;const n: HelixNode[]=[];for(let y=-26;y<=h+26;y+=stp){const p=y*k-t*spd+ph0;const s=Math.sin(p),c=Math.cos(p);const xA=cxx+s*amp,xB=cxx-s*amp;const dA=c,dB=-c;const hwA=bw*(0.30+0.70*(0.5+0.5*dA));const hwB=bw*(0.30+0.70*(0.5+0.5*dB));n.push({y:y,s:s,c:c,xA:xA,xB:xB,dA:dA,dB:dB,hwA:hwA,hwB:hwB});}const N=n.length;ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<N;i++){const q=n[i];if(q.c<-0.12)continue;const front=0.5+0.5*q.c;const a=(isMain?0.05:0.024)+(isMain?0.24:0.10)*front;ctx.beginPath();ctx.moveTo(q.xA,q.y);ctx.lineTo(q.xB,q.y);ctx.strokeStyle="rgba(120,214,232,"+a.toFixed(3)+")";ctx.lineWidth=(isMain?1.6:1.0)*(0.6+0.8*front);ctx.stroke();if(isMain&&q.c>0.4){const mp=(q.xA+q.xB)*0.5;ctx.beginPath();ctx.arc(mp,q.y,1.6+1.4*front,0,TAU);ctx.fillStyle="rgba(186,232,246,"+(0.14+0.24*front).toFixed(3)+")";ctx.fill();}}ctx.restore();const ribbon=(key: "xA" | "xB",hwKey: "hwA" | "hwB",dKey: "dA" | "dB",topC: string,midC: string,botC: string)=>{ctx.beginPath();for(let i=0;i<N;i++){const q=n[i];const x=q[key]-q[hwKey];if(i===0)ctx.moveTo(x,q.y);else ctx.lineTo(x,q.y);}for(let i=N-1;i>=0;i--){const q=n[i];ctx.lineTo(q[key]+q[hwKey],q.y);}ctx.closePath();const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,topC);g.addColorStop(0.5,midC);g.addColorStop(1,botC);ctx.fillStyle=g;ctx.fill();ctx.strokeStyle="rgba(180,226,240,"+(0.10*aMul).toFixed(3)+")";ctx.lineWidth=1;ctx.stroke();if(isMain){ctx.save();ctx.globalCompositeOperation="lighter";ctx.lineCap="round";for(let i=0;i<N-1;i++){const q=n[i],q2=n[i+1];const d=q[dKey];if(d<0.12)continue;ctx.beginPath();ctx.moveTo(q[key],q.y);ctx.lineTo(q2[key],q2.y);ctx.lineWidth=Math.max(1,q[hwKey]*0.5);ctx.strokeStyle="rgba(208,234,250,"+(0.20*d).toFixed(3)+")";ctx.stroke();}ctx.restore();}};ribbon("xB","hwB","dB","rgba(150,204,238,"+(0.52*aMul).toFixed(3)+")","rgba(110,166,220,"+(0.62*aMul).toFixed(3)+")","rgba(46,92,148,"+(0.50*aMul).toFixed(3)+")");ribbon("xA","hwA","dA","rgba(202,228,244,"+(0.52*aMul).toFixed(3)+")","rgba(150,198,226,"+(0.66*aMul).toFixed(3)+")","rgba(64,112,146,"+(0.56*aMul).toFixed(3)+")");};drawHelixLayer(w*0.5-pxm*w*0.02,w*0.085,0.030,0.95,1.6,Math.max(2,w*0.0032),0.42,false);ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<CFG.motes.length;i++){const m=CFG.motes[i];const mxp=m.x*w-pxm*(6+m.z*30);const myp=m.y*h-pym*(6+m.z*24);const tw=0.35+0.65*(0.5+0.5*Math.sin(t*m.tws+m.tw));const sz=(0.5+m.z*1.6)*m.r;const a=(0.10+0.5*m.z)*tw;ctx.beginPath();ctx.arc(mxp,myp,sz,0,TAU);ctx.fillStyle="rgba(150,215,230,"+a.toFixed(3)+")";ctx.fill();if(m.spark>0.87&&tw>0.7)star4(ctx,mxp,myp,sz*5,0.8,"rgba(180,232,246,"+(0.3*tw).toFixed(3)+")");}ctx.restore();drawHelixLayer(cx,MAMP,MK,MSPD,0,MBW,1,true);ctx.save();for(let i=0;i<CFG.beads.length;i++){const b=CFG.beads[i];const prog=(((t*b.speed+b.off)%1)+1)%1;const by=prog*(h+80)-40;const p=by*MK-t*MSPD;const dir=b.hue<0.5?1:-1;const baseX=cx+dir*Math.sin(p)*MAMP;const depth=dir*Math.cos(p);const oa=t*b.orbitSpd+b.orbit;const bx=baseX+Math.cos(oa)*(13+orbTilt*dir);const byy=by+Math.sin(oa)*7;const front=0.5+0.5*depth;const sz=b.size*(0.7+0.5*front);ctx.globalCompositeOperation="lighter";softGlow(ctx,bx,byy,sz*5.5,"rgba(90,200,222,"+(0.10+0.16*front).toFixed(3)+")","transparent");ctx.beginPath();ctx.arc(bx,byy,sz,0,TAU);ctx.fillStyle="rgba(192,226,244,"+(0.36+0.20*front).toFixed(3)+")";ctx.fill();ctx.beginPath();ctx.arc(bx,byy,sz*0.5,0,TAU);ctx.fillStyle="rgba(214,238,250,"+(0.24+0.18*front).toFixed(3)+")";ctx.fill();if(front>0.72)star4(ctx,bx,byy,sz*4.5,1.2,"rgba(190,238,250,"+(0.26*front).toFixed(3)+")");}ctx.restore();ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<CFG.pulses.length;i++){const b=CFG.pulses[i];const prog=(((t*b.speed+b.off)%1)+1)%1;const yy=prog*(h+40)-20;const dir=b.strand?1:-1;const p=yy*MK-t*MSPD;const x=cx+dir*Math.sin(p)*MAMP;softGlow(ctx,x,yy,10,"rgba(150,230,245,0.24)","transparent");ctx.beginPath();ctx.arc(x,yy,2.2,0,TAU);ctx.fillStyle="rgba(206,234,248,0.50)";ctx.fill();for(let kk=1;kk<=3;kk++){const ty=yy-kk*7;const tp=ty*MK-t*MSPD;const tx=cx+dir*Math.sin(tp)*MAMP;ctx.beginPath();ctx.arc(tx,ty,Math.max(0.4,2.2-kk*0.5),0,TAU);ctx.fillStyle="rgba(150,225,245,"+(0.4-kk*0.1).toFixed(3)+")";ctx.fill();}}ctx.restore();ctx.save();ctx.globalCompositeOperation="lighter";softGlow(ctx,cx,h*0.11,w*0.16,"rgba(80,170,190,0.12)","transparent");star4(ctx,cx,h*0.13,w*0.05,2,"rgba(190,232,248,0.22)");ctx.restore();const topScrim=ctx.createLinearGradient(0,0,0,h*0.46);topScrim.addColorStop(0,"rgba(3,6,13,0.34)");topScrim.addColorStop(1,"rgba(3,6,13,0)");ctx.fillStyle=topScrim;ctx.fillRect(0,0,w,h*0.46);const vg=ctx.createRadialGradient(cx,cy,Math.min(w,h)*0.24,cx,cy,Math.max(w,h)*0.75);vg.addColorStop(0,"rgba(2,4,10,0)");vg.addColorStop(1,"rgba(1,2,7,0.62)");ctx.fillStyle=vg;ctx.fillRect(0,0,w,h);};

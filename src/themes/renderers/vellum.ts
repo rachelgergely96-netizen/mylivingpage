@@ -1,251 +1,266 @@
-import {
-  finiteClamp,
-  resolveThemeMotion,
-  storyStepWeight,
-} from "../shared/motion";
+import { fbm } from "../shared/noise";
+import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-const SHEET_TONES = [
-  [238, 226, 216],
-  [218, 211, 216],
-  [229, 218, 205],
-  [204, 202, 213],
-  [238, 225, 207],
-] as const;
-
-function traceSheet(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  layer: number,
-  t: number,
-  pointerX: number,
-  pointerY: number,
-  storyProgress: number,
-  velocity: number,
-) {
-  const depth = layer / (SHEET_TONES.length - 1);
-  const chapterWeight = storyStepWeight(
-    storyProgress,
-    layer,
-    SHEET_TONES.length,
-  );
-  const phase = t * (0.075 + layer * 0.009) + layer * 0.82;
-  const left =
-    w * (0.43 + depth * 0.035) +
-    (pointerX - 0.5) * w * (0.012 + depth * 0.008) +
-    velocity * w * 0.006;
-  const top =
-    h * (0.06 + layer * 0.135) +
-    Math.sin(phase) * h * 0.012 +
-    (pointerY - 0.5) * h * (0.009 + depth * 0.006) -
-    chapterWeight * h * 0.008;
-  const height = h * (0.245 + depth * 0.025);
-  const lower = top + height;
-  const lift = h * (0.035 + depth * 0.012);
-
-  ctx.beginPath();
-  ctx.moveTo(left, top + lift * 0.55);
-  ctx.bezierCurveTo(
-    w * 0.59,
-    top - lift,
-    w * 0.78,
-    top + lift * 0.74,
-    w + 24,
-    top - lift * 0.16,
-  );
-  ctx.lineTo(w + 24, lower + lift * 0.42);
-  ctx.bezierCurveTo(
-    w * 0.82,
-    lower + lift,
-    w * 0.62,
-    lower - lift * 0.58,
-    left,
-    lower + lift * 0.24,
-  );
-  ctx.closePath();
-
-  return { chapterWeight, left, lower, top };
+interface VellumDust {
+  z: number;
+  r: number;
+  a: number;
+  x: number;
+  y: number;
+  ph: number;
+  sp: number;
+  drift: number;
+  tone: number[];
 }
 
-/** Translucent paper leaves drift at the right edge of a calm editorial stage. */
-export const renderVellum: ThemeRenderer = (
-  ctx,
-  w,
-  h,
-  t,
-  mx,
-  my,
-  _deltaSeconds,
-  motion,
-) => {
-  const pageMotion = resolveThemeMotion(motion);
-  const velocity = finiteClamp(pageMotion.scrollVelocity / 3, -1, 1);
-  const storyProgress = pageMotion.storyProgress;
-  const minSide = Math.min(w, h);
-
-  ctx.save();
-
-  const background = ctx.createLinearGradient(0, 0, w, h);
-  background.addColorStop(0, "#100D13");
-  background.addColorStop(0.5, "#17151B");
-  background.addColorStop(1, "#08070B");
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, w, h);
-
-  // Far plane: a soft window of paper-colored light and barely visible grain.
-  const lightX = w * (0.79 + (mx - 0.5) * 0.018);
-  const paperLight = ctx.createRadialGradient(
-    lightX,
-    h * 0.3,
-    0,
-    lightX,
-    h * 0.34,
-    Math.max(w, h) * 0.62,
-  );
-  paperLight.addColorStop(0, "rgba(244, 228, 208, 0.12)");
-  paperLight.addColorStop(0.42, "rgba(191, 174, 182, 0.05)");
-  paperLight.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = paperLight;
-  ctx.fillRect(w * 0.32, 0, w * 0.68, h);
-
-  ctx.save();
-  ctx.fillStyle = "rgba(255, 244, 231, 0.06)";
-  for (let grain = 0; grain < 58; grain += 1) {
-    const seed = grain * 0.731 + 0.19;
-    const depth = 0.35 + (grain % 5) * 0.13;
-    const x = w * (0.4 + (Math.sin(seed * 5.9) * 0.5 + 0.5) * 0.64);
-    const y =
-      (Math.cos(seed * 4.3) * 0.5 + 0.5) * h +
-      Math.sin(t * (0.04 + depth * 0.025) + seed) * h * 0.008;
-    ctx.globalAlpha = 0.018 + depth * 0.025;
-    ctx.fillRect(x, y, 0.5 + depth * 0.8, 0.5 + depth * 0.8);
-  }
-  ctx.restore();
-
-  // Middle plane: separate translucent leaves with shadow, tooth, and folded
-  // edge light. Each chapter gently brings one leaf forward.
-  const sheetAnchors: Array<{ x: number; y: number }> = [];
-  for (let layer = 0; layer < SHEET_TONES.length; layer += 1) {
-    const [red, green, blue] = SHEET_TONES[layer];
-    const geometry = traceSheet(
-      ctx,
-      w,
-      h,
-      layer,
-      t,
-      mx,
-      my,
-      storyProgress,
-      velocity,
-    );
-    sheetAnchors.push({
-      x: w * (0.73 + layer * 0.025),
-      y: (geometry.top + geometry.lower) * 0.5,
+const CFG=(function(){
+  const rnd=createSeededRandom(74213);
+  const TONES=[
+    [242,230,216],
+    [210,203,214],
+    [232,220,203],
+    [197,196,213],
+    [239,225,203],
+    [219,199,173],
+    [234,223,209]
+  ];
+  const LEAF_N=7;
+  const leaves=[];
+  for(let i=0;i<LEAF_N;i++){
+    const depth=i/(LEAF_N-1);
+    const fibers=[];
+    for(let f=0;f<6;f++){ fibers.push({o:0.08+rnd()*0.84,amp:0.3+rnd()*0.8,ph:rnd()*TAU}); }
+    leaves.push({
+      depth:depth,
+      tone:TONES[i%TONES.length],
+      cx:0.56+rnd()*0.3,
+      cy:0.1+depth*0.74+(rnd()-0.5)*0.06,
+      w:0.28+depth*0.16+rnd()*0.06,
+      h:0.2+depth*0.05+rnd()*0.03,
+      phase:rnd()*TAU,
+      spin:0.05+rnd()*0.05,
+      curl:(rnd()-0.5)*0.55,
+      op:0.6+rnd()*0.78,
+      fibers:fibers
     });
+  }
+  const dust: VellumDust[]=[];
+  const LAYERS=[{n:16,z:0.25,r:0.62,a:0.08},{n:16,z:0.55,r:1.05,a:0.13},{n:12,z:0.92,r:1.75,a:0.19}];
+  for(let L=0;L<LAYERS.length;L++){
+    const lay=LAYERS[L];
+    for(let i=0;i<lay.n;i++){
+      dust.push({
+        z:lay.z, r:lay.r, a:lay.a,
+        x:0.32+rnd()*0.66,
+        y:rnd(),
+        ph:rnd()*TAU,
+        sp:0.2+rnd()*0.6,
+        drift:0.3+rnd()*0.9,
+        tone:TONES[(L*7+i)%TONES.length]
+      });
+    }
+  }
+  return {leaves:leaves,dust:dust};
+})();
 
-    ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.42)";
-    ctx.shadowBlur = 18 + layer * 2;
-    ctx.shadowOffsetY = 5 + layer;
-    const fill = ctx.createLinearGradient(geometry.left, 0, w, 0);
-    fill.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 0.025)`);
-    fill.addColorStop(
-      0.38,
-      `rgba(${red}, ${green}, ${blue}, ${0.075 + layer * 0.012})`,
-    );
-    fill.addColorStop(
-      0.78,
-      `rgba(${red}, ${green}, ${blue}, ${0.13 + geometry.chapterWeight * 0.045})`,
-    );
-    fill.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0.055)`);
-    ctx.fillStyle = fill;
+export const renderVellum: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+  const M=resolveThemeMotion(motion);
+  const vel=finiteClamp(M.scrollVelocity/3,-1,1,0);
+  const story=M.storyProgress;
+  const swayAmt=Math.min(1,M.pointerSpeed);
+  const swayMul=1+Math.abs(vel)*0.5+swayAmt*0.3;   // 1 at rest
+  const stackDrift=story*h*0.02;                    // 0 at rest
+  const parY=vel*h*0.02;                            // 0 at rest
+  const dustAmp=1+Math.abs(vel)*0.6;                // 1 at rest
+  const storyShift=story*w*0.025;                   // 0 at rest
+
+  const px=mx-0.5, py=my-0.5;
+  const maxS=Math.max(w,h), minS=Math.min(w,h);
+  const ox=w*(0.82+px*0.02)-storyShift, oy=h*(0.12+py*0.02);
+
+  function leafPath(cx: number,cy: number,hw: number,hh: number,curl: number){
+    const lx=cx-hw, rx=cx+hw, ty=cy-hh, by=cy+hh;
+    ctx.beginPath();
+    ctx.moveTo(lx,ty+hh*0.16);
+    ctx.bezierCurveTo(cx-hw*0.32,ty-hh*curl,cx+hw*0.42,ty+hh*curl*0.55,rx,ty+hh*0.2);
+    ctx.quadraticCurveTo(rx+hw*0.09,cy,rx,by-hh*0.2);
+    ctx.bezierCurveTo(cx+hw*0.42,by+hh*curl,cx-hw*0.32,by-hh*curl*0.55,lx,by-hh*0.16);
+    ctx.quadraticCurveTo(lx-hw*0.09,cy,lx,ty+hh*0.16);
+    ctx.closePath();
+  }
+
+  function drawMote(d: VellumDust){
+    const z=d.z;
+    const tw=0.5+0.5*Math.sin(t*d.sp+d.ph);
+    const x=d.x*w - px*w*0.035*z + Math.cos(t*d.drift*0.22+d.ph)*w*0.02*dustAmp;
+    const y=d.y*h - py*h*0.02*z + Math.sin(t*d.drift*0.18+d.ph)*h*0.05*dustAmp + parY*z;
+    const rad=d.r*(0.5+z*1.2);
+    ctx.globalAlpha=d.a*(0.4+0.6*tw);
+    ctx.fillStyle="rgb("+d.tone[0]+","+d.tone[1]+","+d.tone[2]+")";
+    ctx.beginPath();
+    ctx.arc(x,y,rad,0,TAU);
     ctx.fill();
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+  }
 
+  ctx.save();
+
+  // Broad, diffuse paper-light wash spilling from the upper-right — round, volumetric,
+  // tamed (lower peak alpha + smaller radius) so centre text never fights it or the bloom.
+  const wash=ctx.createRadialGradient(w*0.86-storyShift,h*0.18,0,w*0.8-storyShift,h*0.26,maxS*0.72);
+  wash.addColorStop(0,"rgba(245,230,208,0.11)");
+  wash.addColorStop(0.34,"rgba(216,198,172,0.06)");
+  wash.addColorStop(0.68,"rgba(196,182,190,0.025)");
+  wash.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=wash;
+  ctx.fillRect(0,0,w,h);
+
+  // Cool shadow pool anchoring the lower-left negative space.
+  const pool=ctx.createRadialGradient(w*0.3,h*0.82,0,w*0.3,h*0.82,maxS*0.62);
+  pool.addColorStop(0,"rgba(30,26,42,0.34)");
+  pool.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=pool;
+  ctx.fillRect(0,0,w,h);
+
+  // Soft directional bloom (no beams / no wedges) — a gently breathing round glow at the
+  // light origin, trimmed so the upper-right corner stays clean under the bright-pass bloom.
+  const breath=0.5+0.5*Math.sin(t*0.11);
+  softGlow(ctx,ox,oy,maxS*0.4,"rgba(255,242,216,"+(0.075+breath*0.035).toFixed(3)+")","transparent");
+  softGlow(ctx,ox-maxS*0.08,oy+maxS*0.07,maxS*0.24,"rgba(246,231,206,0.05)","transparent");
+
+  // Far dust (soft, sparse).
+  const dust=CFG.dust;
+  for(let i=0;i<dust.length;i++){ if(dust[i].z>0.5) continue; drawMote(dust[i]); }
+  ctx.globalAlpha=1;
+
+  const leaves=CFG.leaves;
+  for(let i=0;i<leaves.length;i++){
+    const lf=leaves[i], dep=lf.depth, tone=lf.tone;
+    // Active chapter gently brings one leaf forward (0 for all but the active leaf; leaf 0 at rest).
+    const cw=storyStepWeight(story,i,leaves.length);
+    const cx=lf.cx*w + Math.cos(t*lf.spin*0.6+lf.phase)*w*0.012*swayMul + px*w*(0.006+dep*0.022);
+    const cy=lf.cy*h + Math.sin(t*lf.spin+lf.phase)*h*0.02*swayMul + py*h*(0.005+dep*0.016) + stackDrift + parY*(0.4+dep*0.8) - cw*h*0.009;
+    const hw=lf.w*w*0.5, hh=lf.h*h*0.5;
+    const curl=lf.curl + Math.sin(t*0.12+lf.phase)*0.09;
+
+    // Body: hard-pushed translucency variance + a drop shadow that deepens with depth so
+    // adjacent leaves read as stacked paper. Back leaves shed the shadow and blur is capped
+    // (was up to 40) to cut the dominant per-frame cost under the HD downsample pass.
+    ctx.save();
+    if(dep>0.38){
+      ctx.shadowColor="rgba(0,0,0,0.5)";
+      ctx.shadowBlur=16+dep*8;
+      ctx.shadowOffsetX=-5-dep*8;
+      ctx.shadowOffsetY=8+dep*13;
+    }
+    leafPath(cx,cy,hw,hh,curl);
+    const op=lf.op*(1+cw*0.1);
+    const base=(0.045+dep*0.075)*op;
+    const glow=0.05*Math.max(0,Math.sin(t*0.2+lf.phase));
+    // Cap the bright lower-right band so it + the bright-pass bloom can't blow to a white hotspot.
+    const band=Math.min(0.3,base*2.4+glow+cw*0.025);
+    const g=ctx.createLinearGradient(cx-hw,cy+hh*0.5,cx+hw,cy-hh*0.5);
+    g.addColorStop(0,"rgba("+tone[0]+","+tone[1]+","+tone[2]+","+(base*0.28).toFixed(4)+")");
+    g.addColorStop(0.5,"rgba("+tone[0]+","+tone[1]+","+tone[2]+","+base.toFixed(4)+")");
+    g.addColorStop(0.85,"rgba("+tone[0]+","+tone[1]+","+tone[2]+","+band.toFixed(4)+")");
+    g.addColorStop(1,"rgba("+tone[0]+","+tone[1]+","+tone[2]+","+(base*0.52).toFixed(4)+")");
+    ctx.fillStyle=g;
+    ctx.fill();
+    ctx.restore();
+
+    // Paper tooth + a soft inner shade along the lower edge to deepen the fold between leaves.
+    ctx.save();
+    leafPath(cx,cy,hw,hh,curl);
     ctx.clip();
-    for (let fiber = 0; fiber < 6; fiber += 1) {
-      const ratio = (fiber + 1) / 7;
-      const y =
-        geometry.top +
-        (geometry.lower - geometry.top) * ratio +
-        Math.sin(fiber * 1.7 + layer) * h * 0.006;
+    for(let f=0;f<lf.fibers.length;f++){
+      const fb=lf.fibers[f];
+      const fy=cy-hh+2*hh*fb.o+Math.sin(t*0.15+fb.ph)*hh*0.04;
+      const midY=fy+fbm(fb.o*3+i,t*0.05+f,2)*hh*0.15*fb.amp;
       ctx.beginPath();
-      ctx.moveTo(geometry.left, y);
-      ctx.bezierCurveTo(w * 0.62, y - 5, w * 0.82, y + 7, w + 16, y - 3);
-      ctx.strokeStyle = `rgba(255, 248, 239, ${0.018 + (fiber % 2) * 0.012})`;
-      ctx.lineWidth = 0.7;
+      ctx.moveTo(cx-hw,fy);
+      ctx.bezierCurveTo(cx-hw*0.3,midY-4,cx+hw*0.3,midY+5,cx+hw,fy+(fb.amp-0.5)*6);
+      ctx.strokeStyle="rgba(255,249,239,"+(0.02+(f%2)*0.016).toFixed(4)+")";
+      ctx.lineWidth=0.7;
       ctx.stroke();
     }
+    const sh=ctx.createLinearGradient(cx,cy,cx,cy+hh);
+    sh.addColorStop(0,"rgba(6,5,10,0)");
+    sh.addColorStop(1,"rgba(6,5,10,"+(0.1+dep*0.17).toFixed(3)+")");
+    ctx.fillStyle=sh;
+    ctx.fillRect(cx-hw,cy,hw*2,hh);
     ctx.restore();
 
-    traceSheet(ctx, w, h, layer, t, mx, my, storyProgress, velocity);
-    ctx.strokeStyle = `rgba(255, 247, 235, ${0.1 + geometry.chapterWeight * 0.14})`;
-    ctx.lineWidth = 0.8 + geometry.chapterWeight * 0.55;
+    // Deckled edge highlight — the active chapter's leaf reads a touch brighter/crisper.
+    leafPath(cx,cy,hw,hh,curl);
+    ctx.strokeStyle="rgba(255,248,236,"+(0.07+dep*0.09+cw*0.05).toFixed(4)+")";
+    ctx.lineWidth=0.8+dep*0.6+cw*0.35;
     ctx.stroke();
+
+    // Folded-edge catch-light — a small round bloom, never a streak or spark.
+    if(dep>0.5){
+      ctx.save();
+      ctx.globalCompositeOperation="screen";
+      softGlow(ctx,cx+hw*0.45,cy-hh*0.35,hw*0.55,"rgba(255,242,220,"+(0.05+dep*0.05+cw*0.035).toFixed(4)+")","transparent");
+      ctx.restore();
+    }
   }
 
-  // Foreground plane: a narrow deckled edge and chapter-linked focus stitch.
+  // Near dust (soft, in front of the leaves).
+  for(let i=0;i<dust.length;i++){ if(dust[i].z<=0.5) continue; drawMote(dust[i]); }
+  ctx.globalAlpha=1;
+
+  // Focus response: a soft warm bloom gathers where the reader's focus lands — a round glow
+  // only (never a stitch/bar), attenuated on the left by the clear-space drawn just below.
+  // Absent at rest (hasFocus is false), so the resting scene is unchanged.
+  if(M.hasFocus){
+    const fx=M.focusX*w, fy=M.focusY*h;
+    const fa=0.045+M.interactionImpulse*0.08;
+    ctx.save();
+    ctx.globalCompositeOperation="screen";
+    softGlow(ctx,fx,fy,minS*(0.16+M.interactionImpulse*0.05),"rgba(246,232,214,"+fa.toFixed(3)+")","transparent");
+    ctx.restore();
+  }
+
+  // Right-edge deckle glow.
   ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  const edge = ctx.createLinearGradient(w * 0.68, 0, w, 0);
-  edge.addColorStop(0, "rgba(255, 242, 225, 0)");
-  edge.addColorStop(0.78, "rgba(255, 242, 225, 0.035)");
-  edge.addColorStop(1, "rgba(255, 250, 242, 0.11)");
-  ctx.fillStyle = edge;
-  ctx.fillRect(w * 0.6, 0, w * 0.4, h);
+  ctx.globalCompositeOperation="screen";
+  const edge=ctx.createLinearGradient(w*0.7,0,w,0);
+  edge.addColorStop(0,"rgba(255,242,224,0)");
+  edge.addColorStop(0.8,"rgba(255,242,224,0.03)");
+  edge.addColorStop(1,"rgba(255,250,242,0.1)");
+  ctx.fillStyle=edge;
+  ctx.fillRect(w*0.6,0,w*0.4,h);
   ctx.restore();
 
-  if (pageMotion.hasFocus && sheetAnchors.length > 0) {
-    const activeIndex = Math.min(
-      sheetAnchors.length - 1,
-      Math.round(storyProgress * (sheetAnchors.length - 1)),
-    );
-    const anchor = sheetAnchors[activeIndex];
-    const focusX = pageMotion.focusX * w;
-    const focusY = pageMotion.focusY * h;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(anchor.x, anchor.y);
-    ctx.quadraticCurveTo(w * 0.84, focusY, focusX, focusY);
-    ctx.setLineDash([2, 6]);
-    ctx.strokeStyle = `rgba(246, 232, 217, ${0.12 + pageMotion.interactionImpulse * 0.16})`;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.setLineDash([]);
-    const echo = 8 + (1 - pageMotion.interactionImpulse) * 18;
-    ctx.strokeRect(focusX - echo * 0.5, focusY - echo * 0.5, echo, echo);
-    ctx.restore();
-  }
+  // Editorial clear space on the left — extended toward centre (~0.66w) to protect the reading column.
+  const clear=ctx.createLinearGradient(0,0,w*0.66,0);
+  clear.addColorStop(0,"rgba(7,6,11,0.62)");
+  clear.addColorStop(0.72,"rgba(7,6,11,0.2)");
+  clear.addColorStop(1,"rgba(7,6,11,0)");
+  ctx.fillStyle=clear;
+  ctx.fillRect(0,0,w*0.68,h);
 
-  const clearSpace = ctx.createLinearGradient(0, 0, w * 0.58, 0);
-  clearSpace.addColorStop(0, "rgba(8, 6, 10, 0.58)");
-  clearSpace.addColorStop(0.76, "rgba(8, 6, 10, 0.2)");
-  clearSpace.addColorStop(1, "rgba(8, 6, 10, 0)");
-  ctx.fillStyle = clearSpace;
-  ctx.fillRect(0, 0, w * 0.62, h);
+  const grade=ctx.createLinearGradient(0,0,w,h);
+  grade.addColorStop(0,"rgba(20,16,26,0.18)");
+  grade.addColorStop(0.5,"rgba(0,0,0,0)");
+  grade.addColorStop(1,"rgba(8,6,12,0.28)");
+  ctx.fillStyle=grade;
+  ctx.fillRect(0,0,w,h);
 
-  const vignette = ctx.createRadialGradient(
-    w * 0.76,
-    h * 0.43,
-    minSide * 0.14,
-    w * 0.62,
-    h * 0.46,
-    Math.max(w, h) * 0.78,
-  );
-  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-  vignette.addColorStop(1, "rgba(3, 2, 5, 0.4)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, w, h);
+  const vig=ctx.createRadialGradient(w*0.74,h*0.42,minS*0.15,w*0.6,h*0.46,maxS*0.8);
+  vig.addColorStop(0,"rgba(0,0,0,0)");
+  vig.addColorStop(1,"rgba(3,2,6,0.45)");
+  ctx.fillStyle=vig;
+  ctx.fillRect(0,0,w,h);
 
-  // Keep the static frame visually finished even at very small preview sizes.
+  ctx.globalAlpha=1;
   ctx.beginPath();
-  ctx.arc(w * 0.94, h * 0.11, minSide * 0.0025, 0, TAU);
-  ctx.fillStyle = "rgba(255, 248, 238, 0.34)";
+  ctx.arc(w*0.94,h*0.11,minS*0.0028,0,TAU);
+  ctx.fillStyle="rgba(255,248,238,0.4)";
   ctx.fill();
 
   ctx.restore();

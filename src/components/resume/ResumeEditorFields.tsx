@@ -16,6 +16,9 @@ interface ResumeEditorFieldsProps {
 const fieldsetClass =
   "site-panel scroll-mt-72 space-y-3 rounded-none p-4 sm:p-5 xl:scroll-mt-40";
 const legendClass = "site-eyebrow px-1";
+const fieldLabelClass =
+  "mb-1.5 block text-[11px] font-semibold text-site-secondary";
+const sectionNoteClass = "text-xs leading-5 text-site-muted";
 const inputClass =
   "site-field w-full rounded-none px-3 py-2 text-sm";
 const textAreaClass =
@@ -25,6 +28,35 @@ const subtleTextAreaClass =
 const textRemoveButtonClass = "site-button site-button-danger px-3 text-xs";
 const addButtonClass =
   "site-button site-button-secondary rounded-none border-dashed px-4 py-2 text-xs";
+
+interface SectionLegendProps {
+  number: string;
+  label: string;
+}
+
+function SectionLegend({ number, label }: SectionLegendProps) {
+  return (
+    <legend className={`${legendClass} inline-flex items-center gap-2`}>
+      <span className="font-mono text-site-muted">{number}</span>
+      <span>{label}</span>
+    </legend>
+  );
+}
+
+interface LabeledControlProps {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}
+
+function LabeledControl({ label, className = "", children }: LabeledControlProps) {
+  return (
+    <label className={`block min-w-0 ${className}`.trim()}>
+      <span className={fieldLabelClass}>{label}</span>
+      {children}
+    </label>
+  );
+}
 
 interface RecordHeaderProps {
   id: string;
@@ -74,64 +106,84 @@ export default function ResumeEditorFields({
         data-editor-section="profile"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Profile</legend>
+        <SectionLegend number="02" label="Profile" />
+        <p className={sectionNoteClass}>
+          Make your role and the next step obvious in the first five seconds.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <input
-            type="text"
-            value={data.name}
-            onChange={(event) => updateField("name", event.target.value)}
-            aria-label="Full name"
-            placeholder="Full name"
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={data.headline}
-            onChange={(event) => updateField("headline", event.target.value)}
-            aria-label="Headline"
-            placeholder="Headline"
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={data.location}
-            onChange={(event) => updateField("location", event.target.value)}
-            aria-label="Location"
-            placeholder="Location"
-            className={inputClass}
-          />
-          <input
-            type="email"
-            value={data.email ?? ""}
-            onChange={(event) => updateField("email", event.target.value || null)}
-            aria-label="Email"
-            placeholder="Email"
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={data.linkedin ?? ""}
-            onChange={(event) => updateField("linkedin", event.target.value || null)}
-            aria-label="LinkedIn URL"
-            placeholder="LinkedIn URL"
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={data.github ?? ""}
-            onChange={(event) => updateField("github", event.target.value || null)}
-            aria-label="GitHub URL or username"
-            placeholder="GitHub URL or username"
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={data.website ?? ""}
-            onChange={(event) => updateField("website", event.target.value || null)}
-            aria-label="Website"
-            placeholder="Website"
-            className="sm:col-span-2 w-full rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
-          />
+          <LabeledControl label="Full name">
+            <input
+              type="text"
+              value={data.name}
+              onChange={(event) => updateField("name", event.target.value)}
+              aria-label="Full name"
+              autoComplete="name"
+              placeholder="Avery Morgan"
+              className={inputClass}
+            />
+          </LabeledControl>
+          <LabeledControl label="Headline · target role">
+            <input
+              type="text"
+              value={data.headline}
+              onChange={(event) => updateField("headline", event.target.value)}
+              aria-label="Headline"
+              placeholder="Senior product designer"
+              className={inputClass}
+            />
+          </LabeledControl>
+          <LabeledControl label="Location">
+            <input
+              type="text"
+              value={data.location}
+              onChange={(event) => updateField("location", event.target.value)}
+              aria-label="Location"
+              autoComplete="address-level2"
+              placeholder="Brooklyn, NY"
+              className={inputClass}
+            />
+          </LabeledControl>
+          <LabeledControl label="Public email">
+            <input
+              type="email"
+              value={data.email ?? ""}
+              onChange={(event) => updateField("email", event.target.value || null)}
+              aria-label="Email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              className={inputClass}
+            />
+          </LabeledControl>
+          <LabeledControl label="LinkedIn">
+            <input
+              type="text"
+              value={data.linkedin ?? ""}
+              onChange={(event) => updateField("linkedin", event.target.value || null)}
+              aria-label="LinkedIn URL"
+              placeholder="linkedin.com/in/you"
+              className={inputClass}
+            />
+          </LabeledControl>
+          <LabeledControl label="GitHub">
+            <input
+              type="text"
+              value={data.github ?? ""}
+              onChange={(event) => updateField("github", event.target.value || null)}
+              aria-label="GitHub URL or username"
+              placeholder="github.com/you"
+              className={inputClass}
+            />
+          </LabeledControl>
+          <LabeledControl label="Portfolio or website" className="sm:col-span-2">
+            <input
+              type="text"
+              value={data.website ?? ""}
+              onChange={(event) => updateField("website", event.target.value || null)}
+              aria-label="Website"
+              placeholder="yourwork.com"
+              className={inputClass}
+            />
+          </LabeledControl>
         </div>
       </fieldset>
 
@@ -140,14 +192,20 @@ export default function ResumeEditorFields({
         data-editor-section="summary"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Summary</legend>
-        <textarea
-          aria-label="Professional summary"
-          value={data.summary}
-          onChange={(event) => updateField("summary", event.target.value)}
-          rows={mode === "living" ? 4 : 5}
-          className={textAreaClass}
-        />
+        <SectionLegend number="03" label="Intro" />
+        <p className={sectionNoteClass}>
+          Give a skimmer the through-line: what you do, where you are strongest, and what comes next.
+        </p>
+        <LabeledControl label="Opening summary">
+          <textarea
+            aria-label="Professional summary"
+            value={data.summary}
+            onChange={(event) => updateField("summary", event.target.value)}
+            rows={mode === "living" ? 4 : 5}
+            placeholder="Connect your experience, strengths, and direction in a few clear lines."
+            className={textAreaClass}
+          />
+        </LabeledControl>
       </fieldset>
 
       {includeStats ? (
@@ -156,7 +214,10 @@ export default function ResumeEditorFields({
           data-editor-section="stats"
           className={fieldsetClass}
         >
-          <legend className={legendClass}>Stats</legend>
+          <SectionLegend number="04" label="Impact" />
+          <p className={sectionNoteClass}>
+            Choose up to four numbers that make your scope or results believable at a glance.
+          </p>
           {data.stats.map((stat, index) => (
             <div
               key={index}
@@ -166,7 +227,7 @@ export default function ResumeEditorFields({
             >
               <RecordHeader
                 id={`editor-stat-${index + 1}-title`}
-                label={`Stat ${index + 1}`}
+                label={stat.label.trim() || `Impact signal ${index + 1}`}
                 removeLabel={`Remove stat ${index + 1}`}
                 onRemove={() =>
                   updateField(
@@ -220,7 +281,10 @@ export default function ResumeEditorFields({
         data-editor-section="experience"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Experience</legend>
+        <SectionLegend number="05" label="Experience" />
+        <p className={sectionNoteClass}>
+          Lead with outcomes and visible scope, not a list of responsibilities.
+        </p>
         {data.experience.map((experience, index) => (
           <div
             key={index}
@@ -230,7 +294,11 @@ export default function ResumeEditorFields({
           >
             <RecordHeader
               id={`editor-experience-${index + 1}-title`}
-              label={`Experience ${index + 1}`}
+              label={
+                experience.title.trim()
+                  ? `${experience.title}${experience.company.trim() ? ` · ${experience.company}` : ""}`
+                  : `Experience ${index + 1}`
+              }
               removeLabel={`Remove experience ${index + 1}`}
               onRemove={() =>
                 updateField(
@@ -336,7 +404,10 @@ export default function ResumeEditorFields({
         data-editor-section="education"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Education</legend>
+        <SectionLegend number="06" label="Education" />
+        <p className={sectionNoteClass}>
+          Keep the credentials that help someone understand your foundation.
+        </p>
         {data.education.map((education, index) => (
           <div
             key={index}
@@ -346,7 +417,7 @@ export default function ResumeEditorFields({
           >
             <RecordHeader
               id={`editor-education-${index + 1}-title`}
-              label={`Education ${index + 1}`}
+              label={education.degree.trim() || education.school.trim() || `Education ${index + 1}`}
               removeLabel={`Remove education ${index + 1}`}
               onRemove={() =>
                 updateField(
@@ -409,7 +480,10 @@ export default function ResumeEditorFields({
         data-editor-section="skills"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Skills</legend>
+        <SectionLegend number="07" label="Skills" />
+        <p className={sectionNoteClass}>
+          Group the terms recruiters search for so expertise is easy to scan.
+        </p>
         {data.skills.map((group, index) => (
           <div
             key={index}
@@ -419,7 +493,7 @@ export default function ResumeEditorFields({
           >
             <RecordHeader
               id={`editor-skill-category-${index + 1}-title`}
-              label={`Skill category ${index + 1}`}
+              label={group.category.trim() || `Skill category ${index + 1}`}
               removeLabel={`Remove skill category ${index + 1}`}
               onRemove={() =>
                 updateField(
@@ -484,7 +558,10 @@ export default function ResumeEditorFields({
         data-editor-section="projects"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Projects</legend>
+        <SectionLegend number="08" label="Projects" />
+        <p className={sectionNoteClass}>
+          Feature work that proves how you think, build, or lead beyond a job title.
+        </p>
         {data.projects.map((project, index) => (
           <div
             key={index}
@@ -494,7 +571,7 @@ export default function ResumeEditorFields({
           >
             <RecordHeader
               id={`editor-project-${index + 1}-title`}
-              label={`Project ${index + 1}`}
+              label={project.name.trim() || `Project ${index + 1}`}
               removeLabel={`Remove project ${index + 1}`}
               onRemove={() =>
                 updateField(
@@ -589,7 +666,10 @@ export default function ResumeEditorFields({
           data-editor-section="proof"
           className={fieldsetClass}
         >
-          <legend className={legendClass}>Proof</legend>
+          <SectionLegend number="09" label="Proof" />
+          <p className={sectionNoteClass}>
+            Add a case study, launch, publication, or result someone can inspect for themselves.
+          </p>
           <p className="text-sm leading-6 text-site-secondary">
             Add proof blocks that show work, outcomes, and artifacts directly on the page.
           </p>
@@ -602,7 +682,7 @@ export default function ResumeEditorFields({
             >
               <RecordHeader
                 id={`editor-proof-${index + 1}-title`}
-                label={`Proof block ${index + 1}`}
+                label={proof.title.trim() || `Proof block ${index + 1}`}
                 removeLabel={`Remove proof block ${index + 1}`}
                 onRemove={() =>
                   updateField(
@@ -707,7 +787,10 @@ export default function ResumeEditorFields({
           data-editor-section="testimonials"
           className={fieldsetClass}
         >
-          <legend className={legendClass}>Testimonials</legend>
+          <SectionLegend number="10" label="Voices" />
+          <p className={sectionNoteClass}>
+            Let a trusted collaborator describe the value of working with you in their own words.
+          </p>
           <p className="text-sm leading-6 text-site-secondary">
             Collect and approve quotes here. Only approved testimonials appear on the public page.
           </p>
@@ -720,7 +803,7 @@ export default function ResumeEditorFields({
             >
               <RecordHeader
                 id={`editor-testimonial-${index + 1}-title`}
-                label={`Testimonial ${index + 1}`}
+                label={testimonial.name.trim() || `Voice ${index + 1}`}
                 removeLabel={`Remove testimonial ${index + 1}`}
                 onRemove={() =>
                   updateField(
@@ -767,68 +850,89 @@ export default function ResumeEditorFields({
                   className={inputClass}
                 />
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <input
-                  type="text"
-                  value={testimonial.relationship ?? ""}
+              <LabeledControl label="Quote shown on the page">
+                <textarea
+                  value={testimonial.quote}
                   onChange={(event) => {
                     const next = [...testimonials];
-                    next[index] = { ...next[index], relationship: event.target.value || null };
+                    next[index] = { ...next[index], quote: event.target.value };
                     updateField("testimonials", next);
                   }}
-                  aria-label="Relationship"
-                  placeholder="Relationship"
-                  className={inputClass}
+                  rows={3}
+                  aria-label="What should appear on the page once approved?"
+                  placeholder="A specific observation about the value of working with you."
+                  className={subtleTextAreaClass}
                 />
-                <input
-                  aria-label="Testimonial request date"
-                  type="date"
-                  value={testimonial.requested_at ?? ""}
-                  onChange={(event) => {
-                    const next = [...testimonials];
-                    next[index] = { ...next[index], requested_at: event.target.value || null };
-                    updateField("testimonials", next);
-                  }}
-                  className={inputClass}
-                />
-                <select
-                  aria-label="Testimonial status"
-                  value={testimonial.status}
-                  onChange={(event) => {
-                    const next = [...testimonials];
-                    next[index] = { ...next[index], status: event.target.value as typeof testimonial.status };
-                    updateField("testimonials", next);
-                  }}
-                  className={inputClass}
-                >
-                  <option value="draft">Draft</option>
-                  <option value="requested">Requested</option>
-                  <option value="approved">Approved</option>
-                </select>
-              </div>
-              <input
-                aria-label="Testimonial approval date"
-                type="date"
-                value={testimonial.approved_at ?? ""}
-                onChange={(event) => {
-                  const next = [...testimonials];
-                  next[index] = { ...next[index], approved_at: event.target.value || null };
-                  updateField("testimonials", next);
-                }}
-                className={inputClass}
-              />
-              <textarea
-                value={testimonial.quote}
-                onChange={(event) => {
-                  const next = [...testimonials];
-                  next[index] = { ...next[index], quote: event.target.value };
-                  updateField("testimonials", next);
-                }}
-                rows={3}
-                aria-label="What should appear on the page once approved?"
-                placeholder="What should appear on the page once approved?"
-                className={subtleTextAreaClass}
-              />
+              </LabeledControl>
+              <details className="border border-site-border bg-site-surface px-3 py-2.5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] font-semibold text-site-secondary">
+                  Visibility &amp; request tracking
+                  <span className="font-mono text-[9px] text-site-action-hover">
+                    {testimonial.status}
+                  </span>
+                </summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <LabeledControl label="Relationship">
+                    <input
+                      type="text"
+                      value={testimonial.relationship ?? ""}
+                      onChange={(event) => {
+                        const next = [...testimonials];
+                        next[index] = { ...next[index], relationship: event.target.value || null };
+                        updateField("testimonials", next);
+                      }}
+                      aria-label="Relationship"
+                      placeholder="Former manager"
+                      className={inputClass}
+                    />
+                  </LabeledControl>
+                  <LabeledControl label="Public status">
+                    <select
+                      aria-label="Testimonial status"
+                      value={testimonial.status}
+                      onChange={(event) => {
+                        const next = [...testimonials];
+                        next[index] = {
+                          ...next[index],
+                          status: event.target.value as typeof testimonial.status,
+                        };
+                        updateField("testimonials", next);
+                      }}
+                      className={inputClass}
+                    >
+                      <option value="draft">Draft · hidden</option>
+                      <option value="requested">Requested · hidden</option>
+                      <option value="approved">Approved · public</option>
+                    </select>
+                  </LabeledControl>
+                  <LabeledControl label="Requested on">
+                    <input
+                      aria-label="Testimonial request date"
+                      type="date"
+                      value={testimonial.requested_at ?? ""}
+                      onChange={(event) => {
+                        const next = [...testimonials];
+                        next[index] = { ...next[index], requested_at: event.target.value || null };
+                        updateField("testimonials", next);
+                      }}
+                      className={inputClass}
+                    />
+                  </LabeledControl>
+                  <LabeledControl label="Approved on">
+                    <input
+                      aria-label="Testimonial approval date"
+                      type="date"
+                      value={testimonial.approved_at ?? ""}
+                      onChange={(event) => {
+                        const next = [...testimonials];
+                        next[index] = { ...next[index], approved_at: event.target.value || null };
+                        updateField("testimonials", next);
+                      }}
+                      className={inputClass}
+                    />
+                  </LabeledControl>
+                </div>
+              </details>
             </div>
           ))}
           <button
@@ -851,7 +955,10 @@ export default function ResumeEditorFields({
         data-editor-section="certifications"
         className={fieldsetClass}
       >
-        <legend className={legendClass}>Certifications</legend>
+        <SectionLegend number="11" label="Credentials" />
+        <p className={sectionNoteClass}>
+          Include current certifications that add trust or clarify a specialized skill.
+        </p>
         {data.certifications.map((certification, index) => (
           <div
             key={index}
@@ -861,7 +968,7 @@ export default function ResumeEditorFields({
           >
             <RecordHeader
               id={`editor-certification-${index + 1}-title`}
-              label={`Certification ${index + 1}`}
+              label={certification.name.trim() || `Credential ${index + 1}`}
               removeLabel={`Remove certification ${index + 1}`}
               onRemove={() =>
                 updateField(

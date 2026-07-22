@@ -100,15 +100,22 @@ describe("ResumeEditorFields", () => {
     );
 
     [
-      "Stat 1",
-      "Experience 1",
-      "Education 1",
-      "Skill category 1",
-      "Project 1",
-      "Proof block 1",
-      "Testimonial 1",
-      "Certification 1",
+      "Growth",
+      "Product Lead · Northstar",
+      "BFA",
+      "Product",
+      "Launch",
+      "Launch case study",
+      "Jordan Lee",
+      "Product Strategy",
     ].forEach((label) => expect(markup).toContain(label));
+
+    ["Intro", "Impact", "Voices", "Credentials"].forEach((label) =>
+      expect(markup).toContain(label),
+    );
+    expect(markup).toContain("Headline · target role");
+    expect(markup).toContain("Opening summary");
+    expect(markup).toContain("Visibility &amp; request tracking");
 
     expect(markup).toContain("sm:grid-cols-[7rem_minmax(0,1fr)]");
     expect(

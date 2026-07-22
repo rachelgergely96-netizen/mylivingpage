@@ -1,250 +1,384 @@
-import { fbm } from "../shared/noise";
-import { createSeededRandom, type RandomSource } from "../shared/random";
-import { frameScaleFromDelta } from "../shared/timing";
+import { fbm, noise2D } from "../shared/noise";
+import { createSeededRandom } from "../shared/random";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
-// Crack path (array of [x,y] points)
-type CrackPath = Array<[number, number]>;
+type Point = [number, number];
 
-function buildCracks(w: number, h: number, random: RandomSource): CrackPath[] {
-  const cracks: CrackPath[] = [];
-  const count = 18;
-
-  for (let i = 0; i < count; i++) {
-    const seed = i * 67.3;
-    const s = (v: number) => Math.sin(seed * v);
-
-    // Random start point on canvas
-    let x = Math.abs(s(127.1)) * w;
-    let y = Math.abs(s(311.7)) * h;
-
-    // Direction: mostly downward-outward from a rough center
-    const cx = w * 0.5 + s(73.1) * w * 0.3;
-    const cy = h * 0.4 + s(53.9) * h * 0.3;
-    const dx = x - cx;
-    const dy = y - cy;
-    const len = Math.hypot(dx, dy) + 1;
-    let dirX = dx / len;
-    let dirY = dy / len;
-
-    const path: CrackPath = [[x, y]];
-    const steps = 18 + Math.floor(Math.abs(s(89.3)) * 22);
-    const stepLen = (50 + Math.abs(s(43.7)) * 80) / steps * steps / 8;
-
-    for (let step = 0; step < steps; step++) {
-      // Wander direction with noise
-      const angle = Math.atan2(dirY, dirX) + (random() - 0.5) * 0.7;
-      dirX = Math.cos(angle);
-      dirY = Math.sin(angle);
-      x += dirX * stepLen;
-      y += dirY * stepLen;
-      x = Math.max(0, Math.min(w, x));
-      y = Math.max(0, Math.min(h, y));
-      path.push([x, y]);
-    }
-
-    cracks.push(path);
-  }
-  return cracks;
-}
-
-// Heat particles
-interface Particle {
+interface ObsidianGeometryPoint {
   x: number;
   y: number;
-  vy: number;
-  alpha: number;
-  r: number;
-  crackIdx: number;
+  nx: number;
+  ny: number;
+  frac: number;
 }
 
-interface ObsidianState {
-  width: number;
-  height: number;
-  cracks: CrackPath[];
-  particles: Particle[];
-  random: RandomSource;
+interface ObsidianCache {
+  w: number;
+  h: number;
+  fgrad: CanvasGradient[] | null;
+  vig: CanvasGradient | null;
+  topg: CanvasGradient | null;
 }
 
-const obsidianStates = new WeakMap<CanvasRenderingContext2D, ObsidianState>();
+const CFG=(function(){
+  const rnd=createSeededRandom(0x0b51d1a4);
+  const T2=Math.PI*2;
+  const originX=0.5, originY=0.60;
 
-function resetParticle(p: Particle, w: number, cracks: CrackPath[], random: RandomSource) {
-  const crack = cracks[p.crackIdx];
-  if (!crack || crack.length === 0) {
-    p.x = random() * w;
-    p.y = random() * 200 + 200;
-  } else {
-    const pt = crack[Math.floor(random() * crack.length)];
-    p.x = pt[0] + (random() - 0.5) * 6;
-    p.y = pt[1];
+  function sampleAt(pts: Point[], frac: number): Point{
+    const fi=frac*(pts.length-1);
+    const i0=Math.max(0,Math.min(pts.length-2,Math.floor(fi)));
+    const f=fi-i0;
+    const a=pts[i0], b=pts[i0+1];
+    return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f];
   }
-  p.vy = -(0.4 + random() * 0.8);
-  p.alpha = 0.5 + random() * 0.5;
-  p.r = 0.8 + random() * 1.4;
-}
-
-function createParticles(w: number, cracks: CrackPath[], random: RandomSource): Particle[] {
-  const particles: Particle[] = [];
-  for (let i = 0; i < 90; i++) {
-    const p: Particle = {
-      x: 0, y: 0, vy: 0, alpha: 0, r: 1,
-      crackIdx: i % cracks.length,
-    };
-    resetParticle(p, w, cracks, random);
-    // Scatter starting y
-    p.y += random() * 600;
-    particles.push(p);
+  function resample(pts: Point[], N: number): Point[]{
+    const out: Point[]=[];
+    for(let i=0;i<N;i++){ out.push(sampleAt(pts, N>1?i/(N-1):0)); }
+    return out;
   }
-  return particles;
-}
-
-function getObsidianState(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-): ObsidianState {
-  const current = obsidianStates.get(ctx);
-  if (current && current.width === width && current.height === height) {
-    return current;
+  function widthProfile(n: number, seed: number){
+    const wj: number[]=[];
+    for(let i=0;i<n;i++){
+      wj.push(0.74 + 0.16*Math.sin(i*0.9+seed) + 0.12*Math.sin(i*2.1+seed*1.7+0.6));
+    }
+    return wj;
   }
 
-  const random = createSeededRandom(0x0b51d1a4);
-  const cracks = buildCracks(width, height, random);
-  const next: ObsidianState = {
-    width,
-    height,
-    cracks,
-    particles: createParticles(width, cracks, random),
-    random,
-  };
-  obsidianStates.set(ctx, next);
-  return next;
-}
+  const veins=[];
+  const HERO=11;
+  for(let i=0;i<HERO;i++){
+    const base=(i/HERO)*T2 + rnd()*0.55;
+    let ang=base + (rnd()-0.5)*0.4;
+    let x=originX + (rnd()-0.5)*0.07;
+    let y=originY + (rnd()-0.5)*0.07;
+    const steps=16+Math.floor(rnd()*10);
+    const reach=0.34+rnd()*0.3;
+    const step=reach/steps;
+    const raw: Point[]=[[x,y]];
+    for(let s=0;s<steps;s++){
+      ang+=(rnd()-0.5)*0.62;
+      ang+=(Math.sin(ang)<0?0.03:-0.01);
+      x+=Math.cos(ang)*step;
+      y+=Math.sin(ang)*step*1.02;
+      x=Math.max(-0.06,Math.min(1.06,x));
+      y=Math.max(-0.06,Math.min(1.09,y));
+      raw.push([x,y]);
+    }
+    const pts=resample(raw, 11);
+    veins.push({pts, wj:widthProfile(pts.length, i*3.1+1.2), phase:rnd()*T2, breath:0.5+rnd()*0.85, width:0.6+rnd()*0.95, hot:rnd()});
+  }
 
-function drawCrack(
-  ctx: CanvasRenderingContext2D,
-  path: CrackPath,
-  alpha: number,
-  mouseGlow: number,
-) {
-  if (path.length < 2) return;
+  const branches=[];
+  for(let i=0;i<HERO;i++){
+    const parent=veins[i].pts;
+    const nb=1+Math.floor(rnd()*2);
+    for(let b=0;b<nb;b++){
+      const idx=2+Math.floor(rnd()*(parent.length-3));
+      let x=parent[idx][0], y=parent[idx][1];
+      const nx=parent[idx+1]?parent[idx+1]:parent[idx];
+      let ang=Math.atan2(nx[1]-y, nx[0]-x)+(rnd()-0.5)*1.5;
+      const steps=6+Math.floor(rnd()*6);
+      const st=0.035+rnd()*0.05;
+      const raw: Point[]=[[x,y]];
+      for(let s=0;s<steps;s++){
+        ang+=(rnd()-0.5)*0.75;
+        x+=Math.cos(ang)*st; y+=Math.sin(ang)*st;
+        raw.push([x,y]);
+      }
+      const pts=resample(raw, 6);
+      branches.push({pts, wj:widthProfile(pts.length, i*7.7+b*2.3+0.4), phase:rnd()*T2, width:0.35+rnd()*0.5});
+    }
+  }
 
-  // Outer glow — thick orange
+  const nodes=[];
+  const fracs=[0.3,0.55,0.8];
+  for(let i=0;i<veins.length;i++){
+    for(let k=0;k<fracs.length;k++){
+      const p=sampleAt(veins[i].pts, fracs[k]);
+      nodes.push({x:p[0], y:p[1], frac:fracs[k], vein:i, size:0.5+rnd()*0.95, phase:veins[i].phase});
+    }
+  }
+
+  const vents=[];
+  for(let i=0;i<veins.length;i++){
+    const p=veins[i].pts[veins[i].pts.length-1];
+    vents.push({x:p[0], y:p[1], phase:rnd()*T2, size:0.65+rnd()*0.85, spike:rnd()<0.55});
+  }
+
+  const GX=6, GY=4;
+  const corners=[];
+  for(let gy=0;gy<=GY;gy++){
+    const row=[];
+    for(let gx=0;gx<=GX;gx++){
+      row.push([gx/GX+(rnd()-0.5)*0.085, gy/GY+(rnd()-0.5)*0.085]);
+    }
+    corners.push(row);
+  }
+  const facets=[];
+  for(let gy=0;gy<GY;gy++){
+    for(let gx=0;gx<GX;gx++){
+      facets.push({
+        a:corners[gy][gx], b:corners[gy][gx+1], c:corners[gy+1][gx+1], d:corners[gy+1][gx],
+        shade:0.35+rnd()*0.65, tone:rnd()
+      });
+    }
+  }
+
+  const embers=[];
+  for(let i=0;i<80;i++){
+    const v=Math.floor(rnd()*veins.length);
+    const p=sampleAt(veins[v].pts, 0.1+rnd()*0.82);
+    embers.push({
+      sx:p[0]+(rnd()-0.5)*0.02, sy:p[1],
+      speed:0.05+rnd()*0.14, phase:rnd(),
+      rise:0.16+rnd()*0.42, driftAmp:0.008+rnd()*0.03, driftFreq:1+rnd()*2.6,
+      size:0.6+rnd()*1.8, swirl:rnd()*T2, big:rnd()<0.16
+    });
+  }
+
+  const poolCols=[[255,120,32],[220,52,10],[255,164,86],[150,26,6]];
+  const pools=[];
+  for(let i=0;i<4;i++){
+    pools.push({x:0.3+rnd()*0.4, y:0.42+rnd()*0.46, r:0.3+rnd()*0.3, sp:0.03+rnd()*0.05, phase:rnd()*T2, col:poolCols[i%poolCols.length]});
+  }
+
+  const cache: ObsidianCache={w:-1,h:-1,fgrad:null,vig:null,topg:null};
+
+  return {originX, originY, veins, branches, nodes, vents, facets, embers, pools, cache};
+})();
+
+export const renderObsidian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+  const C=CFG;
+  const min=Math.min(w,h)||1;
+  const beat=0.5+0.5*Math.sin(t*0.5);
+  const beat2=0.5+0.5*Math.sin(t*0.28+1.3);
+  const cxp=mx*w, cyp=my*h;
+  const ox=C.originX*w, oy=C.originY*h;
+
+  // ---- cache static gradients (facets / vignette / top-depth) — rebuilt only on resize ----
+  const cache=C.cache;
+  if(cache.w!==w || cache.h!==h){
+    cache.w=w; cache.h=h;
+    const fg=new Array<CanvasGradient>(C.facets.length);
+    for(let i=0;i<C.facets.length;i++){
+      const f=C.facets[i];
+      const ax=f.a[0]*w, ay=f.a[1]*h, ccx=f.c[0]*w, ccy=f.c[1]*h;
+      const g=ctx.createLinearGradient(ax,ay,ccx,ccy);
+      const lit=0.03+f.shade*0.06;
+      const warm=(28+f.tone*26)|0;
+      g.addColorStop(0,"rgba("+warm+","+((9+f.tone*9)|0)+",6,"+lit+")");
+      g.addColorStop(0.5,"rgba(9,3,1,0)");
+      g.addColorStop(1,"rgba(2,0,0,"+(0.10+f.shade*0.14)+")");
+      fg[i]=g;
+    }
+    cache.fgrad=fg;
+    const vig=ctx.createRadialGradient(w*0.5,h*0.52,min*0.12, w*0.5,h*0.52,Math.max(w,h)*0.72);
+    vig.addColorStop(0,"rgba(0,0,0,0)");
+    vig.addColorStop(0.6,"rgba(2,0,0,0.26)");
+    vig.addColorStop(1,"rgba(1,0,0,0.82)");
+    cache.vig=vig;
+    const topg=ctx.createLinearGradient(0,0,0,h*0.4);
+    topg.addColorStop(0,"rgba(0,0,0,0.5)");
+    topg.addColorStop(1,"rgba(0,0,0,0)");
+    cache.topg=topg;
+  }
+  const fgrad=cache.fgrad;
+  const vignette=cache.vig;
+  const topDepth=cache.topg;
+  if(!fgrad || !vignette || !topDepth) return;
+
   ctx.save();
-  ctx.globalAlpha = alpha * 0.55;
-  ctx.strokeStyle = `rgba(255,70,0,1)`;
-  ctx.lineWidth = 5 + mouseGlow * 3;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.shadowColor = "rgba(255,80,0,0.9)";
-  ctx.shadowBlur = 14 + mouseGlow * 10;
-  ctx.beginPath();
-  ctx.moveTo(path[0][0], path[0][1]);
-  for (let i = 1; i < path.length; i++) {
-    ctx.lineTo(path[i][0], path[i][1]);
-  }
-  ctx.stroke();
-  ctx.restore();
+  ctx.lineCap="round"; ctx.lineJoin="round";
 
-  // Inner bright core
-  ctx.save();
-  ctx.globalAlpha = alpha * 0.85;
-  ctx.strokeStyle = `rgba(255,160,50,1)`;
-  ctx.lineWidth = 1.5;
-  ctx.shadowColor = "rgba(255,180,80,0.8)";
-  ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.moveTo(path[0][0], path[0][1]);
-  for (let i = 1; i < path.length; i++) {
-    ctx.lineTo(path[i][0], path[i][1]);
-  }
-  ctx.stroke();
-  ctx.restore();
-}
+  // 1. Molten underglow rising from beneath the glass
+  ctx.globalCompositeOperation="lighter";
+  const ug=ctx.createRadialGradient(w*0.5, h*0.87, min*0.04, w*0.5, h*0.87, h*(0.95+0.06*beat));
+  ug.addColorStop(0, "rgba(122,28,5,"+(0.46+0.13*beat)+")");
+  ug.addColorStop(0.42, "rgba(58,12,2,0.30)");
+  ug.addColorStop(1, "rgba(2,0,0,0)");
+  ctx.fillStyle=ug; ctx.fillRect(0,0,w,h);
 
-export const renderObsidian: ThemeRenderer = (ctx, width, height, time, mouseX, mouseY, deltaSeconds) => {
-  const state = getObsidianState(ctx, width, height);
-  const frameScale = frameScaleFromDelta(deltaSeconds);
+  // molten core glows — lowered out of the text band, warm + softened so the convergence is a pocket, not a hotspot
+  softGlow(ctx, ox, oy, min*(0.34+0.03*beat), "rgba(255,104,32,"+(0.12+0.07*beat)+")", "transparent");
+  softGlow(ctx, ox, oy, min*(0.16+0.02*beat2), "rgba(255,170,96,"+(0.10+0.06*beat2)+")", "transparent");
 
-  const mx = mouseX * width;
-  const my = mouseY * height;
-
-  // Background — near-black volcanic
-  ctx.fillStyle = "#040100";
-  ctx.fillRect(0, 0, width, height);
-
-  // Subtle FBM surface texture
-  const texSamples = 32;
-  for (let tx = 0; tx < texSamples; tx++) {
-    for (let ty = 0; ty < texSamples; ty++) {
-      const n = fbm(tx / texSamples * 4 + time * 0.01, ty / texSamples * 4, 3);
-      if (n < -0.05) continue;
-      const alpha = n * 0.06;
-      const x = (tx / texSamples) * width;
-      const y = (ty / texSamples) * height;
-      ctx.fillStyle = `rgba(40,10,0,${alpha})`;
-      ctx.fillRect(x, y, width / texSamples + 1, height / texSamples + 1);
-    }
+  // 2. Drifting ember heat-pools — localised fill (no full-screen additive overdraw)
+  for(let i=0;i<C.pools.length;i++){
+    const p=C.pools[i];
+    const px=(p.x+Math.sin(t*p.sp+p.phase)*0.05)*w;
+    const py=(p.y+Math.cos(t*p.sp*0.8+p.phase)*0.04)*h;
+    const pr=Math.max(1,p.r*min*(0.9+0.12*Math.sin(t*0.2+p.phase)));
+    const a=0.085+0.045*Math.sin(t*0.3+p.phase);
+    if(a<=0.002) continue;
+    const g=ctx.createRadialGradient(px,py,0,px,py,pr);
+    g.addColorStop(0,"rgba("+p.col[0]+","+p.col[1]+","+p.col[2]+","+Math.max(0,a)+")");
+    g.addColorStop(0.5,"rgba("+p.col[0]+","+p.col[1]+","+p.col[2]+","+Math.max(0,a*0.38)+")");
+    g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;
+    const rx=Math.max(0,px-pr), ry=Math.max(0,py-pr);
+    ctx.fillRect(rx,ry,Math.min(w,px+pr)-rx,Math.min(h,py+pr)-ry);
   }
 
-  // ── Cracks ──────────────────────────────────────────────────────
-  for (let i = 0; i < state.cracks.length; i++) {
-    const crack = state.cracks[i];
-    const crackSeed = i * 0.71;
-
-    // Breathing pulse per crack
-    const alpha = 0.4 + 0.35 * Math.sin(time * 0.65 + crackSeed);
-
-    // Mouse glow boost — check proximity to any point in the crack
-    let mouseGlow = 0;
-    const midPt = crack[Math.floor(crack.length / 2)];
-    if (midPt) {
-      const dist = Math.hypot(mx - midPt[0], my - midPt[1]);
-      mouseGlow = Math.max(0, 1 - dist / 200);
-    }
-
-    // FBM along crack for flowing magma effect
-    const flowN = fbm(i * 0.3 + time * 0.04, time * 0.07, 3);
-    const finalAlpha = Math.min(1, alpha + mouseGlow * 0.45 + flowN * 0.15);
-
-    drawCrack(ctx, crack, finalAlpha, mouseGlow);
-  }
-
-  // ── Heat particles ───────────────────────────────────────────────
-  for (const p of state.particles) {
-    p.y += p.vy * frameScale;
-    p.x += Math.sin(time * 1.1 + p.y * 0.02) * 0.4 * frameScale;
-    p.alpha -= 0.004 * frameScale;
-
-    if (p.alpha <= 0 || p.y < -10) {
-      resetParticle(p, width, state.cracks, state.random);
-    }
-
-    // Particles near mouse rise faster
-    const dist = Math.hypot(mx - p.x, my - p.y);
-    if (dist < 100) {
-      p.vy -= 0.02 * (1 - dist / 100) * frameScale;
-    }
-
-    const hue = 20 + (p.crackIdx % 7) * 3;
-    ctx.save();
-    ctx.globalAlpha = p.alpha * 0.75;
-    ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
-    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
-    ctx.shadowBlur = 4;
+  // 3. Obsidian glass facets over the molten depth (cached gradients)
+  ctx.globalCompositeOperation="source-over";
+  for(let i=0;i<C.facets.length;i++){
+    const f=C.facets[i];
+    const ax=f.a[0]*w, ay=f.a[1]*h, bx=f.b[0]*w, by=f.b[1]*h;
+    const ccx=f.c[0]*w, ccy=f.c[1]*h, dxx=f.d[0]*w, dyy=f.d[1]*h;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.lineTo(ccx,ccy); ctx.lineTo(dxx,dyy); ctx.closePath();
+    ctx.fillStyle=fgrad[i]; ctx.fill();
+    ctx.strokeStyle = f.shade>0.6 ? "rgba(150,64,26,0.06)" : "rgba(120,44,18,0.045)";
+    ctx.lineWidth=1; ctx.stroke();
   }
 
-  // ── Dark vignette ────────────────────────────────────────────────
-  const vignette = ctx.createRadialGradient(
-    width / 2, height / 2, height * 0.1,
-    width / 2, height / 2, height * 0.9,
-  );
-  vignette.addColorStop(0, "rgba(0,0,0,0)");
-  vignette.addColorStop(1, "rgba(2,1,0,0.7)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, width, height);
+  // 4. Heat-haze / ember-dust texture
+  const gxN=18, gyN=10, cw=w/gxN, ch=h/gyN;
+  for(let ix=0; ix<gxN; ix++){
+    for(let iy=0; iy<gyN; iy++){
+      const nx=ix/gxN, ny=iy/gyN;
+      const n=fbm(nx*3.5 + t*0.03, ny*3.5 - t*0.05, 3);
+      if(n<0.09) continue;
+      const heat=Math.max(0, 1-Math.abs(ny-C.originY)*1.6);
+      const a=n*0.05*(0.4+heat);
+      if(a<0.004) continue;
+      ctx.fillStyle="rgba(255,"+((88+heat*72)|0)+","+((28+heat*34)|0)+","+a+")";
+      ctx.fillRect(ix*cw, iy*ch, cw+1, ch+1);
+    }
+  }
+
+  // ---- geometry helpers for tapered magma ribbons ----
+  const geo=(pts: Point[]): ObsidianGeometryPoint[]=>{
+    const n=pts.length;
+    const arr=new Array<ObsidianGeometryPoint>(n);
+    for(let i=0;i<n;i++){
+      arr[i]={x:pts[i][0]*w, y:pts[i][1]*h, nx:0, ny:0, frac:n>1?i/(n-1):0};
+    }
+    for(let i=0;i<n;i++){
+      const a=arr[i>0?i-1:0], c=arr[i<n-1?i+1:n-1];
+      const tx=c.x-a.x, ty=c.y-a.y;
+      const tl=Math.hypot(tx,ty)||1;
+      arr[i].nx=-ty/tl; arr[i].ny=tx/tl;
+    }
+    return arr;
+  };
+  const ribbon=(g: ObsidianGeometryPoint[],hwFn: (frac: number, index: number) => number)=>{
+    const n=g.length;
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const hw=hwFn(g[i].frac,i);
+      const px=g[i].x+g[i].nx*hw, py=g[i].y+g[i].ny*hw;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    for(let i=n-1;i>=0;i--){
+      const hw=hwFn(g[i].frac,i);
+      ctx.lineTo(g[i].x-g[i].nx*hw, g[i].y-g[i].ny*hw);
+    }
+    ctx.closePath();
+  };
+
+  // 5. Magma veins: layered tapered ribbons (deep-red halo, orange body, warm-hot core).
+  //    No shadowBlur — the layered taper + host bright-pass bloom carry the glow.
+  ctx.globalCompositeOperation="lighter";
+  for(let vi=0; vi<C.veins.length; vi++){
+    const v=C.veins[vi];
+    const g=geo(v.pts);
+    const wj=v.wj;
+    const mid=g[g.length>>1];
+    const md=Math.hypot(cxp-mid.x, cyp-mid.y);
+    const mg=Math.max(0, 1-md/(min*0.35));
+    const breath=0.6+0.4*Math.sin(t*v.breath + v.phase);
+    const flick=0.82+0.18*fbm(vi*1.7, t*0.6, 2);
+    const wb=0.8+0.45*breath+0.25*mg;
+    const ai=Math.min(1.5, 0.5 + breath*0.5 + mg*0.75 + v.hot*0.15);
+
+    // outer molten glow — deep red, widest, tapers to the tip (slightly widened to feather without shadowBlur)
+    ribbon(g,(fr,i)=> min*0.019*v.width*wb*Math.pow(1-fr,0.5)*wj[i] + min*0.0012);
+    ctx.fillStyle="rgba(150,26,4,"+(0.16*ai)+")"; ctx.fill();
+
+    // molten body — orange, medium
+    ribbon(g,(fr,i)=> min*0.0095*v.width*(0.85+0.3*breath)*Math.pow(1-fr,0.82)*wj[i]);
+    ctx.fillStyle="rgba(255,100,26,"+(0.21*ai)+")"; ctx.fill();
+
+    // warm-hot core — warmed + capped, and faded to zero at the convergence (fr->0) so the 11-vein junction is not a bloom hotspot
+    ribbon(g,(fr,i)=> min*0.0038*v.width*(0.9+0.2*flick)*Math.pow(1-fr,1.35)*wj[i]*Math.min(1,fr*6.2));
+    ctx.fillStyle="rgba(255,224,170,"+(Math.min(0.4,0.34*ai*flick))+")"; ctx.fill();
+  }
+
+  // 6. Branch cracks — thinner tapered ribbons, no shadowBlur
+  for(let bi=0; bi<C.branches.length; bi++){
+    const b=C.branches[bi];
+    const g=geo(b.pts);
+    const wj=b.wj;
+    const breath=0.5+0.5*Math.sin(t*0.95 + b.phase);
+    const ai=0.3+breath*0.4;
+
+    ribbon(g,(fr,i)=> min*0.0078*b.width*(0.7+0.4*breath)*Math.pow(1-fr,0.6)*wj[i] + min*0.0007);
+    ctx.fillStyle="rgba(170,34,8,"+(0.16*ai)+")"; ctx.fill();
+
+    ribbon(g,(fr,i)=> min*0.0026*b.width*Math.pow(1-fr,1.1)*wj[i]);
+    ctx.fillStyle="rgba(255,150,64,"+(0.32*ai)+")"; ctx.fill();
+  }
+
+  // 7. Travelling hot pockets — warm amber, capped (no white bloom over content)
+  for(let ni=0; ni<C.nodes.length; ni++){
+    const nd=C.nodes[ni];
+    const wv=0.5+0.5*Math.sin(t*1.1 - nd.frac*6.5 + nd.phase);
+    const b=wv*wv;
+    if(b<0.08) continue;
+    const x=nd.x*w, y=nd.y*h;
+    const r=Math.max(1, min*(0.010+nd.size*0.02)*(0.6+b*0.8));
+    softGlow(ctx, x, y, r*2.2, "rgba(255,116,40,"+(0.20*b)+")", "transparent");
+    softGlow(ctx, x, y, r*0.85, "rgba(255,192,124,"+(Math.min(0.4,0.42*b))+")", "transparent");
+  }
+
+  // 8. Vents where veins reach the surface — soft round blooms, warmed + capped
+  for(let i=0;i<C.vents.length;i++){
+    const ve=C.vents[i];
+    const pulse=0.42+0.58*Math.abs(Math.sin(t*0.8+ve.phase));
+    const x=ve.x*w, y=ve.y*h;
+    const r=Math.max(1, min*(0.02+ve.size*0.03)*(0.7+0.4*pulse));
+    softGlow(ctx, x, y, r*1.8, "rgba(255,86,24,"+(0.18*pulse)+")", "transparent");
+    softGlow(ctx, x, y, r*0.7, "rgba(255,198,138,"+(Math.min(0.4,0.46*pulse))+")", "transparent");
+    if(ve.spike && pulse>0.72){
+      softGlow(ctx, x, y, r*1.2, "rgba(255,214,150,"+(Math.min(0.34,0.4*(pulse-0.72)/0.28))+")", "transparent");
+    }
+  }
+
+  // cursor heat bloom — subtle warm lift (sits over centre when the pointer is at rest)
+  softGlow(ctx, cxp, cyp, min*0.15, "rgba(255,128,50,0.055)", "transparent");
+
+  // 9. Rising heat embers, colour-graded hot to cool
+  for(let i=0;i<C.embers.length;i++){
+    const e=C.embers[i];
+    let p=t*e.speed + e.phase; p=p-Math.floor(p);
+    const life=Math.sin(p*Math.PI);
+    if(life<=0.02) continue;
+    const curl=noise2D(e.sx*6 + p*2.2, e.sy*6 + t*0.1)*0.03;
+    const x=(e.sx + Math.sin(p*6.28318*e.driftFreq + e.swirl)*e.driftAmp + curl)*w;
+    const y=(e.sy - p*e.rise)*h;
+    const cool=1-p;
+    const r=Math.max(0.4, e.size*(0.5+cool*0.7));
+    const gg=(86+cool*142)|0, bb=(18+cool*82)|0;
+    const a=Math.min(0.82, life*(0.48+0.4*cool));
+    if(e.big){
+      softGlow(ctx, x, y, r*4, "rgba(255,"+gg+","+bb+","+(a*0.32)+")", "transparent");
+    }
+    ctx.fillStyle="rgba(255,"+gg+","+bb+","+a+")";
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.28318); ctx.fill();
+  }
+
+  // 10. Warm centre grade + vignette + top depth (vignette & top-depth are cached)
+  const grade=ctx.createRadialGradient(w*0.5,h*0.5,0,w*0.5,h*0.5,min*0.82);
+  grade.addColorStop(0,"rgba(82,26,7,"+(0.08+0.035*beat)+")");
+  grade.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=grade; ctx.fillRect(0,0,w,h);
+
+  ctx.globalCompositeOperation="source-over";
+  ctx.fillStyle=vignette; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle=topDepth; ctx.fillRect(0,0,w,h*0.4);
+
+  ctx.restore();
 };

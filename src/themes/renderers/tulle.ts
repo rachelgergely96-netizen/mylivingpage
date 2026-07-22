@@ -1,76 +1,149 @@
+import { fbm } from "../shared/noise";
+import { createSeededRandom } from "../shared/random";
 import {
   finiteClamp,
   resolveThemeMotion,
   storyStepWeight,
 } from "../shared/motion";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-interface Drape {
+interface TulleDrape {
   x: number;
-  y: number;
-  width: number;
-  height: number;
-  amplitude: number;
+  w: number;
+  yTop: number;
+  hMul: number;
+  amp: number;
   sag: number;
+  depth: number;
   phase: number;
-  color: readonly [number, number, number];
+  speed: number;
+  color: number[];
+  cols: number;
+  rows: number;
+  sheenSpeed: number;
+  sheenPhase: number;
+  sheenW: number;
 }
 
-function fabricPoint(
-  drape: Drape,
-  u: number,
-  v: number,
-  phase: number,
-  pullX: number,
-  pullY: number,
-): readonly [number, number] {
-  const anchored = v * v;
-  const billow = Math.sin(v * Math.PI * 1.55 + phase + u * 1.8);
-  const crossFold = Math.sin(u * Math.PI * 2.4 - phase * 0.45) * Math.sin(v * Math.PI);
-  const x =
-    drape.x +
-    u * drape.width +
-    billow * drape.amplitude * (0.18 + anchored * 0.82) +
-    pullX * anchored;
-  const y =
-    drape.y +
-    v * drape.height +
-    Math.sin(u * Math.PI) * drape.sag * Math.sin(v * Math.PI) +
-    crossFold * drape.sag * 0.18 +
-    pullY * anchored;
-  return [x, y];
+interface TulleGradientCache {
+  key: string;
+  bg: CanvasGradient | null;
+  clear: CanvasGradient | null;
+  grade: CanvasGradient | null;
+  vig: CanvasGradient | null;
 }
 
-function traceDrape(
-  ctx: CanvasRenderingContext2D,
-  drape: Drape,
-  phase: number,
-  pullX: number,
-  pullY: number,
-) {
-  const segments = 16;
-  ctx.beginPath();
-  for (let i = 0; i <= segments; i += 1) {
-    const point = fabricPoint(drape, i / segments, 0, phase, pullX, pullY);
-    if (i === 0) ctx.moveTo(point[0], point[1]);
-    else ctx.lineTo(point[0], point[1]);
+const CFG = (function () {
+  const rnd = createSeededRandom(2130741);
+  const palette = [
+    [126, 151, 184],
+    [150, 150, 190],
+    [190, 174, 210],
+    [201, 190, 221],
+    [224, 214, 234],
+  ];
+  const drapeDefs = [
+    { x: 0.5, w: 0.44, amp: 0.055, sag: 0.05, depth: 0.2, ci: 0 },
+    { x: 0.605, w: 0.41, amp: 0.086, sag: 0.07, depth: 0.42, ci: 1 },
+    { x: 0.7, w: 0.37, amp: 0.074, sag: 0.06, depth: 0.62, ci: 2 },
+    { x: 0.795, w: 0.34, amp: 0.096, sag: 0.076, depth: 0.8, ci: 3 },
+    { x: 0.885, w: 0.3, amp: 0.07, sag: 0.05, depth: 1.0, ci: 4 },
+  ];
+  const drapes: TulleDrape[] = [];
+  for (let i = 0; i < drapeDefs.length; i++) {
+    const d = drapeDefs[i];
+    drapes.push({
+      x: d.x,
+      w: d.w,
+      yTop: -0.06 - rnd() * 0.08,
+      hMul: 1.12 + rnd() * 0.06,
+      amp: d.amp,
+      sag: d.sag,
+      depth: d.depth,
+      phase: rnd() * TAU,
+      speed: 0.7 + rnd() * 0.5,
+      color: palette[d.ci],
+      cols: 5 + (i % 2),
+      rows: 5 + (i % 2),
+      sheenSpeed: 0.05 + i * 0.03 + rnd() * 0.02,
+      sheenPhase: rnd() * TAU,
+      sheenW: 0.15 + rnd() * 0.1,
+    });
   }
-  for (let i = 1; i <= segments; i += 1) {
-    const point = fabricPoint(drape, 1, i / segments, phase, pullX, pullY);
-    ctx.lineTo(point[0], point[1]);
+  const massColors = [
+    [201, 214, 243],
+    [150, 132, 196],
+    [201, 190, 221],
+    [120, 140, 180],
+    [230, 222, 240],
+  ];
+  const masses = [];
+  for (let i = 0; i < 5; i++) {
+    const m = {
+      x: 0.63 + rnd() * 0.3,
+      y: 0.18 + rnd() * 0.54,
+      r: 0.28 + rnd() * 0.24,
+      color: massColors[i],
+      amp: 0.03 + rnd() * 0.04,
+      phase: rnd() * TAU,
+      speed: 0.045 + rnd() * 0.07,
+      alpha: 0.05 + rnd() * 0.045,
+    };
+    if (i < 3) masses.push(m);
   }
-  for (let i = segments - 1; i >= 0; i -= 1) {
-    const point = fabricPoint(drape, i / segments, 1, phase, pullX, pullY);
-    ctx.lineTo(point[0], point[1]);
+  const wisps = [];
+  for (let i = 0; i < 6; i++) {
+    wisps.push({
+      bx: 0.52 + i * 0.075,
+      seed: i,
+      col: [190, 180, 214],
+      phase: rnd() * TAU,
+    });
   }
-  for (let i = segments - 1; i > 0; i -= 1) {
-    const point = fabricPoint(drape, 0, i / segments, phase, pullX, pullY);
-    ctx.lineTo(point[0], point[1]);
+  const motes = [];
+  for (let i = 0; i < 40; i++) {
+    motes.push({
+      x: 0.32 + rnd() * 0.7,
+      y: rnd(),
+      r: 0.4 + rnd() * 1.5,
+      depth: rnd(),
+      phase: rnd() * TAU,
+      driftX: rnd() - 0.5,
+      driftY: rnd() - 0.5,
+      driftSpeed: 0.03 + rnd() * 0.06,
+      twPhase: rnd() * TAU,
+      twSpeed: 0.3 + rnd() * 0.9,
+    });
   }
-  ctx.closePath();
-}
+  const pearls = [];
+  for (let i = 0; i < 24; i++) {
+    pearls.push({
+      di: i % drapeDefs.length,
+      u: rnd(),
+      v: 0.1 + rnd() * 0.82,
+      r: 0.9 + rnd() * 1.6,
+      phase: rnd() * TAU,
+      twSpeed: 0.22 + rnd() * 0.7,
+    });
+  }
+  return {
+    drapes: drapes,
+    masses: masses,
+    wisps: wisps,
+    motes: motes,
+    pearls: pearls,
+  };
+})();
+const GRAD: TulleGradientCache = {
+  key: "",
+  bg: null,
+  clear: null,
+  grade: null,
+  vig: null,
+};
 
 export const renderTulle: ThemeRenderer = (
   ctx,
@@ -82,165 +155,366 @@ export const renderTulle: ThemeRenderer = (
   _deltaSeconds,
   motion,
 ) => {
-  const page = resolveThemeMotion(motion);
-  const pointerX = finiteClamp(mx, 0, 1, 0.5) - 0.5;
-  const pointerY = finiteClamp(my, 0, 1, 0.5) - 0.5;
-  const minSide = Math.min(w, h);
-  const pullX = pointerX * minSide * 0.11 + page.scrollVelocity * minSide * 0.012;
-  const pullY = pointerY * minSide * 0.065 - page.interactionImpulse * minSide * 0.025;
-  const phase = t * 0.055 + page.storyProgress * 0.9;
-  const drapes: Drape[] = [
-    {
-      x: w * 0.55,
-      y: -h * 0.08,
-      width: minSide * 0.39,
-      height: h * 1.12,
-      amplitude: minSide * 0.065,
-      sag: minSide * 0.055,
-      phase: 0.2,
-      color: [126, 151, 184],
-    },
-    {
-      x: w * 0.69,
-      y: -h * 0.12,
-      width: minSide * 0.36,
-      height: h * 1.15,
-      amplitude: minSide * 0.09,
-      sag: minSide * 0.07,
-      phase: 1.8,
-      color: [190, 174, 210],
-    },
-    {
-      x: w * 0.79,
-      y: -h * 0.05,
-      width: minSide * 0.31,
-      height: h * 1.08,
-      amplitude: minSide * 0.075,
-      sag: minSide * 0.05,
-      phase: 3.4,
-      color: [218, 210, 228],
-    },
-  ];
-
+  const M = resolveThemeMotion(motion);
+  const minSide = Math.min(w, h) || 1;
+  const maxSide = Math.max(w, h) || 1;
+  const px = finiteClamp(mx, 0, 1, 0.5) - 0.5;
+  const py = finiteClamp(my, 0, 1, 0.5) - 0.5;
+  const pullX = px * minSide * 0.11 + M.scrollVelocity * minSide * 0.012;
+  const pullY = py * minSide * 0.065 - M.interactionImpulse * minSide * 0.025;
+  const story = M.storyProgress;
+  const fp = (
+    d: TulleDrape,
+    u: number,
+    v: number,
+    ph: number,
+  ): [number, number] => {
+    const anchored = v * v;
+    const billow = Math.sin(v * Math.PI * 1.55 + ph + u * 1.8);
+    const secondary = Math.sin(u * Math.PI * 3.1 + ph * 0.7 - v * 2.0);
+    const cross =
+      Math.sin(u * Math.PI * 2.4 - ph * 0.45) * Math.sin(v * Math.PI);
+    const amp = d.amp * minSide;
+    const sag = d.sag * minSide;
+    const x =
+      d.x * w +
+      u * d.w * minSide +
+      billow * amp * (0.18 + anchored * 0.82) +
+      secondary * amp * 0.28 +
+      pullX * anchored * d.depth;
+    const y =
+      d.yTop * h +
+      v * d.hMul * h +
+      Math.sin(u * Math.PI) * sag * Math.sin(v * Math.PI) +
+      cross * sag * 0.2 +
+      pullY * anchored * d.depth;
+    return [x, y];
+  };
+  const trace = (d: TulleDrape, ph: number) => {
+    const seg = 12;
+    ctx.beginPath();
+    for (let i = 0; i <= seg; i++) {
+      const p = fp(d, i / seg, 0, ph);
+      if (i) ctx.lineTo(p[0], p[1]);
+      else ctx.moveTo(p[0], p[1]);
+    }
+    for (let i = 1; i <= seg; i++) {
+      const p = fp(d, 1, i / seg, ph);
+      ctx.lineTo(p[0], p[1]);
+    }
+    for (let i = seg - 1; i >= 0; i--) {
+      const p = fp(d, i / seg, 1, ph);
+      ctx.lineTo(p[0], p[1]);
+    }
+    for (let i = seg - 1; i > 0; i--) {
+      const p = fp(d, 0, i / seg, ph);
+      ctx.lineTo(p[0], p[1]);
+    }
+    ctx.closePath();
+  };
   ctx.save();
-
-  const background = ctx.createLinearGradient(0, 0, w, h);
-  background.addColorStop(0, "#0E1019");
-  background.addColorStop(0.48, "#101321");
-  background.addColorStop(1, "#04060A");
-  ctx.fillStyle = background;
+  const gkey = w + "x" + h;
+  if (GRAD.key !== gkey) {
+    GRAD.key = gkey;
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "rgba(19,21,37,0.55)");
+    bg.addColorStop(0.5, "rgba(15,18,32,0.34)");
+    bg.addColorStop(1, "rgba(3,4,9,0.62)");
+    GRAD.bg = bg;
+    const clear = ctx.createLinearGradient(0, 0, w * 0.7, 0);
+    clear.addColorStop(0, "rgba(6,7,11,0.88)");
+    clear.addColorStop(0.5, "rgba(6,7,11,0.56)");
+    clear.addColorStop(1, "rgba(6,7,11,0)");
+    GRAD.clear = clear;
+    const grade = ctx.createRadialGradient(
+      w * 0.78,
+      h * 0.34,
+      0,
+      w * 0.78,
+      h * 0.4,
+      minSide * 0.85,
+    );
+    grade.addColorStop(0, "rgba(201,190,221,0.05)");
+    grade.addColorStop(0.5, "rgba(150,132,196,0.02)");
+    grade.addColorStop(1, "rgba(6,7,11,0)");
+    GRAD.grade = grade;
+    const vig = ctx.createRadialGradient(
+      w * 0.72,
+      h * 0.44,
+      minSide * 0.15,
+      w * 0.55,
+      h * 0.5,
+      maxSide * 0.85,
+    );
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, "rgba(0,0,0,0.42)");
+    GRAD.vig = vig;
+  }
+  ctx.fillStyle = GRAD.bg!;
   ctx.fillRect(0, 0, w, h);
-
-  // Far plane: a cool backlight reveals the fabric without filling the text lane.
-  const backlight = ctx.createRadialGradient(w * 0.82, h * 0.36, 0, w * 0.82, h * 0.42, minSide * 0.72);
-  backlight.addColorStop(0, "rgba(201, 214, 243, 0.22)");
-  backlight.addColorStop(0.46, "rgba(108, 128, 173, 0.09)");
-  backlight.addColorStop(1, "rgba(8, 9, 15, 0)");
-  ctx.fillStyle = backlight;
-  ctx.fillRect(w * 0.34, 0, w * 0.66, h);
-
-  for (let drapeIndex = 0; drapeIndex < drapes.length; drapeIndex += 1) {
-    const drape = drapes[drapeIndex];
-    const drapePhase = phase * (0.72 + drapeIndex * 0.09) + drape.phase;
-    const [red, green, blue] = drape.color;
-
-    // Middle plane: translucent filled sheets create depth before the mesh is drawn.
-    traceDrape(ctx, drape, drapePhase, pullX, pullY);
-    const fabric = ctx.createLinearGradient(drape.x, 0, drape.x + drape.width, h);
-    fabric.addColorStop(0, `rgba(${red}, ${green}, ${blue}, ${0.055 + drapeIndex * 0.018})`);
-    fabric.addColorStop(0.48, `rgba(${red + 18}, ${green + 16}, ${blue + 12}, ${0.14 + drapeIndex * 0.025})`);
-    fabric.addColorStop(1, `rgba(${red - 24}, ${green - 20}, ${blue - 14}, 0.035)`);
-    ctx.fillStyle = fabric;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(w * 0.34, 0, w * 0.66, h);
+  ctx.clip();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < CFG.masses.length; i++) {
+    const m = CFG.masses[i];
+    const c = m.color;
+    const mxp =
+      m.x * w +
+      Math.cos(t * m.speed + m.phase) * m.amp * w +
+      px * minSide * 0.05 * m.r;
+    const myp =
+      m.y * h +
+      Math.sin(t * m.speed * 0.8 + m.phase) * m.amp * h +
+      py * minSide * 0.05 * m.r;
+    const pulse = 0.7 + 0.3 * Math.sin(t * 0.2 + m.phase);
+    const nz = fbm(m.x * 3 + t * 0.05, m.y * 3, 3);
+    const a = m.alpha * pulse * (0.55 + 0.45 * (nz * 0.5 + 0.5));
+    softGlow(
+      ctx,
+      mxp,
+      myp,
+      m.r * maxSide * 0.42,
+      "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(4) + ")",
+      "transparent",
+    );
+  }
+  for (let i = 0; i < CFG.wisps.length; i++) {
+    const wp = CFG.wisps[i];
+    const nx = fbm(wp.seed * 1.7 + t * 0.06, 3.1, 3);
+    const ny = fbm(wp.seed * 2.3, t * 0.05 + 1.7, 3);
+    const hx = wp.bx * w + nx * minSide * 0.12;
+    const hy = (0.4 + ny * 0.28) * h;
+    const hr =
+      minSide * (0.14 + 0.06 * (0.5 + 0.5 * Math.sin(t * 0.1 + wp.phase)));
+    const ha =
+      0.022 + 0.024 * (0.5 + 0.5 * Math.sin(t * 0.13 + wp.phase * 1.3));
+    softGlow(
+      ctx,
+      hx,
+      hy,
+      hr,
+      "rgba(" +
+        wp.col[0] +
+        "," +
+        wp.col[1] +
+        "," +
+        wp.col[2] +
+        "," +
+        ha.toFixed(4) +
+        ")",
+      "transparent",
+    );
+  }
+  ctx.restore();
+  for (let i = 0; i < CFG.drapes.length; i++) {
+    const d = CFG.drapes[i];
+    const ph = t * 0.05 * d.speed + d.phase + story * 0.9;
+    const c = d.color;
+    const baseA = 0.05 + d.depth * 0.09;
+    trace(d, ph);
+    const g = ctx.createLinearGradient(d.x * w, 0, d.x * w + d.w * minSide, h);
+    g.addColorStop(
+      0,
+      "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + baseA.toFixed(4) + ")",
+    );
+    g.addColorStop(
+      0.48,
+      "rgba(" +
+        (c[0] + 18) +
+        "," +
+        (c[1] + 16) +
+        "," +
+        (c[2] + 12) +
+        "," +
+        (baseA * 2.2).toFixed(4) +
+        ")",
+    );
+    g.addColorStop(
+      1,
+      "rgba(" +
+        Math.max(0, c[0] - 24) +
+        "," +
+        Math.max(0, c[1] - 20) +
+        "," +
+        Math.max(0, c[2] - 14) +
+        "," +
+        (baseA * 0.5).toFixed(4) +
+        ")",
+    );
+    ctx.fillStyle = g;
     ctx.fill();
-
     ctx.save();
-    traceDrape(ctx, drape, drapePhase, pullX, pullY);
     ctx.clip();
-
-    const columnCount = 7;
-    const rowCount = 10;
-    for (let column = 0; column <= columnCount; column += 1) {
-      const u = column / columnCount;
+    const le = d.x * w + pullX * d.depth;
+    const shW = Math.max(1, d.w * minSide * 0.34);
+    const sh = ctx.createLinearGradient(
+      le - d.amp * minSide * 2,
+      0,
+      le + shW,
+      0,
+    );
+    sh.addColorStop(
+      0,
+      "rgba(4,5,10," + (0.16 + d.depth * 0.12).toFixed(4) + ")",
+    );
+    sh.addColorStop(1, "rgba(4,5,10,0)");
+    ctx.fillStyle = sh;
+    ctx.fillRect(le - d.amp * minSide * 2, 0, shW + d.amp * minSide * 2, h);
+    ctx.globalCompositeOperation = "lighter";
+    const l = d.x * w - d.amp * minSide * 1.5 + pullX * d.depth;
+    const r = d.x * w + d.w * minSide + d.amp * minSide * 1.5 + pullX * d.depth;
+    const sg = ctx.createLinearGradient(l, 0, r, 0);
+    const s = 0.5 + 0.42 * Math.sin(t * d.sheenSpeed + d.sheenPhase);
+    const sheenA = 0.04 + d.depth * 0.075;
+    sg.addColorStop(Math.max(0, s - d.sheenW), "rgba(232,234,250,0)");
+    sg.addColorStop(
+      Math.min(1, Math.max(0.0001, s)),
+      "rgba(236,236,250," + sheenA.toFixed(4) + ")",
+    );
+    sg.addColorStop(Math.min(1, s + d.sheenW), "rgba(232,234,250,0)");
+    ctx.fillStyle = sg;
+    ctx.fillRect(l, 0, Math.max(1, r - l), h);
+    for (let col = 0; col <= d.cols; col++) {
+      const u = col / d.cols;
       ctx.beginPath();
-      for (let sample = 0; sample <= 18; sample += 1) {
-        const point = fabricPoint(drape, u, sample / 18, drapePhase, pullX, pullY);
-        if (sample === 0) ctx.moveTo(point[0], point[1]);
-        else ctx.lineTo(point[0], point[1]);
+      for (let s2 = 0; s2 <= 6; s2++) {
+        const p = fp(d, u, s2 / 6, ph);
+        if (s2) ctx.lineTo(p[0], p[1]);
+        else ctx.moveTo(p[0], p[1]);
       }
-      ctx.strokeStyle = `rgba(222, 231, 250, ${0.055 + drapeIndex * 0.018})`;
-      ctx.lineWidth = 0.7;
+      const lit = 0.5 + 0.5 * Math.sin(u * Math.PI * 2 + ph * 1.5);
+      ctx.strokeStyle =
+        "rgba(224,229,248," +
+        ((0.03 + d.depth * 0.04) * (0.45 + lit * 0.9)).toFixed(4) +
+        ")";
+      ctx.lineWidth = 0.6 + d.depth * 0.5;
       ctx.stroke();
     }
-
-    for (let row = 0; row <= rowCount; row += 1) {
-      const v = row / rowCount;
+    for (let row = 0; row <= d.rows; row++) {
+      const v = row / d.rows;
       ctx.beginPath();
-      for (let sample = 0; sample <= 16; sample += 1) {
-        const point = fabricPoint(drape, sample / 16, v, drapePhase, pullX, pullY);
-        if (sample === 0) ctx.moveTo(point[0], point[1]);
-        else ctx.lineTo(point[0], point[1]);
+      for (let s2 = 0; s2 <= 6; s2++) {
+        const p = fp(d, s2 / 6, v, ph);
+        if (s2) ctx.lineTo(p[0], p[1]);
+        else ctx.moveTo(p[0], p[1]);
       }
-      ctx.strokeStyle = `rgba(232, 225, 247, ${0.04 + drapeIndex * 0.015})`;
-      ctx.lineWidth = 0.65;
+      ctx.strokeStyle =
+        "rgba(230,224,245," +
+        (
+          (0.025 + d.depth * 0.032) *
+          (0.55 + 0.5 * Math.sin(v * Math.PI))
+        ).toFixed(4) +
+        ")";
+      ctx.lineWidth = 0.55 + d.depth * 0.4;
       ctx.stroke();
     }
     ctx.restore();
-
-    const edgeWeight = storyStepWeight(page.storyProgress, drapeIndex, drapes.length);
+    ctx.globalCompositeOperation = "lighter";
+    const ew = storyStepWeight(story, i, CFG.drapes.length);
     ctx.beginPath();
-    for (let sample = 0; sample <= 20; sample += 1) {
-      const point = fabricPoint(drape, 0, sample / 20, drapePhase, pullX, pullY);
-      if (sample === 0) ctx.moveTo(point[0], point[1]);
-      else ctx.lineTo(point[0], point[1]);
+    for (let s2 = 0; s2 <= 16; s2++) {
+      const p = fp(d, 0, s2 / 16, ph);
+      if (s2) ctx.lineTo(p[0], p[1]);
+      else ctx.moveTo(p[0], p[1]);
     }
-    ctx.strokeStyle = `rgba(246, 240, 255, ${0.12 + edgeWeight * 0.28})`;
-    ctx.lineWidth = 0.9 + edgeWeight * 1.2;
+    ctx.strokeStyle =
+      "rgba(240,238,252," +
+      (0.05 + d.depth * 0.06 + ew * 0.13).toFixed(4) +
+      ")";
+    ctx.lineWidth = 0.9 + d.depth * 0.9 + ew * 0.8;
+    ctx.stroke();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.beginPath();
+    for (let s2 = 0; s2 <= 16; s2++) {
+      const p = fp(d, 1, s2 / 16, ph);
+      if (s2) ctx.lineTo(p[0], p[1]);
+      else ctx.moveTo(p[0], p[1]);
+    }
+    ctx.strokeStyle =
+      "rgba(60,68,96," + (0.06 + d.depth * 0.09).toFixed(4) + ")";
+    ctx.lineWidth = 0.8 + d.depth * 0.9;
     ctx.stroke();
   }
-
-  // Foreground: a few pearl knots make the tulle read as tactile material.
-  for (let i = 0; i < 18; i += 1) {
-    const drapeIndex = i % drapes.length;
-    const drape = drapes[drapeIndex];
-    const u = ((i * 5) % 8) / 7;
-    const v = (1 + ((i * 7) % 10)) / 11;
-    const point = fabricPoint(
-      drape,
-      u,
-      v,
-      phase * (0.72 + drapeIndex * 0.09) + drape.phase,
-      pullX,
-      pullY,
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < CFG.pearls.length; i++) {
+    const pl = CFG.pearls[i];
+    const d = CFG.drapes[pl.di];
+    const ph = t * 0.05 * d.speed + d.phase + story * 0.9;
+    const p = fp(d, pl.u, pl.v, ph);
+    const tw = 0.5 + 0.5 * Math.sin(t * pl.twSpeed + pl.phase);
+    let fb = 0;
+    if (M.hasFocus) {
+      const fdx = p[0] - M.focusX * w;
+      const fdy = p[1] - M.focusY * h;
+      fb = Math.max(0, 1 - Math.sqrt(fdx * fdx + fdy * fdy) / (minSide * 0.3));
+    }
+    const rr = Math.max(
+      0.5,
+      pl.r * minSide * 0.0015 * (0.7 + d.depth * 0.5) * (0.75 + tw * 0.5),
     );
-    const shimmer = 0.5 + 0.5 * Math.sin(t * 0.42 + i * 1.9);
+    softGlow(
+      ctx,
+      p[0],
+      p[1],
+      rr * 5 + 3,
+      "rgba(232,230,248," + (0.045 + tw * 0.075 + fb * 0.05).toFixed(4) + ")",
+      "transparent",
+    );
     ctx.beginPath();
-    ctx.arc(point[0], point[1], 0.75 + shimmer * 1.15, 0, TAU);
-    ctx.fillStyle = `rgba(247, 243, 255, ${0.12 + shimmer * 0.24})`;
+    ctx.arc(p[0], p[1], rr, 0, TAU);
+    ctx.fillStyle =
+      "rgba(238,236,250," + (0.15 + tw * 0.18 + fb * 0.12).toFixed(4) + ")";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(p[0] - rr * 0.3, p[1] - rr * 0.3, Math.max(0.2, rr * 0.4), 0, TAU);
+    ctx.fillStyle =
+      "rgba(244,242,252," + (0.14 + tw * 0.16 + fb * 0.08).toFixed(4) + ")";
     ctx.fill();
   }
-
-  if (page.hasFocus) {
-    const target = fabricPoint(drapes[0], 0.08, 0.52, phase + drapes[0].phase, pullX, pullY);
+  for (let i = 0; i < CFG.motes.length; i++) {
+    const mo = CFG.motes[i];
+    const x =
+      mo.x * w +
+      Math.sin(t * mo.driftSpeed + mo.phase) * minSide * 0.03 * mo.driftX -
+      px * minSide * 0.05 * mo.depth;
+    const y =
+      mo.y * h +
+      Math.cos(t * mo.driftSpeed * 0.9 + mo.phase) *
+        minSide *
+        0.025 *
+        mo.driftY -
+      py * minSide * 0.05 * mo.depth;
+    const tw = 0.5 + 0.5 * Math.sin(t * mo.twSpeed + mo.twPhase);
+    const rr = Math.max(
+      0.3,
+      mo.r * (0.5 + mo.depth) * (0.4 + tw * 0.8) * minSide * 0.0011,
+    );
+    const a = (0.03 + mo.depth * 0.06) * tw;
     ctx.beginPath();
-    ctx.moveTo(page.focusX * w, page.focusY * h);
-    ctx.quadraticCurveTo(w * 0.62, page.focusY * h, target[0], target[1]);
-    ctx.strokeStyle = "rgba(225, 229, 250, 0.2)";
+    ctx.arc(x, y, rr, 0, TAU);
+    ctx.fillStyle = "rgba(222,220,242," + a.toFixed(4) + ")";
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+  if (M.hasFocus) {
+    const d0 = CFG.drapes[0];
+    const tp = fp(d0, 0.08, 0.52, t * 0.05 * d0.speed + d0.phase + story * 0.9);
+    ctx.beginPath();
+    ctx.moveTo(M.focusX * w, M.focusY * h);
+    ctx.quadraticCurveTo(w * 0.6, M.focusY * h, tp[0], tp[1]);
+    ctx.strokeStyle = "rgba(214,210,236,0.14)";
     ctx.lineWidth = 1;
     ctx.stroke();
   }
-
-  const clearSpace = ctx.createLinearGradient(0, 0, w * 0.69, 0);
-  clearSpace.addColorStop(0, "rgba(8, 9, 15, 0.84)");
-  clearSpace.addColorStop(0.64, "rgba(8, 9, 15, 0.52)");
-  clearSpace.addColorStop(1, "rgba(8, 9, 15, 0)");
-  ctx.fillStyle = clearSpace;
-  ctx.fillRect(0, 0, w * 0.69, h);
-
-  const vignette = ctx.createRadialGradient(w * 0.78, h * 0.42, minSide * 0.1, w * 0.56, h * 0.5, Math.max(w, h) * 0.82);
-  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-  vignette.addColorStop(1, "rgba(0, 0, 0, 0.37)");
-  ctx.fillStyle = vignette;
+  ctx.fillStyle = GRAD.clear!;
+  ctx.fillRect(0, 0, w * 0.7, h);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = GRAD.grade!;
+  ctx.fillRect(w * 0.34, 0, w * 0.66, h);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = GRAD.vig!;
   ctx.fillRect(0, 0, w, h);
-
   ctx.restore();
 };

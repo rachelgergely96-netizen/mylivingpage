@@ -6,6 +6,7 @@ import {
   useLivingMotionBridge,
 } from "@/hooks/useLivingMotionBridge";
 import { THEME_MAP } from "@/themes/registry";
+import { createSeededRandom } from "@/themes/shared/random";
 import { getLoadedRenderer, loadRenderer } from "@/themes/loadRenderer";
 import {
   clearTransientThemeMotion,
@@ -43,6 +44,8 @@ interface ThemeCanvasProps {
    * deliberately higher- or lower-frequency presentation.
    */
   maxFps?: number;
+  /** Apply the host-level HD post-process (bright-pass bloom + dithered film grain). */
+  hd?: boolean;
   children?: React.ReactNode;
 }
 
@@ -56,6 +59,7 @@ export default function ThemeCanvas({
   mobileAmbientMotion = false,
   motionAware = false,
   maxFps = 30,
+  hd = true,
   children,
 }: ThemeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -72,7 +76,8 @@ export default function ThemeCanvas({
   const reducedMotionRef = useRef(false);
   const rendererRef = useRef<ThemeRenderer | null>(null);
   const motionRef = useRef<ThemeMotionContext>(createInitialThemeMotionContext());
-  const theme = useMemo(() => THEME_MAP[themeId], [themeId]);
+  const theme = useMemo(() => THEME_MAP[themeId] ?? THEME_MAP.cosmic, [themeId]);
+  const resolvedThemeId = theme.id;
   const themeStyle = useMemo<ThemeCanvasStyle>(() => {
     const presentation = theme.presentation;
     return {
@@ -193,6 +198,88 @@ export default function ThemeCanvas({
     };
 
     const container = containerRef.current;
+
+    // ---- Host-level "HD" post-process: a bright-pass bloom so lit elements glow
+    // (only genuinely bright pixels, via a multiply-by-self bright pass) plus a
+    // low-alpha dithered film grain that breaks gradient banding. Bloom is
+    // skipped on light-ground themes (it would wash them out); the grain freezes
+    // under reduced motion.
+    const lightGround = (() => {
+      const match = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(theme.background);
+      if (!match) return false;
+      return 0.299 * parseInt(match[1], 16) + 0.587 * parseInt(match[2], 16) + 0.114 * parseInt(match[3], 16) > 90;
+    })();
+    let bloomBuffer: HTMLCanvasElement | null = null;
+    let bloomContext: CanvasRenderingContext2D | null = null;
+    let noiseTile: HTMLCanvasElement | null = null;
+    const ensureHdBuffers = () => {
+      const bw = Math.max(1, Math.floor(canvas.width / 4));
+      const bh = Math.max(1, Math.floor(canvas.height / 4));
+      if (!bloomBuffer) {
+        bloomBuffer = document.createElement("canvas");
+        bloomContext = bloomBuffer.getContext("2d");
+      }
+      if (bloomBuffer.width !== bw || bloomBuffer.height !== bh) {
+        bloomBuffer.width = bw;
+        bloomBuffer.height = bh;
+      }
+      if (!noiseTile) {
+        noiseTile = document.createElement("canvas");
+        noiseTile.width = 128;
+        noiseTile.height = 128;
+        const noiseContext = noiseTile.getContext("2d");
+        if (noiseContext) {
+          const image = noiseContext.createImageData(128, 128);
+          const data = image.data;
+          const random = createSeededRandom(0x9e3779b9);
+          for (let i = 0; i < data.length; i += 4) {
+            const value = Math.floor(random() * 255);
+            data[i] = value;
+            data[i + 1] = value;
+            data[i + 2] = value;
+            data[i + 3] = 255;
+          }
+          noiseContext.putImageData(image, 0, 0);
+        }
+      }
+    };
+    const applyHdPost = (elapsed: number) => {
+      if (!hd) return;
+      ensureHdBuffers();
+      const w = canvas.width;
+      const h = canvas.height;
+      if (!lightGround && bloomBuffer && bloomContext) {
+        bloomContext.globalCompositeOperation = "source-over";
+        bloomContext.clearRect(0, 0, bloomBuffer.width, bloomBuffer.height);
+        bloomContext.drawImage(canvas, 0, 0, bloomBuffer.width, bloomBuffer.height);
+        bloomContext.globalCompositeOperation = "multiply"; // ~luminance^2 bright pass
+        bloomContext.drawImage(bloomBuffer, 0, 0);
+        bloomContext.globalCompositeOperation = "source-over";
+        context.save();
+        context.globalCompositeOperation = "lighter";
+        context.globalAlpha = 0.42;
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(bloomBuffer, 0, 0, w, h);
+        context.restore();
+      }
+      if (noiseTile) {
+        const pattern = context.createPattern(noiseTile, "repeat");
+        if (pattern) {
+          const anim = reducedMotionRef.current ? 0 : 1;
+          const ox = (Math.floor(elapsed * 53) % 128) * anim;
+          const oy = (Math.floor(elapsed * 97) % 128) * anim;
+          context.save();
+          context.globalCompositeOperation = "overlay";
+          context.globalAlpha = 0.05;
+          context.fillStyle = pattern;
+          context.translate(ox, oy);
+          context.fillRect(-ox, -oy, w, h);
+          context.restore();
+        }
+      }
+    };
+
     let consecutiveRenderFailures = 0;
     const renderFrame = (elapsed: number, deltaSeconds = 0) => {
       context.fillStyle = theme.background;
@@ -215,6 +302,7 @@ export default function ThemeCanvas({
           motionAware ? motionRef.current : undefined,
         );
         consecutiveRenderFailures = 0;
+        applyHdPost(elapsed);
       } catch (error) {
         consecutiveRenderFailures += 1;
         if (consecutiveRenderFailures < 3) return;
@@ -226,7 +314,7 @@ export default function ThemeCanvas({
           cancelAnimationFrame(animationRef.current);
           animationRef.current = null;
         }
-        console.error(`[ThemeCanvas] Renderer for ${themeId} failed repeatedly; using fallback.`, error);
+        console.error(`[ThemeCanvas] Renderer for ${resolvedThemeId} failed repeatedly; using fallback.`, error);
       }
     };
 
@@ -350,7 +438,7 @@ export default function ThemeCanvas({
       }
       rendererLoading = true;
       setRendererStatus("loading");
-      void loadRenderer(themeId)
+      void loadRenderer(resolvedThemeId)
         .then((renderer) => {
           if (cancelled) {
             return;
@@ -377,7 +465,7 @@ export default function ThemeCanvas({
           setRendererStatus("fallback");
           stop();
           renderFrame(elapsedRef.current);
-          console.error(`[ThemeCanvas] Falling back to the ${themeId} background.`, error);
+          console.error(`[ThemeCanvas] Falling back to the ${resolvedThemeId} background.`, error);
         })
         .finally(() => {
           rendererLoading = false;
@@ -394,7 +482,7 @@ export default function ThemeCanvas({
       requestRenderer();
     };
 
-    rendererRef.current = getLoadedRenderer(themeId);
+    rendererRef.current = getLoadedRenderer(resolvedThemeId);
     if (rendererRef.current) {
       setRendererStatus("ready");
     } else {
@@ -468,7 +556,7 @@ export default function ThemeCanvas({
         container.removeEventListener("touchcancel", handleTouchEnd);
       }
     };
-  }, [animated, interactive, mobileAmbientMotion, motionAware, maxFps, theme, themeId]);
+  }, [animated, interactive, mobileAmbientMotion, motionAware, maxFps, hd, resolvedThemeId, theme]);
 
   return (
     <div
@@ -483,7 +571,7 @@ export default function ThemeCanvas({
       style={{
         position: "relative",
         overflow: "hidden",
-        ...(!className?.includes("rounded-none") ? { borderRadius: 16 } : {}),
+        borderRadius: "var(--site-radius, 0px)",
         ...themeStyle,
         ...style,
       }}

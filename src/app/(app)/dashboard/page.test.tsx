@@ -64,6 +64,16 @@ vi.mock("@/components/DeletePageButton", () => ({
   default: ({ pageId }: { pageId: string }) => <button type="button">Delete {pageId}</button>,
 }));
 
+vi.mock("@/components/PublishPageButton", () => ({
+  default: ({
+    label = "Publish",
+    pageId,
+  }: {
+    label?: string;
+    pageId: string;
+  }) => <button type="button">{label} {pageId}</button>,
+}));
+
 import DashboardPage from "./page";
 
 function makeServiceRoleClient(overrides?: {
@@ -235,23 +245,24 @@ describe("dashboard page", () => {
     vi.useRealTimers();
   });
 
-  it("uses only the row-level analytics action and keeps proof panels focused on status", async () => {
+  it("turns proof state into a single primary signal action without losing page tools", async () => {
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).not.toContain("See when people open your page and what happens next.");
-    expect(markup).not.toContain("Open Page Analytics");
+    expect(markup).toContain("Signal desk · Your public page");
     expect(markup).toContain('href="/dashboard/analytics/page-1"');
     expect(markup).toContain('href="/dashboard/analytics/page-2"');
     expect(markup).toContain('href="/dashboard/edit/page-1/living-page#ats-readiness"');
     expect(markup).toContain('href="/dashboard/edit/page-2/living-page#ats-readiness"');
-    expect((markup.match(/>Check ATS<\/a>/g) ?? []).length).toBe(2);
-    expect((markup.match(/>Page Analytics<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>ATS check<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>Read the signal<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/data-dashboard-primary-action/g) ?? []).length).toBe(2);
+    expect((markup.match(/>Live<\/span>/g) ?? []).length).toBe(2);
     expect(markup).toContain(
-      "Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.",
+      "Read the signal for device mix, referrers, and viewing behavior.",
     );
     expect(markup).toContain(
-      "Use the Page Analytics button on this page card to check whether your page is still getting looked at between follow-ups.",
+      "Open analytics to see whether the page is still carrying your follow-ups.",
     );
   });
 
@@ -269,12 +280,15 @@ describe("dashboard page", () => {
         ],
       }),
     );
+    isPubliclyAvailablePageMock.mockReturnValue(false);
 
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
     expect(markup).toContain("Someone tried to open your page while it was offline");
     expect(markup).toContain('href="/dashboard/settings"');
-    expect(markup).toContain("Use the Publish button on the page card below");
+    expect(markup).toContain("Publish the page below when you are ready to restore the link");
+    expect(markup).toContain("Publish page page-1");
+    expect(markup).toContain(">Offline</span>");
   });
 });

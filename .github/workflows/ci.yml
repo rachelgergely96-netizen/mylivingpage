@@ -65,7 +65,7 @@ jobs:
       - name: Install browser for credential-free visual checks
         run: npx playwright install --with-deps chromium
 
-      - name: Theme, editor, and homepage visual regression
+      - name: Theme, editor, dashboard, and homepage visual regression
         env:
           PLAYWRIGHT_WEB_SERVER_COMMAND: npm run start
         run: npm run test:e2e:visual

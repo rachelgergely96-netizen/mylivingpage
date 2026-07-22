@@ -184,7 +184,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], value: event.target.value };
                     updateField("stats", next);
                   }}
-                  aria-label="Value"
+                  aria-label={`Stat ${index + 1} value`}
                   placeholder="Value"
                   className="site-field min-w-0 rounded-none px-3 py-2 text-sm text-site-action"
                 />
@@ -196,7 +196,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], label: event.target.value };
                     updateField("stats", next);
                   }}
-                  aria-label="Label"
+                  aria-label={`Stat ${index + 1} label`}
                   placeholder="Label"
                   className="site-field min-w-0 rounded-none px-3 py-2 text-sm"
                 />
@@ -248,7 +248,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], title: event.target.value };
                   updateField("experience", next);
                 }}
-                aria-label="Title"
+                aria-label={`Experience ${index + 1} title`}
                 placeholder="Title"
                 className={inputClass}
               />
@@ -260,7 +260,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], company: event.target.value };
                   updateField("experience", next);
                 }}
-                aria-label="Company"
+                aria-label={`Experience ${index + 1} company`}
                 placeholder="Company"
                 className={inputClass}
               />
@@ -272,7 +272,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], dates: event.target.value };
                   updateField("experience", next);
                 }}
-                aria-label="Dates"
+                aria-label={`Experience ${index + 1} dates`}
                 placeholder="Dates"
                 className="rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
               />
@@ -285,7 +285,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], url: event.target.value || null };
                 updateField("experience", next);
               }}
-              aria-label="Company website URL (optional)"
+              aria-label={`Experience ${index + 1} company website URL (optional)`}
               placeholder="Company website URL (optional)"
               className={inputClass}
             />
@@ -311,7 +311,7 @@ export default function ResumeEditorFields({
                 updateField("experience", next);
               }}
               rows={3}
-              aria-label="Highlights (one per line)"
+              aria-label={`Experience ${index + 1} highlights (one per line)`}
               placeholder="Highlights (one per line)"
               className={subtleTextAreaClass}
             />
@@ -364,7 +364,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], degree: event.target.value };
                   updateField("education", next);
                 }}
-                aria-label="Degree"
+                aria-label={`Education ${index + 1} degree`}
                 placeholder="Degree"
                 className={inputClass}
               />
@@ -376,7 +376,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], school: event.target.value };
                   updateField("education", next);
                 }}
-                aria-label="School"
+                aria-label={`Education ${index + 1} school`}
                 placeholder="School"
                 className={inputClass}
               />
@@ -388,7 +388,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], year: event.target.value };
                   updateField("education", next);
                 }}
-                aria-label="Year"
+                aria-label={`Education ${index + 1} year`}
                 placeholder="Year"
                 className={inputClass}
               />
@@ -511,7 +511,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], name: event.target.value };
                 updateField("projects", next);
               }}
-              aria-label="Project name"
+              aria-label={`Project ${index + 1} name`}
               placeholder="Project name"
               className={inputClass}
             />
@@ -523,7 +523,7 @@ export default function ResumeEditorFields({
                 updateField("projects", next);
               }}
               rows={2}
-              aria-label="Brief description"
+              aria-label={`Project ${index + 1} description`}
               placeholder="Brief description"
               className={subtleTextAreaClass}
             />
@@ -551,7 +551,7 @@ export default function ResumeEditorFields({
                 };
                 updateField("projects", next);
               }}
-              aria-label="Technologies (comma separated)"
+              aria-label={`Project ${index + 1} technologies (comma separated)`}
               placeholder="Technologies (comma separated)"
               className={inputClass}
             />
@@ -563,7 +563,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], url: event.target.value || null };
                 updateField("projects", next);
               }}
-              aria-label="Project URL (optional)"
+              aria-label={`Project ${index + 1} URL (optional)`}
               placeholder="Project URL (optional)"
               className={inputClass}
             />
@@ -613,7 +613,7 @@ export default function ResumeEditorFields({
               />
               <div className="grid gap-2 sm:grid-cols-2">
                 <select
-                  aria-label="Proof type"
+                  aria-label={`Proof block ${index + 1} type`}
                   value={proof.type}
                   onChange={(event) => {
                     const next = [...proofs];
@@ -636,7 +636,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], source_label: event.target.value || null };
                     updateField("proofs", next);
                   }}
-                  aria-label="Label (optional)"
+                  aria-label={`Proof block ${index + 1} label (optional)`}
                   placeholder="Label (optional)"
                   className={inputClass}
                 />
@@ -649,7 +649,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], title: event.target.value };
                   updateField("proofs", next);
                 }}
-                aria-label="Proof title"
+                aria-label={`Proof block ${index + 1} title`}
                 placeholder="Proof title"
                 className={inputClass}
               />
@@ -661,7 +661,7 @@ export default function ResumeEditorFields({
                   updateField("proofs", next);
                 }}
                 rows={3}
-                aria-label="What was the work?"
+                aria-label={`Proof block ${index + 1} work summary`}
                 placeholder="What was the work?"
                 className={subtleTextAreaClass}
               />
@@ -673,7 +673,7 @@ export default function ResumeEditorFields({
                   updateField("proofs", next);
                 }}
                 rows={2}
-                aria-label="What changed, improved, or shipped?"
+                aria-label={`Proof block ${index + 1} outcome`}
                 placeholder="What changed, improved, or shipped?"
                 className={subtleTextAreaClass}
               />
@@ -685,7 +685,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], url: event.target.value || null };
                   updateField("proofs", next);
                 }}
-                aria-label="Supporting URL (optional)"
+                aria-label={`Proof block ${index + 1} supporting URL (optional)`}
                 placeholder="Supporting URL (optional)"
                 className={inputClass}
               />
@@ -738,7 +738,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], name: event.target.value };
                     updateField("testimonials", next);
                   }}
-                  aria-label="Name"
+                  aria-label={`Testimonial ${index + 1} name`}
                   placeholder="Name"
                   className={inputClass}
                 />
@@ -750,7 +750,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], role: event.target.value };
                     updateField("testimonials", next);
                   }}
-                  aria-label="Role"
+                  aria-label={`Testimonial ${index + 1} role`}
                   placeholder="Role"
                   className={inputClass}
                 />
@@ -762,7 +762,7 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], company: event.target.value };
                     updateField("testimonials", next);
                   }}
-                  aria-label="Company"
+                  aria-label={`Testimonial ${index + 1} company`}
                   placeholder="Company"
                   className={inputClass}
                 />
@@ -776,12 +776,12 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], relationship: event.target.value || null };
                     updateField("testimonials", next);
                   }}
-                  aria-label="Relationship"
+                  aria-label={`Testimonial ${index + 1} relationship`}
                   placeholder="Relationship"
                   className={inputClass}
                 />
                 <input
-                  aria-label="Testimonial request date"
+                  aria-label={`Testimonial ${index + 1} request date`}
                   type="date"
                   value={testimonial.requested_at ?? ""}
                   onChange={(event) => {
@@ -792,7 +792,7 @@ export default function ResumeEditorFields({
                   className={inputClass}
                 />
                 <select
-                  aria-label="Testimonial status"
+                  aria-label={`Testimonial ${index + 1} status`}
                   value={testimonial.status}
                   onChange={(event) => {
                     const next = [...testimonials];
@@ -807,7 +807,7 @@ export default function ResumeEditorFields({
                 </select>
               </div>
               <input
-                aria-label="Testimonial approval date"
+                aria-label={`Testimonial ${index + 1} approval date`}
                 type="date"
                 value={testimonial.approved_at ?? ""}
                 onChange={(event) => {
@@ -825,7 +825,7 @@ export default function ResumeEditorFields({
                   updateField("testimonials", next);
                 }}
                 rows={3}
-                aria-label="What should appear on the page once approved?"
+                aria-label={`Testimonial ${index + 1} approved quote`}
                 placeholder="What should appear on the page once approved?"
                 className={subtleTextAreaClass}
               />
@@ -879,7 +879,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], name: event.target.value };
                   updateField("certifications", next);
                 }}
-                aria-label="Certification name"
+                aria-label={`Certification ${index + 1} name`}
                 placeholder="Certification name"
                 className={inputClass}
               />
@@ -891,7 +891,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], issuer: event.target.value || null };
                   updateField("certifications", next);
                 }}
-                aria-label="Issuer"
+                aria-label={`Certification ${index + 1} issuer`}
                 placeholder="Issuer"
                 className={inputClass}
               />
@@ -903,7 +903,7 @@ export default function ResumeEditorFields({
                   next[index] = { ...next[index], date: event.target.value || null };
                   updateField("certifications", next);
                 }}
-                aria-label="Date"
+                aria-label={`Certification ${index + 1} date`}
                 placeholder="Date"
                 className={inputClass}
               />

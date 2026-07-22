@@ -29,7 +29,7 @@ async function fetchOwnedPage(pageId: string, userId: string) {
     .from("pages")
     .select("*")
     .eq("id", pageId)
-    .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
+    .eq("owner_id", userId)
     .maybeSingle();
   return { page, error };
 }

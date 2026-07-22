@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
+import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import {
   buildResumePdfFileName,
   coerceResumeDataForExport,
@@ -11,12 +11,12 @@ import {
   renderFallbackResumePdf,
   renderResumePdf,
 } from "@/lib/pdf/ResumePDFDocument";
-import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 const routeTrustLevel = "public_read";
 
 interface ResumeExportRequestBody {
@@ -42,7 +42,10 @@ export async function POST(request: Request) {
   let requestedPageId: string | undefined;
 
   try {
-    const body = (await request.json()) as ResumeExportRequestBody;
+    const body = (await request.json().catch(() => null)) as ResumeExportRequestBody | null;
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    }
     requestedPageId = body.pageId;
     if (!body.pageId) {
       return NextResponse.json({ error: "pageId is required." }, { status: 400 });
@@ -59,28 +62,7 @@ export async function POST(request: Request) {
       throw new Error(pageError.message);
     }
 
-    const pageOwnerId = page?.owner_id ?? page?.user_id ?? null;
-    const ownerProfileResult = pageOwnerId
-      ? await fetchProfileWithHostingAccess<{
-          plan?: string | null;
-        }>({
-          supabase,
-          select: "plan",
-          matchField: "id",
-          matchValue: pageOwnerId,
-        })
-      : { data: null };
-    const ownerProfile = ownerProfileResult.data;
-
-    const syncedPage = page
-      ? await syncPageHostingState(supabase, page, {
-          plan: ownerProfile?.plan ?? null,
-          billing_cohort: ownerProfile?.billing_cohort ?? null,
-          hosting_trial_started_at: ownerProfile?.hosting_trial_started_at ?? null,
-        })
-      : null;
-
-    if (!page || !syncedPage || !isPubliclyAvailablePage(syncedPage.page)) {
+    if (!page || !isPubliclyAvailablePage(page)) {
       return NextResponse.json({ error: "Page not found." }, { status: 404 });
     }
 
@@ -111,12 +93,12 @@ export async function POST(request: Request) {
     }
 
     const selectedVariant = getPageVariant(
-      syncedPage.page.page_config ?? null,
+      page.page_config ?? null,
       body.variantId ?? null,
     );
     const normalized = coerceResumeDataForExport(
       applyPageVariant(
-        coerceResumeDataForExport(syncedPage.page.resume_data),
+        coerceResumeDataForExport(page.resume_data),
         selectedVariant,
       ),
     );

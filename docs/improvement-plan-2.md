@@ -36,6 +36,28 @@ The audit findings remain the backlog, but they are not one atomic implementatio
 - External configuration remains: Vercel alert/log drain, `NEXT_PUBLIC_LEGAL_SITE`, Supabase migration promotion, and admin MFA enrollment.
 - Deliver remaining phases as subsequent verified batches; do not combine destructive schema cleanup, dependency majors, and auth changes in one release.
 
+### Local follow-up status (2026-07-20)
+
+- Added an unconditional credential-free Playwright CI job and made missing staging database/authenticated-browser gates fail on pushes to `main` instead of silently passing.
+- Closed direct test-file coverage for every API route, plus middleware, profile provisioning, account-deletion ordering, analytics retention, crawler filtering, and HMAC identifier hashing.
+- Removed the unreachable paid-hosting shutdown/offline-page chain and its feeder profile queries from public rendering, view tracking, PDF export, profile loading, and the dashboard. Owner-scoped queries now consistently use `owner_id` in the touched paths.
+- Added root social-preview artwork, auth-route metadata, noindex handling for unavailable public pages and password recovery, accessible focus/error improvements, admin unpublish controls, public reporting, and UGC link attributes.
+- Added an additive analytics index/retention migration and backup/restore runbook. Applying/scheduling that migration and configuring `SECURITY_HASH_PEPPER` remain external deployment work.
+- Local verification at this checkpoint: strict lint, TypeScript, client/design guards, 464 passing unit tests (plus 1 skipped), a 53-page production build, and 34 credential-free Playwright tests all pass. Authenticated browser and live schema verification still require staging values.
+
+### Paused external-completion checklist (2026-07-21)
+
+**Status: safely deferred.** The credential-free code and local verification are complete enough to pause. Missing values do not block unrelated local product work, but this batch should not be treated as production-ready or merged to `main` until the following external checks are complete:
+
+- Configure the server-only `SECURITY_HASH_PEPPER` in the production/preview deployment environments.
+- Configure `STAGING_SCHEMA_CHECK_DATABASE_URL` in GitHub Actions for an isolated, runner-reachable staging database.
+- Configure the staging Supabase connection and a dedicated Playwright test account required by the authenticated CI lane. Add Stripe/Google staging credentials only when those optional flows are exercised.
+- Review and apply `supabase/migrations/20260720193000_analytics_retention_and_abuse_indexes.sql` to a Supabase preview branch first.
+- Run the database security/schema checks and authenticated Playwright suite against staging; review the results before promotion.
+- Review, commit, and push the currently local batch only after the gates above are ready, or deliberately revise the main-branch CI policy in a separately reviewed change.
+
+Until then, unrelated local design, copy, component, and unit-test work may proceed. Keep all staging credentials out of source control and never point the automated destructive-account tests at production.
+
 ---
 
 ## Phase 1 — Observability and account-security (highest priority, ~2 days)

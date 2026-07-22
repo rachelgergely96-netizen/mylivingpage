@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import DelimitedListInput from "@/components/create/DelimitedListInput";
 import type { ResumeData } from "@/types/resume";
 
@@ -82,6 +82,7 @@ export default function GuidedFlow({
   consolidatedReview = false,
 }: GuidedFlowProps) {
   const [step, setStep] = useState(0);
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const entryIdPrefix = useId();
   const newEntryCounterRef = useRef(0);
   const createNewEntryId = (kind: string) => {
@@ -112,6 +113,10 @@ export default function GuidedFlow({
   const [statIds, setStatIds] = useState(() => stats.map((_, index) => `${entryIdPrefix}-stat-${index}`));
 
   const set = (patch: Partial<ResumeData>) => onUpdate({ ...guidedData, ...patch });
+
+  useEffect(() => {
+    stepHeadingRef.current?.focus();
+  }, [step]);
 
   /* ── Navigation ─────────────────────────────────────── */
   const canContinue = () => {
@@ -683,7 +688,7 @@ export default function GuidedFlow({
     <section className="site-panel p-4 sm:p-6 md:p-8">
       {progressDots}
       <p className="site-eyebrow">Step 1 · {step + 1} of {TOTAL_STEPS}</p>
-      <h2 className="site-section-title mt-2">{STEP_PROMPTS[step].heading}</h2>
+      <h2 ref={stepHeadingRef} tabIndex={-1} className="site-section-title mt-2 outline-none">{STEP_PROMPTS[step].heading}</h2>
       <p className="mb-6 mt-2 text-sm text-site-secondary">{STEP_PROMPTS[step].sub}</p>
 
       {stepRenderers[step]()}

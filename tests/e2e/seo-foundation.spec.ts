@@ -152,3 +152,27 @@ test("legacy ATS guide URLs permanently redirect to the new Resume PDF guide", a
   await page.goto("/guides/ats-resume-test");
   await expect(page).toHaveURL(/\/guides\/resume-pdf-check$/);
 });
+
+test("auth pages use stable canonicals and keep recovery URLs out of search", async ({ page }) => {
+  await page.goto("/login?next=/dashboard");
+  await expect(page).toHaveTitle("Sign in | MyLivingPage");
+  expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/login");
+
+  await page.goto("/signup?ref=guide&next=/create");
+  await expect(page).toHaveTitle("Create your account | MyLivingPage");
+  expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/signup");
+
+  for (const path of ["/forgot-password", "/reset-password"]) {
+    await page.goto(path);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  }
+});
+
+test("the site-wide social preview image renders", async ({ request, page }) => {
+  await page.goto("/");
+  const imageUrl = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(imageUrl).toBeTruthy();
+  const response = await request.get(imageUrl!);
+  expect(response.ok()).toBeTruthy();
+  expect(response.headers()["content-type"]).toContain("image/png");
+});

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AtsReadinessCard from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
@@ -103,7 +103,6 @@ function hasGuidedDraftContent(data: Partial<ResumeData>) {
 
 export default function CreatePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("input");
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>(EMPTY_GUIDED_DATA);
   const [resumeText, setResumeText] = useState("");
@@ -127,14 +126,10 @@ export default function CreatePage() {
       billing_cohort: PUBLISH_CC_TRIAL_BILLING_COHORT,
     }),
   );
-  const [publishRestoredDraft, setPublishRestoredDraft] = useState(false);
   const [pageCount, setPageCount] = useState<number>(0);
   const atPageLimit = pageCount >= MAX_PAGES_PER_ACCOUNT;
-  const legacyCheckoutReturnHandledRef = useRef(false);
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const publishingRef = useRef(false);
-  const returnedFromPublishCheckout =
-    searchParams.get("checkout") === "success" &&
-    searchParams.get("source") === "publish";
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
   const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<CreateDraft>(createDraftKey);
@@ -242,7 +237,7 @@ export default function CreatePage() {
           supabase
             .from("pages")
             .select("id", { count: "exact", head: true })
-            .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`),
+            .eq("owner_id", user.id),
         ]);
 
         setAccountAccess(
@@ -299,33 +294,6 @@ export default function CreatePage() {
       setSelectedPreviewVariantId(limitedVariants[0]?.id ?? null);
     }
   }, [accountAccess.variantLimit, selectedPreviewVariantId, variants]);
-
-  useEffect(() => {
-    if (legacyCheckoutReturnHandledRef.current || !returnedFromPublishCheckout) {
-      return;
-    }
-
-    legacyCheckoutReturnHandledRef.current = true;
-
-    if (pendingDraft) {
-      applyDraft(pendingDraft.data);
-      dismissDraft();
-      setPublishRestoredDraft(true);
-      router.replace("/create", { scroll: false });
-      return;
-    }
-
-    setError(
-      "We couldn't find the saved page draft to finish publishing. Rebuild or restore your page, then publish again.",
-    );
-    router.replace("/create", { scroll: false });
-  }, [
-    applyDraft,
-    dismissDraft,
-    pendingDraft,
-    returnedFromPublishCheckout,
-    router,
-  ]);
 
   const beginReviewOutputs = useCallback(
     (nextData: ResumeData) => {
@@ -406,7 +374,6 @@ export default function CreatePage() {
       setPublishedPageId(result?.pageId ?? null);
       setPublicSlug(nextSlug);
       setStep("success");
-      setPublishRestoredDraft(false);
       clearDraft();
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Unable to publish page.");
@@ -433,13 +400,10 @@ export default function CreatePage() {
   }, [publishPage, publishing]);
 
   useEffect(() => {
-    if (!publishRestoredDraft || !parsedData) {
-      return;
-    }
-
-    setPublishRestoredDraft(false);
-    void publishPage();
-  }, [parsedData, publishPage, publishRestoredDraft]);
+    if (step === "input") return;
+    const frame = window.requestAnimationFrame(() => stepHeadingRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
 
   return (
     <main className="site-container-wide py-6 sm:py-8">
@@ -571,7 +535,7 @@ export default function CreatePage() {
         <section className="space-y-5">
           <div>
             <p className="site-eyebrow">Step 2</p>
-            <h2 className="site-section-title mt-2">
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="site-section-title mt-2 outline-none">
               This is what someone will see when you send it.
             </h2>
             <p className="mt-2 max-w-4xl text-sm leading-7 text-site-secondary">
@@ -719,7 +683,7 @@ export default function CreatePage() {
         <section className="space-y-5">
           <div className="site-panel p-5 sm:p-8">
             <p className="site-eyebrow">Step 3</p>
-            <h2 className="site-section-title mt-2">
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="site-section-title mt-2 outline-none">
               Your page is live.
             </h2>
             <p className="mt-2 text-sm leading-7 text-site-secondary">

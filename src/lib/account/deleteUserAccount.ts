@@ -58,6 +58,7 @@ async function cancelActiveSubscriptions(customerId: string) {
     for (const subscription of cancellable) {
       await stripe.subscriptions.cancel(subscription.id);
     }
+    await stripe.customers.del(customerId);
   } catch (error) {
     console.error("Account deletion blocked: Stripe cancellation failed", error);
     throw new AccountDeletionError(
@@ -67,21 +68,25 @@ async function cancelActiveSubscriptions(customerId: string) {
   }
 }
 
-async function removeAvatarFiles(userId: string) {
+async function removeUserFiles(bucket: string, userId: string) {
   const supabase = createServiceRoleSupabaseClient();
-  const { data: avatarFiles, error: listError } = await supabase.storage.from("avatars").list(userId);
+  const { data: files, error: listError } = await supabase.storage.from(bucket).list(userId);
 
   if (listError) {
+    const statusCode = "statusCode" in listError ? String(listError.statusCode) : "";
+    if (bucket === "page-images" && (statusCode === "404" || /bucket.*not found/i.test(listError.message))) {
+      return;
+    }
     throw new AccountDeletionError("Failed to inspect avatar files for deletion.", 500);
   }
 
-  if (!avatarFiles?.length) {
+  if (!files?.length) {
     return;
   }
 
   const { error: removeError } = await supabase.storage
-    .from("avatars")
-    .remove(avatarFiles.map((file) => `${userId}/${file.name}`));
+    .from(bucket)
+    .remove(files.map((file) => `${userId}/${file.name}`));
 
   if (removeError) {
     throw new AccountDeletionError("Failed to remove avatar files.", 500);
@@ -105,7 +110,8 @@ export async function deleteUserAccount({
     await cancelActiveSubscriptions(profile.stripe_customer_id);
   }
 
-  await removeAvatarFiles(targetUserId);
+  await removeUserFiles("avatars", targetUserId);
+  await removeUserFiles("page-images", targetUserId);
 
   const supabase = createServiceRoleSupabaseClient();
   const { error: deleteError } = await supabase.auth.admin.deleteUser(targetUserId);
@@ -117,8 +123,6 @@ export async function deleteUserAccount({
   if (auditEventName && actorUserId) {
     await trackEvent(actorUserId, auditEventName, {
       target_user_id: targetUserId,
-      target_email: profile?.email ?? null,
-      target_username: profile?.username ?? null,
     });
   }
 

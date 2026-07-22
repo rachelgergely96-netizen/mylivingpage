@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   getAccountAccessState,
@@ -9,6 +9,7 @@ import {
 } from "@/lib/account-access";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
+import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
 
@@ -49,25 +50,8 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-function isLivePublicPage(
-  page:
-    | {
-        status: string | null;
-        visibility: string | null;
-      }
-    | null
-    | undefined,
-) {
-  return Boolean(
-    page &&
-      (page.visibility === "public" ||
-        (page.visibility == null && page.status === "live")),
-  );
-}
-
 export default function SettingsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const deleteInputRef = useRef<HTMLInputElement>(null);
   const deleteDialogRef = useRef<HTMLDivElement>(null);
@@ -131,69 +115,11 @@ export default function SettingsPage() {
       if (!res.ok) { setLoading(false); return; }
       const data = (await res.json()) as Profile;
 
-      const justUpgraded = searchParams.get("upgraded") === "true";
-      const upgradedAccess = data.accountAccess ?? getAccountAccessState({
-        plan: data.plan,
-        billing_cohort: data.billing_cohort ?? null,
-        hosting_trial_started_at: data.hosting_trial_started_at ?? null,
-        stripe_subscription_status: data.stripe_subscription_status ?? null,
-        stripe_trial_ends_at: data.stripe_trial_ends_at ?? null,
-      });
-
-      // If returning from Stripe checkout but webhook hasn't updated the plan yet,
-      // poll up to 5 times (every 1.5s) until the paid hosting state is visible.
-      if (justUpgraded && !upgradedAccess.hasPaidSubscription) {
-        let retries = 0;
-        const poll = async (): Promise<Profile> => {
-          if (retries >= 5 || cancelled) return data;
-          retries++;
-          await new Promise((r) => setTimeout(r, 1500));
-          if (cancelled) return data;
-          const retry = await fetch("/api/profile");
-          if (!retry.ok) return data;
-          const fresh = (await retry.json()) as Profile;
-          const freshAccess = fresh.accountAccess ?? getAccountAccessState({
-            plan: fresh.plan,
-            billing_cohort: fresh.billing_cohort ?? null,
-            hosting_trial_started_at: fresh.hosting_trial_started_at ?? null,
-            stripe_subscription_status: fresh.stripe_subscription_status ?? null,
-            stripe_trial_ends_at: fresh.stripe_trial_ends_at ?? null,
-          });
-          if (freshAccess.hasPaidSubscription) return fresh;
-          return poll();
-        };
-        const final = await poll();
-        if (cancelled) return;
-        setProfile(final);
-        setFullName(final.full_name ?? "");
-        setUsername(final.username ?? "");
-        setAvatarUrl(final.avatar_url);
-        setLoading(false);
-        const finalAccess = final.accountAccess ?? getAccountAccessState({
-          plan: final.plan,
-          billing_cohort: final.billing_cohort ?? null,
-          hosting_trial_started_at: final.hosting_trial_started_at ?? null,
-          stripe_subscription_status: final.stripe_subscription_status ?? null,
-          stripe_trial_ends_at: final.stripe_trial_ends_at ?? null,
-        });
-        showToast(
-          finalAccess.hasPaidSubscription
-            ? `${finalAccess.publicPlanLabel} trial is active.`
-            : "Subscription processing - hosting will activate shortly.",
-        );
-        router.replace("/dashboard/settings", { scroll: false });
-        return;
-      }
-
       setProfile(data);
       setFullName(data.full_name ?? "");
       setUsername(data.username ?? "");
       setAvatarUrl(data.avatar_url);
       setLoading(false);
-      if (justUpgraded) {
-        showToast(`${upgradedAccess.publicPlanLabel} trial is active.`);
-        router.replace("/dashboard/settings", { scroll: false });
-      }
     })().catch(() => {
       if (!cancelled) {
         setProfileLoadError("We could not load your settings. Check your connection and try again.");
@@ -201,7 +127,7 @@ export default function SettingsPage() {
       }
     });
     return () => { cancelled = true; };
-  }, [router, searchParams, showToast]);
+  }, [router]);
 
   // Username availability check (debounced)
   const checkTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -495,7 +421,7 @@ export default function SettingsPage() {
       stripe_subscription_status: profile.stripe_subscription_status ?? null,
       stripe_trial_ends_at: profile.stripe_trial_ends_at ?? null,
     });
-  const livePageActive = isLivePublicPage(profile.latestPage);
+  const livePageActive = isPubliclyAvailablePage(profile.latestPage);
   const activePlanPrice =
     profile.plan === "starter" ? STARTER_PLAN_PRICE : PRO_PLAN_PRICE;
 

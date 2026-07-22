@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
-import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
+import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { isKnownCrawlerUserAgent } from "@/lib/analytics/bot-user-agent";
 import { getClientIp, hashSecurityIdentifier } from "@/lib/security/request";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
@@ -84,36 +84,14 @@ export async function POST(request: Request) {
     }
 
     const pageOwnerId = page.owner_id ?? page.user_id ?? null;
-    const ownerProfileResult = pageOwnerId
-      ? await fetchProfileWithHostingAccess<{
-          plan?: string | null;
-        }>({
-          supabase,
-          select: "plan",
-          matchField: "id",
-          matchValue: pageOwnerId,
-        })
-      : { data: null };
-    const ownerProfile = ownerProfileResult.data;
-    if ("error" in ownerProfileResult && ownerProfileResult.error) {
-      throw new Error(ownerProfileResult.error.message);
-    }
-
-    const syncedPage = await syncPageHostingState(supabase, page, {
-      plan: ownerProfile?.plan ?? null,
-      billing_cohort: ownerProfile?.billing_cohort ?? null,
-      hosting_trial_started_at: ownerProfile?.hosting_trial_started_at ?? null,
-    });
-
-    if (syncedPage.changed || !isPubliclyAvailablePage(syncedPage.page)) {
-      return NextResponse.json({ error: "Page not found" }, { status: 404 });
-    }
-
     if (user?.id && pageOwnerId === user.id) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
     const headersList = await headers();
+    if (isKnownCrawlerUserAgent(headersList.get("user-agent"))) {
+      return NextResponse.json({ ok: true, ignored: true });
+    }
     const rawIp = getClientIp(headersList) ?? "unknown";
     const hashedIp = hashSecurityIdentifier(rawIp);
     const country = headersList.get("x-vercel-ip-country") ?? null;

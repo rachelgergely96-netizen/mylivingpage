@@ -489,7 +489,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "list",
             items: [
-              "Identifiers: name, username, email, account ID, device IDs, and IP address.",
+              "Identifiers: name, username, email, account ID, device IDs, and IP address. For public-page deduplication and abuse controls, IP-derived identifiers are stored as keyed pseudonymous hashes rather than plain IP addresses.",
               "Profile and content: text, photos, links, notes, files, and user-submitted materials.",
               "Usage data: logs, interactions, diagnostics, and performance metrics.",
               site.id === "mylivingpage"
@@ -561,6 +561,10 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
           {
             type: "paragraph",
             text: "We retain personal data as needed to provide the Service, satisfy legal requirements, and resolve disputes, then delete or de-identify when no longer needed.",
+          },
+          {
+            type: "paragraph",
+            text: "Operational rate-limit records are normally kept for 7 days. Public-page view records and ordinary product events are normally kept for up to 180 days unless a shorter period is required or a longer period is necessary for security, legal compliance, or dispute resolution.",
           },
           {
             type: "list",
@@ -990,8 +994,9 @@ function buildDeleteAccountPolicy(site: LegalSiteConfig): LegalPolicyDocument {
             items: [
               "Profile and published-page content records: removed at deletion request completion, except where retention is legally required.",
               "Financial and tax records tied to paid billing: retained up to 7 years where required by law or accounting standards.",
-              "Security logs and abuse-prevention records: generally retained up to 24 months.",
-              "Backups: rolling encrypted backups are typically overwritten within 35 days.",
+              "Operational rate-limit records: generally retained for 7 days; public-page views and ordinary product events: generally retained up to 180 days.",
+              "Other security and abuse-investigation records: retained only as long as reasonably necessary, and generally no longer than 24 months.",
+              "Backups: retained and overwritten according to the active hosting provider backup window; deletion from backups occurs through that normal rotation process.",
             ],
           },
         ],

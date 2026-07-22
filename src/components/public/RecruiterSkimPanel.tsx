@@ -144,7 +144,7 @@ export default function RecruiterSkimPanel({
                   <a
                     href={toHref(resumeData.linkedin)}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel="noopener noreferrer nofollow ugc"
                     className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
                   >
                     LinkedIn
@@ -187,7 +187,7 @@ export default function RecruiterSkimPanel({
                     <a
                       href={toHref(featuredProject.url)}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow ugc"
                       className="theme-link rounded-none border border-[var(--theme-accent-border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors"
                     >
                       Open project

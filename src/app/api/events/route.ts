@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     .from("pages")
     .select("id")
     .eq("id", metadata.page_id)
-    .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
+    .eq("owner_id", user.id)
     .maybeSingle<{ id: string }>();
 
   if (pageError) {

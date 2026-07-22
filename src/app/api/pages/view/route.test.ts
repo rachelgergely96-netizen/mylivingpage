@@ -50,13 +50,7 @@ function createServiceRoleClient(options?: {
     status?: string | null;
     visibility?: string | null;
   } | null;
-  ownerProfile?: {
-    plan?: string | null;
-    billing_cohort?: string | null;
-    hosting_trial_started_at?: string | null;
-  } | null;
   pageError?: { message: string } | null;
-  ownerProfileError?: { message: string } | null;
   recentViewError?: { message: string } | null;
 }) {
   return {
@@ -88,28 +82,6 @@ function createServiceRoleClient(options?: {
               eq: vi.fn().mockResolvedValue({
                 error: null,
               }),
-            };
-          },
-        };
-      }
-
-      if (table === "profiles") {
-        return {
-          select() {
-            return {
-              eq() {
-                return {
-                  maybeSingle: vi.fn().mockResolvedValue({
-                    data:
-                      options?.ownerProfile ?? {
-                        plan: "legacy_freemium",
-                        billing_cohort: "legacy_freemium",
-                        hosting_trial_started_at: null,
-                      },
-                    error: options?.ownerProfileError ?? null,
-                  }),
-                };
-              },
             };
           },
         };
@@ -181,16 +153,8 @@ describe("POST /api/pages/view", () => {
     mocks.trackEvent.mockResolvedValue(undefined);
   });
 
-  it("counts views after a historical free-hosting period expires", async () => {
-    mocks.createServiceRoleSupabaseClient.mockReturnValue(
-      createServiceRoleClient({
-        ownerProfile: {
-          plan: "spark",
-          billing_cohort: "trial_hosting_v1",
-          hosting_trial_started_at: "2026-01-01T00:00:00.000Z",
-        },
-      }),
-    );
+  it("counts views for a public live page", async () => {
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(createServiceRoleClient());
 
     const response = await POST(
       new Request("http://localhost/api/pages/view", {
@@ -210,6 +174,21 @@ describe("POST /api/pages/view", () => {
     expect(mocks.pageUpdate).not.toHaveBeenCalled();
     expect(mocks.insertPageView).toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenCalled();
+  });
+
+  it("does not count known search and social crawlers", async () => {
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(createServiceRoleClient());
+    mocks.headers.mockResolvedValue({
+      get: (name: string) => name === "user-agent" ? "Googlebot/2.1" : null,
+    });
+    const response = await POST(new Request("http://localhost/api/pages/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pageId: "page-1" }),
+    }));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, ignored: true });
+    expect(mocks.insertPageView).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -242,10 +221,6 @@ describe("POST /api/pages/view", () => {
 
   it.each([
     ["page lookup", { pageError: { message: "page lookup failed" } }],
-    [
-      "owner profile lookup",
-      { ownerProfileError: { message: "profile lookup failed" } },
-    ],
     [
       "view deduplication lookup",
       { recentViewError: { message: "dedupe lookup failed" } },

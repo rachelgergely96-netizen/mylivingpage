@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ANALYTICS_CONSENT_STORAGE_KEY,
   isAnalyticsEligiblePath,
@@ -41,6 +41,8 @@ export default function AnalyticsConsent() {
   const [choice, setChoice] = useState<AnalyticsConsentChoice | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [analyticsReady, setAnalyticsReady] = useState(false);
+  const settingsPanelRef = useRef<HTMLElement | null>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const eligible = eligibleHost && isAnalyticsEligiblePath(pathname);
   const analyticsActive = hydrated && eligible && choice === "analytics";
 
@@ -57,10 +59,27 @@ export default function AnalyticsConsent() {
   }, []);
 
   useEffect(() => {
-    const openSettings = () => setSettingsOpen(true);
+    const openSettings = () => {
+      restoreFocusRef.current = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+      setSettingsOpen(true);
+    };
     window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
     return () => window.removeEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    settingsPanelRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setSettingsOpen(false);
+      window.setTimeout(() => restoreFocusRef.current?.focus(), 0);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [settingsOpen]);
 
   useEffect(() => {
     if (!analyticsActive) {
@@ -112,6 +131,7 @@ export default function AnalyticsConsent() {
     }
     setChoice(nextChoice);
     setSettingsOpen(false);
+    window.setTimeout(() => restoreFocusRef.current?.focus(), 0);
     updateGoogleConsent(nextChoice);
   };
 
@@ -131,6 +151,8 @@ export default function AnalyticsConsent() {
 
       {showPrompt ? (
         <section
+          ref={settingsPanelRef}
+          tabIndex={-1}
           aria-label="Cookie and analytics settings"
           className="fixed inset-x-3 bottom-3 z-[100] border border-site-border bg-site-surface p-4 shadow-2xl sm:left-auto sm:max-w-xl sm:p-5"
           data-site-ui

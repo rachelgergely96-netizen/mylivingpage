@@ -131,12 +131,10 @@ export async function assertSignedWebhook<T>(input: {
         signature,
       },
     };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Webhook signature verification failed.";
+  } catch {
     return {
       response: NextResponse.json(
-        { error: `Webhook signature verification failed: ${message}` },
+        { error: "Webhook signature verification failed." },
         { status: 400 },
       ),
     };

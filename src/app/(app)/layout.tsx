@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import AppNavigation from "@/components/ui/AppNavigation";
 import { isAdminEmail } from "@/lib/admin";
-import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
-import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function AuthenticatedLayout({
   children,
@@ -17,9 +16,6 @@ export default async function AuthenticatedLayout({
   if (!user) {
     redirect("/login");
   }
-
-  const admin = createServiceRoleSupabaseClient();
-  await ensureUserProfile(admin, user);
 
   return (
     <div className="site-shell" data-site-ui>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 
 interface AdminPage {
   id: string;
@@ -18,12 +19,15 @@ interface AdminPage {
 }
 
 export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
+  const [pageRows, setPageRows] = useState(pages);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [pendingPageId, setPendingPageId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = pages.filter((p) => {
+  const filtered = pageRows.filter((p) => {
     if (statusFilter !== "all") {
-      const effectiveStatus = p.visibility === "public" ? "live" : (p.status ?? "draft");
+      const effectiveStatus = isPubliclyAvailablePage(p) ? "live" : "draft";
       if (effectiveStatus !== statusFilter) return false;
     }
     if (!search) return true;
@@ -36,8 +40,27 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
     );
   });
 
+  const unpublish = async (pageId: string) => {
+    if (!window.confirm("Unpublish this page? Its public URL will stop working immediately.")) return;
+    setPendingPageId(pageId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/pages/${pageId}`, { method: "PATCH" });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Unable to unpublish page.");
+      setPageRows((current) => current.map((page) => page.id === pageId
+        ? { ...page, status: "draft", visibility: "private" }
+        : page));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to unpublish page.");
+    } finally {
+      setPendingPageId(null);
+    }
+  };
+
   return (
     <div>
+      {error ? <p role="alert" className="mb-4 text-sm text-site-danger">{error}</p> : null}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
         <label htmlFor="admin-page-search" className="sr-only">
           Search pages
@@ -67,7 +90,7 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
 
       <div className="space-y-2">
         {filtered.map((p) => {
-          const isLive = p.visibility === "public" || p.status === "live";
+          const isLive = isPubliclyAvailablePage(p);
           return (
             <div
               key={p.id}
@@ -99,6 +122,16 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
                 >
                   {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </time>
+                {isLive && (
+                  <button
+                    type="button"
+                    disabled={pendingPageId === p.id}
+                    onClick={() => unpublish(p.id)}
+                    className="site-button site-button-danger px-3 py-1.5 text-[11px]"
+                  >
+                    {pendingPageId === p.id ? "Unpublishing..." : "Unpublish"}
+                  </button>
+                )}
                 {isLive && (
                   <Link
                     href={`/${p.slug}`}

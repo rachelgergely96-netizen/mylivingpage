@@ -10,7 +10,6 @@ import RecruiterSkimPanel from "@/components/public/RecruiterSkimPanel";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
-import { getAccountAccessState } from "@/lib/account-access";
 import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import { getLivingPageSectionIds } from "@/lib/living-page-sections";
 import {
@@ -20,10 +19,8 @@ import {
   getPageVariant,
 } from "@/lib/page-variants";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
-import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { trackEvent } from "@/lib/track-event";
 import { THEME_IDS, type ThemeId } from "@/themes/types";
 
 const VALID_THEMES: Set<string> = new Set(THEME_IDS);
@@ -39,63 +36,6 @@ interface PublicPageProps {
   searchParams: Promise<{ v?: string; s?: string; sl?: string }>;
 }
 
-async function fetchOfflinePageContext(
-  username: string,
-  supabase: ReturnType<typeof createServiceRoleSupabaseClient>,
-) {
-  const { data: profile } = await fetchProfileWithHostingAccess<{
-    id: string;
-    plan?: string | null;
-    stripe_subscription_status?: string | null;
-    stripe_trial_ends_at?: string | null;
-  }>({
-    supabase,
-    select: "id, plan",
-    matchField: "username",
-    matchValue: username,
-  });
-
-  if (!profile) {
-    return null;
-  }
-
-  const access = getAccountAccessState({
-    plan: profile.plan ?? null,
-    billing_cohort: profile.billing_cohort ?? null,
-    hosting_trial_started_at: profile.hosting_trial_started_at ?? null,
-    stripe_subscription_status: profile.stripe_subscription_status ?? null,
-    stripe_trial_ends_at: profile.stripe_trial_ends_at ?? null,
-  });
-
-  if (access.publicHostingAllowed) {
-    return null;
-  }
-
-  const { data: page } = await supabase
-    .from("pages")
-    .select("id, resume_data, published_at, user_id, owner_id")
-    .or(`owner_id.eq.${profile.id},user_id.eq.${profile.id}`)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!page || !page.published_at) {
-    return null;
-  }
-
-  return {
-    page: page as {
-      id: string;
-      resume_data: { name?: string | null } | null;
-      published_at: string | null;
-      user_id?: string | null;
-      owner_id?: string | null;
-    },
-    access,
-    ownerId: profile.id,
-  };
-}
-
 export async function generateMetadata({ params }: PublicPageProps): Promise<Metadata> {
   noStore();
   const { username } = await params;
@@ -104,6 +44,7 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
     return {
       title: SITE_NAME,
       description: "Living digital pages for professionals.",
+      robots: { index: false, follow: false },
     };
   }
 
@@ -139,45 +80,15 @@ export default async function PublicLivingPage({
 }: PublicPageProps) {
   noStore();
   const [{ username }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const supabase = createServiceRoleSupabaseClient();
   const page = await getPublicPage(username);
   const publicPageAvailable = isPubliclyAvailablePage(page);
 
   if (!page || !publicPageAvailable) {
-    const offlineContext = await fetchOfflinePageContext(username, supabase);
-
-    if (!offlineContext) {
-      notFound();
-    }
-
-    await trackEvent(offlineContext.ownerId, "page.offline_view_attempted", {
-      page_id: offlineContext.page.id,
-      username,
-    }).catch(() => undefined);
-
-    const pageName = offlineContext.page.resume_data?.name?.trim() || username;
-
-    return (
-      <main className="site-shell px-4 py-12 sm:px-6 sm:py-16" data-site-ui>
-        <div className="site-panel-raised mx-auto max-w-3xl p-6 sm:p-10">
-          <p className="site-eyebrow">Page unavailable</p>
-          <h1 className="site-page-title mt-3">
-            {pageName}&rsquo;s page is being updated.
-          </h1>
-          <p className="site-muted mt-4 text-base leading-7">
-            This link was live before and can be reactivated anytime. The owner can turn hosting
-            back on from their MyLivingPage settings when they are ready to share it again.
-          </p>
-          <div className="site-callout mt-6 p-4 text-sm leading-6">
-            The URL stays reserved so the page can come back without changing the link.
-          </div>
-        </div>
-      </main>
-    );
+    notFound();
   }
 
   const themeId = (VALID_THEMES.has(page.theme_id) ? page.theme_id : "cosmic") as ThemeId;
-  const pageUserId = page.user_id ?? page.owner_id ?? "";
+  const pageUserId = page.owner_id ?? page.user_id ?? "";
   const authClient = await createServerSupabaseClient();
   const { data: { user: viewer } } = await authClient.auth.getUser();
   const isOwner = viewer?.id === pageUserId;
@@ -188,24 +99,6 @@ export default async function PublicLivingPage({
     variantId: selectedVariant?.id ?? null,
   });
   const variantAwareUrl = absoluteUrl(variantAwarePath as `/${string}`);
-  const { data: ownerProfile } = await fetchProfileWithHostingAccess<{
-    plan?: string | null;
-    username?: string | null;
-    stripe_subscription_status?: string | null;
-    stripe_trial_ends_at?: string | null;
-  }>({
-    supabase,
-    select: "plan, username",
-    matchField: "username",
-    matchValue: username,
-  });
-  const ownerAccess = getAccountAccessState({
-    plan: ownerProfile?.plan ?? null,
-    billing_cohort: ownerProfile?.billing_cohort ?? null,
-    hosting_trial_started_at: ownerProfile?.hosting_trial_started_at ?? null,
-    stripe_subscription_status: ownerProfile?.stripe_subscription_status ?? null,
-    stripe_trial_ends_at: ownerProfile?.stripe_trial_ends_at ?? null,
-  });
   const livingPageSectionIds = getLivingPageSectionIds(variantResumeData);
 
   return (
@@ -250,6 +143,15 @@ export default async function PublicLivingPage({
                 data={variantResumeData}
                 useExternalScrollRoot
               />
+              <footer className="resume-theme mx-auto flex max-w-4xl justify-end px-4 pb-24 sm:px-6 md:px-8">
+                <a
+                  href={`mailto:${process.env.NEXT_PUBLIC_LEGAL_CONTACT_EMAIL ?? "support@mylivingpage.com"}?subject=${encodeURIComponent(`Report public page /${page.slug}`)}`}
+                  rel="nofollow"
+                  className="resume-theme-link text-xs underline underline-offset-4"
+                >
+                  Report this page
+                </a>
+              </footer>
             </div>
           </div>
         </PageOwnerBar>
@@ -262,17 +164,9 @@ export default async function PublicLivingPage({
         resumeData={variantResumeData}
         variantId={selectedVariant?.id ?? null}
         liveUrl={variantAwareUrl}
-        shareCardEnabled={ownerAccess.shareCardAllowed}
-        analyticsHref={
-          ownerAccess.analyticsTier === "full"
-            ? `/dashboard/analytics/${page.id}`
-            : "/dashboard"
-        }
-        analyticsCtaLabel={
-          ownerAccess.analyticsTier === "full"
-            ? "Open Page Analytics"
-            : "Open Dashboard"
-        }
+        shareCardEnabled
+        analyticsHref={`/dashboard/analytics/${page.id}`}
+        analyticsCtaLabel="Open Page Analytics"
         avoidBadge
       />
       <MadeWithBadge isSignedIn={Boolean(viewer)} />

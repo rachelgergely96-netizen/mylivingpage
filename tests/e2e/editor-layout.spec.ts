@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import type { AtsReadinessResult } from "../../src/lib/ats-readiness";
 import { DEMO_PAGES } from "../../src/lib/demo-data";
 import type { PageRecord } from "../../src/types/resume";
 
@@ -22,6 +23,125 @@ const editorPage: PageRecord = {
   published_at: "2026-07-19T12:00:00.000Z",
   created_at: "2026-07-18T12:00:00.000Z",
   updated_at: "2026-07-19T12:00:00.000Z",
+};
+
+const jobComparisonReadiness: AtsReadinessResult = {
+  status: "needs_attention",
+  score: 84,
+  categoryScores: {
+    essentials: 100,
+    content: 92,
+    searchability: 62,
+    pdf: 100,
+  },
+  checks: {
+    essentials: [
+      {
+        id: "contact-values-valid",
+        category: "essentials",
+        title: "Contact details are readable",
+        detail: "The contact details use readable text.",
+        severity: "pass",
+        passed: true,
+        pointsDeducted: 0,
+      },
+    ],
+    content: [],
+    searchability: [
+      {
+        id: "target-title-present",
+        category: "searchability",
+        title: "The target title appears in the resume",
+        detail: '"Principal Product Manager" does not appear as an exact phrase in the resume.',
+        severity: "warning",
+        passed: false,
+        pointsDeducted: 20,
+        suggestedFix: "Use the title only if it accurately describes your work.",
+      },
+      {
+        id: "job-keyword-coverage",
+        category: "searchability",
+        title: "Relevant job-description terms are represented",
+        detail: "50% of the selected job-description terms appear in the resume.",
+        severity: "warning",
+        passed: false,
+        pointsDeducted: 25,
+        suggestedFix: "Review the missing terms below.",
+      },
+    ],
+    pdf: [
+      {
+        id: "pdf-renderable",
+        category: "pdf",
+        title: "The PDF renders",
+        detail: "The PDF rendered successfully.",
+        severity: "pass",
+        passed: true,
+        pointsDeducted: 0,
+      },
+    ],
+  },
+  criticalFixes: [],
+  improvements: [
+    {
+      id: "target-title-present",
+      category: "searchability",
+      title: "The target title appears in the resume",
+      detail: '"Principal Product Manager" does not appear as an exact phrase in the resume.',
+      severity: "warning",
+      passed: false,
+      pointsDeducted: 20,
+      suggestedFix: "Use the title only if it accurately describes your work.",
+    },
+    {
+      id: "job-keyword-coverage",
+      category: "searchability",
+      title: "Relevant job-description terms are represented",
+      detail: "50% of the selected job-description terms appear in the resume.",
+      severity: "warning",
+      passed: false,
+      pointsDeducted: 25,
+      suggestedFix: "Review the missing terms below.",
+    },
+  ],
+  passedChecks: [
+    {
+      id: "contact-values-valid",
+      category: "essentials",
+      title: "Contact details are readable",
+      detail: "The contact details use readable text.",
+      severity: "pass",
+      passed: true,
+      pointsDeducted: 0,
+    },
+    {
+      id: "pdf-renderable",
+      category: "pdf",
+      title: "The PDF renders",
+      detail: "The PDF rendered successfully.",
+      severity: "pass",
+      passed: true,
+      pointsDeducted: 0,
+    },
+  ],
+  pdf: {
+    renderable: true,
+    pageCount: 1,
+    fitsOnOnePage: true,
+    renderFailureReason: null,
+    overflowReasons: [],
+    recommendedFixes: [],
+  },
+  keywordCoverage: {
+    keywords: ["analytics", "roadmaps", "python", "sql"],
+    matchedKeywords: ["analytics", "roadmaps"],
+    missingKeywords: ["python", "sql"],
+    coveragePercent: 50,
+  },
+  fingerprint: "preview-fingerprint",
+  evaluatedAt: "2026-07-22T20:00:00.000Z",
+  disclaimer:
+    "This check reviews common ATS practices and cannot predict employer decisions.",
 };
 
 async function mockEditorRequests(page: Page) {
@@ -174,4 +294,63 @@ test("mobile editor switches cleanly between editing and preview", async ({ page
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(previewOverflow).toBeLessThanOrEqual(0);
+});
+
+test("job-specific ATS check makes found and missing words easy to scan", async ({
+  page,
+}) => {
+  await page.route("**/api/resume/readiness", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ readiness: jobComparisonReadiness }),
+    });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dev/editor-preview");
+
+  const atsCard = page.locator("#ats-readiness");
+  const titleInput = page.getByLabel(/Target job title/);
+  const descriptionInput = page.getByLabel(/Job description/);
+
+  await atsCard.scrollIntoViewIfNeeded();
+  await expect(titleInput).toBeVisible();
+  await expect(descriptionInput).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run general ATS check" })).toBeVisible();
+  await expect(page.locator("[data-ats-check-mode]")).toHaveText("General ATS check");
+
+  await titleInput.fill("Principal Product Manager");
+  await descriptionInput.fill(
+    "Lead product roadmaps using analytics, Python, and SQL across a B2B platform.",
+  );
+  await expect(page.locator("[data-ats-check-mode]")).toHaveText("Job-specific check");
+
+  await page.getByRole("button", { name: "Check against this job" }).click();
+
+  const results = page.locator("[data-ats-readiness-results]");
+  const jobMatch = page.locator("[data-ats-job-match]");
+  await expect(results).toBeVisible();
+  await expect(results).toBeFocused();
+  await expect(jobMatch.getByRole("heading", {
+    name: "2 of 4 important terms appear in your resume",
+  })).toBeVisible();
+  await expect(jobMatch.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+  await expect(jobMatch.getByRole("list", {
+    name: "Job terms found in your resume",
+  })).toContainText("analytics");
+  await expect(jobMatch.getByRole("list", {
+    name: "Job terms found in your resume",
+  })).toContainText("roadmaps");
+  await expect(jobMatch.getByRole("list", {
+    name: "Job terms not found in your resume",
+  })).toContainText("python");
+  await expect(jobMatch.getByRole("list", {
+    name: "Job terms not found in your resume",
+  })).toContainText("sql");
+  await expect(jobMatch).toContainText("Only add a missing term when it truthfully describes work you have done.");
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
 });

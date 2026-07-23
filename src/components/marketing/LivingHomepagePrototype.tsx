@@ -483,8 +483,7 @@ export default function LivingHomepagePrototype({
                 anytime and share as one link.
               </p>
               <p className={styles.heroBody}>
-                Create a free account, upload a PDF or paste text, review the important details,
-                and publish only when you are ready.
+                Upload or paste your résumé, then review every field before publishing.
               </p>
               <div className={styles.heroActions}>
                 <Link
@@ -515,7 +514,9 @@ export default function LivingHomepagePrototype({
               <div className={styles.storyHeader}>
                 <div>
                   <p>One truthful source</p>
-                  <h2 id="live-product-story-title">See one résumé become more useful.</h2>
+                  <h2 id="live-product-story-title">
+                    One résumé becomes a page, PDF, and Share Card.
+                  </h2>
                 </div>
                 <span>Sample data</span>
               </div>
@@ -545,6 +546,10 @@ export default function LivingHomepagePrototype({
                 })}
               </div>
 
+              <p className={styles.storyMobileSummary} data-story-mobile-summary>
+                Choose an output above. Your facts stay the same.
+              </p>
+
               <div className={styles.storyStage} data-story-stage data-transformation-stage>
                 <StorySourceResume />
                 <TruthTransfer motionKey={motionKey} />
@@ -573,15 +578,19 @@ export default function LivingHomepagePrototype({
               <div className={styles.storyStyleChooser} data-living-gallery data-story-style-chooser>
                 <div className={styles.storyStyleHeader} id="story-style-choice-help">
                   <div>
-                    <span>59 living themes</span>
-                    <h3>Try five directions. Your information stays the same.</h3>
+                    <span>{storyMomentId === "referral" ? "59 living themes" : "Living Page styles"}</span>
+                    <h3>
+                      {storyMomentId === "referral"
+                        ? "Try five directions. Your information stays the same."
+                        : "Choose a direction to return to the Living Page."}
+                    </h3>
                   </div>
                   <Link href="/examples">Explore all themes</Link>
                 </div>
                 <div
                   className={styles.galleryOptions}
                   role="radiogroup"
-                  aria-label="Choose a style for the Living Page above"
+                  aria-label="Choose a Living Page style"
                   aria-describedby="story-style-choice-help"
                 >
                   {WORLD_DIRECTIONS.map((world, index) => {

@@ -1,5 +1,5 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { ADMIN_EMAIL } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
 import {
   assessBotRisk,
   type BotDisposition,
@@ -153,7 +153,7 @@ export function buildAdminUserRows({
       signup_referrer: profile.signup_referrer,
       pageCount: pageStats.pageCount,
       totalViews: pageStats.totalViews,
-      isAdmin: userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+      isAdmin: isAdminEmail(userEmail),
       emailConfirmedAt: botRisk.emailConfirmedAt,
       botRiskScore: botRisk.botRiskScore,
       botSignals: botRisk.botSignals,

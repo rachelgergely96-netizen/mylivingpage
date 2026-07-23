@@ -18,6 +18,7 @@ import {
   isTurnstileConfigured,
   isTurnstileMissingInProduction,
 } from "@/lib/turnstile";
+import styles from "@/components/admin/AdminExperience.module.css";
 
 interface EventRow {
   event_name: string;
@@ -180,21 +181,21 @@ export default async function AdminOpsPage() {
   const thirtyDayCutoff = thirtyDaysAgo.toISOString();
 
   const [
-    { count: webhookFailureCount },
-    { count: publishFailureCount },
-    { count: publishFallbackCount },
-    { count: authGoogleStartSuccessCount },
-    { count: authGoogleStartFailureCount },
-    { count: authCallbackSuccessCount },
-    { count: authCallbackFailureCount },
-    { count: rateLimitBlockedCount },
-    { data: processedWebhookRows },
-    { data: authCallbackFailureRows },
-    { data: recentAuthRows },
-    { data: recentBillingRows },
-    { data: recentFailureRows },
-    { data: recentRateLimitRows },
-    { data: profiles },
+    webhookFailureResult,
+    publishFailureResult,
+    publishFallbackResult,
+    authGoogleStartSuccessResult,
+    authGoogleStartFailureResult,
+    authCallbackSuccessResult,
+    authCallbackFailureResult,
+    rateLimitBlockedResult,
+    processedWebhookResult,
+    authCallbackFailureRowsResult,
+    recentAuthResult,
+    recentBillingResult,
+    recentFailureResult,
+    recentRateLimitResult,
+    profilesResult,
     authUsers,
     stripePriceStatus,
   ] = await Promise.all([
@@ -302,15 +303,43 @@ export default async function AdminOpsPage() {
     getStripePriceStatus(),
   ]);
 
-  const processedWebhooks = (processedWebhookRows ?? []) as EventRow[];
-  const authCallbackFailures = (authCallbackFailureRows ?? []) as EventRow[];
-  const recentAuthEvents = (recentAuthRows ?? []) as EventRow[];
-  const recentBillingEvents = (recentBillingRows ?? []) as EventRow[];
-  const recentFailureEvents = (recentFailureRows ?? []) as EventRow[];
-  const recentRateLimitEvents = (recentRateLimitRows ?? []) as EventRow[];
+  const queryError =
+    webhookFailureResult.error ??
+    publishFailureResult.error ??
+    publishFallbackResult.error ??
+    authGoogleStartSuccessResult.error ??
+    authGoogleStartFailureResult.error ??
+    authCallbackSuccessResult.error ??
+    authCallbackFailureResult.error ??
+    rateLimitBlockedResult.error ??
+    processedWebhookResult.error ??
+    authCallbackFailureRowsResult.error ??
+    recentAuthResult.error ??
+    recentBillingResult.error ??
+    recentFailureResult.error ??
+    recentRateLimitResult.error ??
+    profilesResult.error;
+  if (queryError) {
+    throw new Error("Unable to load system health.");
+  }
+
+  const webhookFailureCount = webhookFailureResult.count;
+  const publishFailureCount = publishFailureResult.count;
+  const publishFallbackCount = publishFallbackResult.count;
+  const authGoogleStartSuccessCount = authGoogleStartSuccessResult.count;
+  const authGoogleStartFailureCount = authGoogleStartFailureResult.count;
+  const authCallbackSuccessCount = authCallbackSuccessResult.count;
+  const authCallbackFailureCount = authCallbackFailureResult.count;
+  const rateLimitBlockedCount = rateLimitBlockedResult.count;
+  const processedWebhooks = (processedWebhookResult.data ?? []) as EventRow[];
+  const authCallbackFailures = (authCallbackFailureRowsResult.data ?? []) as EventRow[];
+  const recentAuthEvents = (recentAuthResult.data ?? []) as EventRow[];
+  const recentBillingEvents = (recentBillingResult.data ?? []) as EventRow[];
+  const recentFailureEvents = (recentFailureResult.data ?? []) as EventRow[];
+  const recentRateLimitEvents = (recentRateLimitResult.data ?? []) as EventRow[];
   const legalIssues = getLegalConfigIssues();
   const adminUsers = buildAdminUserRows({
-    profiles: ((profiles ?? []) as AdminProfileRow[]),
+    profiles: ((profilesResult.data ?? []) as AdminProfileRow[]),
     pages: [],
     authUsers,
   });
@@ -369,16 +398,17 @@ export default async function AdminOpsPage() {
       : null;
 
   return (
-    <main className="site-container-wide py-8 md:py-10">
-      <div className="mb-6">
-        <p className="site-eyebrow">Admin</p>
-        <h1 className="site-page-title mt-2">
-          Operations
-        </h1>
-        <p className="site-muted mt-2 max-w-3xl text-sm">
-          Release health for billing, publishing, auth callbacks, bot pressure on public endpoints, and public legal readiness.
-        </p>
-      </div>
+    <main className={styles.page}>
+      <header className={styles.pageHeader}>
+        <div className={styles.pageIntro}>
+          <p className="site-eyebrow">System / Health</p>
+          <h1 className="site-page-title mt-2">System health</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary">
+            Check billing, publishing, sign-in callbacks, bot pressure, and launch
+            configuration without digging through raw event names first.
+          </p>
+        </div>
+      </header>
 
       {turnstileMissingInProduction ? (
         <div className="site-callout site-callout-warning mb-6 px-5 py-4 text-sm">

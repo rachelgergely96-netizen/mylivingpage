@@ -85,6 +85,12 @@ export const RATE_LIMIT_POLICIES = {
     windowMs: 10 * 60 * 1000,
     scope: "user",
   },
+  feedback_submit: {
+    label: "Feedback submission",
+    maxRequests: 10,
+    windowMs: 60 * 60 * 1000,
+    scope: "user",
+  },
 } satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMIT_POLICIES;

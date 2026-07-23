@@ -3,16 +3,36 @@ import { expect, test } from "@playwright/test";
 test("examples page matches the simpler Living Page and Resume PDF positioning", async ({ page }) => {
   await page.goto("/examples");
 
-  await expect(page.getByRole("heading", { name: "See what the decision page can look like once someone is considering you." })).toBeVisible();
   await expect(
-    page.getByText("once someone opens your link and wants faster context."),
+    page.getByRole("heading", {
+      name: "See what someone sees when they open your link.",
+    }),
   ).toBeVisible();
-  await expect(page.getByText("After you apply", { exact: true })).toBeVisible();
-  await expect(page.getByText("Why this helps a human", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Use the PDF", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open large preview" }).first()).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Ready to create one page you can actually send?" }),
+    page.getByText("Use your résumé PDF when an application asks for a file.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: /After applying/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /A recruiter is interested/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Software engineer re-entering the market" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Open full sample for Avery Sample/ }),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: /A referral asks/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Designer moving into a new in-house role" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Turn your résumé into a page you can send as one link.",
+    }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Create Your Page (Free)" }).first()).toHaveAttribute(
     "href",

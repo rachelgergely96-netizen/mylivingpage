@@ -585,7 +585,7 @@ export default function LivingHomepagePrototype({
                         : "Choose a style to preview your web page again."}
                     </h3>
                   </div>
-                  <Link href="/examples">See all page styles</Link>
+                  <Link href="/examples">See more examples</Link>
                 </div>
                 <div
                   className={styles.galleryOptions}

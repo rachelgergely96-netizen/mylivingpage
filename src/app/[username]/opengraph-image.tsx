@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
+import { ShareCardProfileMark } from "@/components/ShareCardProfileMark";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import {
   buildQrMatrix,
@@ -136,6 +137,14 @@ export default async function OGImage({ params }: OgImageProps) {
   const shareTags = getShareCardTags(resume);
   const firstName = getFirstName(safeName);
   const initial = safeName.slice(0, 1).toUpperCase() || "?";
+  const headingFontFamily =
+    visual.headingFont === "editorial"
+      ? playfairFont
+        ? "Playfair"
+        : "serif"
+      : dmSansFont
+        ? "DM Sans"
+        : "sans-serif";
 
   return new ImageResponse(
     (
@@ -147,8 +156,8 @@ export default async function OGImage({ params }: OgImageProps) {
           position: "relative",
           overflow: "hidden",
           padding: "32px",
-          background: "linear-gradient(145deg, #030711 0%, #07111C 55%, #03060D 100%)",
-          color: "#F0F4FF",
+          background: visual.background,
+          color: visual.text,
           fontFamily: dmSansFont ? "DM Sans" : "sans-serif",
         }}
       >
@@ -185,8 +194,8 @@ export default async function OGImage({ params }: OgImageProps) {
             display: "flex",
             flexDirection: "column",
             padding: "34px 36px 30px",
-            borderRadius: 32,
-            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 0,
+            border: `1px solid ${visual.border}`,
             background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
             boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 70px ${visual.glow}`,
             overflow: "hidden",
@@ -203,6 +212,18 @@ export default async function OGImage({ params }: OgImageProps) {
               background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)`,
             }}
           />
+          <ShareCardProfileMark
+            accent={visual.accent}
+            motif={visual.motif}
+            style={{
+              height: 72,
+              opacity: 0.58,
+              right: 178,
+              top: 42,
+              width: 72,
+              zIndex: 2,
+            }}
+          />
 
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 28 }}>
             <div style={{ display: "flex", flexDirection: "column", maxWidth: 760 }}>
@@ -213,32 +234,35 @@ export default async function OGImage({ params }: OgImageProps) {
                   gap: 10,
                   fontSize: 14,
                   letterSpacing: "0.18em",
-                  color: "rgba(240,244,255,0.58)",
+                  color: visual.textSubtle,
                   textTransform: "uppercase",
                 }}
               >
-                <span style={{ width: 28, height: 2, background: visual.accent, borderRadius: 99 }} />
+                <span style={{ width: 28, height: 2, background: visual.accent }} />
                 Personalized Share Card
               </div>
               <div
                 style={{
                   marginTop: 16,
-                  fontFamily: playfairFont ? "Playfair" : "serif",
+                  fontFamily: headingFontFamily,
                   fontSize: 66,
                   lineHeight: 0.98,
                   fontWeight: 700,
                   letterSpacing: "-0.03em",
-                  textShadow: "0 2px 22px rgba(0,0,0,0.35)",
+                  color: visual.text,
+                  textShadow: visual.lightGround
+                    ? "none"
+                    : "0 2px 22px rgba(0,0,0,0.35)",
                   maxWidth: 720,
                 }}
               >
                 {safeName}
               </div>
-              <div style={{ marginTop: 16, fontSize: 24, color: "rgba(240,244,255,0.86)", maxWidth: 700 }}>
+              <div style={{ marginTop: 16, fontSize: 24, color: visual.textMuted, maxWidth: 700 }}>
                 {safeHeadline}
               </div>
               {safeLocation ? (
-                <div style={{ marginTop: 14, fontSize: 18, color: "rgba(240,244,255,0.56)" }}>
+                <div style={{ marginTop: 14, fontSize: 18, color: visual.textSubtle }}>
                   {safeLocation}
                 </div>
               ) : null}
@@ -249,11 +273,11 @@ export default async function OGImage({ params }: OgImageProps) {
                   alignItems: "center",
                   alignSelf: "flex-start",
                   padding: "9px 16px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(10,22,40,0.38)",
+                  borderRadius: 0,
+                  border: `1px solid ${visual.border}`,
+                  background: visual.surface,
                   fontSize: 18,
-                  color: "#93C5FD",
+                  color: visual.accentBright,
                 }}
               >
                 @{page.slug}
@@ -269,7 +293,7 @@ export default async function OGImage({ params }: OgImageProps) {
                 style={{
                   width: 128,
                   height: 128,
-                  borderRadius: "50%",
+                  borderRadius: 0,
                   objectFit: "cover",
                   border: `3px solid ${visual.accent}`,
                   boxShadow: `0 0 36px ${visual.glow}`,
@@ -280,15 +304,15 @@ export default async function OGImage({ params }: OgImageProps) {
                 style={{
                   width: 128,
                   height: 128,
-                  borderRadius: "50%",
+                  borderRadius: 0,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: playfairFont ? "Playfair" : "serif",
+                  fontFamily: headingFontFamily,
                   fontSize: 50,
                   fontWeight: 700,
-                  color: "#0A1628",
-                  background: `linear-gradient(135deg, ${visual.accent}, #E2E8F0)`,
+                  color: visual.background,
+                  background: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
                   boxShadow: `0 0 36px ${visual.glow}`,
                 }}
               >
@@ -312,11 +336,11 @@ export default async function OGImage({ params }: OgImageProps) {
                   key={tag}
                   style={{
                     padding: "9px 14px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    background: "rgba(10,22,40,0.40)",
+                    borderRadius: 0,
+                    border: `1px solid ${visual.border}`,
+                    background: visual.surface,
                     fontSize: 15,
-                    color: "rgba(240,244,255,0.78)",
+                    color: visual.textMuted,
                     maxWidth: "100%",
                   }}
                 >
@@ -335,13 +359,13 @@ export default async function OGImage({ params }: OgImageProps) {
               justifyContent: "space-between",
               gap: 22,
               padding: "22px 24px",
-              borderRadius: 26,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(6,14,28,0.54)",
+              borderRadius: 0,
+              border: `1px solid ${visual.border}`,
+              background: visual.surfaceStrong,
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", maxWidth: 520 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#F0F4FF" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: visual.text }}>
                 Scan to visit {firstName}
               </div>
               <div
@@ -349,7 +373,7 @@ export default async function OGImage({ params }: OgImageProps) {
                   marginTop: 10,
                   fontSize: 16,
                   lineHeight: 1.45,
-                  color: "rgba(240,244,255,0.58)",
+                  color: visual.textSubtle,
                 }}
               >
                 This QR code is unique to @{page.slug} and opens {truncate(livePageUrl, 44)}.
@@ -361,8 +385,8 @@ export default async function OGImage({ params }: OgImageProps) {
                 style={{
                   width: 172,
                   height: 172,
-                  borderRadius: 22,
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  borderRadius: 0,
+                  border: `1px solid ${visual.border}`,
                   background: "#FFFFFF",
                   padding: 12,
                   display: "flex",
@@ -406,9 +430,9 @@ export default async function OGImage({ params }: OgImageProps) {
                 style={{
                   width: 172,
                   height: 172,
-                  borderRadius: 22,
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  background: "rgba(255,255,255,0.08)",
+                  borderRadius: 0,
+                  border: `1px solid ${visual.border}`,
+                  background: visual.surface,
                 }}
               />
             )}
@@ -418,7 +442,7 @@ export default async function OGImage({ params }: OgImageProps) {
             style={{
               marginTop: 18,
               fontSize: 18,
-              color: "rgba(240,244,255,0.56)",
+              color: visual.textSubtle,
             }}
           >
             {displayUrl}

@@ -1,7 +1,14 @@
 import qrcode from "qrcode-generator";
+import { getTheme, THEME_MAP } from "@/themes/registry";
+import type {
+  ThemeCollectionId,
+  ThemeContentProfileId,
+  ThemeId,
+  ThemePresentation,
+} from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
 
-export interface ShareCardVisual {
+interface ShareCardGradient {
   accent: string;
   glow: string;
   gradientFrom: string;
@@ -9,7 +16,33 @@ export interface ShareCardVisual {
   gradientTo: string;
 }
 
-const DEFAULT_SHARE_CARD_VISUAL: ShareCardVisual = {
+export type ShareCardMotifId =
+  | ThemeContentProfileId
+  | "bearing"
+  | "curtain"
+  | "orbit"
+  | "petal"
+  | "contour"
+  | "weave";
+
+export interface ShareCardVisual extends ShareCardGradient {
+  accentBright: string;
+  background: string;
+  border: string;
+  collection: ThemeCollectionId;
+  contentProfile: ThemeContentProfileId;
+  headingFont: ThemePresentation["headingFont"];
+  lightGround: boolean;
+  motif: ShareCardMotifId;
+  surface: string;
+  surfaceStrong: string;
+  text: string;
+  textMuted: string;
+  textSubtle: string;
+  themeId: ThemeId;
+}
+
+const DEFAULT_SHARE_CARD_VISUAL: ShareCardGradient = {
   accent: "#3B82F6",
   glow: "rgba(59,130,246,0.30)",
   gradientFrom: "#09152B",
@@ -17,7 +50,16 @@ const DEFAULT_SHARE_CARD_VISUAL: ShareCardVisual = {
   gradientTo: "#13071E",
 };
 
-const SHARE_CARD_VISUALS: Record<string, ShareCardVisual> = {
+const SHARE_CARD_THEME_MOTIFS: Partial<Record<ThemeId, ShareCardMotifId>> = {
+  aurora: "curtain",
+  halo: "orbit",
+  meridian: "bearing",
+  sakura: "petal",
+  silk: "weave",
+  topo: "contour",
+};
+
+const SHARE_CARD_VISUALS: Record<ThemeId, ShareCardGradient> = {
   cosmic: { accent: "#6B5CE7", glow: "rgba(107,92,231,0.32)", gradientFrom: "#070C1B", gradientMid: "#0C1231", gradientTo: "#1B0E31" },
   fluid: { accent: "#3B82F6", glow: "rgba(59,130,246,0.30)", gradientFrom: "#071325", gradientMid: "#091C34", gradientTo: "#0B1230" },
   ember: { accent: "#EF6C35", glow: "rgba(239,108,53,0.33)", gradientFrom: "#180906", gradientMid: "#2A110A", gradientTo: "#17090C" },
@@ -150,8 +192,85 @@ export function buildQrDataUrl(value: string): string | null {
   }
 }
 
+function parseHexColor(value: string): [number, number, number] | null {
+  const match = /^#([0-9a-f]{6})$/i.exec(value.trim());
+  if (!match) return null;
+  const color = Number.parseInt(match[1], 16);
+  return [(color >> 16) & 255, (color >> 8) & 255, color & 255];
+}
+
+function toHexColor(red: number, green: number, blue: number): string {
+  return `#${[red, green, blue]
+    .map((channel) =>
+      Math.round(Math.min(255, Math.max(0, channel)))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+function mixHexColors(from: string, to: string, amount: number): string {
+  const start = parseHexColor(from);
+  const end = parseHexColor(to);
+  if (!start || !end) return from;
+  const weight = Math.min(1, Math.max(0, amount));
+  return toHexColor(
+    start[0] + (end[0] - start[0]) * weight,
+    start[1] + (end[1] - start[1]) * weight,
+    start[2] + (end[2] - start[2]) * weight,
+  );
+}
+
+function withAlpha(color: string, alpha: number, fallback: string): string {
+  const channels = parseHexColor(color);
+  if (!channels) return fallback;
+  return `rgba(${channels[0]},${channels[1]},${channels[2]},${alpha})`;
+}
+
+function isLightColor(color: string): boolean {
+  const channels = parseHexColor(color);
+  if (!channels) return false;
+  return (
+    channels[0] * 0.299 + channels[1] * 0.587 + channels[2] * 0.114 > 130
+  );
+}
+
 export function getShareCardVisual(themeId: string): ShareCardVisual {
-  return SHARE_CARD_VISUALS[themeId] ?? DEFAULT_SHARE_CARD_VISUAL;
+  const theme = getTheme(themeId) ?? THEME_MAP.cosmic;
+  const legacyGradient =
+    SHARE_CARD_VISUALS[theme.id] ?? DEFAULT_SHARE_CARD_VISUAL;
+  const lightGround = isLightColor(theme.background);
+  const gradients = lightGround
+    ? {
+        gradientFrom: mixHexColors(theme.background, "#FFFFFF", 0.12),
+        gradientMid: mixHexColors(theme.background, theme.presentation.accent, 0.08),
+        gradientTo: mixHexColors(theme.background, "#000000", 0.08),
+      }
+    : legacyGradient;
+
+  return {
+    ...gradients,
+    accent: theme.presentation.accent,
+    accentBright: theme.presentation.accentBright,
+    background: theme.background,
+    border: theme.presentation.border,
+    collection: theme.collection,
+    contentProfile: theme.contentProfile,
+    glow: withAlpha(
+      theme.presentation.accent,
+      0.3,
+      legacyGradient.glow,
+    ),
+    headingFont: theme.presentation.headingFont,
+    lightGround,
+    motif: SHARE_CARD_THEME_MOTIFS[theme.id] ?? theme.contentProfile,
+    surface: theme.presentation.surface,
+    surfaceStrong: theme.presentation.surfaceStrong,
+    text: theme.presentation.text,
+    textMuted: theme.presentation.textMuted,
+    textSubtle: theme.presentation.textSubtle,
+    themeId: theme.id,
+  };
 }
 
 export function getShareCardTags(resume: ResumeData): string[] {

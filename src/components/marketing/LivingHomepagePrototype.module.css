@@ -340,7 +340,7 @@
 .storyHeader p {
   color: var(--world-accent-bright);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -355,7 +355,7 @@
 .storyHeader > span {
   color: var(--text-muted);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -373,7 +373,7 @@
   color: var(--text-muted);
   cursor: pointer;
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   min-height: 43px;
   padding: 8px 10px;
@@ -388,7 +388,7 @@
 .storyMomentTabs button span {
   color: var(--text-muted);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 7px;
+  font-size: 9px;
   margin-right: 7px;
 }
 
@@ -401,6 +401,10 @@
   background: var(--world-accent-soft);
   box-shadow: inset 0 -2px 0 var(--world-accent);
   color: var(--text);
+}
+
+.storyMobileSummary {
+  display: none;
 }
 
 .storyStage {
@@ -528,7 +532,7 @@
   align-items: center;
   color: #445970;
   display: flex;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 700;
   gap: 5px;
   padding: 0 8px 8px;
@@ -569,11 +573,11 @@
   border: 1px solid var(--world-accent-border);
   color: var(--world-accent-bright);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 6px;
+  font-size: 9px;
   font-weight: 700;
   left: 50%;
   letter-spacing: 0.06em;
-  padding: 5px 6px;
+  padding: 5px 7px;
   position: absolute;
   text-transform: uppercase;
   top: 8px;
@@ -592,7 +596,7 @@
 .truthTransfer small {
   color: var(--text-muted);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 6px;
+  font-size: 9px;
   letter-spacing: 0.04em;
   position: absolute;
   text-align: center;
@@ -622,12 +626,12 @@
 .storyOutputMeta small {
   color: var(--text-muted);
   display: block;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 700;
 }
 
 .storyOutputMeta h3 {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.025em;
   line-height: 1.1;
@@ -660,7 +664,7 @@
 
 .storyOutputNote {
   color: var(--text-muted);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.45;
   margin: 7px 2px 0;
 }
@@ -1215,24 +1219,44 @@
   border-top: 1px solid var(--border);
 }
 
+.searchStatementIntro {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 76px 0 16px;
+}
+
 .searchStatement {
   color: var(--text);
   display: grid;
-  font-size: clamp(23px, 2.6vw, 39px);
-  font-weight: 610;
   grid-template-columns: repeat(3, 1fr);
-  letter-spacing: -0.045em;
-  margin-top: 76px;
 }
 
 .searchStatement span {
   border-bottom: 1px solid var(--border-strong);
   border-top: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 28px 24px;
 }
 
 .searchStatement span + span {
   border-left: 1px solid var(--border);
+}
+
+.searchStatement small {
+  color: var(--action-bright);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.searchStatement strong {
+  font-size: clamp(20px, 2vw, 30px);
+  font-weight: 610;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
 }
 
 .visibilityBenefits {
@@ -1423,6 +1447,44 @@
   }
 }
 
+@media (min-width: 1041px) {
+  .heroCopy .secondaryButton {
+    display: none;
+  }
+}
+
+@media (min-width: 1041px) and (max-height: 680px) {
+  .hero {
+    padding-top: 24px;
+  }
+
+  .heroCopy {
+    padding-top: 20px;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(52px, 4.85vw, 68px);
+  }
+
+  .heroLead {
+    font-size: clamp(18px, 1.35vw, 21px);
+    margin-top: 20px;
+  }
+
+  .heroBody {
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+
+  .heroActions {
+    margin-top: 18px;
+  }
+
+  .trustStrip {
+    margin-top: 14px;
+  }
+}
+
 @media (max-width: 1220px) {
   .previewBadge {
     display: none;
@@ -1542,7 +1604,7 @@
   }
 
   .storyMomentTabs button {
-    font-size: 8px;
+    font-size: 9px;
     min-height: 48px;
   }
 
@@ -1556,23 +1618,53 @@
     padding: 14px;
   }
 
+  .storyMobileSummary {
+    border-bottom: 1px solid var(--border);
+    color: var(--world-accent-bright);
+    display: block;
+    font-family: var(--font-dm-mono), monospace;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    margin: 0;
+    padding: 10px 14px;
+  }
+
   .storySource {
-    height: 190px;
+    height: 150px;
     justify-self: center;
-    max-width: 260px;
-    width: 74%;
+    max-width: 250px;
+    width: 78%;
+  }
+
+  .storySourceTopline {
+    padding: 6px;
   }
 
   .storySourceDocument {
-    padding: 8px 10px;
+    margin: 5px 8px;
+    padding: 7px 10px;
+  }
+
+  .storySourceDocument > i,
+  .storySourceDocument span:nth-of-type(2),
+  .storySourceDocument div {
+    display: none;
   }
 
   .storySourceDocument span {
-    margin-top: 8px;
+    margin-top: 5px;
+  }
+
+  .storySourceDocument p {
+    margin-top: 3px;
+  }
+
+  .storySourceStatus {
+    padding-bottom: 5px;
   }
 
   .truthTransfer {
-    height: 76px;
+    height: 70px;
   }
 
   .truthLine {
@@ -1583,7 +1675,7 @@
 
   .truthTokens {
     height: 100%;
-    width: 180px;
+    width: 210px;
   }
 
   .truthTokens b {
@@ -1593,12 +1685,12 @@
   }
 
   .truthTokens b:nth-child(2) {
-    left: 61px;
+    left: 72px;
     top: 28px;
   }
 
   .truthTokens b:nth-child(3) {
-    left: 115px;
+    left: 142px;
     top: 28px;
   }
 
@@ -1686,8 +1778,10 @@
   }
 
   .searchStatement {
-    font-size: 24px;
     grid-template-columns: 1fr;
+  }
+
+  .searchStatementIntro {
     margin-top: 52px;
   }
 

@@ -782,16 +782,13 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               <div className="px-1">
                 <p className="site-eyebrow">
                   <span className="mr-2 font-mono text-site-muted">13</span>
-                  ATS check
+                  ATS &amp; job check
                 </p>
                 <h2 id="editor-tools-title" className="site-panel-title mt-1.5">
-                  Make the saved output travel well
+                  Check the saved résumé against the next role
                 </h2>
-              </div>
-              <div className="site-callout px-4 py-3">
-                <p className="site-eyebrow">Résumé PDF</p>
-                <p className="mt-2 text-sm leading-6 text-site-text">
-                  The public page uses this same saved information for the downloadable Resume PDF.
+                <p className="mt-2 text-xs leading-5 text-site-muted">
+                  Review the PDF structure on its own, or paste one job description to make the word match visible.
                 </p>
               </div>
               <AtsReadinessCard resumeData={data} />

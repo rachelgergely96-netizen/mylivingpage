@@ -5,7 +5,7 @@ import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
 const canonicalUrl = getAbsoluteUrl("/");
 const homepageTitle = `Turn Your Résumé Into a Page You Can Share | ${SITE_NAME}`;
 const homepageDescription =
-  "Upload your résumé, review a polished private draft, and publish one professional link—completely free.";
+  "Upload your résumé, review a private draft, and publish one professional web page—completely free.";
 
 export const dynamic = "force-static";
 

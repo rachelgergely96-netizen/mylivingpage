@@ -16,7 +16,7 @@
     "test:unit": "vitest run",
     "test:integration": "vitest run src/lib/pdf/ats-export.test.ts src/app/api/resume/export/route.render.test.ts",
     "test:e2e": "playwright test",
-    "test:e2e:visual": "playwright test tests/e2e/editor-layout.spec.ts tests/e2e/theme-quality.spec.ts tests/e2e/homepage-preview.spec.ts",
+    "test:e2e:visual": "playwright test tests/e2e/editor-layout.spec.ts tests/e2e/dashboard-layout.spec.ts tests/e2e/theme-quality.spec.ts tests/e2e/homepage-preview.spec.ts",
     "check:single-page-schema": "node ./scripts/check-single-page-schema.mjs",
     "check:analytics-schema": "node ./scripts/check-analytics-schema.mjs",
     "check:database-security": "node ./scripts/check-database-security.mjs",
@@ -48,6 +48,9 @@
     "vitest": "^3.0.7"
   },
   "overrides": {
-    "sharp": "0.35.3"
+    "sharp": "0.35.3",
+    "next": {
+      "postcss": "8.5.22"
+    }
   }
 }

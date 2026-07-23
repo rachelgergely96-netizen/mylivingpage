@@ -18,7 +18,14 @@ opens and updates the Living Resume above, so there is one obvious preview and n
 separate design showcase. The older Signal Frame implementation remains in source as
 a short-term rollback option while the promoted homepage is monitored.
 
-For local renderer review, run `ENABLE_EDITOR_PREVIEW=1 npm run dev` and open
-`/dev/theme-lab`. The credential-free fixed-frame checks run with
-`npm run test:e2e:visual`; set `UPDATE_THEME_BASELINES=1` while running the theme
-quality spec only when an intentional renderer change requires new reference values.
+For local renderer and logged-in workspace review, run
+`ENABLE_EDITOR_PREVIEW=1 npm run dev` and open:
+
+- `/dev/theme-lab` for Living Page renderer frames
+- `/dev/editor-preview` for the Signal Studio workspace
+- `/dev/dashboard-preview` for the logged-in dashboard workspace
+
+These credential-free routes remain unavailable on Vercel and self-hosted production.
+The fixed-frame checks run with `npm run test:e2e:visual`; set
+`UPDATE_THEME_BASELINES=1` while running the theme quality spec only when an
+intentional renderer change requires new reference values.

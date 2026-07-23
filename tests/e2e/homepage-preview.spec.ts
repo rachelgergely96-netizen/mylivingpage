@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const productionHomepage = "/";
 
 test("production homepage makes the value and first action clear above the fold", async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto(productionHomepage);
 
   await expect(page).toHaveTitle(/Turn Your Résumé Into a Page You Can Share/);
@@ -14,19 +14,25 @@ test("production homepage makes the value and first action clear above the fold"
   await expect(page.getByText("professional page you can update", { exact: false })).toBeVisible();
   await expect(page.getByLabel("Product assurances")).toContainText("Completely free");
   await expect(page.getByLabel("Product assurances")).toContainText("Private until published");
+  await expect(page.getByLabel("Product assurances")).toBeVisible();
 
   const primaryCta = page.getByTestId("homepage-primary-cta");
   await expect(primaryCta).toHaveAttribute(
     "href",
     "/signup?ref=landing_start_free&next=/create",
   );
-  await expect(page.getByRole("link", { name: "See it transform" })).toHaveAttribute(
+  const transformationLink = page.locator('a[href="#live-product-story"]');
+  await expect(transformationLink).toHaveAttribute(
     "href",
     "#live-product-story",
   );
+  await expect(transformationLink).toBeHidden();
   const primaryBox = await primaryCta.boundingBox();
+  const assurancesBox = await page.getByLabel("Product assurances").boundingBox();
   expect(primaryBox).not.toBeNull();
-  expect(primaryBox!.y + primaryBox!.height).toBeLessThanOrEqual(768);
+  expect(assurancesBox).not.toBeNull();
+  expect(primaryBox!.y + primaryBox!.height).toBeLessThanOrEqual(600);
+  expect(assurancesBox!.y + assurancesBox!.height).toBeLessThanOrEqual(600);
 
   const startActions = page.locator("[data-start-action]");
   await expect(startActions).toHaveCount(4);
@@ -52,7 +58,7 @@ test("the transformation opens on the Living Page and keeps one truthful source 
 
   const story = page.locator("[data-live-product-story]");
   await expect(
-    story.getByRole("heading", { name: "See one résumé become more useful." }),
+    story.getByRole("heading", { name: "One résumé becomes a page, PDF, and Share Card." }),
   ).toBeVisible();
 
   const referral = story.getByRole("button", { name: /Living Page/ });
@@ -71,11 +77,20 @@ test("the transformation opens on the Living Page and keeps one truthful source 
       (node) => getComputedStyle(node).animationName,
     ),
   ).toContain("truthTravel");
+  expect(
+    await story.locator("[data-transform-motion] b").first().evaluate(
+      (node) => Number.parseFloat(getComputedStyle(node).fontSize),
+    ),
+  ).toBeGreaterThanOrEqual(9);
 
   await application.click();
   await expect(application).toHaveAttribute("aria-pressed", "true");
   await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
   await expect(story.getByText("Avery-Morgan_Product-Lead.pdf")).toBeVisible();
+  await expect(story.locator("[data-story-style-chooser]")).toContainText("Living Page styles");
+  await expect(story.locator("[data-story-style-chooser]")).toContainText(
+    "Choose a direction to return to the Living Page.",
+  );
 
   await introduction.click();
   await expect(introduction).toHaveAttribute("aria-pressed", "true");
@@ -164,7 +179,7 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   expect(chooserBox!.y).toBeGreaterThanOrEqual(stageBox!.y + stageBox!.height - 1);
 
   const directions = chooser.getByRole("radiogroup", {
-    name: "Choose a style for the Living Page above",
+    name: "Choose a Living Page style",
   });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
   await expect(directions.getByRole("radio")).toHaveCount(5);
@@ -193,7 +208,7 @@ test("theme controls are equal and support roving keyboard selection", async ({ 
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
   const directions = chooser.getByRole("radiogroup", {
-    name: "Choose a style for the Living Page above",
+    name: "Choose a Living Page style",
   });
   const clear = directions.getByRole("radio", { name: /Clear and structured/ });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
@@ -240,6 +255,13 @@ test("tablet and mobile layouts stay usable without horizontal overflow", async 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page.getByTestId("homepage-primary-cta")).toBeVisible();
+  await expect(page.getByRole("link", { name: "See it transform" })).toBeVisible();
+  await expect(page.locator("[data-story-mobile-summary]")).toContainText(
+    "Choose an output above. Your facts stay the same.",
+  );
+  const sourceBox = await page.locator("[data-truth-source]").boundingBox();
+  expect(sourceBox).not.toBeNull();
+  expect(sourceBox!.height).toBeLessThanOrEqual(160);
   const storyButtons = page.locator("[data-story-moment]");
   expect(
     await storyButtons.evaluateAll((buttons) =>

@@ -26,6 +26,75 @@ function perceptualHashDistance(left: string, right: string): number {
   return distance;
 }
 
+test("paired prototypes keep the Living Page and share card identity in sync", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/dev/theme-lab");
+
+  const prototypeThemes = [
+    ["Meridian", "meridian", "bearing"],
+    ["Halo", "halo", "orbit"],
+    ["Sakura", "sakura", "petal"],
+    ["Aurora", "aurora", "curtain"],
+    ["Silk", "silk", "weave"],
+    ["Topo", "topo", "contour"],
+  ] as const;
+
+  for (const [name, themeId, motif] of prototypeThemes) {
+    await page
+      .locator("[data-theme-prototype-selector]")
+      .getByRole("button", { name, exact: true })
+      .click();
+
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
+    const shareCard = page.getByTestId("story-share-card");
+
+    await expect(livingPage).toHaveAttribute("data-theme-renderer-status", "ready");
+    await expect(shareCard).toHaveAttribute("data-theme-id", themeId);
+    await expect(shareCard).toHaveAttribute(
+      "data-theme-detail",
+      THEME_MAP[themeId].contentProfile,
+    );
+    await expect(
+      shareCard.locator("[data-share-card-profile]"),
+    ).toHaveAttribute("data-share-card-profile", motif);
+  }
+});
+
+test("attention motion stays brief and fully respects reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/dev/theme-lab");
+  const identity = page.locator(
+    '[data-theme-lab-canvas] [data-motion-kind="identity"]',
+  );
+  const standardMotion = await identity.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      duration: Number.parseFloat(style.animationDuration) * 1000,
+      name: style.animationName,
+    };
+  });
+  expect(standardMotion.name).toContain("living-identity-resolve");
+  expect(standardMotion.duration).toBeLessThanOrEqual(500);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  const reducedMotion = await page
+    .locator('[data-theme-lab-canvas] [data-motion-kind="identity"]')
+    .evaluate((element) => window.getComputedStyle(element).animationName);
+  const reducedSignalMotion = await page
+    .locator('[data-theme-lab-canvas] [data-attention-signal="metric"]')
+    .evaluate((element) => window.getComputedStyle(element).animationName);
+  expect(reducedMotion).toBe("none");
+  expect(reducedSignalMotion).toBe("none");
+});
+
 test("every catalog theme renders a detailed deterministic frame", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -42,7 +111,9 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
 
   for (const themeId of CATALOG_THEME_IDS) {
     await select.selectOption(themeId);
-    const theme = page.locator(`[data-theme-id="${themeId}"]`);
+    const theme = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
     await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
     await expect(theme).toHaveAttribute(
       "data-theme-detail",
@@ -181,7 +252,9 @@ test("signature themes expose authored content profiles and deterministic detail
 
   for (const themeId of SIGNATURE_THEME_IDS) {
     await select.selectOption(themeId);
-    const theme = page.locator(`[data-theme-id="${themeId}"]`);
+    const theme = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
     await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
     await expect(theme).toHaveAttribute(
       "data-theme-detail",
@@ -238,7 +311,9 @@ test("signature themes fit mobile and keep Living Resume surfaces sharp", async 
 
   for (const themeId of SIGNATURE_THEME_IDS) {
     await select.selectOption(themeId);
-    const theme = page.locator(`[data-theme-id="${themeId}"]`);
+    const theme = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
     await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
 
     const geometry = await theme.evaluate((element) => {
@@ -276,7 +351,9 @@ test("theme lab remains static with reduced motion and fits mobile", async ({ pa
   await page.goto("/dev/theme-lab");
 
   await page.getByLabel("Catalog theme").selectOption("topo");
-  const theme = page.locator('[data-theme-id="topo"]');
+  const theme = page.locator(
+    '[data-theme-lab-canvas] [data-theme-id="topo"]',
+  );
   await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
   await page.getByRole("button", { name: "Enable motion" }).click();
 
@@ -302,7 +379,9 @@ test("catalog motion advances and keeps keyboard focus connected to the world", 
   await page.goto("/dev/theme-lab");
   await page.getByLabel("Catalog theme").selectOption("solstice");
 
-  const theme = page.locator('[data-theme-id="solstice"]');
+  const theme = page.locator(
+    '[data-theme-lab-canvas] [data-theme-id="solstice"]',
+  );
   await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
   const canvas = theme.locator("canvas");
   const firstFrame = await canvas.evaluate((element) =>

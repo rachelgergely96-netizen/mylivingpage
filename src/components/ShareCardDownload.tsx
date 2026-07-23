@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from "react";
+import { ShareCardProfileMark } from "@/components/ShareCardProfileMark";
 import type { ShareIntentEventName } from "@/lib/analytics/proofSummary";
 import {
   buildQrDataUrl,
@@ -178,7 +179,7 @@ export default function ShareCardDownload({
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: "#07111C",
+        backgroundColor: visual.background,
       });
 
       const a = document.createElement("a");
@@ -252,9 +253,13 @@ export default function ShareCardDownload({
               <div
                 ref={cardRef}
                 data-living-output
-                className="relative overflow-hidden rounded-[26px] border border-[rgba(255,255,255,0.1)] p-5 sm:p-6"
+                data-theme-id={visual.themeId}
+                data-theme-detail={visual.contentProfile}
+                data-theme-collection={visual.collection}
+                className="relative overflow-hidden rounded-none border p-5 sm:p-6"
                 style={{
                   background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
+                  borderColor: visual.border,
                   boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 60px ${visual.glow}`,
                 }}
               >
@@ -262,20 +267,47 @@ export default function ShareCardDownload({
                   className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full"
                   style={{ background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)` }}
                 />
+                <ShareCardProfileMark
+                  accent={visual.accent}
+                  motif={visual.motif}
+                  className="right-28 top-6"
+                />
                 <div className="relative flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[rgba(240,244,255,0.56)]">
+                    <div
+                      className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em]"
+                      style={{ color: visual.textSubtle }}
+                    >
                       <span className="inline-block h-px w-5 rounded-full" style={{ background: visual.accent }} />
                       Personalized Share Card
                     </div>
-                    <h4 className="mt-3 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-4xl">
+                    <h4
+                      className={`mt-3 text-3xl font-bold leading-tight sm:text-4xl ${
+                        visual.headingFont === "editorial" ? "font-heading" : "font-body"
+                      }`}
+                      style={{ color: visual.text }}
+                    >
                       {safeName}
                     </h4>
-                    <p className="mt-2 max-w-xl text-sm text-[rgba(240,244,255,0.82)] sm:text-base">{safeHeadline}</p>
+                    <p
+                      className="mt-2 max-w-xl text-sm sm:text-base"
+                      style={{ color: visual.textMuted }}
+                    >
+                      {safeHeadline}
+                    </p>
                     {safeLocation ? (
-                      <p className="mt-2 text-sm text-[rgba(240,244,255,0.56)]">{safeLocation}</p>
+                      <p className="mt-2 text-sm" style={{ color: visual.textSubtle }}>
+                        {safeLocation}
+                      </p>
                     ) : null}
-                    <div className="mt-4 inline-flex rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(10,22,40,0.38)] px-3 py-1 text-xs text-[#93C5FD]">
+                    <div
+                      className="mt-4 inline-flex rounded-none border px-3 py-1 text-xs"
+                      style={{
+                        background: visual.surface,
+                        borderColor: visual.border,
+                        color: visual.accentBright,
+                      }}
+                    >
                       @{slug}
                     </div>
                   </div>
@@ -285,13 +317,16 @@ export default function ShareCardDownload({
                       src={resumeData.avatar_url}
                       alt={safeName}
                       crossOrigin="anonymous"
-                      className="h-20 w-20 shrink-0 rounded-full border-2 object-cover shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
+                      className="h-20 w-20 shrink-0 rounded-none border-2 object-cover shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
                       style={{ borderColor: visual.accent }}
                     />
                   ) : (
                     <div
-                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full font-heading text-3xl font-bold text-[#0A1628] shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
-                      style={{ background: `linear-gradient(135deg, ${visual.accent}, #E2E8F0)` }}
+                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-none font-heading text-3xl font-bold shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
+                      style={{
+                        background: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
+                        color: visual.background,
+                      }}
                     >
                       {initial}
                     </div>
@@ -303,7 +338,12 @@ export default function ShareCardDownload({
                     {shareTags.map((tag) => (
                       <span
                         key={tag}
-                        className="max-w-full rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs leading-5 text-[rgba(240,244,255,0.78)] whitespace-normal break-words"
+                        className="max-w-full rounded-none border px-3 py-1 text-xs leading-5 whitespace-normal break-words"
+                        style={{
+                          background: visual.surface,
+                          borderColor: visual.border,
+                          color: visual.textMuted,
+                        }}
                       >
                         {tag}
                       </span>
@@ -311,10 +351,15 @@ export default function ShareCardDownload({
                   </div>
                 ) : null}
 
-                <div className="relative mt-5 grid gap-4 rounded-[22px] border border-[rgba(255,255,255,0.1)] bg-[rgba(6,14,28,0.54)] p-4 sm:grid-cols-[1fr_156px] sm:items-center">
+                <div
+                  className="relative mt-5 grid gap-4 rounded-none border p-4 sm:grid-cols-[1fr_156px] sm:items-center"
+                  style={{ background: visual.surfaceStrong, borderColor: visual.border }}
+                >
                   <div>
-                    <p className="text-sm font-semibold text-[#F0F4FF]">Scan to visit {firstName}&rsquo;s living page</p>
-                    <p className="mt-1 text-xs text-[rgba(240,244,255,0.56)]">
+                    <p className="text-sm font-semibold" style={{ color: visual.text }}>
+                      Scan to visit {firstName}&rsquo;s living page
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: visual.textSubtle }}>
                       This QR code is unique to @{slug} and opens {displayUrl}.
                     </p>
                   </div>
@@ -322,14 +367,23 @@ export default function ShareCardDownload({
                     <img
                       src={qrDataUrl}
                       alt={`QR code for ${displayUrl}`}
-                      className="h-32 w-32 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-white p-2 justify-self-start sm:h-[156px] sm:w-[156px] sm:justify-self-end"
+                      className="h-32 w-32 rounded-none border bg-white p-2 justify-self-start sm:h-[156px] sm:w-[156px] sm:justify-self-end"
+                      style={{ borderColor: visual.border }}
                     />
                   ) : (
-                    <div className="h-32 w-32 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] sm:h-[156px] sm:w-[156px] sm:justify-self-end" />
+                    <div
+                      className="h-32 w-32 rounded-none border sm:h-[156px] sm:w-[156px] sm:justify-self-end"
+                      style={{ background: visual.surface, borderColor: visual.border }}
+                    />
                   )}
                 </div>
 
-                <p className="relative mt-4 font-mono text-xs text-[rgba(240,244,255,0.56)]">{displayUrl}</p>
+                <p
+                  className="relative mt-4 font-mono text-xs"
+                  style={{ color: visual.textSubtle }}
+                >
+                  {displayUrl}
+                </p>
               </div>
 
               <div className="site-panel flex flex-col justify-between gap-4 p-5">

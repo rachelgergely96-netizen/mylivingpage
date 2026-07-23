@@ -9,6 +9,7 @@ const ADMIN_PATHS = ["/admin"];
 const LOCAL_PREVIEW_PATHS = new Set([
   "/dev/ats-preview",
   "/dev/editor-preview",
+  "/dev/settings-preview",
   "/dev/theme-lab",
 ]);
 

@@ -24,7 +24,7 @@ describe("getDashboardPrimaryAction", () => {
     for (const status of ["proof_landed", "active"] as const) {
       expect(getDashboardPrimaryAction(status, true)).toEqual({
         kind: "analytics",
-        label: "Read the signal",
+        label: "View activity",
       });
     }
   });

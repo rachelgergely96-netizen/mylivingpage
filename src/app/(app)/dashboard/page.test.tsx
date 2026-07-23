@@ -245,25 +245,29 @@ describe("dashboard page", () => {
     vi.useRealTimers();
   });
 
-  it("turns proof state into a single primary signal action without losing page tools", async () => {
+  it("turns page activity into one clear primary action without losing page tools", async () => {
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Signal desk · Your public page");
+    expect(markup).toContain("Check if your page is live, then edit, share, or review recent views.");
     expect(markup).toContain('href="/dashboard/analytics/page-1"');
     expect(markup).toContain('href="/dashboard/analytics/page-2"');
     expect(markup).toContain('href="/dashboard/edit/page-1/living-page#ats-readiness"');
     expect(markup).toContain('href="/dashboard/edit/page-2/living-page#ats-readiness"');
     expect((markup.match(/>ATS check<\/a>/g) ?? []).length).toBe(2);
-    expect((markup.match(/>Read the signal<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>View activity<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>Copy link<\/button>/g) ?? []).length).toBe(2);
     expect((markup.match(/data-dashboard-primary-action/g) ?? []).length).toBe(2);
     expect((markup.match(/>Live<\/span>/g) ?? []).length).toBe(2);
     expect(markup).toContain(
-      "Read the signal for device mix, referrers, and viewing behavior.",
+      "Open activity for device, referrer, and reading time.",
     );
     expect(markup).toContain(
-      "Open analytics to see whether the page is still carrying your follow-ups.",
+      "Open activity for the full picture.",
     );
+    expect(markup).not.toContain("Signal Studio");
+    expect(markup).not.toContain("Proof landed");
+    expect(markup).not.toContain("Visual world");
   });
 
   it("surfaces an offline-page reactivation banner when a public link gets opened while hosting is inactive", async () => {
@@ -285,10 +289,28 @@ describe("dashboard page", () => {
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Someone tried to open your page while it was offline");
+    expect(markup).toContain("Someone opened this link while the page was offline");
     expect(markup).toContain('href="/dashboard/settings"');
-    expect(markup).toContain("Publish the page below when you are ready to restore the link");
+    expect(markup).toContain("Publish below to put it back online");
     expect(markup).toContain("Publish page page-1");
-    expect(markup).toContain(">Offline</span>");
+    expect((markup.match(/>Offline<\/span>/g) ?? []).length).toBe(1);
+    expect((markup.match(/>Draft<\/span>/g) ?? []).length).toBe(1);
+    expect(markup).toContain("Put your page back online.");
+    expect(markup).toContain("Private draft");
+  });
+
+  it("describes an unpublished page as a private draft", async () => {
+    isPubliclyAvailablePageMock.mockReturnValue(false);
+
+    const element = await DashboardPage();
+    const markup = renderToStaticMarkup(element);
+
+    expect(markup).toContain(">Draft</span>");
+    expect(markup).toContain("Private draft");
+    expect(markup).toContain("Your page is ready when you are.");
+    expect(markup).toContain(
+      "Until then, only you can open it.",
+    );
+    expect(markup).toContain("Publish page page-1");
   });
 });

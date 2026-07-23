@@ -23,7 +23,7 @@ For local renderer and logged-in workspace review, run
 
 - `/dev/theme-lab` for Living Page renderer frames
 - `/dev/editor-preview` for the Signal Studio workspace
-- `/dev/dashboard-preview` for the Signal Desk dashboard
+- `/dev/dashboard-preview` for the logged-in dashboard workspace
 
 These credential-free routes remain unavailable on Vercel and self-hosted production.
 The fixed-frame checks run with `npm run test:e2e:visual`; set

@@ -106,9 +106,28 @@ export default async function DashboardPage() {
     }),
   );
   const publicSlug = profile?.username ?? list[0]?.slug ?? null;
-  const offlineAttemptEvents = events.filter(
-    (event) => event.event_name === "page.offline_view_attempted",
-  );
+  const offlineAttemptAtByPageId = new Map<string, string>();
+  for (const event of events) {
+    if (event.event_name !== "page.offline_view_attempted") {
+      continue;
+    }
+
+    const metadataPageId = event.metadata?.page_id;
+    const eventPageId =
+      typeof metadataPageId === "string"
+        ? metadataPageId
+        : pageIds.length === 1
+          ? pageIds[0]
+          : null;
+
+    if (
+      eventPageId &&
+      pageIds.includes(eventPageId) &&
+      !offlineAttemptAtByPageId.has(eventPageId)
+    ) {
+      offlineAttemptAtByPageId.set(eventPageId, event.created_at);
+    }
+  }
   const activePaidPlanPriceLabel =
     accountAccess.publicPlanLabel === "Starter"
       ? STARTER_PLAN_PRICE.displayLabel
@@ -120,8 +139,8 @@ export default async function DashboardPage() {
       activePaidPlanPriceLabel={activePaidPlanPriceLabel}
       displayName={displayName}
       maxPagesPerAccount={MAX_PAGES_PER_ACCOUNT}
-      offlineAttemptAt={offlineAttemptEvents[0]?.created_at ?? null}
       pages={syncedList.map((page) => ({
+        offlineAttemptAt: offlineAttemptAtByPageId.get(page.id) ?? null,
         page,
         proof: proofByPageId.get(page.id) ?? buildPageProofSummary({
           pageId: page.id,

@@ -9,6 +9,7 @@ import PublishPageButton from "@/components/PublishPageButton";
 import DashboardCopyLinkButton from "@/components/dashboard/DashboardCopyLinkButton";
 
 export interface DashboardSignalPage {
+  offlineAttemptAt: string | null;
   page: PageRecord;
   proof: PageProofSummary;
   publicViewAvailable: boolean;
@@ -19,7 +20,6 @@ interface DashboardSignalDeskProps {
   activePaidPlanPriceLabel: string;
   displayName: string | null;
   maxPagesPerAccount: number;
-  offlineAttemptAt: string | null;
   pages: DashboardSignalPage[];
   publicSlug: string | null;
 }
@@ -78,45 +78,62 @@ function formatRelativeTime(value: string | null) {
 function buildProofPanelCopy(
   proof: PageProofSummary,
   analyticsTier: AnalyticsTier,
+  publicViewAvailable: boolean,
+  wasOpenedWhileOffline: boolean,
 ): ProofPanelCopy {
+  if (!publicViewAvailable) {
+    return wasOpenedWhileOffline
+      ? {
+          eyebrow: "Offline",
+          title: "Put your page back online.",
+          body: "Publish it again so people can use the link you already shared.",
+        }
+      : {
+          eyebrow: "Private draft",
+          title: "Your page is ready when you are.",
+          body:
+            "Keep editing, or publish when you want other people to see it. Until then, only you can open it.",
+        };
+  }
+
   switch (proof.status) {
     case "awaiting_views":
       return {
-        eyebrow: "Signal sent",
-        title: "Your link is out. The first look is the next signal.",
+        eyebrow: "Waiting for views",
+        title: "Your link is out. Waiting for the first view.",
         body:
-          "Tracking is active. Give the recipient a little time, or copy the link again for a well-timed follow-up.",
+          "We’ll show activity when someone opens the page. You can copy the link again for a follow-up.",
       };
     case "proof_landed":
       return {
-        eyebrow: "Proof landed",
-        title: "Someone looked after you shared it.",
+        eyebrow: "Recent activity",
+        title: "Someone viewed your page after you shared it.",
         body:
           analyticsTier === "full"
             ? proof.firstViewAfterLatestShareAt
-              ? `Your first post-share look showed up ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Read the signal for device mix, referrers, and viewing behavior.`
-              : "Your page is getting attention after a recent share. Read the signal to see what happened after the click."
-            : "Your page is getting attention after a recent share. Read the signal for the deeper engagement details.",
+              ? `First view after your share: ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Open activity for device, referrer, and reading time.`
+              : "Your page got a view after a recent share. Open activity to see what happened next."
+            : "Your page got a view after a recent share. Open activity for more detail.",
       };
     case "active":
       return {
-        eyebrow: "Live signal",
-        title: `${proof.viewsLast7d} people looked in the last 7 days.`,
+        eyebrow: "Active this week",
+        title: `${proof.viewsLast7d} view${proof.viewsLast7d === 1 ? "" : "s"} in the last 7 days.`,
         body:
           analyticsTier === "full"
             ? proof.latestViewAt
-              ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Open analytics to see whether the page is still carrying your follow-ups.`
-              : "Your page is getting outside traffic. Open analytics for the full picture."
+              ? `Latest view ${formatRelativeTime(proof.latestViewAt)}. Open activity for the full picture.`
+              : "Your page is getting views. Open activity for the full picture."
             : proof.latestViewAt
-              ? `Latest activity was ${formatRelativeTime(proof.latestViewAt)}. Open analytics for the deeper engagement details.`
-              : "Your page is getting outside traffic. Open analytics for the full picture.",
+              ? `Latest view ${formatRelativeTime(proof.latestViewAt)}. Open activity for more detail.`
+              : "Your page is getting views. Open activity for the full picture.",
       };
     default:
       return {
-        eyebrow: "Next signal",
-        title: "Put your Living Page in front of one real person.",
+        eyebrow: "Ready to share",
+        title: "Share your page with someone who needs to see it.",
         body:
-          "Copy the public link and send it with your next application, recruiter reply, or warm introduction. The desk will show you when attention lands.",
+          "Copy your public link for an application, recruiter reply, or introduction. Activity shows up here after someone opens it.",
       };
   }
 }
@@ -137,7 +154,7 @@ export function getDashboardPrimaryAction(
     return { kind: "copy", label: "Copy link again" };
   }
 
-  return { kind: "analytics", label: "Read the signal" };
+  return { kind: "analytics", label: "View activity" };
 }
 
 function DashboardPrimaryAction({
@@ -207,15 +224,16 @@ function EmptySignalDesk() {
       <span aria-hidden="true" className="editor-signal-corner editor-signal-corner-nw" />
       <span aria-hidden="true" className="editor-signal-corner editor-signal-corner-se" />
       <div className="relative max-w-2xl">
-        <p className="site-eyebrow">First signal</p>
+        <p className="site-eyebrow">Get started</p>
         <h2 id="dashboard-empty-title" className="site-section-title mt-2">
-          No page is broadcasting yet.
+          You don’t have a Living Page yet.
         </h2>
         <p className="site-muted mt-3 max-w-xl text-sm leading-6">
-          Bring your résumé. You will shape the story, choose the visual world, and review the finished page before anything goes public.
+          Start from your résumé. Edit the page, choose a theme, and review everything
+          before you publish. Drafts stay private.
         </p>
         <Link href="/create" className="site-button site-button-primary mt-5">
-          Create Your Page
+          Create your page
         </Link>
       </div>
     </section>
@@ -227,7 +245,6 @@ export default function DashboardSignalDesk({
   activePaidPlanPriceLabel,
   displayName,
   maxPagesPerAccount,
-  offlineAttemptAt,
   pages,
   publicSlug,
 }: DashboardSignalDeskProps) {
@@ -237,9 +254,9 @@ export default function DashboardSignalDesk({
       id="main-content"
       data-dashboard-signal-desk
     >
-      <header className="mb-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <header className="mb-7">
         <div className="max-w-3xl">
-          <p className="site-eyebrow">Signal desk · Your public page</p>
+          <p className="site-eyebrow">Your page</p>
           <h1 className="site-page-title mt-2">
             {displayName ? (
               <>
@@ -250,87 +267,61 @@ export default function DashboardSignalDesk({
             )}
           </h1>
           <p className="site-muted mt-3 max-w-2xl text-sm leading-6 sm:text-base">
-            See whether your page is live, choose the next move, and read the attention that follows.
+            Check if your page is live, then edit, share, or review recent views.
           </p>
         </div>
-        {pages.length ? (
-          <div className="border-l border-site-border pl-4 sm:pl-5">
-            <p className="site-eyebrow text-[9px] text-site-muted">Public address</p>
-            <p className="mt-1 max-w-72 truncate font-mono text-sm text-site-action-hover">
-              /{publicSlug ?? pages[0]?.page.slug}
-            </p>
-            <Link
-              href="/dashboard/settings"
-              className="mt-2 inline-flex min-h-8 items-center border-b border-site-border text-xs font-semibold text-site-secondary transition-colors hover:border-site-action hover:text-site-text"
-            >
-              Manage public URL
-            </Link>
-          </div>
-        ) : (
-          <Link href="/create" className="site-button site-button-primary self-start lg:self-auto">
-            Create Your Page
-          </Link>
-        )}
       </header>
 
       {!pages.length ? (
         <EmptySignalDesk />
       ) : (
         <div className="space-y-4">
-          {offlineAttemptAt ? (
-            <div className="site-callout site-callout-warning px-4 py-3 text-sm">
-              <strong className="text-site-text">Someone tried to open your page while it was offline</strong>
-              {formatRelativeTime(offlineAttemptAt)
-                ? ` ${formatRelativeTime(offlineAttemptAt)}`
-                : ""}. Publish the page below when you are ready to restore the link.
-            </div>
-          ) : null}
-
           {pages.length > maxPagesPerAccount ? (
             <div className="site-callout site-callout-warning px-4 py-3 text-sm">
-              This account still has legacy extra pages. Your public URL resolves through one username, so remove extras before relying on the page publicly.
+              This account has more than one page from an earlier plan. Your public link
+              uses one username—delete extras before sharing.
             </div>
           ) : null}
-
-          {!accountAccess.isLegacyAccount ? (
-            <div className="site-callout px-4 py-3 text-xs leading-5 sm:text-sm">
-              {accountAccess.hasPaidSubscription ? (
-                <>
-                  Your living resume is free and remains available regardless of billing. An
-                  existing {accountAccess.publicPlanLabel} subscription at {activePaidPlanPriceLabel} is still on file.{" "}
-                  <Link href="/dashboard/settings" className="font-semibold text-site-action hover:text-site-action-hover">
-                    Review the subscription
-                  </Link>
-                  .
-                </>
-              ) : (
-                <>Your living resume, public link, ATS-ready PDF, share card, themes, and analytics are free. No card or subscription is required.</>
-              )}
-            </div>
-          ) : null}
-
-          <p className="border-l border-site-border px-4 py-1 text-xs leading-5 text-site-muted">
-            V1 supports one public page per account. Edit your current page, or delete it before creating a replacement.
-          </p>
 
           <section className="grid gap-5" aria-label="Your Living Pages">
-            {pages.map(({ page, proof, publicViewAvailable }) => {
+            {pages.map(({ offlineAttemptAt, page, proof, publicViewAvailable }) => {
               const livePath = `/${publicSlug ?? page.slug}`;
               const analyticsHref = `/dashboard/analytics/${page.id}`;
-              const proofCopy = buildProofPanelCopy(proof, accountAccess.analyticsTier);
+              const proofCopy = buildProofPanelCopy(
+                proof,
+                accountAccess.analyticsTier,
+                publicViewAvailable,
+                Boolean(offlineAttemptAt),
+              );
               const primaryAction = getDashboardPrimaryAction(
                 proof.status,
                 publicViewAvailable,
               );
               const avgReading = formatDurationShort(proof.avgEngagedSecondsLast7d);
               const themeName = getTheme(page.theme_id)?.name ?? page.theme_id;
+              const availabilityLabel = publicViewAvailable
+                ? "Live"
+                : offlineAttemptAt
+                  ? "Offline"
+                  : "Draft";
 
               return (
-                <article
-                  key={page.id}
-                  className="editor-signal-frame dashboard-signal-card relative overflow-hidden border border-site-border-strong bg-site-surface"
-                  data-dashboard-signal-card
-                >
+                <React.Fragment key={page.id}>
+                  {offlineAttemptAt ? (
+                    <div className="site-callout site-callout-warning px-4 py-3 text-sm">
+                      <strong className="text-site-text">
+                        Someone opened this link while the page was offline
+                      </strong>
+                      {formatRelativeTime(offlineAttemptAt)
+                        ? ` ${formatRelativeTime(offlineAttemptAt)}`
+                        : ""}. Publish below to put it back online.
+                    </div>
+                  ) : null}
+
+                  <article
+                    className="editor-signal-frame dashboard-signal-card relative overflow-hidden border border-site-border-strong bg-site-surface"
+                    data-dashboard-signal-card
+                  >
                   <span aria-hidden="true" className="editor-signal-corner editor-signal-corner-nw" />
                   <span aria-hidden="true" className="editor-signal-corner editor-signal-corner-se" />
 
@@ -338,11 +329,8 @@ export default function DashboardSignalDesk({
                     <header className="grid gap-4 border-b border-site-border bg-[color-mix(in_srgb,var(--site-canvas-alt)_88%,transparent)] px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-site-muted">
-                            Page signal
-                          </span>
                           <span
-                            className={`inline-flex items-center gap-2 border px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.1em] ${
+                            className={`inline-flex items-center gap-2 border px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${
                               publicViewAvailable
                                 ? "site-status-success"
                                 : "site-status-warning text-site-warning"
@@ -354,24 +342,30 @@ export default function DashboardSignalDesk({
                                 publicViewAvailable ? "bg-site-success" : "bg-site-warning"
                               }`}
                             />
-                            {publicViewAvailable ? "Live" : "Offline"}
+                            {availabilityLabel}
                           </span>
                         </div>
                         <h2 className="mt-2 truncate font-site text-xl font-semibold tracking-[-0.035em] text-site-text sm:text-2xl">
                           {page.resume_data?.name ?? "Untitled"}
                         </h2>
                         <p className="mt-1 truncate text-sm text-site-secondary">
-                          {page.resume_data?.headline ?? "Add a headline in Signal Studio"}
+                          {page.resume_data?.headline ?? "Add a headline in the editor"}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs lg:text-right">
                         <div>
-                          <p className="site-eyebrow text-[9px] text-site-muted">Address</p>
+                          <p className="site-eyebrow text-[9px] text-site-muted">Link</p>
                           <p className="mt-1 font-mono text-site-action-hover">{livePath}</p>
+                          <Link
+                            href="/dashboard/settings"
+                            className="mt-2 inline-flex min-h-7 items-center border-b border-site-border text-[10px] font-semibold text-site-muted transition-colors hover:border-site-action hover:text-site-text"
+                          >
+                            Manage public URL
+                          </Link>
                         </div>
                         <div>
-                          <p className="site-eyebrow text-[9px] text-site-muted">Visual world</p>
+                          <p className="site-eyebrow text-[9px] text-site-muted">Theme</p>
                           <p className="mt-1 text-site-secondary">{themeName}</p>
                         </div>
                       </div>
@@ -408,35 +402,32 @@ export default function DashboardSignalDesk({
                       >
                         <div className="flex items-end justify-between gap-4">
                           <div>
-                            <p className="site-eyebrow text-[9px] text-site-muted">7-day readout</p>
-                            <p className="mt-1 text-xs text-site-secondary">Real activity, no vanity pulse</p>
+                            <p className="site-eyebrow text-[9px] text-site-muted">Last 7 days</p>
+                            <p className="mt-1 text-xs text-site-secondary">Page activity</p>
                           </div>
-                          <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-site-muted">
-                            Last 7d
-                          </span>
                         </div>
                         <div className="mt-5 grid grid-cols-3 gap-3">
                           <SignalMetric
-                            label="Looks"
+                            label="Views"
                             value={String(proof.viewsLast7d)}
                             detail={`${page.views ?? 0} all-time`}
                           />
                           <SignalMetric
-                            label="Shares"
+                            label="Share actions"
                             value={String(proof.shareIntentCountLast7d)}
-                            detail="Link sends"
+                            detail="Copies, cards, opens"
                           />
                           <SignalMetric
-                            label="Reading"
+                            label="Avg. time"
                             value={avgReading ?? "—"}
-                            detail={avgReading ? "Average" : "Fills in"}
+                            detail={avgReading ? "Per view" : "Not enough data"}
                           />
                         </div>
                         <div className="mt-5 border-t border-site-border pt-4">
                           <p className="text-xs leading-5 text-site-muted">
                             {proof.mobileViewsLast7d > 0
-                              ? `${proof.mobileViewsLast7d} mobile look${proof.mobileViewsLast7d === 1 ? "" : "s"} this week.`
-                              : "No mobile looks recorded this week."}
+                              ? `${proof.mobileViewsLast7d} mobile view${proof.mobileViewsLast7d === 1 ? "" : "s"} this week.`
+                              : "No mobile views this week."}
                           </p>
                         </div>
                       </aside>
@@ -451,7 +442,7 @@ export default function DashboardSignalDesk({
                           href={`/dashboard/edit/${page.id}/living-page`}
                           className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
                         >
-                          Open Signal Studio
+                          Edit page
                         </Link>
                         {publicViewAvailable ? (
                           <Link
@@ -460,6 +451,14 @@ export default function DashboardSignalDesk({
                           >
                             View live
                           </Link>
+                        ) : null}
+                        {publicViewAvailable && primaryAction.kind === "analytics" ? (
+                          <DashboardCopyLinkButton
+                            emphasis="secondary"
+                            label="Copy link"
+                            livePath={livePath}
+                            pageId={page.id}
+                          />
                         ) : null}
                         <Link
                           href={`/dashboard/edit/${page.id}/living-page#ats-readiness`}
@@ -472,20 +471,43 @@ export default function DashboardSignalDesk({
                             href={analyticsHref}
                             className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
                           >
-                            Analytics
+                            Activity
                           </Link>
                         ) : null}
                       </nav>
-                      <div className="flex items-center gap-3 border-l border-site-border pl-3">
-                        <span className="hidden text-[10px] text-site-muted sm:inline">Permanent action</span>
+                      <div className="flex items-center border-t border-site-border pt-3 lg:border-l lg:border-t-0 lg:pl-3 lg:pt-0">
                         <DeletePageButton pageId={page.id} />
                       </div>
                     </footer>
                   </div>
-                </article>
+                  </article>
+                </React.Fragment>
               );
             })}
           </section>
+
+          <div className="grid gap-2">
+            {!accountAccess.isLegacyAccount ? (
+              <div className="site-callout px-4 py-3 text-xs leading-5 sm:text-sm">
+                {accountAccess.hasPaidSubscription ? (
+                  <>
+                    Your Living Page stays free. A {accountAccess.publicPlanLabel} subscription
+                    at {activePaidPlanPriceLabel} is still on file.{" "}
+                    <Link href="/dashboard/settings" className="font-semibold text-site-action hover:text-site-action-hover">
+                      Review subscription
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  <>Your Living Page is free to edit, publish, share, and track. No credit card or subscription is required.</>
+                )}
+              </div>
+            ) : null}
+
+            <p className="border-l border-site-border px-4 py-1 text-xs leading-5 text-site-muted">
+              One public page per account. Edit this one, or delete it to start over.
+            </p>
+          </div>
         </div>
       )}
     </main>

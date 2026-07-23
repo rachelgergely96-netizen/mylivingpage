@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface DashboardCopyLinkButtonProps {
+  emphasis?: "primary" | "secondary";
   label: string;
   livePath: string;
   pageId: string;
 }
 
 export default function DashboardCopyLinkButton({
+  emphasis = "primary",
   label,
   livePath,
   pageId,
@@ -59,11 +61,15 @@ export default function DashboardCopyLinkButton({
   };
 
   return (
-    <div>
+    <div className={emphasis === "secondary" ? "inline-flex flex-col" : undefined}>
       <button
         type="button"
         onClick={() => void copyLiveLink()}
-        className="site-button site-button-primary w-full sm:w-auto"
+        className={`site-button ${
+          emphasis === "primary"
+            ? "site-button-primary w-full sm:w-auto"
+            : "site-button-secondary px-3 py-2 text-xs sm:px-4"
+        }`}
       >
         {copyState === "copied" ? "Link copied" : label}
       </button>

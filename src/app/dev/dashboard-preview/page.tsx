@@ -84,9 +84,9 @@ export default function DashboardLayoutPreviewPage() {
         activePaidPlanPriceLabel="$9.99/mo"
         displayName="Avery"
         maxPagesPerAccount={1}
-        offlineAttemptAt={null}
         pages={[
           {
+            offlineAttemptAt: null,
             page: previewPage,
             proof: previewProof,
             publicViewAvailable: true,

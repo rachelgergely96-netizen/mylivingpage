@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("Signal Desk prioritizes one next move and keeps the readout beside it", async ({
+test("dashboard prioritizes one next move and keeps recent activity beside it", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
@@ -11,12 +11,19 @@ test("Signal Desk prioritizes one next move and keeps the readout beside it", as
   const readout = page.locator("[data-dashboard-signal-readout]");
 
   await expect(page.getByRole("heading", { name: /Welcome back, Avery/i })).toBeVisible();
-  await expect(page.getByText("Signal desk · Your public page", { exact: true })).toBeVisible();
+  await expect(page.getByText("Check if your page is live", { exact: false })).toBeVisible();
   await expect(signalCard).toBeVisible();
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
-  await expect(nextSignal.getByRole("link", { name: "Read the signal" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open Signal Studio" })).toBeVisible();
+  await expect(nextSignal.getByRole("link", { name: "View activity" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Edit page" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
   await expect(page.getByRole("link", { name: "ATS check" })).toBeVisible();
+  await expect(readout).toContainText("Views");
+  await expect(readout).toContainText("Share actions");
+  await expect(readout).toContainText("Avg. time");
+  await expect(page.locator("main")).not.toContainText("Signal Desk");
+  await expect(page.locator("main")).not.toContainText("Proof landed");
+  await expect(page.locator("main")).not.toContainText("Visual world");
 
   const nextSignalBox = await nextSignal.boundingBox();
   const readoutBox = await readout.boundingBox();
@@ -30,7 +37,7 @@ test("Signal Desk prioritizes one next move and keeps the readout beside it", as
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("Signal Desk stacks cleanly on mobile and honors reduced motion", async ({ page }) => {
+test("dashboard stacks cleanly on mobile and honors reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/dev/dashboard-preview");
@@ -40,7 +47,10 @@ test("Signal Desk stacks cleanly on mobile and honors reduced motion", async ({ 
 
   await expect(signalCard).toBeVisible();
   await expect(readout).toBeVisible();
-  await expect(page.getByRole("link", { name: "Read the signal" })).toBeVisible();
+  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "View activity" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Edit page" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete" })).toBeVisible();
 
   const signalCardBox = await signalCard.boundingBox();

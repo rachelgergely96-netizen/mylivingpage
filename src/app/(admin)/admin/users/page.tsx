@@ -1,4 +1,5 @@
 import AdminUsersTable from "@/components/admin/AdminUsersTable";
+import styles from "@/components/admin/AdminExperience.module.css";
 import {
   buildAdminUserRows,
   listAllAuthUsers,
@@ -11,7 +12,7 @@ import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 export default async function AdminUsersPage() {
   const supabase = createServiceRoleSupabaseClient();
 
-  const [{ data: profiles }, { data: allPages }, authUsers] = await Promise.all([
+  const [profilesResult, pagesResult, authUsers] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, username, full_name, email, avatar_url, plan, created_at, auth_provider, last_sign_in_at, sign_in_count, signup_referrer")
@@ -22,9 +23,13 @@ export default async function AdminUsersPage() {
     listAllAuthUsers(supabase),
   ]);
 
+  if (profilesResult.error || pagesResult.error) {
+    throw new Error("Unable to load user review data.");
+  }
+
   const users = buildAdminUserRows({
-    profiles: ((profiles ?? []) as AdminProfileRow[]),
-    pages: ((allPages ?? []) as AdminPageStatsRow[]),
+    profiles: ((profilesResult.data ?? []) as AdminProfileRow[]),
+    pages: ((pagesResult.data ?? []) as AdminPageStatsRow[]),
     authUsers,
   });
   const riskSummary = summarizeAdminUserRisk(users);
@@ -42,16 +47,18 @@ export default async function AdminUsersPage() {
     .slice(0, 8);
 
   return (
-    <main className="site-container-wide py-8">
-      <div className="mb-6">
-        <p className="site-eyebrow">Admin</p>
-        <h1 className="site-page-title mt-2">
-          All Users
-          <span className="ml-3 text-lg font-normal tabular-nums text-site-muted">
-            ({users.length})
-          </span>
-        </h1>
-      </div>
+    <main className={styles.page}>
+      <header className={styles.pageHeader}>
+        <div className={styles.pageIntro}>
+          <p className="site-eyebrow">Manage / People</p>
+          <h1 className="site-page-title mt-2">Users and account signals</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary">
+            Find an account, review confirmation and risk signals, or carefully remove
+            an account when necessary.
+          </p>
+        </div>
+        <span className="site-badge">{users.length} total users</span>
+      </header>
       <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="site-panel p-5">
           <p className="text-2xl font-semibold tabular-nums text-site-danger">{riskSummary.suspiciousTotal}</p>

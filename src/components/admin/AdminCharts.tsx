@@ -7,6 +7,17 @@ interface DailyDatum {
 
 export function AdminDailyChart({ title, dailyData }: { title: string; dailyData: DailyDatum[] }) {
   const maxCount = Math.max(...dailyData.map((d) => d.count), 1);
+  const total = dailyData.reduce((sum, day) => sum + day.count, 0);
+  const peak = dailyData.reduce<DailyDatum | null>(
+    (current, day) => (!current || day.count > current.count ? day : current),
+    null,
+  );
+  const accessibleSummary = peak
+    ? `${title}. ${total} total. Highest day was ${new Date(`${peak.date}T00:00:00`).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+      })} with ${peak.count}.`
+    : `${title}. No data.`;
 
   return (
     <section className="site-panel p-4 sm:p-5">
@@ -17,7 +28,7 @@ export function AdminDailyChart({ title, dailyData }: { title: string; dailyData
         role="img"
         className="flex items-end gap-[3px] border-b border-site-border sm:gap-1"
         style={{ height: 120 }}
-        aria-label={`${title} bar chart`}
+        aria-label={accessibleSummary}
       >
         {dailyData.map((day) => {
           const height = maxCount > 0 ? (day.count / maxCount) * 100 : 0;

@@ -1,210 +1,262 @@
-import Link from "next/link";
+import AdminSignalDesk from "@/components/admin/AdminSignalDesk";
+import {
+  buildAdminFeedbackItems,
+  type AdminFeedbackEventRow,
+} from "@/lib/admin-feedback";
+import {
+  buildAdminUserRows,
+  listAllAuthUsers,
+  type AdminPageStatsRow,
+  type AdminProfileRow,
+} from "@/lib/admin-user-review";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
-import { AdminDailyChart } from "@/components/admin/AdminCharts";
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="site-panel p-4 sm:p-5">
-      <p className="text-2xl font-semibold tabular-nums text-site-action sm:text-3xl">
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </p>
-      <p className="mt-1 text-xs font-medium text-site-muted">
-        {label}
-      </p>
-    </div>
-  );
+interface AdminOverviewPageRow extends AdminPageStatsRow {
+  slug: string;
+  views: number;
+  created_at: string;
+  resume_data: { name?: string } | null;
 }
 
-function buildDailyBuckets(timestamps: string[], days: number): { date: string; count: number }[] {
-  const byDay: Record<string, number> = {};
-  for (const ts of timestamps) {
-    const day = ts.slice(0, 10);
-    byDay[day] = (byDay[day] ?? 0) + 1;
-  }
-  const result: { date: string; count: number }[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    result.push({ date: key, count: byDay[key] ?? 0 });
-  }
-  return result;
+interface AdminOverviewEventRow extends AdminFeedbackEventRow {
+  event_name: string;
 }
+
+interface AdminOverviewViewRow {
+  viewed_at: string;
+}
+
+const FAILURE_EVENT_NAMES = [
+  "billing.checkout.session_failed",
+  "billing.portal.session_failed",
+  "billing.webhook.failed",
+  "page.publish.failed",
+  "auth.google.start.failed",
+  "auth.callback.failed",
+] as const;
+
+function buildDailyBuckets(timestamps: string[], days: number) {
+  const byDay = timestamps.reduce<Record<string, number>>((counts, timestamp) => {
+    const day = timestamp.slice(0, 10);
+    counts[day] = (counts[day] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() - (days - index - 1));
+    const key = date.toISOString().slice(0, 10);
+    return { date: key, count: byDay[key] ?? 0 };
+  });
+}
+
+function firstNonEmptyText(
+  ...values: Array<string | null | undefined>
+): string {
+  for (const value of values) {
+    const normalized = value?.trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return "Unknown";
+}
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
   const supabase = createServiceRoleSupabaseClient();
-
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  const cutoff = ninetyDaysAgo.toISOString();
-
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
   const sevenDayCutoff = sevenDaysAgo.toISOString();
+  const ninetyDaysAgo = new Date(now);
+  ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90);
+  const ninetyDayCutoff = ninetyDaysAgo.toISOString();
 
-  // Parallel queries
   const [
-    { count: totalUsers },
-    { count: totalPages },
-    { count: waitlistCount },
-    { count: googleUserCount },
-    { count: activeSevenDayCount },
-    { data: allPages },
-    { data: recentProfiles },
-    { data: recentViews },
-    { data: latestUsers },
-    { data: latestPages },
-    { data: recentEvents },
+    profilesResult,
+    pageStatsResult,
+    recentPagesResult,
+    waitlistResult,
+    viewsResult,
+    recentEventsResult,
+    recentFeedbackResult,
+    profileCountResult,
+    pageCountResult,
+    viewCountResult,
+    googleUserCountResult,
+    activeUserCountResult,
+    feedbackSevenDayCountResult,
+    failureSevenDayCountResult,
+    authUsers,
   ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, username, full_name, email, avatar_url, plan, created_at, auth_provider, last_sign_in_at, sign_in_count, signup_referrer",
+      )
+      .order("created_at", { ascending: false })
+      .returns<AdminProfileRow[]>(),
+    supabase
+      .from("pages")
+      .select("owner_id, user_id, views")
+      .returns<AdminPageStatsRow[]>(),
+    supabase
+      .from("pages")
+      .select("slug, views, created_at, resume_data, owner_id, user_id")
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .returns<AdminOverviewPageRow[]>(),
+    supabase.from("waitlist").select("*", { count: "exact", head: true }),
+    supabase
+      .from("page_views")
+      .select("viewed_at")
+      .gte("viewed_at", ninetyDayCutoff)
+      .order("viewed_at", { ascending: true })
+      .returns<AdminOverviewViewRow[]>(),
+    supabase
+      .from("events")
+      .select("id, event_name, metadata, created_at, user_id")
+      .gte("created_at", ninetyDayCutoff)
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .returns<AdminOverviewEventRow[]>(),
+    supabase
+      .from("events")
+      .select("id, event_name, metadata, created_at, user_id")
+      .eq("event_name", "feedback.submitted")
+      .order("created_at", { ascending: false })
+      .limit(4)
+      .returns<AdminOverviewEventRow[]>(),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("pages").select("*", { count: "exact", head: true }),
-    supabase.from("waitlist").select("*", { count: "exact", head: true }),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("auth_provider", "google"),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).gte("last_sign_in_at", sevenDayCutoff),
-    supabase.from("pages").select("views"),
-    supabase.from("profiles").select("created_at").gte("created_at", cutoff).order("created_at", { ascending: true }),
-    supabase.from("page_views").select("viewed_at").gte("viewed_at", cutoff).order("viewed_at", { ascending: true }),
-    supabase.from("profiles").select("username, full_name, email, created_at").order("created_at", { ascending: false }).limit(5),
-    supabase.from("pages").select("slug, views, created_at, resume_data").order("created_at", { ascending: false }).limit(5),
-    supabase.from("events").select("event_name, metadata, created_at, user_id").order("created_at", { ascending: false }).limit(15),
+    supabase.from("page_views").select("*", { count: "exact", head: true }),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("auth_provider", "google"),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .gte("last_sign_in_at", sevenDayCutoff),
+    supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("event_name", "feedback.submitted")
+      .gte("created_at", sevenDayCutoff),
+    supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .in("event_name", [...FAILURE_EVENT_NAMES])
+      .gte("created_at", sevenDayCutoff),
+    listAllAuthUsers(supabase),
   ]);
 
-  const totalViews = (allPages ?? []).reduce((sum, p) => sum + ((p as { views: number }).views ?? 0), 0);
+  const queryError =
+    profilesResult.error ??
+    pageStatsResult.error ??
+    recentPagesResult.error ??
+    waitlistResult.error ??
+    viewsResult.error ??
+    recentEventsResult.error ??
+    recentFeedbackResult.error ??
+    profileCountResult.error ??
+    pageCountResult.error ??
+    viewCountResult.error ??
+    googleUserCountResult.error ??
+    activeUserCountResult.error ??
+    feedbackSevenDayCountResult.error ??
+    failureSevenDayCountResult.error;
+  if (queryError) {
+    throw new Error("Unable to load the admin overview.");
+  }
 
-  const dailySignups = buildDailyBuckets(
-    (recentProfiles ?? []).map((p) => (p as { created_at: string }).created_at),
-    30
-  );
-  const dailyViews = buildDailyBuckets(
-    (recentViews ?? []).map((v) => (v as { viewed_at: string }).viewed_at),
-    30
-  );
+  const profiles = profilesResult.data ?? [];
+  const pageStats = pageStatsResult.data ?? [];
+  const recentPages = recentPagesResult.data ?? [];
+  const recentViews = viewsResult.data ?? [];
+  const recentEvents = recentEventsResult.data ?? [];
+  const adminUsers = buildAdminUserRows({
+    profiles,
+    pages: pageStats,
+    authUsers,
+    now,
+  });
+  const accountsToReview = adminUsers.filter(
+    (user) => user.botDisposition === "suspicious" || user.isUnconfirmedPastGrace,
+  ).length;
+
+  const feedbackItems = buildAdminFeedbackItems({
+    events: recentFeedbackResult.data ?? [],
+    profiles,
+  });
+  const feedbackLastSevenDays = feedbackSevenDayCountResult.count ?? 0;
+  const failuresLastSevenDays = failureSevenDayCountResult.count ?? 0;
+  const totalViews = viewCountResult.count ?? 0;
+  const googleUsers = googleUserCountResult.count ?? 0;
+  const activeLastSevenDays = activeUserCountResult.count ?? 0;
 
   return (
-    <main className="site-container-wide py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <p className="site-eyebrow">Admin</p>
-        <h1 className="site-page-title mt-2">Platform Overview</h1>
-      </div>
-
-      {/* Stat cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 sm:gap-4">
-        <StatCard label="Total Users" value={totalUsers ?? 0} />
-        <StatCard label="Total Pages" value={totalPages ?? 0} />
-        <StatCard label="Total Views" value={totalViews} />
-        <StatCard label="Google Users" value={googleUserCount ?? 0} />
-        <StatCard label="Active (7d)" value={activeSevenDayCount ?? 0} />
-        <StatCard label="Waitlist" value={waitlistCount ?? 0} />
-      </div>
-
-      {/* Charts */}
-      <div className="mb-6 grid gap-4 md:grid-cols-2">
-        <AdminDailyChart title="Signups — Last 30 Days" dailyData={dailySignups} />
-        <AdminDailyChart title="Views — Last 30 Days" dailyData={dailyViews} />
-      </div>
-
-      {/* Recent activity */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Recent signups */}
-        <section className="site-panel p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-site-text">
-              Recent Signups
-            </h2>
-            <Link href="/admin/users" className="text-xs font-semibold text-site-action hover:text-site-action-hover">
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {(latestUsers ?? []).map((u) => {
-              const user = u as { username: string; full_name: string | null; email: string | null; created_at: string };
-              return (
-                <div key={user.username} className="flex items-center justify-between gap-4 border-t border-site-border pt-3 first:border-t-0 first:pt-0">
-                  <div>
-                    <p className="text-sm text-site-text">{user.full_name || user.username}</p>
-                    <p className="text-xs text-site-muted">{user.email}</p>
-                  </div>
-                  <p className="shrink-0 font-mono text-[10px] text-site-muted">
-                    {new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </p>
-                </div>
-              );
-            })}
-            {(latestUsers ?? []).length === 0 && (
-              <p className="text-sm text-site-muted">No users yet.</p>
-            )}
-          </div>
-        </section>
-
-        {/* Recent pages */}
-        <section className="site-panel p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-site-text">
-              Recent Pages
-            </h2>
-            <Link href="/admin/pages" className="text-xs font-semibold text-site-action hover:text-site-action-hover">
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {(latestPages ?? []).map((p) => {
-              const page = p as { slug: string; views: number; created_at: string; resume_data: { name?: string } };
-              return (
-                <div key={page.slug} className="flex items-center justify-between gap-4 border-t border-site-border pt-3 first:border-t-0 first:pt-0">
-                  <div>
-                    <p className="text-sm text-site-text">{page.resume_data?.name || page.slug}</p>
-                    <p className="font-mono text-[11px] text-site-muted">/{page.slug}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm tabular-nums text-site-action">{page.views}</p>
-                    <p className="font-mono text-[10px] text-site-muted">
-                      {new Date(page.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-            {(latestPages ?? []).length === 0 && (
-              <p className="text-sm text-site-muted">No pages yet.</p>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* Activity feed */}
-      <div className="mt-6">
-        <section className="site-panel p-4 sm:p-5">
-          <h2 className="mb-4 text-sm font-semibold text-site-text">
-            Recent Activity
-          </h2>
-          <div className="space-y-2.5">
-            {(recentEvents ?? []).length === 0 ? (
-              <p className="text-sm text-site-muted">No activity yet.</p>
-            ) : (
-              (recentEvents ?? []).map((e, i) => {
-                const ev = e as { event_name: string; metadata: Record<string, unknown>; created_at: string; user_id: string | null };
-                return (
-                  <div key={`${ev.created_at}-${i}`} className="flex items-center justify-between gap-4 border-t border-site-border px-1 py-3 first:border-t-0">
-                    <div className="min-w-0">
-                      <p className="text-sm text-site-text">{ev.event_name}</p>
-                      {ev.metadata && Object.keys(ev.metadata).length > 0 && (
-                        <p className="max-w-xs truncate font-mono text-[10px] text-site-muted">
-                          {JSON.stringify(ev.metadata)}
-                        </p>
-                      )}
-                    </div>
-                    <p className="shrink-0 font-mono text-[10px] text-site-muted">
-                      {new Date(ev.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{" "}
-                      {new Date(ev.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-      </div>
-    </main>
+    <AdminSignalDesk
+      attention={[
+        {
+          detail: "Messages received in the last 7 days",
+          href: "/admin/feedback",
+          label: "Feedback",
+          value: feedbackLastSevenDays,
+        },
+        {
+          detail: "Sign-in, publishing, or billing failures",
+          href: "/admin/ops",
+          label: "Failed actions",
+          value: failuresLastSevenDays,
+        },
+        {
+          detail: "Suspicious or unconfirmed for more than 24 hours",
+          href: "/admin/users",
+          label: "Accounts to review",
+          value: accountsToReview,
+        },
+      ]}
+      metrics={[
+        { label: "Total users", value: profileCountResult.count ?? 0 },
+        { label: "Total Living Pages", value: pageCountResult.count ?? 0 },
+        { label: "Total page views", value: totalViews },
+        { label: "Active in 7 days", value: activeLastSevenDays },
+        { label: "Google sign-ins", value: googleUsers },
+        { label: "Waitlist names", value: waitlistResult.count ?? 0 },
+      ]}
+      dailySignups={buildDailyBuckets(
+        profiles.map((profile) => profile.created_at),
+        30,
+      )}
+      dailyViews={buildDailyBuckets(
+        recentViews.map((view) => view.viewed_at),
+        30,
+      )}
+      latestFeedback={feedbackItems.slice(0, 4)}
+      recentActivity={recentEvents.slice(0, 10).map((event) => ({
+        createdAt: event.created_at,
+        eventName: event.event_name,
+      }))}
+      recentUsers={profiles.slice(0, 5).map((profile) => ({
+        createdAt: profile.created_at,
+        displayName: firstNonEmptyText(
+          profile.full_name,
+          profile.username,
+          profile.email,
+        ),
+        email: profile.email,
+        username: profile.username,
+      }))}
+      recentPages={recentPages.map((page) => ({
+        createdAt: page.created_at,
+        name: firstNonEmptyText(page.resume_data?.name, page.slug),
+        slug: page.slug,
+        views: page.views ?? 0,
+      }))}
+    />
   );
 }

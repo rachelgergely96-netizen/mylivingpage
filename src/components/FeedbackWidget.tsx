@@ -1,5 +1,6 @@
 "use client";
 
+import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 type FeedbackType = "bug" | "feature" | "general";
@@ -38,7 +39,8 @@ export default function FeedbackWidget() {
     setError("");
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!message.trim()) return;
     setStatus("loading");
     setError("");
@@ -98,15 +100,23 @@ export default function FeedbackWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" data-site-ui>
       {open && (
-        <div className="site-panel-raised w-80 max-w-[calc(100vw-2rem)] p-4" role="dialog" aria-labelledby="feedback-title">
+        <div
+          className="site-panel-raised w-80 max-w-[calc(100vw-2rem)] p-4"
+          role="dialog"
+          aria-labelledby="feedback-title"
+          aria-describedby="feedback-description"
+        >
           <p id="feedback-title" className="site-eyebrow mb-3">
             Send feedback
+          </p>
+          <p id="feedback-description" className="mb-3 text-xs leading-5 text-site-muted">
+            This goes to the private MyLivingPage admin inbox.
           </p>
 
           {status === "success" ? (
             <p className="py-4 text-center text-sm text-site-success" role="status">Thanks for your feedback!</p>
           ) : (
-            <>
+            <form onSubmit={handleSubmit}>
               {/* Type selector */}
               <div className="mb-3 flex gap-1.5">
                 {(["bug", "feature", "general"] as FeedbackType[]).map((t) => (
@@ -154,15 +164,14 @@ export default function FeedbackWidget() {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSubmit}
                   disabled={status === "loading" || !message.trim()}
-                  type="button"
+                  type="submit"
                   className="site-button site-button-primary flex-1 text-xs disabled:opacity-50"
                 >
                   {status === "loading" ? "Sending..." : "Send"}
                 </button>
               </div>
-            </>
+            </form>
           )}
         </div>
       )}

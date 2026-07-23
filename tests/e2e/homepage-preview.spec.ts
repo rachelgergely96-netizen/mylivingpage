@@ -53,22 +53,24 @@ test("production homepage makes the value and first action clear above the fold"
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(4_500);
 });
 
-test("the transformation opens on the Living Page and keeps one truthful source visible", async ({ page }) => {
+test("the transformation opens on the web page and keeps one résumé source visible", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
   await expect(
-    story.getByRole("heading", { name: "One résumé becomes a page, PDF, and Share Card." }),
+    story.getByRole("heading", {
+      name: "One résumé becomes a web page, a PDF, and a shareable card.",
+    }),
   ).toBeVisible();
 
-  const referral = story.getByRole("button", { name: /Living Page/ });
-  const application = story.getByRole("button", { name: /Application PDF/ });
-  const introduction = story.getByRole("button", { name: /Share Card \+ QR/ });
+  const referral = story.getByRole("button", { name: /Web page/ });
+  const application = story.getByRole("button", { name: /Résumé PDF/ });
+  const introduction = story.getByRole("button", { name: /Card \+ QR code/ });
   await expect(story.locator("[data-story-moment]")).toHaveCount(3);
   await expect(referral).toHaveAttribute("aria-pressed", "true");
   await expect(story.locator("[data-story-output-region]"))
     .toHaveAttribute("data-story-output-region", "referral");
-  await expect(story.getByRole("heading", { name: "Professional page" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
   await expect(story.locator("[data-truth-source]")).toBeVisible();
   await expect(story.locator("[data-truth-destination]")).toBeVisible();
   await expect(story.locator("[data-transform-motion]")).toContainText("Same facts, new form");
@@ -85,16 +87,16 @@ test("the transformation opens on the Living Page and keeps one truthful source 
 
   await application.click();
   await expect(application).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "PDF for applications" })).toBeVisible();
   await expect(story.getByText("Avery-Morgan_Product-Lead.pdf")).toBeVisible();
-  await expect(story.locator("[data-story-style-chooser]")).toContainText("Living Page styles");
+  await expect(story.locator("[data-story-style-chooser]")).toContainText("Page styles");
   await expect(story.locator("[data-story-style-chooser]")).toContainText(
-    "Choose a direction to return to the Living Page.",
+    "Choose a style to preview your web page again.",
   );
 
   await introduction.click();
   await expect(introduction).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "Card + QR code" })).toBeVisible();
   const qr = story.getByRole("img", { name: "Sample QR code preview for the professional page" });
   await expect(qr).toBeVisible();
 
@@ -119,12 +121,12 @@ test("homepage defines an editable three-step path and a clear stopping point", 
     await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workflow-step"))),
   ).toEqual(["upload", "review", "publish"]);
   await expect(steps.nth(0)).toContainText("Bring your résumé");
-  await expect(steps.nth(1)).toContainText("Review the truth");
-  await expect(steps.nth(1)).toContainText("Every inferred field stays editable");
-  await expect(steps.nth(2)).toContainText("Share one living link");
+  await expect(steps.nth(1)).toContainText("Review your details");
+  await expect(steps.nth(1)).toContainText("Every imported detail stays editable");
+  await expect(steps.nth(2)).toContainText("Publish and share");
 
   const shortcut = page.locator("[data-overwhelmed-shortcut]");
-  await expect(shortcut).toContainText("A complete first session");
+  await expect(shortcut).toContainText("A simple first visit");
   await expect(shortcut.locator("[data-stopping-point]")).toContainText("You can stop there");
   const shortcutLink = shortcut.getByRole("link", { name: "Create my free page" });
   await expect(shortcutLink).toHaveAttribute(
@@ -141,25 +143,36 @@ test("homepage explains readable content and the always-free promise without ove
 
   const searchReadiness = page.locator("[data-search-readiness]");
   await expect(
-    searchReadiness.getByRole("heading", { name: "A memorable page. Recognizable information." }),
+    searchReadiness.getByRole("heading", {
+      name: "The design can change. Your details stay easy to read.",
+    }),
   ).toBeVisible();
-  await expect(searchReadiness).toContainText("recruiters, ATS tools, search, and AI-assisted tools");
-  await expect(searchReadiness.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
+  await expect(searchReadiness).toContainText("hiring software (often called an ATS)");
+  const readableDetails = searchReadiness.locator("[data-readable-detail-types]");
+  await expect(readableDetails).toContainText("Job titles");
+  await expect(readableDetails).toContainText("The roles you have held");
+  await expect(readableDetails).toContainText("Skills");
+  await expect(readableDetails).toContainText("What you know how to do");
+  await expect(readableDetails).toContainText("Results");
+  await expect(readableDetails).toContainText("What changed because of your work");
   await expect(
-    searchReadiness.getByRole("heading", { name: "Readable by recruiters + AI tools" }),
+    searchReadiness.getByRole("heading", { name: "PDF for job applications" }),
   ).toBeVisible();
   await expect(
-    searchReadiness.getByRole("heading", { name: "A page with its own address" }),
+    searchReadiness.getByRole("heading", { name: "Easy for recruiters and hiring tools to read" }),
+  ).toBeVisible();
+  await expect(
+    searchReadiness.getByRole("heading", { name: "One link you can keep using" }),
   ).toBeVisible();
   await expect(searchReadiness).toContainText(
-    "No tool can guarantee how every system will parse or rank your résumé",
+    "does not invent experience or guarantee how hiring software will read or rank your résumé",
   );
 
   const freePromise = searchReadiness.locator("[data-free-promise]");
   await expect(
-    freePromise.getByRole("heading", { name: "One Living Resume. Completely free. Always." }),
+    freePromise.getByRole("heading", { name: "Everything shown here is free." }),
   ).toBeVisible();
-  await expect(freePromise).toContainText("No card or subscription required");
+  await expect(freePromise).toContainText("No credit card or subscription.");
   await expect(freePromise).toContainText("No trial. No hidden fees.");
 });
 
@@ -169,7 +182,7 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
-  await expect(chooser).toContainText("59 living themes");
+  await expect(chooser).toContainText("59 page styles");
   await expect(chooser).toContainText("Your information stays the same");
 
   const stageBox = await story.locator("[data-story-stage]").boundingBox();
@@ -179,14 +192,14 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   expect(chooserBox!.y).toBeGreaterThanOrEqual(stageBox!.y + stageBox!.height - 1);
 
   const directions = chooser.getByRole("radiogroup", {
-    name: "Choose a Living Page style",
+    name: "Choose a page style",
   });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
   await expect(directions.getByRole("radio")).toHaveCount(5);
   await calm.click();
 
   await expect(calm).toHaveAttribute("aria-checked", "true");
-  await expect(story.getByRole("button", { name: /Living Page/ }))
+  await expect(story.getByRole("button", { name: /Web page/ }))
     .toHaveAttribute("aria-pressed", "true");
   const livingOutput = story.locator("[data-story-living-output]");
   await expect(livingOutput).toHaveAttribute("data-theme-id", "nocturne");
@@ -194,9 +207,9 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   await expect(chooser.locator("[data-style-selection-status]"))
     .toContainText("Calm and focused · Nocturne");
 
-  await story.getByRole("button", { name: /Share Card \+ QR/ }).click();
+  await story.getByRole("button", { name: /Card \+ QR code/ }).click();
   await expect(story.getByRole("img", { name: /Sample QR code/ })).toBeVisible();
-  await story.getByRole("button", { name: /Living Page/ }).click();
+  await story.getByRole("button", { name: /Web page/ }).click();
   await expect(story.locator("[data-story-living-output]"))
     .toHaveAttribute("data-theme-id", "nocturne");
 });
@@ -208,7 +221,7 @@ test("theme controls are equal and support roving keyboard selection", async ({ 
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
   const directions = chooser.getByRole("radiogroup", {
-    name: "Choose a Living Page style",
+    name: "Choose a page style",
   });
   const clear = directions.getByRole("radio", { name: /Clear and structured/ });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
@@ -255,9 +268,9 @@ test("tablet and mobile layouts stay usable without horizontal overflow", async 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page.getByTestId("homepage-primary-cta")).toBeVisible();
-  await expect(page.getByRole("link", { name: "See it transform" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "See an example" })).toBeVisible();
   await expect(page.locator("[data-story-mobile-summary]")).toContainText(
-    "Choose an output above. Your facts stay the same.",
+    "Choose an output above. Your information stays the same.",
   );
   const sourceBox = await page.locator("[data-truth-source]").boundingBox();
   expect(sourceBox).not.toBeNull();
@@ -283,7 +296,7 @@ test("reduced motion keeps the full transformation understandable and interactiv
   await expect(story.locator("[data-truth-source]")).toBeVisible();
   await expect(story.locator("[data-truth-destination]")).toBeVisible();
   await expect(story.locator("[data-transform-motion] b").first()).toBeHidden();
-  await expect(story.getByRole("heading", { name: "Professional page" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
 
   const practical = story.getByRole("radio", { name: /Practical and grounded/ });
   await practical.click();

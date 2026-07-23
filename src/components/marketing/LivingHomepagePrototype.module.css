@@ -1219,24 +1219,44 @@
   border-top: 1px solid var(--border);
 }
 
+.searchStatementIntro {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 76px 0 16px;
+}
+
 .searchStatement {
   color: var(--text);
   display: grid;
-  font-size: clamp(23px, 2.6vw, 39px);
-  font-weight: 610;
   grid-template-columns: repeat(3, 1fr);
-  letter-spacing: -0.045em;
-  margin-top: 76px;
 }
 
 .searchStatement span {
   border-bottom: 1px solid var(--border-strong);
   border-top: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 28px 24px;
 }
 
 .searchStatement span + span {
   border-left: 1px solid var(--border);
+}
+
+.searchStatement small {
+  color: var(--action-bright);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.searchStatement strong {
+  font-size: clamp(20px, 2vw, 30px);
+  font-weight: 610;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
 }
 
 .visibilityBenefits {
@@ -1758,8 +1778,10 @@
   }
 
   .searchStatement {
-    font-size: 24px;
     grid-template-columns: 1fr;
+  }
+
+  .searchStatementIntro {
     margin-top: 52px;
   }
 

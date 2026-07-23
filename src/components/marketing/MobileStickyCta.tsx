@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 interface MobileStickyCtaProps {
   href: string;
   label: string;
+  supportingText?: string;
   targetId: string;
   hideNearId?: string;
   dismissStorageKey?: string;
@@ -14,6 +15,7 @@ interface MobileStickyCtaProps {
 export default function MobileStickyCta({
   href,
   label,
+  supportingText = "Know when someone looks.",
   targetId,
   hideNearId,
   dismissStorageKey = "mlp-mobile-sticky-dismissed",
@@ -87,7 +89,7 @@ export default function MobileStickyCta({
     >
       <div className="mx-auto flex max-w-lg items-center gap-2 border border-site-border bg-site-canvas-alt px-2 py-2 shadow-[6px_6px_0_rgba(2,6,14,0.45)]">
         <p className="min-w-0 flex-1 truncate px-1 text-xs font-medium text-site-secondary">
-          Know when someone looks.
+          {supportingText}
         </p>
         <Link
           href={href}

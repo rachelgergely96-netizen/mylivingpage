@@ -39,10 +39,12 @@ const IN_SCOPE = [
   "src/components/marketing/SignalFrameHomepage.tsx",
   "src/components/marketing/SiteHeader.tsx",
   "src/components/ui",
+  "src/components/marketing/ExamplesExperience.tsx",
 ];
 
 const CSS_IN_SCOPE = [
   "src/app/globals.css",
+  "src/components/marketing/ExamplesExperience.module.css",
   "src/components/marketing/LivingHomepagePrototype.module.css",
   "src/components/marketing/SignalFrameHomepage.module.css",
 ];

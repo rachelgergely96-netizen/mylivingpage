@@ -15,7 +15,7 @@ interface SamplePageCardProps {
   previewHref?: string;
   anchorId?: string;
   interactivePreview?: boolean;
-  previewHeight?: number;
+  previewHeight?: number | string;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -96,21 +96,14 @@ export default function SamplePageCard({
 
   return (
     <>
-      <article id={anchorId} className="site-panel overflow-hidden" data-site-ui>
-        <div className="relative overflow-hidden border-b border-site-border">
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 py-4">
-            <span className="site-badge bg-site-canvas">{sample.sampleBadge}</span>
-            {theme ? <span className="site-badge bg-site-canvas">{theme.name}</span> : null}
-          </div>
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={() => setOpenPreview(true)}
-            className="site-button site-button-secondary absolute right-4 top-16 z-20 min-h-11 bg-site-canvas px-3 py-2 text-xs"
-          >
-            Open large preview
-          </button>
-          <div data-living-output>
+      <article
+        id={anchorId}
+        className="site-panel overflow-hidden bg-site-canvas"
+        data-example-sample={sample.id}
+        data-site-ui
+      >
+        <div className="overflow-hidden border-b border-site-border">
+          <div data-living-output className="overflow-hidden">
             <ThemeCanvas
               themeId={sample.demo.themeId}
               height={previewHeight}
@@ -119,55 +112,76 @@ export default function SamplePageCard({
               interactive={interactivePreview}
               motionAware
             >
-              <div className="h-full">
+              <div
+                className="pointer-events-none h-full select-none overflow-hidden"
+                aria-hidden="true"
+              >
                 <ResumeLayout data={sample.demo.data} compact headingLevel="h2" disableExternalLinks />
               </div>
             </ThemeCanvas>
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-site-border bg-site-canvas-alt px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="site-badge">{sample.sampleBadge}</span>
+              {theme ? (
+                <span className="text-xs text-site-muted">{theme.name} style</span>
+              ) : null}
+            </div>
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={() => setOpenPreview(true)}
+              className="site-button site-button-secondary min-h-11 px-4 py-2 text-xs"
+              aria-label={`Open full sample for ${sample.demo.data.name}, ${sample.roleLabel}`}
+            >
+              Open full sample
+            </button>
+          </div>
         </div>
 
-        <div className="p-5 sm:p-6">
+        <div className="p-5 sm:p-6 lg:p-7">
           <div className="flex flex-wrap items-center gap-2">
             <span className="site-badge">{sample.audienceLabel}</span>
-            <span className="text-xs text-site-muted">{sample.roleLabel}</span>
+            <span className="text-xs text-site-muted">Made-up profile</span>
           </div>
 
           <div className="mt-4">
-            <h3 className="site-panel-title text-2xl">{sample.demo.data.name}</h3>
-            <p className="mt-1 text-sm text-site-secondary">{sample.demo.data.headline}</p>
+            <h3 className="site-section-title text-2xl sm:text-3xl">{sample.roleLabel}</h3>
+            <p className="mt-2 text-sm text-site-muted">
+              {sample.demo.data.name} · {sample.demo.data.headline}
+            </p>
           </div>
 
-          <dl className="mt-5 divide-y divide-site-border border-y border-site-border text-sm leading-7 text-site-secondary">
-            <div className="py-4">
-              <dt className="site-eyebrow">Best used after</dt>
-              <dd className="mt-1">{sample.bestUsedAfter}</dd>
+          <p className="mt-5 text-base leading-7 text-site-secondary">
+            {sample.humanBenefit}
+          </p>
+
+          <dl className="mt-5 grid gap-px bg-site-border text-sm leading-6 text-site-secondary sm:grid-cols-2">
+            <div className="bg-site-surface p-4">
+              <dt className="site-eyebrow">Send it when</dt>
+              <dd className="mt-2">{sample.bestUsedAfter}</dd>
             </div>
-            <div className="py-4">
-              <dt className="site-eyebrow">Why this helps a human</dt>
-              <dd className="mt-1">{sample.humanBenefit}</dd>
-            </div>
-            <div className="py-4">
-              <dt className="site-eyebrow">Keep the resume for</dt>
-              <dd className="mt-1">{sample.resumeBoundary}</dd>
+            <div className="bg-site-surface p-4">
+              <dt className="site-eyebrow">Keep your résumé PDF for</dt>
+              <dd className="mt-2">{sample.resumeBoundary}</dd>
             </div>
           </dl>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href={signupHref} className="site-button site-button-primary">
-              Create Your Page (Free)
+          {previewHref ? (
+            <Link
+              href={previewHref}
+              className="mt-5 inline-flex text-sm font-semibold text-site-action hover:text-site-action-hover"
+            >
+              See this sample in context
             </Link>
-            {previewHref ? (
-              <Link href={previewHref} className="text-sm font-semibold text-site-action hover:text-site-action-hover">
-                See this sample in context
-              </Link>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </article>
 
       {openPreview ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-2 sm:p-4"
+          data-example-preview-overlay
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setOpenPreview(false);
@@ -180,16 +194,18 @@ export default function SamplePageCard({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
             tabIndex={-1}
-            className="site-panel-raised max-h-[calc(100dvh-2rem)] w-full max-w-6xl overflow-y-auto"
+            className="site-panel-raised flex h-[calc(100dvh-1rem)] max-h-[64rem] w-full max-w-6xl flex-col overflow-hidden sm:h-[calc(100dvh-2rem)]"
             data-site-ui
           >
-            <div className="flex items-center justify-between gap-4 border-b border-site-border px-5 py-4 sm:px-6">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-site-border px-4 py-3 sm:px-6 sm:py-4">
               <div>
-                <p className="site-eyebrow">Large preview</p>
-                <h3 id={dialogTitleId} className="site-panel-title mt-2 text-2xl">
+                <p className="site-eyebrow">Full sample</p>
+                <h3 id={dialogTitleId} className="site-panel-title mt-1 text-xl sm:mt-2 sm:text-2xl">
                   {sample.demo.data.name}
                 </h3>
-                <p className="mt-1 text-sm text-site-secondary">{sample.demo.data.headline}</p>
+                <p className="mt-1 hidden text-sm text-site-secondary sm:block">
+                  {sample.demo.data.headline}
+                </p>
               </div>
               <button
                 ref={closeButtonRef}
@@ -204,12 +220,12 @@ export default function SamplePageCard({
               </button>
             </div>
 
-            <div className="p-4 sm:p-6">
-              <div className="overflow-hidden border border-site-border" data-living-output>
+            <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-5">
+              <div className="min-h-0 flex-1 overflow-hidden border border-site-border" data-living-output>
                 <ThemeCanvas
                   themeId={sample.demo.themeId}
-                  height="min(82vh, 920px)"
-                  className="rounded-none"
+                  height="100%"
+                  className="h-full min-h-0 rounded-none"
                   interactive
                   motionAware
                 >
@@ -226,16 +242,16 @@ export default function SamplePageCard({
                   </div>
                 </ThemeCanvas>
               </div>
-              <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-site-border pt-5">
+              <div className="mt-3 flex shrink-0 flex-wrap items-center gap-3 border-t border-site-border pt-3 sm:mt-4 sm:pt-4">
                 <Link href={signupHref} className="site-button site-button-primary">
-                  Create Your Page (Free)
+                  Create my free page
                 </Link>
                 <button
                   type="button"
                   onClick={() => setOpenPreview(false)}
                   className="site-button site-button-secondary"
                 >
-                  Back to samples
+                  Back to examples
                 </button>
               </div>
             </div>

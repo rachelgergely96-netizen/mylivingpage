@@ -207,4 +207,32 @@ describe("ShareCardArtwork", () => {
     },
     45_000,
   );
+
+  it.each(["metal", "holographic"] as const)(
+    "renders the %s finish through ImageResponse (Satori-safe)",
+    async (finish) => {
+      const model = buildShareCardModel({
+        appUrl: "https://www.mylivingpage.com",
+        resume: buildResume(),
+        slug: "rachel-gergely",
+      });
+      const response = new ImageResponse(
+        (
+          <ShareCardArtwork
+            bodyFontFamily="sans-serif"
+            finish={finish}
+            model={model}
+            visual={getShareCardVisual("obsidian")}
+          />
+        ),
+        SHARE_CARD_SIZE,
+      );
+      const bytes = new Uint8Array(await response.arrayBuffer());
+
+      expect(response.headers.get("content-type")).toBe("image/png");
+      expect(readPngDimensions(bytes)).toEqual(SHARE_CARD_SIZE);
+      expect(bytes.byteLength).toBeGreaterThan(10_000);
+    },
+    45_000,
+  );
 });

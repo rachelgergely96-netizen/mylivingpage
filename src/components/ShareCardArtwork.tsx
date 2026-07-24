@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React from "react";
 import type { CSSProperties } from "react";
+import { ShareCardEmblem } from "@/components/ShareCardEmblem";
 import { ShareCardProfileMark } from "@/components/ShareCardProfileMark";
 import { ShareCardQr } from "@/components/ShareCardQr";
 import { ShareCardThemeArtwork } from "@/components/ShareCardThemeArtwork";
@@ -9,12 +10,17 @@ import {
   type ShareCardModel,
   type ShareCardVisual,
 } from "@/lib/share-card";
+import {
+  getShareCardFinish,
+  type ShareCardFinishId,
+} from "@/lib/share-card-finish";
 
 export interface ShareCardArtworkProps {
   bodyFontFamily?: string;
   className?: string;
   ctaBody?: string;
   ctaHeadline?: string;
+  finish?: ShareCardFinishId;
   model: ShareCardModel;
   style?: CSSProperties;
   visual: ShareCardVisual;
@@ -25,21 +31,28 @@ export function ShareCardArtwork({
   className,
   ctaBody = "Scan to explore work, experience, and more.",
   ctaHeadline,
+  finish = "classic",
   model,
   style,
   visual,
 }: ShareCardArtworkProps) {
+  const treatment = getShareCardFinish(finish, visual);
+  const serial = treatment.signatureSerial
+    ? `${treatment.signatureSerial} · ${model.slug.toUpperCase()} · ${visual.themeName.toUpperCase()}`
+    : null;
+
   return (
     <div
       aria-label={`${model.name} share card in the ${visual.themeName} theme`}
       className={className}
       data-share-card-artwork
       data-share-card-collection={visual.collection}
+      data-share-card-finish={treatment.id}
       data-share-card-theme-id={visual.themeId}
       style={{
-        background: visual.background,
+        background: treatment.outerBackground,
         boxSizing: "border-box",
-        color: visual.text,
+        color: treatment.text,
         display: "flex",
         fontFamily: bodyFontFamily,
         height: SHARE_CARD_SIZE.height,
@@ -50,35 +63,40 @@ export function ShareCardArtwork({
         ...style,
       }}
     >
-      <div
-        style={{
-          background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)`,
-          borderRadius: "50%",
-          height: 520,
-          position: "absolute",
-          right: -150,
-          top: -210,
-          width: 520,
-        }}
-      />
-      <div
-        style={{
-          background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 76%)`,
-          borderRadius: "50%",
-          bottom: -250,
-          height: 540,
-          left: -170,
-          opacity: 0.46,
-          position: "absolute",
-          width: 540,
-        }}
-      />
+      {treatment.showGlowOrbs ? (
+        <>
+          <div
+            style={{
+              background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)`,
+              borderRadius: "50%",
+              height: 520,
+              position: "absolute",
+              right: -150,
+              top: -210,
+              width: 520,
+            }}
+          />
+          <div
+            style={{
+              background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 76%)`,
+              borderRadius: "50%",
+              bottom: -250,
+              height: 540,
+              left: -170,
+              opacity: 0.46,
+              position: "absolute",
+              width: 540,
+            }}
+          />
+        </>
+      ) : null}
 
       <div
         style={{
-          background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
-          border: `1px solid ${visual.border}`,
-          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.07), 0 24px 70px ${visual.glow}`,
+          background: treatment.panelBackground,
+          border: treatment.panelBorder,
+          borderRadius: treatment.panelRadius,
+          boxShadow: treatment.panelBoxShadow,
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
@@ -95,32 +113,47 @@ export function ShareCardArtwork({
           background={visual.background}
           border={visual.border}
           glow={visual.glow}
+          style={{ opacity: treatment.themeArtOpacity }}
           surface={visual.surface}
           themeId={visual.themeId}
         />
-        <div
-          style={{
-            background: visual.lightGround
-              ? "linear-gradient(90deg, rgba(255,255,255,0.44) 0%, rgba(255,255,255,0.2) 54%, rgba(255,255,255,0) 82%)"
-              : "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 54%, rgba(0,0,0,0) 82%)",
-            bottom: 0,
-            left: 0,
-            position: "absolute",
-            right: 0,
-            top: 0,
-          }}
-        />
-        <ShareCardProfileMark
-          accent={visual.accent}
-          motif={visual.motif}
-          style={{
-            height: 68,
-            opacity: 0.64,
-            right: 184,
-            top: 34,
-            width: 68,
-          }}
-        />
+
+        {/* Finish material sheets sit above the theme motif, below content. */}
+        {treatment.sheets.map((sheet, index) => (
+          <div key={index} style={sheet} />
+        ))}
+        {treatment.specular ? <div style={treatment.specular} /> : null}
+
+        {treatment.bodyScrim ? (
+          <div style={treatment.bodyScrim} />
+        ) : treatment.id === "classic" ? (
+          <div
+            style={{
+              background: visual.lightGround
+                ? "linear-gradient(90deg, rgba(255,255,255,0.44) 0%, rgba(255,255,255,0.2) 54%, rgba(255,255,255,0) 82%)"
+                : "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 54%, rgba(0,0,0,0) 82%)",
+              bottom: 0,
+              left: 0,
+              position: "absolute",
+              right: 0,
+              top: 0,
+            }}
+          />
+        ) : null}
+
+        {treatment.emblem === null ? (
+          <ShareCardProfileMark
+            accent={visual.accent}
+            motif={visual.motif}
+            style={{
+              height: 68,
+              opacity: 0.64,
+              right: 184,
+              top: 34,
+              width: 68,
+            }}
+          />
+        ) : null}
 
         <div
           style={{
@@ -142,7 +175,7 @@ export function ShareCardArtwork({
             <div
               style={{
                 alignItems: "center",
-                color: visual.textMuted,
+                color: treatment.textMuted,
                 display: "flex",
                 fontSize: 13,
                 fontWeight: 700,
@@ -153,7 +186,7 @@ export function ShareCardArtwork({
             >
               <span
                 style={{
-                  background: visual.accent,
+                  background: treatment.accent,
                   display: "flex",
                   height: 2,
                   width: 28,
@@ -164,7 +197,7 @@ export function ShareCardArtwork({
 
             <div
               style={{
-                color: visual.text,
+                color: treatment.text,
                 display: "flex",
                 fontFamily: bodyFontFamily,
                 fontSize: model.nameFontSize,
@@ -175,9 +208,7 @@ export function ShareCardArtwork({
                 maxHeight: 124,
                 maxWidth: 760,
                 overflow: "hidden",
-                textShadow: visual.lightGround
-                  ? "none"
-                  : "0 2px 22px rgba(0,0,0,0.34)",
+                textShadow: treatment.nameTextShadow,
               }}
             >
               {model.name}
@@ -185,7 +216,7 @@ export function ShareCardArtwork({
 
             <div
               style={{
-                color: visual.textMuted,
+                color: treatment.textMuted,
                 display: "flex",
                 fontSize: 23,
                 lineHeight: 1.25,
@@ -207,9 +238,9 @@ export function ShareCardArtwork({
             >
               <div
                 style={{
-                  background: visual.surface,
-                  border: `1px solid ${visual.border}`,
-                  color: visual.accentBright,
+                  background: treatment.chromeSurface,
+                  border: `1px solid ${treatment.chromeBorder}`,
+                  color: treatment.accentBright,
                   display: "flex",
                   fontSize: 16,
                   padding: "7px 13px",
@@ -220,7 +251,7 @@ export function ShareCardArtwork({
               {model.location ? (
                 <div
                   style={{
-                    color: visual.textMuted,
+                    color: treatment.textMuted,
                     display: "flex",
                     fontSize: 16,
                   }}
@@ -239,8 +270,8 @@ export function ShareCardArtwork({
               src={model.avatarUrl}
               width={126}
               style={{
-                border: `3px solid ${visual.accent}`,
-                boxShadow: `0 0 36px ${visual.glow}`,
+                border: `3px solid ${treatment.avatarBorder}`,
+                boxShadow: treatment.showGlowOrbs ? `0 0 36px ${visual.glow}` : "0 2px 12px rgba(0,0,0,0.5)",
                 flex: "none",
                 height: 126,
                 objectFit: "cover",
@@ -251,9 +282,9 @@ export function ShareCardArtwork({
             <div
               style={{
                 alignItems: "center",
-                background: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
-                boxShadow: `0 0 36px ${visual.glow}`,
-                color: visual.background,
+                background: treatment.monogramBackground,
+                boxShadow: treatment.showGlowOrbs ? `0 0 36px ${visual.glow}` : "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 12px rgba(0,0,0,0.5)",
+                color: treatment.monogramColor,
                 display: "flex",
                 flex: "none",
                 fontFamily: bodyFontFamily,
@@ -286,9 +317,9 @@ export function ShareCardArtwork({
               <div
                 key={tag}
                 style={{
-                  background: visual.surface,
-                  border: `1px solid ${visual.border}`,
-                  color: visual.textMuted,
+                  background: treatment.chromeSurface,
+                  border: `1px solid ${treatment.chromeBorder}`,
+                  color: treatment.textMuted,
                   display: "flex",
                   fontSize: 14,
                   lineHeight: 1.25,
@@ -307,8 +338,8 @@ export function ShareCardArtwork({
         <div
           style={{
             alignItems: "center",
-            background: visual.surfaceStrong,
-            border: `1px solid ${visual.border}`,
+            background: treatment.footerBackground,
+            border: `1px solid ${treatment.chromeBorder}`,
             display: "flex",
             gap: 22,
             justifyContent: "space-between",
@@ -317,17 +348,24 @@ export function ShareCardArtwork({
             position: "relative",
           }}
         >
+          {treatment.emblem ? (
+            <ShareCardEmblem treatment={treatment} initial={model.initial} />
+          ) : null}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
+              // Only grow the text column when an emblem shares the row; omit
+              // the key entirely otherwise so classic markup (and Satori) is
+              // byte-identical to the original.
+              ...(treatment.emblem ? { flex: 1 } : {}),
               maxWidth: 650,
               minWidth: 0,
             }}
           >
             <div
               style={{
-                color: visual.text,
+                color: treatment.text,
                 display: "flex",
                 fontSize: 22,
                 fontWeight: 700,
@@ -337,7 +375,7 @@ export function ShareCardArtwork({
             </div>
             <div
               style={{
-                color: visual.textMuted,
+                color: treatment.textMuted,
                 display: "flex",
                 fontSize: 15,
                 lineHeight: 1.45,
@@ -348,7 +386,7 @@ export function ShareCardArtwork({
             </div>
             <div
               style={{
-                color: visual.accentBright,
+                color: treatment.accentBright,
                 display: "flex",
                 fontSize: 15,
                 marginTop: 10,
@@ -359,12 +397,30 @@ export function ShareCardArtwork({
           </div>
 
           <ShareCardQr
-            borderColor={visual.border}
+            borderColor={treatment.chromeBorder}
             matrix={model.qrMatrix}
             size={132}
             title={`QR code for ${model.displayUrl}`}
           />
         </div>
+
+        {serial ? (
+          <div
+            style={{
+              alignItems: "center",
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              color: treatment.serialColor,
+              display: "flex",
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              marginTop: 10,
+              paddingTop: 8,
+              textTransform: "uppercase",
+            }}
+          >
+            {serial}
+          </div>
+        ) : null}
       </div>
     </div>
   );

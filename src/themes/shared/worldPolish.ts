@@ -214,10 +214,12 @@ function drawDepthBokeh(
     // Keep the reading column calm: fade discs down as they cross the left half.
     const readColumnDim =
       0.3 + 0.7 * finiteClamp((wrapX.u - 0.34) / 0.2, 0, 1);
+    // Near-field discs travel a touch more than the mid motif, so the depth
+    // planes separate as the (already-smoothed) pointer moves.
     const x =
-      width * wrapX.u + (pointerX - 0.5) * width * (0.03 + depth * 0.035);
+      width * wrapX.u + (pointerX - 0.5) * width * (0.045 + depth * 0.025);
     const y =
-      height * wrapY.u + (pointerY - 0.5) * height * (0.024 + depth * 0.028);
+      height * wrapY.u + (pointerY - 0.5) * height * (0.035 + depth * 0.02);
     const radius =
       Math.min(width, height) *
       (0.05 + unitValue(seed + 5.2) * 0.06) *
@@ -674,11 +676,15 @@ function drawWorldPolish(
     ? pointerY * 0.25 + pageMotion.focusY * 0.75
     : pointerY;
   const velocity = finiteClamp(pageMotion.scrollVelocity / 4, -1, 1);
+  // The mid (motif) layer parallax is held slightly back so the near (bokeh)
+  // layer can move a touch more — widening the near/mid depth-band separation
+  // reads as looking through a 3D window without adding overall motion. Only
+  // pointer-driven, so the centered deterministic frames are unaffected.
   const anchorX =
     width *
     finiteClamp(
       profile.anchorX +
-        (targetX - 0.5) * 0.055 +
+        (targetX - 0.5) * 0.04 +
         (pageMotion.storyProgress - 0.5) * 0.035,
       0.58,
       0.9,
@@ -686,7 +692,7 @@ function drawWorldPolish(
   const anchorY =
     height *
     finiteClamp(
-      profile.anchorY + (targetY - 0.5) * 0.04 + velocity * 0.012,
+      profile.anchorY + (targetY - 0.5) * 0.03 + velocity * 0.012,
       0.2,
       0.58,
     );

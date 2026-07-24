@@ -1,6 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
-import { softGlow, star4 } from "../shared/draw";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -87,7 +87,17 @@ const CFG = (function(){
   return { VW, VH, traces, comps, pads, dust, specks, masses, rails };
 })();
 
-export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderCircuit: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const t = motion?.reducedMotion ? 0 : time;
   const C = CFG;
   const VW=C.VW, VH=C.VH;
   const clamp=(v:number,a:number,b:number)=> v<a?a:(v>b?b:v);
@@ -168,7 +178,7 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const f=((t*rl.speed*0.12 + rl.phase)%1+1)%1;
     const ex=x0+(x1-x0)*f, ey=y0+(y1-y0)*f;
     ctx.globalCompositeOperation="lighter";
-    softGlow(ctx, ex, ey, 22, `hsla(${rl.hue|0},90%,60%,0.18)`, "transparent");
+    softGlow(ctx, ex, ey, 16, `hsla(${rl.hue|0},90%,60%,0.10)`, "transparent");
     ctx.globalCompositeOperation="source-over";
   }
 
@@ -218,7 +228,6 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       softGlow(ctx, hx, hy, 12, `hsla(${hue},96%,64%,0.4)`, "transparent");
       ctx.fillStyle=`hsla(${hue},92%,70%,0.55)`;
       ctx.beginPath(); ctx.arc(hx,hy,1.7,0,TAU); ctx.fill();
-      if(p===0 && (i%4===0)) star4(ctx,hx,hy,9,1.0,`hsla(${hue},95%,70%,0.28)`);
       ctx.globalCompositeOperation="source-over";
     }
   }
@@ -228,10 +237,10 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for(let i=0;i<C.pads.length;i++){
     const pd=C.pads[i];
     const x=X(pd.p.x), y=Y(pd.p.y);
-    const b=0.35+0.35*Math.sin(t*0.9+pd.phase);
+    const b=0.5+0.5*Math.sin(t*0.9+pd.phase);
     ctx.strokeStyle=`hsla(${pd.hue|0},40%,30%,0.35)`; ctx.lineWidth=1;
     ctx.beginPath(); ctx.arc(x,y,3.2,0,TAU); ctx.stroke();
-    ctx.fillStyle=`hsla(${pd.hue|0},76%,${(52+12*b).toFixed(1)}%,${(0.18+0.34*b).toFixed(4)})`;
+    ctx.fillStyle=`hsla(${pd.hue|0},76%,${(50+8*b).toFixed(1)}%,${(0.12+0.16*b).toFixed(4)})`;
     ctx.beginPath(); ctx.arc(x,y,1.5,0,TAU); ctx.fill();
   }
   ctx.restore();
@@ -244,7 +253,7 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const md=Math.hypot(x-mpx, y-mpy);
     const mouse=clamp(1-md/(mind*0.18),0,1);
     const bl=0.5+0.5*Math.sin(t*cp.blink+cp.phase);
-    const act=clamp(bl*cp.bright + mouse*0.9, 0, 1.2);
+    const act=clamp(bl*cp.bright + mouse*0.35, 0, 0.72);
     const S=cp.size;
     const hue=cp.hue|0;
 
@@ -253,9 +262,9 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       ctx.beginPath(); ctx.arc(x,y,3.2*S,0,TAU); ctx.stroke();
       ctx.fillStyle=`hsla(${hue},18%,10%,0.6)`;
       ctx.beginPath(); ctx.arc(x,y,2.0*S,0,TAU); ctx.fill();
-      ctx.fillStyle=`hsla(${hue},82%,${(56+13*act).toFixed(1)}%,${(0.22+0.38*act).toFixed(4)})`;
+      ctx.fillStyle=`hsla(${hue},82%,${(54+10*act).toFixed(1)}%,${(0.16+0.18*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x,y,1.2*S,0,TAU); ctx.fill();
-      if(act>0.55){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,9*S,`hsla(${hue},90%,62%,${(0.24*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
+      if(act>0.55){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,9*S,`hsla(${hue},90%,62%,${(0.12*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
     } else if(cp.type==="chip"){
       const wch=(cp.horiz?9:6)*S, hch=(cp.horiz?6:9)*S;
       ctx.fillStyle=`hsla(${hue},22%,${(9+6*act).toFixed(1)}%,0.85)`;
@@ -271,7 +280,7 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       }
       ctx.fillStyle=`hsla(172,92%,66%,${(0.3+0.34*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x-wch/2+2.2*S, y-hch/2+2.2*S, 1.0*S, 0, TAU); ctx.fill();
-      if(act>0.6){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,Math.max(wch,hch)*1.3,`hsla(${hue},90%,60%,${(0.14*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
+      if(act>0.6){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,Math.max(wch,hch)*1.3,`hsla(${hue},90%,60%,${(0.10*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
     } else if(cp.type==="cap"){
       const wc=5*S, hc=7*S;
       ctx.fillStyle=`hsla(${hue},30%,${(14+8*act).toFixed(1)}%,0.85)`;
@@ -289,10 +298,9 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       for(let k=0;k<3;k++){ ctx.fillStyle=`hsla(${(hue+k*20)%360},60%,55%,${(0.3+0.3*act).toFixed(4)})`; ctx.fillRect(x-wr/2+1.5+k*2.2, y-hr/2, 1.1, hr); }
     } else {
       ctx.globalCompositeOperation="lighter";
-      softGlow(ctx,x,y,9.5*S*(0.7+0.6*act),`hsla(${hue},96%,60%,${(0.22+0.4*act).toFixed(4)})`,"transparent");
-      ctx.fillStyle=`hsla(${hue},94%,${(62+8*act).toFixed(1)}%,${(0.42+0.34*act).toFixed(4)})`;
+      softGlow(ctx,x,y,9.5*S*(0.7+0.6*act),`hsla(${hue},96%,60%,${(0.08+0.16*act).toFixed(4)})`,"transparent");
+      ctx.fillStyle=`hsla(${hue},94%,${(60+7*act).toFixed(1)}%,${(0.30+0.18*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x,y,1.9*S,0,TAU); ctx.fill();
-      if(act>0.7) star4(ctx,x,y,8.5*S,1.0,`hsla(${hue},95%,70%,${(0.32*act).toFixed(4)})`);
       ctx.globalCompositeOperation="source-over";
     }
   }

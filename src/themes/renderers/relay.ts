@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { resolveThemeMotion } from "../shared/motion";
 import { createSeededRandom } from "../shared/random";
 import { softGlow, star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
@@ -53,7 +54,26 @@ const CFG=(function(){
   return {towers:towers,links:links,stars:stars,skylineFar:skylineFar,skylineMid:skylineMid,fog:fog,cache:cache};
 })();
 
-export const renderRelay: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderRelay: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const M=resolveThemeMotion(motion);
+  const reduced=Boolean(motion?.reducedMotion);
+  const t=reduced?0:time;
+  const hasStory=M.sectionCount>0;
+  const routeCycle=t*0.045;
+  const activeLink=hasStory
+    ? ((M.activeSectionIndex%CFG.links.length)+CFG.links.length)%CFG.links.length
+    : Math.floor(routeCycle)%CFG.links.length;
+  const packetU=reduced?0.58:routeCycle-Math.floor(routeCycle);
+  const activeRoute=CFG.links[activeLink];
   const clamp=(v: number,a: number,b: number)=>v<a?a:(v>b?b:v);
   const qp=(u: number,a: number,c: number,b: number)=>{const m=1-u;return m*m*a+2*m*u*c+u*u*b;};
   const legDim=(xx: number)=>{const u=clamp((xx/(w||1)-0.42)/0.5,0,1);return 1-0.38*u*u;};
@@ -114,7 +134,6 @@ export const renderRelay: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.fillStyle=`hsla(${190+st.hueShift},82%,${70+st.bright*12}%,${a})`; ctx.fill();
     if(st.bright>0.82&&st.depth===2){
       softGlow(ctx,sx,sy,rad*6,`hsla(190,82%,68%,${a*0.4})`,"transparent");
-      star4(ctx,sx,sy,rad*7,rad*0.5,`hsla(190,82%,80%,${a*0.5})`);
     }
   }
   ctx.restore();
@@ -189,10 +208,6 @@ export const renderRelay: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.beginPath(); ctx.moveTo(fx,h); ctx.lineTo(vpx+(fx-vpx)*0.04,vpy);
     ctx.strokeStyle=`rgba(60,175,212,${0.05*(1-Math.abs(g)/9)+0.012})`; ctx.lineWidth=1; ctx.stroke();
   }
-  const scanU=(t*0.07)%1;
-  const scanY=ground+(h-ground)*scanU*scanU;
-  ctx.beginPath(); ctx.moveTo(0,scanY); ctx.lineTo(w,scanY);
-  ctx.strokeStyle=`rgba(120,225,245,${0.08*(1-scanU)})`; ctx.lineWidth=1.4; ctx.stroke();
   ctx.restore();
 
   ctx.save(); ctx.globalCompositeOperation="lighter";
@@ -235,63 +250,58 @@ export const renderRelay: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for(const T of TW){
     const x=T.x, top=T.top, base=T.base, H=T.height;
     const dim=legDim(x);
-    const beat=0.5+0.5*Math.sin(t*1.2+T.cfg.beat);
-    for(let ring=0;ring<3;ring++){
-      const phase=((t*0.32+ring*0.34+T.i*0.2)%1);
-      const rr=10+phase*(H*0.6+40);
-      ctx.beginPath(); ctx.arc(x,top,rr,Math.PI*1.06,Math.PI*1.94);
-      ctx.strokeStyle=`hsla(190,85%,70%,${(1-phase)*0.16*dim})`;
-      ctx.lineWidth=1.4*(1-phase)+0.3; ctx.stroke();
-    }
+    const isActiveEndpoint=T.i===activeRoute.a||T.i===activeRoute.b;
+    const beat=0.5+0.5*Math.sin(t*0.55+T.cfg.beat);
     for(let wI=0;wI<2;wI++){
       const u=0.4+wI*0.28;
       const wy=base+(top-base)*u;
-      const bl=0.5+0.5*Math.sin(t*2.2+wI*2+T.i);
       ctx.beginPath(); ctx.arc(x,wy,1.6,0,TAU);
-      ctx.fillStyle=`hsla(190,90%,78%,${(0.3+bl*0.5)*dim})`; ctx.fill();
+      ctx.fillStyle=`hsla(190,90%,78%,${(isActiveEndpoint?0.18+beat*0.14:0.18)*dim})`; ctx.fill();
     }
     const rg=ctx.createLinearGradient(x,base,x,base+H*0.45);
-    rg.addColorStop(0,`hsla(190,90%,68%,${(0.10+beat*0.06)*dim})`);
+    rg.addColorStop(0,`hsla(190,90%,68%,${(isActiveEndpoint?0.06+beat*0.04:0.06)*dim})`);
     rg.addColorStop(1,"transparent");
     ctx.fillStyle=rg; ctx.fillRect(x-2,base,4,H*0.45);
-    softGlow(ctx,x,base+4,w*0.02,`hsla(190,80%,58%,${(0.10+beat*0.08)*dim})`,"transparent");
-    softGlow(ctx,x,top,14+beat*10+w*0.004,`hsla(190,90%,70%,${(0.10+beat*0.14)*dim})`,"transparent");
+    softGlow(ctx,x,base+4,w*0.02,`hsla(190,80%,58%,${(isActiveEndpoint?0.06+beat*0.04:0.06)*dim})`,"transparent");
+    softGlow(ctx,x,top,14+beat*10+w*0.004,`hsla(190,90%,70%,${(isActiveEndpoint?0.06+beat*0.10:0.06)*dim})`,"transparent");
     ctx.beginPath(); ctx.arc(x,top,2.6+beat*1.5,0,TAU);
-    ctx.fillStyle=`hsla(188,92%,${74+beat*8}%,${0.70*dim})`; ctx.fill();
-    star4(ctx,x,top,15+beat*12,1.4,`hsla(190,90%,80%,${(0.26+beat*0.16)*dim})`);
+    ctx.fillStyle=`hsla(188,92%,${74+beat*8}%,${(isActiveEndpoint?0.42+beat*0.16:0.42)*dim})`; ctx.fill();
+    if(isActiveEndpoint){
+      star4(ctx,x,top,15+beat*12,1.4,`hsla(190,90%,80%,${(0.12+beat*0.10)*dim})`);
+    }
   }
   ctx.restore();
 
   ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.lineCap="round";
-  for(const L of CFG.links){
+  for(let linkIndex=0;linkIndex<CFG.links.length;linkIndex++){
+    const L=CFG.links[linkIndex];
+    const active=linkIndex===activeLink;
     const A=TW[L.a], B=TW[L.b];
     const cx=(A.x+B.x)/2+(mx-0.5)*30;
     const cy=Math.min(A.top,B.top)-h*L.lift-(my-0.5)*20;
     ctx.beginPath(); ctx.moveTo(A.x,A.top); ctx.quadraticCurveTo(cx,cy,B.x,B.top);
-    ctx.strokeStyle="rgba(60,180,220,0.05)"; ctx.lineWidth=6; ctx.stroke();
+    ctx.strokeStyle=`rgba(60,180,220,${active?0.06:0.04})`; ctx.lineWidth=6; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(A.x,A.top); ctx.quadraticCurveTo(cx,cy,B.x,B.top);
-    ctx.strokeStyle="rgba(92,206,236,0.10)"; ctx.lineWidth=2.2; ctx.stroke();
+    ctx.strokeStyle=`rgba(92,206,236,${active?0.13:0.08})`; ctx.lineWidth=2.2; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(A.x,A.top); ctx.quadraticCurveTo(cx,cy,B.x,B.top);
-    ctx.strokeStyle="rgba(205,242,255,0.13)"; ctx.lineWidth=1; ctx.stroke();
-    for(let pi=0;pi<L.packets.length;pi++){
-      const pk=L.packets[pi];
-      const pr=((t*pk.speed+pk.phase)%1);
-      const hx=qp(pr,A.x,cx,B.x), hy=qp(pr,A.top,cy,B.top);
-      const tu=Math.max(0,pr-0.10);
-      const tx=qp(tu,A.x,cx,B.x), ty=qp(tu,A.top,cy,B.top);
-      const mu=(tu+pr)/2;
-      const dim=legDim(hx);
-      const g=ctx.createLinearGradient(tx,ty,hx,hy);
-      g.addColorStop(0,`hsla(${pk.hue},90%,72%,0)`);
-      g.addColorStop(1,`hsla(${pk.hue},92%,76%,${0.58*dim})`);
-      ctx.strokeStyle=g; ctx.lineWidth=pk.size*1.4;
-      ctx.beginPath(); ctx.moveTo(tx,ty);
-      ctx.quadraticCurveTo(qp(mu,A.x,cx,B.x),qp(mu,A.top,cy,B.top),hx,hy);
-      ctx.stroke();
-      if(pi===0){ softGlow(ctx,hx,hy,pk.size*6,`hsla(${pk.hue},92%,78%,${0.5*dim})`,"transparent"); }
-      ctx.beginPath(); ctx.arc(hx,hy,pk.size,0,TAU);
-      ctx.fillStyle=`hsla(${pk.hue},92%,78%,${0.72*dim})`; ctx.fill();
-    }
+    ctx.strokeStyle=`rgba(205,242,255,${active?0.18:0.11})`; ctx.lineWidth=1; ctx.stroke();
+    if(!active) continue;
+    const pk=L.packets[0];
+    const hx=qp(packetU,A.x,cx,B.x), hy=qp(packetU,A.top,cy,B.top);
+    const trailU=Math.max(0,packetU-0.10);
+    const tx=qp(trailU,A.x,cx,B.x), ty=qp(trailU,A.top,cy,B.top);
+    const midU=(trailU+packetU)/2;
+    const dim=legDim(hx);
+    const g=ctx.createLinearGradient(tx,ty,hx,hy);
+    g.addColorStop(0,`hsla(${pk.hue},90%,72%,0)`);
+    g.addColorStop(1,`hsla(${pk.hue},92%,76%,${0.50*dim})`);
+    ctx.strokeStyle=g; ctx.lineWidth=pk.size*1.4;
+    ctx.beginPath(); ctx.moveTo(tx,ty);
+    ctx.quadraticCurveTo(qp(midU,A.x,cx,B.x),qp(midU,A.top,cy,B.top),hx,hy);
+    ctx.stroke();
+    softGlow(ctx,hx,hy,pk.size*6,`hsla(${pk.hue},92%,78%,${0.38*dim})`,"transparent");
+    ctx.beginPath(); ctx.arc(hx,hy,pk.size,0,TAU);
+    ctx.fillStyle=`hsla(${pk.hue},92%,78%,${0.68*dim})`; ctx.fill();
   }
   ctx.restore();
 

@@ -503,7 +503,7 @@ const THEME_DEFINITIONS: Array<
     id: "luxe",
     name: "Luxe",
     description:
-      "A slow, heavy river of melted gold flows in broad viscous swells, mirror-bright sheens rolling across the liquid-metal surface under a warm, expensive bloom.",
+      "One monumental fold of liquid gold moves through black lacquer, its mirror ridge following the page story.",
     vibe: "Prestigious & Confident",
     background: "#0A0808",
   },
@@ -739,7 +739,7 @@ const THEME_DEFINITIONS: Array<
     id: "filigree",
     name: "Filigree",
     description:
-      "Ornamental metallic curls unfurl from the center in elegant looping arabesques.",
+      "A continuous line of chased gold climbs the page in asymmetric openwork, catching a jeweler's light as each chapter comes forward.",
     vibe: "Intricate & Regal",
     background: "#05060A",
   },

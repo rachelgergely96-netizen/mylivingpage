@@ -105,7 +105,17 @@ const readAnchors = [[0.33, 0.27], [0.43, 0.48]];
 let bandCache: PrismBandCache[] | null = null;
 let bandCacheKey = 0;
 
-export const renderPrism: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderPrism: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const t = motion?.reducedMotion ? 0 : time;
   const minWH = Math.min(w, h);
   const cx = w * 0.5, cy = h * 0.5;
   const span = Math.hypot(w, h) * 0.78;
@@ -198,23 +208,88 @@ export const renderPrism: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.restore();
   }
 
+  // A single glass prism gives the spectral field a legible optical source.
+  // It stays in the decorative right side, with the dispersed rays terminating
+  // in the existing lower caustic field instead of crossing the reading column.
+  const prismCx = w * 0.8 + pmx * w * 0.018;
+  const prismCy = h * 0.57 + pmy * h * 0.018;
+  const prismR = minWH * 0.095;
+  const sourceX = w * 1.04;
+  const sourceY = h * (0.25 + Math.sin(t * TAU / 44) * 0.018);
+  const entryX = prismCx + prismR * 0.58;
+  const entryY = prismCy - prismR * 0.28;
+  const sourcePulse = 0.86 + Math.sin(t * TAU / 18) * 0.14;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.strokeStyle = `rgba(222,236,255,${0.12 * sourcePulse})`;
+  ctx.lineWidth = Math.max(1, minWH * 0.004);
+  ctx.beginPath();
+  ctx.moveTo(sourceX, sourceY);
+  ctx.lineTo(entryX, entryY);
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(204,224,255,${0.035 * sourcePulse})`;
+  ctx.lineWidth = Math.max(4, minWH * 0.018);
+  ctx.stroke();
+
+  const prismFill = ctx.createLinearGradient(
+    prismCx - prismR,
+    prismCy - prismR,
+    prismCx + prismR,
+    prismCy + prismR,
+  );
+  prismFill.addColorStop(0, "rgba(214,226,255,0.035)");
+  prismFill.addColorStop(0.5, "rgba(156,182,232,0.10)");
+  prismFill.addColorStop(1, "rgba(244,222,255,0.045)");
+  ctx.beginPath();
+  ctx.moveTo(prismCx, prismCy - prismR);
+  ctx.lineTo(prismCx + prismR * 0.88, prismCy + prismR * 0.58);
+  ctx.lineTo(prismCx - prismR * 0.88, prismCy + prismR * 0.58);
+  ctx.closePath();
+  ctx.fillStyle = prismFill;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(220,232,255,0.24)";
+  ctx.lineWidth = Math.max(0.8, minWH * 0.0018);
+  ctx.stroke();
+
+  const rayOriginX = prismCx - prismR * 0.16;
+  const rayOriginY = prismCy + prismR * 0.5;
+  const rayHues = [8, 34, 52, 188, 232, 276];
+  for (let i = 0; i < rayHues.length; i++) {
+    const spread = i / (rayHues.length - 1);
+    const endX = w * (0.58 + spread * 0.4);
+    const endY = h * (0.88 + spread * 0.055);
+    ctx.strokeStyle = `hsla(${rayHues[i]},82%,68%,${0.075 * sourcePulse})`;
+    ctx.lineWidth = Math.max(0.7, minWH * 0.0014);
+    ctx.beginPath();
+    ctx.moveTo(rayOriginX, rayOriginY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   // Rainbow caustics rippling on the dark floor (biased right/lower, clear of the reading column)
   for (let i = 0; i < caustics.length; i++) {
     const c = caustics[i];
     const rip = noise2D(c.phase * 2.7 + t * 0.14 * c.ripple, i * 0.63);
     const rip2 = Math.sin(t * 0.5 * c.ripple + c.phase);
+    // One slow source rolls across the caustic field, so the reflections read
+    // as related refractions rather than independent colored blooms.
+    const sourceWave = 0.5 + 0.5 * Math.cos(c.x * TAU * 1.2 - t * 0.18);
     const cxp = (c.x + c.driftX * Math.sin(t * 0.09 + c.phase)) * w + rip * minWH * 0.02 + pmx * w * 0.05;
     const cyp = c.y * h + rip2 * minWH * 0.012 + pmy * h * 0.02;
-    const rx = Math.max(2, c.rx * w * (0.85 + 0.25 * Math.sin(t * 0.4 + c.phase)));
-    const ry = Math.max(1, c.ry * h * (0.8 + 0.35 * rip2));
+    const rx = Math.max(2, c.rx * w * (0.88 + 0.28 * Math.sin(t * 0.4 + c.phase)));
+    const ry = Math.max(1, c.ry * h * (0.82 + 0.38 * rip2));
     const hue = (c.hue + t * c.hueRate) % 360;
-    const alpha = c.alpha * (0.55 + 0.45 * (0.5 + 0.5 * rip2));
+    const alpha = c.alpha
+      * (0.55 + 0.45 * (0.5 + 0.5 * rip2))
+      * (0.82 + 0.34 * sourceWave);
     ctx.save();
     ctx.translate(cxp, cyp);
     ctx.scale(1, ry / rx);
     const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-    rg.addColorStop(0, `hsla(${hue},84%,64%,${alpha})`);
-    rg.addColorStop(0.5, `hsla(${(hue + 40) % 360},80%,57%,${alpha * 0.4})`);
+    rg.addColorStop(0, `hsla(${hue},84%,66%,${alpha * 1.08})`);
+    rg.addColorStop(0.42, `hsla(${(hue + 40) % 360},80%,59%,${alpha * 0.46})`);
     rg.addColorStop(1, `hsla(${(hue + 75) % 360},78%,54%,0)`);
     ctx.beginPath();
     ctx.arc(0, 0, rx, 0, TAU);

@@ -1,7 +1,5 @@
-import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
-import { star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -74,13 +72,20 @@ const CFG=(function(){
   return {webs:webs,layers:layers,strands:strands,craters:craters,aur:aur};
 })();
 
-export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+export const renderGossamer: ThemeRenderer = (ctx,w,h,timeValue,mx,my,_deltaSeconds,motion)=>{
   const M=resolveThemeMotion(motion);
-  const velocity=finiteClamp(M.scrollVelocity/4,-1,1);
+  const reduced=motion?.reducedMotion===true;
+  const t=reduced?0:timeValue;
+  const velocity=reduced?0:finiteClamp(M.scrollVelocity/4,-1,1);
   const story=finiteClamp(M.storyProgress,0,1);
   const impulse=finiteClamp(M.interactionImpulse,0,1);
-  const stir=finiteClamp(impulse+M.pointerSpeed*0.15,0,1);
   const nStep=CFG.webs.length;
+  const activeWebIdx=M.sectionCount>0
+    ? Math.round(story*(CFG.webs.length-1))
+    : 0;
+  const sweepU=M.sectionCount>0
+    ? finiteClamp(0.16+story*0.68+(reduced?0:Math.sin(t*TAU/18)*0.03),0.08,0.92,0.5)
+    : reduced?0.5:0.5+Math.sin(t*TAU/18)*0.42;
 
   const minSide=Math.max(1,Math.min(w,h));
   const maxSide=Math.max(w,h);
@@ -95,11 +100,6 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
     y:h*wb.y+py*minSide*(0.016+depth*0.012)+story*minSide*0.015+velocity*minSide*0.01
   });
 
-  const moteSprite=ctx.createRadialGradient(0,0,0,0,0,1);
-  moteSprite.addColorStop(0,"rgba(212,236,253,1)");
-  moteSprite.addColorStop(0.4,"rgba(165,212,238,0.5)");
-  moteSprite.addColorStop(1,"rgba(120,175,220,0)");
-
   ctx.save();
 
   const topGrad=ctx.createLinearGradient(0,0,0,h);
@@ -111,27 +111,10 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
 
   ctx.save();
   ctx.globalCompositeOperation="screen";
-  for(let i=0;i<CFG.aur.length;i++){
-    const a=CFG.aur[i];
-    const ax=w*a.x+Math.sin(t*a.sp+a.ph)*w*0.03+px*minSide*0.02+story*minSide*0.02;
-    const ay=h*a.y+Math.cos(t*a.sp*0.8+a.ph)*h*0.025+py*minSide*0.015;
-    const ar=minSide*a.r;
-    const aa=finiteClamp(a.a*(1+story*0.15),0,0.14,a.a);
-    const g=ctx.createRadialGradient(ax,ay,0,ax,ay,ar);
-    g.addColorStop(0,"rgba("+a.col+","+aa+")");
-    g.addColorStop(0.5,"rgba("+a.col+","+(aa*0.4)+")");
-    g.addColorStop(1,"rgba("+a.col+",0)");
-    ctx.fillStyle=g;
-    ctx.fillRect(ax-ar,ay-ar,ar*2,ar*2);
-  }
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalCompositeOperation="screen";
   const halo=ctx.createRadialGradient(moonX,moonY,moonR*0.5,moonX,moonY,moonR*8);
-  halo.addColorStop(0,"rgba(214,238,255,0.26)");
-  halo.addColorStop(0.16,"rgba(150,203,242,0.13)");
-  halo.addColorStop(0.5,"rgba(90,150,205,0.05)");
+  halo.addColorStop(0,"rgba(214,238,255,0.18)");
+  halo.addColorStop(0.16,"rgba(150,203,242,0.09)");
+  halo.addColorStop(0.5,"rgba(90,150,205,0.035)");
   halo.addColorStop(1,"rgba(45,83,121,0)");
   ctx.fillStyle=halo;
   ctx.fillRect(moonX-moonR*8,moonY-moonR*8,moonR*16,moonR*16);
@@ -176,60 +159,6 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
   ctx.stroke();
   ctx.restore();
 
-  ctx.save();
-  ctx.globalCompositeOperation="screen";
-  for(let band=0;band<3;band++){
-    const baseY=h*(0.34+band*0.2);
-    ctx.beginPath();
-    const steps=14;
-    for(let s=0;s<=steps;s++){
-      const fx=s/steps;
-      const xx=fx*(w+40)-20;
-      const nz=fbm(fx*2.2+band*3.1+t*0.03,band*1.7,2);
-      const yy=baseY+nz*h*0.05+Math.sin(t*0.04+band+fx*3)*h*0.01;
-      if(s===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
-    }
-    ctx.lineTo(w+20,baseY+h*0.18);
-    ctx.lineTo(-20,baseY+h*0.18);
-    ctx.closePath();
-    const mg=ctx.createLinearGradient(0,baseY-h*0.05,0,baseY+h*0.18);
-    mg.addColorStop(0,"rgba(120,168,205,"+(0.045+band*0.014)+")");
-    mg.addColorStop(1,"rgba(60,100,140,0)");
-    ctx.fillStyle=mg;
-    ctx.fill();
-  }
-  ctx.restore();
-
-  const drawMotes=(layer: (typeof CFG.layers)[number],withCross: boolean)=>{
-    const dep=layer.depth;
-    const parX=px*minSide*0.03*dep;
-    const parY=py*minSide*0.02*dep;
-    ctx.save();
-    ctx.globalCompositeOperation="screen";
-    for(let i=0;i<layer.motes.length;i++){
-      const m=layer.motes[i];
-      const bx=m.x*w+Math.sin(t*0.05*m.drift+m.ph)*minSide*0.01-parX;
-      const by=m.y*h+Math.cos(t*0.045*m.drift+m.ph*1.3)*minSide*0.008-parY+velocity*minSide*0.008+story*minSide*0.006;
-      const tw=0.45+(0.55+stir*0.15)*Math.sin(t*m.tw+m.ph);
-      const rr=minSide*(0.0008+m.r*0.0016*dep);
-      const fr=rr*2.2;
-      const al=finiteClamp((0.10+m.bright*0.35)*(0.4+0.6*tw)*(0.5+dep*0.5)*(1+stir*0.15),0,0.6,0);
-      ctx.save();
-      ctx.globalAlpha=al;
-      ctx.translate(bx,by);
-      ctx.scale(fr,fr);
-      ctx.fillStyle=moteSprite;
-      ctx.beginPath();
-      ctx.arc(0,0,1,0,TAU);
-      ctx.fill();
-      ctx.restore();
-      if(withCross&&m.bright>0.82){
-        star4(ctx,bx,by,rr*(3+tw*3),Math.max(0.5,rr*0.4),"rgba(228,244,255,"+(al*0.7)+")");
-      }
-    }
-    ctx.restore();
-  };
-
   const drawWeb=(wb: GossamerWeb,idx: number,depth: number)=>{
     const c=webCenter(wb,depth);
     const cx=c.x,cy=c.y;
@@ -253,6 +182,14 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
       const rad=R*rp;
       return {x:cx+Math.cos(ang)*rad,y:cy+Math.sin(ang)*rad*flat};
     };
+    let activeSpoke=Math.round(story*(wb.spokes-1));
+    if(idx===activeWebIdx&&M.hasFocus){
+      const fx=finiteClamp(M.focusX,0,1,0.5)*w;
+      const fy=finiteClamp(M.focusY,0,1,0.5)*h;
+      const localAngle=Math.atan2((fy-cy)/flat,fx-cx)-rot;
+      activeSpoke=((Math.round(localAngle/TAU*wb.spokes)%wb.spokes)+wb.spokes)%wb.spokes;
+    }
+    const centerR=sweepU*wb.rings;
     ctx.save();
     ctx.globalCompositeOperation="screen";
     for(let r=1;r<=wb.rings;r++){
@@ -283,34 +220,38 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
       ctx.lineWidth=Math.max(0.42,minSide*0.0006);
       ctx.stroke();
     }
+    if(idx===activeWebIdx){
+      const startR=Math.max(0,centerR-0.65);
+      const endR=Math.min(wb.rings,centerR+0.65);
+      ctx.beginPath();
+      for(let sample=0;sample<=8;sample++){
+        const r=startR+(endR-startR)*sample/8;
+        const p=pt(activeSpoke,r);
+        if(sample===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+      }
+      ctx.strokeStyle=`rgba(220,240,255,${0.08+(M.hasFocus?0.02:0)+impulse*0.02})`;
+      ctx.lineWidth=Math.max(0.7,minSide*0.00096);
+      ctx.stroke();
+    }
     ctx.restore();
 
     ctx.save();
     ctx.globalCompositeOperation="screen";
-    const chr=R*0.12;
-    const cgA=finiteClamp(0.42*(1+actGain*0.5),0,0.66,0.42);
-    const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,chr);
-    cg.addColorStop(0,"rgba(238,249,255,"+cgA+")");
-    cg.addColorStop(0.3,"rgba(180,222,252,"+(cgA*0.4)+")");
-    cg.addColorStop(1,"rgba(120,188,238,0)");
-    ctx.fillStyle=cg;
-    ctx.fillRect(cx-chr,cy-chr,chr*2,chr*2);
-
     const dewSprite=ctx.createRadialGradient(lx*0.184,ly*0.184,0,0,0,1);
     dewSprite.addColorStop(0,"rgba(255,255,255,1)");
     dewSprite.addColorStop(0.25,"rgba(206,238,255,0.55)");
     dewSprite.addColorStop(0.62,"rgba(120,176,222,0.155)");
     dewSprite.addColorStop(1,"rgba(92,151,202,0)");
-    const dewCore=finiteClamp(0.72+actGain*0.06,0,0.82,0.72);
     for(let i=0;i<wb.dew.length;i++){
       const d=wb.dew[i];
       const p=pt(d.s,d.r);
       const depthR=d.r/wb.rings;
       const rad=minSide*(0.0016+depthR*0.0018)*d.sz;
-      const swell=1+Math.sin(t*0.7+d.ph)*0.08+actGain*0.12+stir*0.08;
-      const fr=Math.max(0.5,rad*swell*1.9);
+      const activeDew=idx===activeWebIdx&&d.s===activeSpoke&&Math.abs(d.r-centerR)<0.8;
+      const dewAlpha=Math.min(0.40,0.16+depthR*0.06+actGain*0.03+(activeDew?0.14:0)+(activeDew&&M.hasFocus?0.03:0)+(activeDew?impulse*0.02:0));
+      const fr=Math.max(0.5,rad*1.9);
       ctx.save();
-      ctx.globalAlpha=dewCore;
+      ctx.globalAlpha=dewAlpha;
       ctx.translate(p.x,p.y);
       ctx.scale(fr,fr);
       ctx.fillStyle=dewSprite;
@@ -318,7 +259,7 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
       ctx.arc(0,0,1,0,TAU);
       ctx.fill();
       ctx.restore();
-      if(d.sz>1.1){
+      if(activeDew&&d.sz>1.1){
         const hx=p.x+lx*fr*0.18;
         const hy=p.y+ly*fr*0.18;
         ctx.fillStyle="rgba(250,253,255,0.5)";
@@ -328,27 +269,8 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
       }
     }
 
-    const glSpeed=1+Math.abs(velocity)*0.6;
-    const glA=finiteClamp(0.46+Math.abs(velocity)*0.18,0,0.66,0.46);
-    for(let i=0;i<wb.glim.length;i++){
-      const gl=wb.glim[i];
-      const prog=((t*gl.speed*glSpeed+gl.off)%1+1)%1;
-      const p=pt(gl.spoke,prog*wb.rings);
-      const gfr=minSide*0.004;
-      ctx.save();
-      ctx.globalAlpha=glA;
-      ctx.translate(p.x,p.y);
-      ctx.scale(gfr,gfr);
-      ctx.fillStyle=moteSprite;
-      ctx.beginPath();
-      ctx.arc(0,0,1,0,TAU);
-      ctx.fill();
-      ctx.restore();
-    }
     ctx.restore();
   };
-
-  drawMotes(CFG.layers[0],false);
 
   const centers=[];
   for(let i=0;i<CFG.webs.length;i++){
@@ -366,76 +288,11 @@ export const renderGossamer: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
     ctx.strokeStyle="rgba(168,205,238,0.09)";
     ctx.lineWidth=Math.max(0.4,minSide*0.0005);
     ctx.stroke();
-    for(let k=1;k<=3;k++){
-      const tt=k/4;
-      const bx=(1-tt)*(1-tt)*a.x+2*(1-tt)*tt*mpx+tt*tt*b.x;
-      const by=(1-tt)*(1-tt)*a.y+2*(1-tt)*tt*mpy+tt*tt*b.y;
-      const br=minSide*0.0016*(0.7+Math.sin(t*0.6+i+k)*0.2);
-      ctx.fillStyle="rgba(220,240,255,0.26)";
-      ctx.beginPath();
-      ctx.arc(bx,by,Math.max(0.6,br),0,TAU);
-      ctx.fill();
-    }
   }
   ctx.restore();
 
   for(let i=0;i<CFG.webs.length;i++){
     drawWeb(CFG.webs[i],i,i/nWeb);
-  }
-
-  drawMotes(CFG.layers[1],true);
-  drawMotes(CFG.layers[2],true);
-
-  ctx.save();
-  ctx.globalCompositeOperation="screen";
-  for(let i=0;i<CFG.strands.length;i++){
-    const st=CFG.strands[i];
-    const sx=st.x*w-px*minSide*0.03;
-    const sy=st.y*h-py*minSide*0.02+Math.sin(t*0.05*st.sp+st.ph)*minSide*0.01+velocity*minSide*0.006;
-    const len=minSide*st.len;
-    const ang=st.ang+Math.sin(t*0.06+st.ph)*0.1;
-    const ex=sx+Math.cos(ang)*len;
-    const ey=sy+Math.sin(ang)*len;
-    const cxp=(sx+ex)/2+Math.cos(ang+1.57)*st.curve*len*0.5;
-    const cyp=(sy+ey)/2+Math.sin(ang+1.57)*st.curve*len*0.5;
-    const sg=ctx.createLinearGradient(sx,sy,ex,ey);
-    sg.addColorStop(0,"rgba(190,222,248,0)");
-    sg.addColorStop(0.5,"rgba(200,230,252,0.1)");
-    sg.addColorStop(1,"rgba(190,222,248,0)");
-    ctx.strokeStyle=sg;
-    ctx.lineWidth=Math.max(0.4,minSide*0.0005*st.w);
-    ctx.beginPath();
-    ctx.moveTo(sx,sy);
-    ctx.quadraticCurveTo(cxp,cyp,ex,ey);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  if(M.hasFocus){
-    const ai=Math.min(centers.length-1,Math.max(0,Math.round(story*(centers.length-1))));
-    const ac=centers[ai];
-    const fx=finiteClamp(M.focusX,0,1,0.5)*w;
-    const fy=finiteClamp(M.focusY,0,1,0.5)*h;
-    ctx.save();
-    ctx.globalCompositeOperation="screen";
-    ctx.beginPath();
-    ctx.moveTo(ac.x,ac.y);
-    ctx.quadraticCurveTo((ac.x+fx)/2,(ac.y+fy)/2-minSide*0.02,fx,fy);
-    ctx.setLineDash([minSide*0.002,minSide*0.009]);
-    ctx.strokeStyle="rgba(192,229,252,"+(0.05+impulse*0.1)+")";
-    ctx.lineWidth=Math.max(0.5,minSide*0.0007);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    const fg=minSide*(0.035+impulse*0.03);
-    const fgGrad=ctx.createRadialGradient(fx,fy,0,fx,fy,fg);
-    fgGrad.addColorStop(0,"rgba(198,230,255,"+(0.08+impulse*0.16)+")");
-    fgGrad.addColorStop(0.5,"rgba(170,214,246,"+(0.04+impulse*0.08)+")");
-    fgGrad.addColorStop(1,"rgba(150,196,235,0)");
-    ctx.fillStyle=fgGrad;
-    ctx.beginPath();
-    ctx.arc(fx,fy,fg,0,TAU);
-    ctx.fill();
-    ctx.restore();
   }
 
   const clear=ctx.createLinearGradient(0,0,w*0.7,0);

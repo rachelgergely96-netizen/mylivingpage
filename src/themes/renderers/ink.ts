@@ -1,35 +1,45 @@
 import { fbm } from "../shared/noise";
 import { finiteClamp } from "../shared/motion";
-import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-export const renderInk: ThemeRenderer = (ctx,w,h,t,mx,my) => {
-  // Ambient depth washes — low-luminance, set the water tint (alphas cut so overlaps stay below white)
-  ctx.save(); ctx.globalCompositeOperation="screen";
-  softGlow(ctx,w*(0.4+Math.sin(t*0.04)*0.06),h*0.5,Math.max(w,h)*0.6,"hsla(220,45%,22%,0.07)","transparent");
-  softGlow(ctx,w*0.7,h*0.35,Math.max(w,h)*0.45,"hsla(190,50%,24%,0.05)","transparent");
-  ctx.restore();
+export const renderInk: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const t = motion?.reducedMotion ? 0 : time;
+  const lightX=w*(0.94+Math.sin(t*TAU/38)*0.018);
+  const lightY=h*0.12;
 
   const palette=[[220,60],[248,55],[190,58],[268,52],[205,60],[232,55],[178,58]];
   ctx.save(); ctx.globalCompositeOperation="screen";
   for (let i=0;i<7;i++){
     const seed=i*127.3;
-    const baseX=(Math.sin(seed*1.1)*0.5+0.5)*w;
-    const baseY=(Math.cos(seed*0.9)*0.5+0.5)*h;
+    const baseX=(0.12+(Math.sin(seed*1.1)*0.5+0.5)*0.84)*w;
+    const baseY=(0.08+(Math.cos(seed*0.9)*0.5+0.5)*0.84)*h;
     const drift=t*3+seed;
     const x=baseX+Math.sin(drift*0.15)*46+(mx-0.5)*40;
     const y=baseY+Math.cos(drift*0.12)*34+(my-0.5)*40;
-    const R=54+Math.sin(t*0.3+seed)*22+Math.sin(t*0.7+i)*12;
+    const R=(54+Math.sin(t*0.3+seed)*22+Math.sin(t*0.7+i)*12)*Math.max(1,Math.min(w,h)/600);
     const [hue,sat]=palette[i];
     // reading-column protection: mute the sharpest accents in the left third where resume text sits
     const colFade=finiteClamp((x-w*0.34)/(w*0.20),0.18,1,1);
+    const sourceAngle=Math.atan2(lightY-y,lightX-x);
+    const key=finiteClamp((x-w*0.52)/(w*0.24),0,1,0)*colFade;
 
     // luminous diffusion body — dense saturated ink core, capped so bright-pass bloom can't blow to white
-    const body=ctx.createRadialGradient(x,y,0,x,y,R*1.15);
-    body.addColorStop(0,`hsla(${hue+8},${Math.min(sat+8,72)}%,44%,0.085)`);
-    body.addColorStop(0.45,`hsla(${hue},${sat}%,38%,0.05)`);
+    const gx=x+Math.cos(sourceAngle)*R*0.16;
+    const gy=y+Math.sin(sourceAngle)*R*0.16;
+    const body=ctx.createRadialGradient(gx,gy,0,x,y,R*1.15);
+    body.addColorStop(0,`hsla(${hue+8},${Math.min(sat+8,72)}%,48%,${(0.18+0.09*key)*(0.55+0.45*colFade)})`);
+    body.addColorStop(0.45,`hsla(${hue},${sat}%,40%,${(0.1+0.04*key)*(0.6+0.4*colFade)})`);
     body.addColorStop(1,"transparent");
     ctx.fillStyle=body; ctx.fillRect(x-R*1.2,y-R*1.2,R*2.4,R*2.4);
 
@@ -42,14 +52,20 @@ export const renderInk: ThemeRenderer = (ctx,w,h,t,mx,my) => {
       if (a===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
     }
     ctx.closePath();
-    ctx.strokeStyle=`hsla(${hue},${sat}%,52%,0.07)`; ctx.lineWidth=1; ctx.stroke();
+    ctx.strokeStyle=`hsla(${hue},${sat}%,54%,0.065)`; ctx.lineWidth=1; ctx.stroke();
 
-    // gentle expansion ring — dimmed and faded out over the left reading column
-    const rw=((t*0.25+seed)%1);
-    const rr=R*(0.8+rw*1.4);
-    ctx.beginPath(); ctx.arc(x,y,rr,0,TAU);
-    ctx.strokeStyle=`hsla(${hue+8},${sat}%,55%,${(1-rw)*0.06*colFade})`;
-    ctx.lineWidth=1.2*(1-rw); ctx.stroke();
+    // Transmitted sidelight catches only the wet pigment boundary. The slow
+    // directional shift keeps the effect tied to ink, not to the whole frame.
+    const edgeX=Math.cos(sourceAngle)*R*1.5;
+    const edgeY=Math.sin(sourceAngle)*R*1.5;
+    const wetEdge=ctx.createLinearGradient(x-edgeX,y-edgeY,x+edgeX,y+edgeY);
+    wetEdge.addColorStop(0,"transparent");
+    wetEdge.addColorStop(0.58,"transparent");
+    wetEdge.addColorStop(0.84,`hsla(${hue+14},${Math.min(sat+6,68)}%,68%,${0.1+0.14*key})`);
+    wetEdge.addColorStop(1,"transparent");
+    ctx.strokeStyle=wetEdge;
+    ctx.lineWidth=2;
+    ctx.stroke();
 
     // fine filament tendrils — the ink-in-water signature, kept subtle
     for (let f=0;f<9;f++){
@@ -67,17 +83,17 @@ export const renderInk: ThemeRenderer = (ctx,w,h,t,mx,my) => {
   ctx.restore();
 
   // Suspended ink motes — dimmer, fewer, muted over the left reading column
-  ctx.save(); ctx.globalCompositeOperation="screen";
+  ctx.save(); ctx.globalCompositeOperation="source-over";
   for (let i=0;i<40;i++){
     const seed=i*57.9;
     const x=(Math.sin(seed*1.5+t*0.08)*0.5+0.5)*w;
     const y=(Math.cos(seed*1.2+t*0.06)*0.5+0.5)*h;
     const size=1+Math.sin(seed)*0.9;
-    const pulse=0.35+Math.sin(t*1.8+seed)*0.28;
+    const pulse=0.35+Math.sin(t*1.8+seed)*0.22;
     const mFade=finiteClamp((x-w*0.34)/(w*0.20),0.2,1,1);
     const hue=205+Math.sin(seed*0.6)*40;
     ctx.beginPath(); ctx.arc(x,y,size,0,TAU);
-    ctx.fillStyle=`hsla(${hue},52%,52%,${pulse*0.32*mFade})`;
+    ctx.fillStyle=`hsla(${hue},48%,46%,${Math.max(0,pulse)*0.10*mFade})`;
     ctx.fill();
   }
   ctx.restore();

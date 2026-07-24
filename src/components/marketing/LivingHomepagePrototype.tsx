@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CookieSettingsButton from "@/components/privacy/CookieSettingsButton";
+import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { SIGNAL_FRAME_SAMPLE } from "@/lib/signal-frame-sample";
@@ -279,15 +280,20 @@ function StoryLivingOutput({ world }: { world: WorldDirection }) {
         <b>Live</b>
       </div>
       <div className={styles.storyLivingViewport}>
+        {/* The one place the product proves "alive": the web-page output
+            animates (24fps is plenty for a small preview; the host pauses it
+            off-screen and under reduced motion). The PDF and card tabs unmount
+            this canvas entirely, so motion is a feature of the Living Page
+            output rather than ambient page chrome. */}
         <ThemeCanvas
           themeId={world.id}
           height="100%"
           className={`${styles.themeCanvasRoot} rounded-none`}
           interactive={false}
-          animated={false}
+          animated
           mobileAmbientMotion={false}
           motionAware
-          maxFps={12}
+          maxFps={24}
         >
           <div
             className={styles.storyResumeViewport}
@@ -381,6 +387,7 @@ export default function LivingHomepagePrototype({
   const [motionKey, setMotionKey] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const styleControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const activeWorld = WORLD_DIRECTIONS.find((world) => world.id === activeThemeId)
     ?? WORLD_DIRECTIONS[0];
@@ -394,6 +401,52 @@ export default function LivingHomepagePrototype({
     syncPreference();
     query.addEventListener("change", syncPreference);
     return () => query.removeEventListener("change", syncPreference);
+  }, []);
+
+  // Below-the-fold sections reveal once with a quiet rise. Content is fully
+  // visible whenever the observer can't run (reduced motion, no IO support),
+  // so nothing can be stranded hidden.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const sections = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]"));
+    const skipMotion =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      !("IntersectionObserver" in window);
+
+    if (skipMotion) {
+      sections.forEach((section) => {
+        section.dataset.visible = "true";
+      });
+      return;
+    }
+
+    sections.forEach((section) => {
+      if (section.getBoundingClientRect().top < window.innerHeight * 0.9) {
+        section.dataset.visible = "true";
+      }
+    });
+    root.dataset.motionReady = "true";
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          (entry.target as HTMLElement).dataset.visible = "true";
+          observer.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.15 },
+    );
+
+    sections.forEach((section) => {
+      if (section.dataset.visible !== "true") {
+        observer.observe(section);
+      }
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   const selectMoment = (momentId: StoryMomentId) => {
@@ -439,6 +492,7 @@ export default function LivingHomepagePrototype({
 
   return (
     <div
+      ref={rootRef}
       className={styles.prototype}
       style={activeStyle}
       data-motion-state={reducedMotion ? "reduced" : "full"}
@@ -458,6 +512,7 @@ export default function LivingHomepagePrototype({
             <Link href="/login">Sign in</Link>
           </div>
           <div className={styles.mobileNavLinks}>
+            <Link href="/examples">Examples</Link>
             <Link href="/login">Sign in</Link>
           </div>
           <Link
@@ -476,7 +531,7 @@ export default function LivingHomepagePrototype({
           <div className={styles.heroGlow} aria-hidden="true" />
           <div className={styles.heroGrid}>
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}><span>Your résumé</span>Alive on the web</p>
+              <p className={styles.eyebrow}><span>One résumé</span>A page, a PDF, and a shareable card</p>
               <h1>Your résumé, alive on the web.</h1>
               <p className={styles.heroLead}>
                 Turn the résumé you already have into a professional page you can update
@@ -640,7 +695,7 @@ export default function LivingHomepagePrototype({
           <span>Share one link</span>
         </div>
 
-        <section id="how-it-works" className={styles.sourceSection} data-default-workflow>
+        <section id="how-it-works" className={styles.sourceSection} data-default-workflow data-reveal>
           <div className={styles.sectionHeading}>
             <p className={styles.eyebrow}><span>How it works</span>Start with your résumé</p>
             <h2>Start with the résumé you already have.</h2>
@@ -678,7 +733,7 @@ export default function LivingHomepagePrototype({
           </aside>
         </section>
 
-        <section id="search-ready" className={styles.visibilitySection} data-search-readiness>
+        <section id="search-ready" className={styles.visibilitySection} data-search-readiness data-reveal>
           <div className={styles.visibilityIntro}>
             <p className={styles.eyebrow}><span>Easy to read</span>For people and hiring software</p>
             <h2>The design can change. Your details stay easy to read.</h2>
@@ -732,7 +787,7 @@ export default function LivingHomepagePrototype({
           </div>
         </section>
 
-        <section className={styles.finalCta}>
+        <section id="closing-cta" className={styles.finalCta} data-reveal>
           <p className={styles.eyebrow}><span>Ready when you are</span>Start with your résumé</p>
           <h2>Make your experience easier to see and share.</h2>
           <p>Create a private draft from your résumé. Review everything. Publish when it feels right.</p>
@@ -750,6 +805,16 @@ export default function LivingHomepagePrototype({
           <small>No credit card. No subscription. Private until you publish.</small>
         </section>
       </main>
+
+      {isProduction ? (
+        <MobileStickyCta
+          href={`/signup?ref=landing_mobile_sticky&next=/create`}
+          label="Create my free page"
+          supportingText="Free · private until you publish"
+          targetId="prototype-hero"
+          hideNearId="closing-cta"
+        />
+      ) : null}
 
       <footer className={styles.footer}>
         <Link href="/" className={styles.logo}>my<span>living</span>page</Link>

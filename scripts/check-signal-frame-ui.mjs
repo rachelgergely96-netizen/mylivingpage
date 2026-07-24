@@ -36,7 +36,6 @@ const IN_SCOPE = [
   "src/components/marketing/LivingHomepagePrototype.tsx",
   "src/components/marketing/MobileStickyCta.tsx",
   "src/components/marketing/SamplePageCard.tsx",
-  "src/components/marketing/SignalFrameHomepage.tsx",
   "src/components/marketing/SiteHeader.tsx",
   "src/components/admin",
   "src/components/ui",
@@ -48,7 +47,6 @@ const CSS_IN_SCOPE = [
   "src/components/admin/AdminExperience.module.css",
   "src/components/marketing/ExamplesExperience.module.css",
   "src/components/marketing/LivingHomepagePrototype.module.css",
-  "src/components/marketing/SignalFrameHomepage.module.css",
 ];
 
 const CHECKS = [

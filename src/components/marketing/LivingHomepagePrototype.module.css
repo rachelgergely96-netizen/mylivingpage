@@ -221,7 +221,7 @@
 }
 
 .heroGrid {
-  align-items: start;
+  align-items: center;
   display: grid;
   gap: clamp(34px, 4vw, 70px);
   grid-template-columns: minmax(360px, 0.72fr) minmax(650px, 1.28fr);
@@ -408,10 +408,10 @@
 }
 
 .storyStage {
-  align-items: stretch;
+  align-items: center;
   display: grid;
   grid-template-columns: minmax(145px, 0.52fr) minmax(72px, 0.22fr) minmax(330px, 1.26fr);
-  min-height: 392px;
+  min-height: 340px;
   padding: 14px;
 }
 
@@ -420,9 +420,12 @@
   background: #dce5ef;
   box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.28);
   color: #142033;
-  height: 280px;
+  height: auto;
+  max-height: 320px;
+  min-height: 260px;
   padding: 9px;
   transform: rotate(-1.1deg);
+  width: 100%;
 }
 
 .storySourceInner {
@@ -605,6 +608,7 @@
 }
 
 .storyOutputFrame {
+  align-self: center;
   background: #081321;
   border: 1px solid var(--world-accent-border);
   display: flex;
@@ -612,6 +616,7 @@
   min-height: 0;
   min-width: 0;
   padding: 9px;
+  width: 100%;
 }
 
 .storyOutputMeta {
@@ -838,7 +843,7 @@
 }
 
 .storyLivingViewport {
-  height: 218px;
+  height: 240px;
 }
 
 .storyResumeViewport {
@@ -1125,20 +1130,24 @@
 }
 
 .outputJourney {
-  border-top: 1px solid var(--border-strong);
+  display: grid;
+  gap: 12px;
   list-style: none;
   margin: 76px 0 0;
   padding: 0;
 }
 
+/* Quiet surface panels reuse the hero demo's card language so the page keeps
+   one material story instead of dropping to hairlines-on-void below the fold. */
 .outputStep {
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  background: var(--canvas-alt);
+  border: 1px solid var(--border);
   display: grid;
   gap: 34px;
   grid-template-columns: 0.25fr 1fr;
-  min-height: 164px;
-  padding: 24px 0;
+  min-height: 150px;
+  padding: 26px 30px;
 }
 
 .stepIndex {
@@ -1166,7 +1175,7 @@
 }
 
 .outputStep p {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.6;
   margin: 8px 0 0;
@@ -1261,17 +1270,15 @@
 
 .visibilityBenefits {
   display: grid;
+  gap: 12px;
   grid-template-columns: repeat(3, 1fr);
   margin-top: 48px;
 }
 
 .visibilityBenefits article {
-  padding: 6px 32px 10px 0;
-}
-
-.visibilityBenefits article + article {
-  border-left: 1px solid var(--border);
-  padding-left: 32px;
+  background: var(--canvas-alt);
+  border: 1px solid var(--border);
+  padding: 22px 24px 24px;
 }
 
 .visibilityBenefits article > span {
@@ -1290,7 +1297,7 @@
 }
 
 .visibilityBenefits p {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.55;
   margin: 9px 0 0;
@@ -1310,7 +1317,7 @@
 }
 
 .searchNote p {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.6;
   margin: 0;
@@ -1419,6 +1426,31 @@
   color: var(--text);
 }
 
+/* Below-the-fold sections reveal once with a quiet rise. The hidden state only
+   exists after the IntersectionObserver arms (data-motion-ready), so content
+   is always visible without JS, under reduced motion, or in old browsers. */
+.prototype[data-motion-ready="true"] [data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.prototype[data-motion-ready="true"] [data-reveal][data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* If reduced-motion turns on mid-session the observer may never fire for
+   unrevealed sections — this guarantees nothing stays stranded hidden. */
+@media (prefers-reduced-motion: reduce) {
+  .prototype [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 @keyframes truthTravel {
   0% {
     opacity: 0;
@@ -1501,6 +1533,14 @@
 
   .storyStage {
     grid-template-columns: 138px 66px minmax(320px, 1fr);
+  }
+
+  /* In the narrow 138px track the rotated card + offset shadow would clip
+     against the hero's overflow bound; let content set the height and ease
+     the tilt so nothing protrudes. */
+  .storySource {
+    min-height: 0;
+    transform: rotate(-0.6deg);
   }
 }
 
@@ -1633,6 +1673,7 @@
     height: 150px;
     justify-self: center;
     max-width: 250px;
+    min-height: 0;
     width: 78%;
   }
 
@@ -1795,13 +1836,7 @@
   }
 
   .visibilityBenefits article {
-    border-bottom: 1px solid var(--border);
-    padding: 26px 0;
-  }
-
-  .visibilityBenefits article + article {
-    border-left: 0;
-    padding-left: 0;
+    padding: 20px 20px 22px;
   }
 
   .searchNote {

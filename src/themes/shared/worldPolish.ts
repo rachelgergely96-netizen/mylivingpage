@@ -12,6 +12,7 @@ import type {
 } from "../types";
 
 const TAU = Math.PI * 2;
+const BESPOKE_WORLD_THEME_IDS = new Set<ThemeId>(["filigree", "luxe"]);
 
 type WorldMotif =
   | "cinematic-orbit"
@@ -25,7 +26,6 @@ export interface WorldPolishProfile {
   seed: number;
   anchorX: number;
   anchorY: number;
-  particleCount: number;
 }
 
 const COLLECTION_PROFILES = {
@@ -33,31 +33,26 @@ const COLLECTION_PROFILES = {
     motif: "cinematic-orbit",
     anchorX: 0.76,
     anchorY: 0.34,
-    particleCount: 26,
   },
   "editorial-luxe": {
     motif: "editorial-ribbon",
     anchorX: 0.74,
     anchorY: 0.38,
-    particleCount: 18,
   },
   "art-lab": {
     motif: "experimental-frame",
     anchorX: 0.72,
     anchorY: 0.4,
-    particleCount: 20,
   },
   "organic-material": {
     motif: "material-contour",
     anchorX: 0.75,
     anchorY: 0.42,
-    particleCount: 22,
   },
   "executive-tech": {
     motif: "technical-grid",
     anchorX: 0.76,
     anchorY: 0.39,
-    particleCount: 16,
   },
 } as const satisfies Record<
   ThemeCollectionId,
@@ -122,55 +117,6 @@ function drawAtmosphere(
   ctx.globalAlpha = 0.035 + impulse * 0.035;
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
-  ctx.restore();
-}
-
-function drawDepthParticles(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  time: number,
-  pointerX: number,
-  pointerY: number,
-  storyProgress: number,
-  accent: string,
-  profile: WorldPolishProfile,
-) {
-  ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  ctx.fillStyle = accent;
-
-  for (let index = 0; index < profile.particleCount; index += 1) {
-    const seed = profile.seed * 0.00001 + index * 1.731;
-    const depth = 0.25 + unitValue(seed + 2.1) * 0.75;
-    const drift = time * (0.004 + depth * 0.008);
-    const xProgress = (unitValue(seed + 0.4) + drift + storyProgress * 0.035 * depth) % 1;
-    const yProgress =
-      (unitValue(seed + 4.8) +
-        Math.sin(time * (0.08 + depth * 0.06) + seed * 4) * 0.025 +
-        1) %
-      1;
-    const x =
-      width * xProgress +
-      (pointerX - 0.5) * width * (0.008 + depth * 0.012);
-    const y =
-      height * yProgress +
-      (pointerY - 0.5) * height * (0.006 + depth * 0.01);
-    const size = 0.45 + depth * 1.05;
-    ctx.globalAlpha = 0.025 + depth * 0.07;
-
-    if (
-      profile.motif === "technical-grid" ||
-      profile.motif === "experimental-frame"
-    ) {
-      ctx.fillRect(x, y, size, size);
-    } else {
-      ctx.beginPath();
-      ctx.arc(x, y, size * 0.62, 0, TAU);
-      ctx.fill();
-    }
-  }
-
   ctx.restore();
 }
 
@@ -554,18 +500,6 @@ function drawWorldPolish(
       break;
   }
 
-  drawDepthParticles(
-    ctx,
-    width,
-    height,
-    effectiveTime,
-    targetX,
-    targetY,
-    pageMotion.storyProgress,
-    theme.presentation.accentBright,
-    profile,
-  );
-
   if (pageMotion.hasFocus) {
     drawFocusEcho(
       ctx,
@@ -586,13 +520,14 @@ function drawWorldPolish(
 
 /**
  * Adds a bounded, deterministic depth and page-motion pass to catalog themes.
- * Signature renderers keep their bespoke compositions unchanged.
+ * Signature renderers and explicitly bespoke worlds keep their compositions
+ * unchanged without altering their presentation profile.
  */
 export function withWorldPolish(
   theme: ThemeMeta,
   renderer: ThemeRenderer,
 ): ThemeRenderer {
-  if (theme.signature) {
+  if (theme.signature || BESPOKE_WORLD_THEME_IDS.has(theme.id)) {
     return renderer;
   }
 

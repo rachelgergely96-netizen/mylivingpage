@@ -87,7 +87,6 @@ describe("world polish", () => {
       expect(profile.anchorX).toBeLessThanOrEqual(0.82);
       expect(profile.anchorY).toBeGreaterThanOrEqual(0.28);
       expect(profile.anchorY).toBeLessThanOrEqual(0.48);
-      expect(profile.particleCount).toBeLessThanOrEqual(26);
     }
   });
 
@@ -97,7 +96,14 @@ describe("world polish", () => {
     expect(withWorldPolish(THEME_MAP.aurora, renderer)).toBe(renderer);
   });
 
-  it("adds bounded depth and focus drawing after a catalog renderer", () => {
+  it("keeps explicitly bespoke catalog worlds untouched", () => {
+    const renderer = vi.fn() as unknown as ThemeRenderer;
+
+    expect(withWorldPolish(THEME_MAP.filigree, renderer)).toBe(renderer);
+    expect(withWorldPolish(THEME_MAP.luxe, renderer)).toBe(renderer);
+  });
+
+  it("adds bounded motif and focus drawing after a catalog renderer", () => {
     const context = createCanvasContext();
     const renderer = vi.fn() as unknown as ThemeRenderer;
     const polished = withWorldPolish(THEME_MAP.cosmic, renderer);

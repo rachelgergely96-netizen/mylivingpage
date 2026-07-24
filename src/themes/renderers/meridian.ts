@@ -1,44 +1,26 @@
-import { fbm } from "../shared/noise";
-import { createSeededRandom } from "../shared/random";
-import { softGlow, star4 } from "../shared/draw";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-const CFG=(function(){
-  const rnd=createSeededRandom(20240517);
-  const masses=[
-    {x:0.30,y:0.34,r:0.44,c:"rgba(28,88,108,0.28)"},
-    {x:0.72,y:0.62,r:0.40,c:"rgba(18,68,94,0.24)"},
-    {x:0.50,y:0.50,r:0.34,c:"rgba(40,110,126,0.16)"}
-  ];
-  const stars=[];
-  const layers=[{count:28,depth:0.25,size:0.7,alpha:0.42},{count:20,depth:0.55,size:1.1,alpha:0.58},{count:11,depth:0.9,size:1.7,alpha:0.70}];
-  for (let li=0;li<layers.length;li++){
-    const L=layers[li];
-    for (let i=0;i<L.count;i++){
-      stars.push({x:rnd(),y:rnd(),depth:L.depth,size:L.size*(0.6+rnd()*0.9),base:L.alpha*(0.5+rnd()*0.5),phase:rnd()*Math.PI*2,tw:0.5+rnd()*1.6,bright:rnd()>0.9});
-    }
-  }
-  const orbits=[];
-  for (let r=0;r<5;r++){
-    const n=3+Math.floor(rnd()*4);
-    const arr=[];
-    for (let m=0;m<n;m++) arr.push({phase:rnd()*Math.PI*2,size:1.3+rnd()*1.9});
-    orbits.push({radiusFactor:0.12+r*0.052,speed:(0.05+rnd()*0.08)*(r%2===0?1:-1),markers:arr});
-  }
-  const arcs=[];
-  for (let i=0;i<5;i++){
-    arcs.push({radiusFactor:0.185+i*0.045,start:rnd()*Math.PI*2,span:0.4+rnd()*0.7,speed:(0.06+rnd()*0.09)*(i%2===0?1:-1),width:3-i*0.35,alpha:0.28-i*0.03});
-  }
-  return {masses,stars,orbits,arcs};
-})();
-
-export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderMeridian: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const M=resolveThemeMotion(motion);
+  const t=motion?.reducedMotion?0:time;
   const minSide = Math.max(1, Math.min(w,h));
-  const cx = w*0.5;
-  const cy = h*(0.52 + (my-0.5)*0.05);
-  const px = mx-0.5, py = my-0.5;
+  const portrait = h>w*1.1;
+  const compassScale = portrait?0.72:1;
+  const cx = w*(portrait?0.98:0.75);
+  const cy = h*((portrait?0.42:0.52) + (my-0.5)*0.05);
+  const px = mx-0.5;
   const cl = (v: number,a: number,b: number)=> v<a?a:(v>b?b:v);
   const northAngle = -Math.PI/2 + px*0.4 + Math.sin(t*0.18)*0.12;
 
@@ -49,34 +31,8 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   bg.addColorStop(1,"rgba(2,5,9,0.62)");
   ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
 
-  // drifting teal atmosphere masses (additive, radii trimmed for fillrate)
-  ctx.globalCompositeOperation="lighter";
-  for (let i=0;i<CFG.masses.length;i++){
-    const m=CFG.masses[i];
-    const dx=(m.x + fbm(t*0.04+i*3.1, i*1.7, 2)*0.03)*w;
-    const dy=(m.y + fbm(i*2.3, t*0.035+i, 2)*0.03)*h;
-    softGlow(ctx,dx,dy,m.r*minSide,m.c,"transparent");
-  }
-  ctx.globalCompositeOperation="source-over";
-
-  // 2. Parallax navigation star field (additive, twinkling, peaks capped)
-  ctx.globalCompositeOperation="lighter";
-  for (let i=0;i<CFG.stars.length;i++){
-    const s=CFG.stars[i];
-    const sx=s.x*w - px*s.depth*minSide*0.04;
-    const sy=s.y*h - py*s.depth*minSide*0.04;
-    const tw=0.5+0.5*Math.sin(t*s.tw+s.phase);
-    const a=s.base*(0.35+0.65*tw);
-    ctx.beginPath(); ctx.arc(sx,sy,s.size,0,TAU);
-    ctx.fillStyle="rgba(190,230,240,"+a.toFixed(3)+")"; ctx.fill();
-    if (s.bright && tw>0.82){
-      star4(ctx,sx,sy,s.size*5*tw,s.size*0.55,"rgba(178,224,240,"+(a*0.45).toFixed(3)+")");
-    }
-  }
-  ctx.globalCompositeOperation="source-over";
-
-  // 3. Rotating globe wireframe (meridians + latitudes + limb)
-  const Rg=minSide*0.44;
+  // 2. Rotating globe wireframe (meridians + latitudes + limb)
+  const Rg=minSide*0.44*compassScale;
   const gRot=t*0.05 + px*0.35;
   for (let i=0;i<8;i++){
     const ph=(i/8)*Math.PI + gRot;
@@ -95,13 +51,8 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.beginPath(); ctx.arc(cx,cy,Rg,0,TAU);
   ctx.strokeStyle="rgba(117,199,212,0.08)"; ctx.lineWidth=1.2; ctx.stroke();
 
-  // 4. Compass halo (additive, radius + alpha reduced)
-  ctx.globalCompositeOperation="lighter";
-  softGlow(ctx,cx,cy,minSide*0.36,"rgba(38,116,136,0.15)","transparent");
-  ctx.globalCompositeOperation="source-over";
-
   // graduated bezel band
-  const Ro=minSide*0.375, Rin=minSide*0.335;
+  const Ro=minSide*0.375*compassScale, Rin=minSide*0.335*compassScale;
   ctx.beginPath(); ctx.arc(cx,cy,Ro,0,TAU);
   ctx.strokeStyle="rgba(117,199,212,0.30)"; ctx.lineWidth=1.4; ctx.stroke();
   ctx.beginPath(); ctx.arc(cx,cy,Rin,0,TAU);
@@ -111,7 +62,7 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for (let i=0;i<36;i++){
     const ang=northAngle+(i/36)*TAU;
     const card=(i%9===0), major=(i%3===0);
-    const inR=card?Rin-minSide*0.030:(major?Rin-minSide*0.019:Rin-minSide*0.009);
+    const inR=card?Rin-minSide*0.030*compassScale:(major?Rin-minSide*0.019*compassScale:Rin-minSide*0.009*compassScale);
     const ca=Math.cos(ang), sa=Math.sin(ang);
     const shim=0.80+0.20*Math.sin(t*0.5+i*0.7);
     ctx.beginPath();
@@ -125,7 +76,7 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
 
   // concentric range rings
   for (let r=0;r<4;r++){
-    const rr=minSide*(0.10+r*0.058);
+    const rr=minSide*(0.10+r*0.058)*compassScale;
     ctx.beginPath(); ctx.arc(cx,cy,rr,0,TAU);
     ctx.strokeStyle="rgba(90,175,192,"+(0.16-r*0.028).toFixed(3)+")";
     ctx.lineWidth=1; ctx.stroke();
@@ -136,8 +87,8 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for (let i=0;i<16;i++){
     const ang=northAngle+(i/16)*TAU;
     const even=i%2===0;
-    const inner=minSide*(even?0.055:0.11);
-    const outer=minSide*(even?0.325:0.255);
+    const inner=minSide*(even?0.055:0.11)*compassScale;
+    const outer=minSide*(even?0.325:0.255)*compassScale;
     const ca=Math.cos(ang), sa=Math.sin(ang);
     ctx.beginPath();
     ctx.moveTo(cx+ca*inner,cy+sa*inner);
@@ -147,56 +98,39 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   }
   ctx.globalCompositeOperation="source-over";
 
-  // 5. Rotating bearing arcs w/ layered glow + travelling spark (additive, capped)
-  ctx.globalCompositeOperation="lighter";
-  for (let i=0;i<CFG.arcs.length;i++){
-    const A=CFG.arcs[i];
-    const rr=minSide*A.radiusFactor;
-    const st=A.start+t*A.speed+northAngle*0.2;
-    const en=st+A.span;
-    ctx.beginPath(); ctx.arc(cx,cy,rr,st,en);
-    ctx.strokeStyle="rgba(84,188,210,"+(A.alpha*0.5).toFixed(3)+")";
-    ctx.lineWidth=A.width+4; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx,cy,rr,st,en);
-    ctx.strokeStyle="rgba(162,226,240,"+A.alpha.toFixed(3)+")";
-    ctx.lineWidth=A.width; ctx.stroke();
-    const sp=st+(en-st)*(0.5+0.5*Math.sin(t*0.8+i*1.7));
-    const spx=cx+Math.cos(sp)*rr, spy=cy+Math.sin(sp)*rr;
-    softGlow(ctx,spx,spy,minSide*0.020,"rgba(200,240,252,0.36)","transparent");
-    ctx.beginPath(); ctx.arc(spx,spy,1.6,0,TAU);
-    ctx.fillStyle="rgba(214,244,252,0.66)"; ctx.fill();
+  // 4. One bearing-bound sweep: the only travelling light in the instrument.
+  const hasStory=M.sectionCount>0;
+  const story=finiteClamp(M.storyProgress,0,1,0);
+  const velocity=finiteClamp(M.scrollVelocity/4,-1,1,0);
+  const sweepU=hasStory
+    ? 0.12+story*0.76+Math.sin(t*TAU/18)*0.025
+    : 0.5+Math.sin(t*TAU/18)*0.42;
+  let bearingAngle=northAngle+(sweepU-0.5)*TAU+velocity*0.04;
+  if(M.hasFocus&&M.focusX>=0.5){
+    const target=Math.atan2(M.focusY*h-cy,M.focusX*w-cx);
+    const delta=Math.atan2(Math.sin(target-bearingAngle),Math.cos(target-bearingAngle));
+    bearingAngle+=delta*0.35;
   }
-  ctx.globalCompositeOperation="source-over";
+  const focusLift=M.hasFocus&&M.focusX>=0.5
+    ? 0.04+finiteClamp(M.interactionImpulse,0,1,0)*0.02
+    : 0;
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  ctx.beginPath(); ctx.arc(cx,cy,Ro,bearingAngle-0.34,bearingAngle+0.34);
+  ctx.strokeStyle=`rgba(110,205,224,${0.08+focusLift*0.5})`;
+  ctx.lineWidth=8; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,Ro,bearingAngle-0.18,bearingAngle+0.18);
+  ctx.strokeStyle=`rgba(202,238,246,${0.30+focusLift})`;
+  ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
 
-  // 6. Pulsing orbital markers across five rings (additive, peak capped)
-  ctx.globalCompositeOperation="lighter";
-  for (let o=0;o<CFG.orbits.length;o++){
-    const O=CFG.orbits[o];
-    const rr=minSide*O.radiusFactor;
-    for (let m=0;m<O.markers.length;m++){
-      const M=O.markers[m];
-      const ang=northAngle+M.phase+t*O.speed;
-      const mxx=cx+Math.cos(ang)*rr, myy=cy+Math.sin(ang)*rr;
-      const pulse=0.55+0.45*Math.sin(t*1.3+M.phase*3);
-      ctx.beginPath(); ctx.arc(mxx,myy,M.size+2.6,0,TAU);
-      ctx.fillStyle="rgba(78,178,200,"+(0.10*pulse).toFixed(3)+")"; ctx.fill();
-      ctx.beginPath(); ctx.arc(mxx,myy,M.size,0,TAU);
-      ctx.fillStyle="rgba(164,224,238,"+(0.22+0.42*pulse).toFixed(3)+")"; ctx.fill();
-    }
-  }
-  ctx.globalCompositeOperation="source-over";
-
-  // 7. Lit north needle (hero) with tamed tip highlight + glow
-  const needleLen=minSide*0.30, tailLen=minSide*0.205;
+  // 5. Lit north needle (hero) with tamed tip highlight + glow
+  const needleLen=minSide*0.30*compassScale, tailLen=minSide*0.205*compassScale;
   const nx=cx+Math.cos(northAngle)*needleLen, ny=cy+Math.sin(northAngle)*needleLen;
   const tx=cx-Math.cos(northAngle)*tailLen, ty=cy-Math.sin(northAngle)*tailLen;
-  const perp=northAngle+Math.PI/2, halfW=minSide*0.017;
+  const perp=northAngle+Math.PI/2, halfW=minSide*0.017*compassScale;
   const lx=cx+Math.cos(perp)*halfW, ly=cy+Math.sin(perp)*halfW;
   const rxp=cx-Math.cos(perp)*halfW, ryp=cy-Math.sin(perp)*halfW;
-  ctx.globalCompositeOperation="lighter";
-  softGlow(ctx,nx,ny,minSide*0.085,"rgba(255,238,212,0.16)","transparent");
-  softGlow(ctx,cx,cy,minSide*0.05,"rgba(118,214,234,0.30)","transparent");
-  ctx.globalCompositeOperation="source-over";
   const ng=ctx.createLinearGradient(cx,cy,nx,ny);
   ng.addColorStop(0,"rgba(150,220,235,0.48)");
   ng.addColorStop(0.65,"rgba(214,240,248,0.66)");
@@ -209,7 +143,7 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.strokeStyle="rgba(240,248,244,0.4)"; ctx.lineWidth=1; ctx.stroke();
 
   // central hub (radial material shading, highlight capped)
-  const hr=minSide*0.022;
+  const hr=minSide*0.022*compassScale;
   const hg=ctx.createRadialGradient(cx-hr*0.3,cy-hr*0.3,hr*0.1,cx,cy,hr*1.1);
   hg.addColorStop(0,"rgba(226,246,252,0.78)");
   hg.addColorStop(0.5,"rgba(120,205,225,0.72)");
@@ -217,15 +151,10 @@ export const renderMeridian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.beginPath(); ctx.arc(cx,cy,hr,0,TAU); ctx.fillStyle=hg; ctx.fill();
   ctx.beginPath(); ctx.arc(cx,cy,hr,0,TAU);
   ctx.strokeStyle="rgba(176,230,242,0.5)"; ctx.lineWidth=1; ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx,cy,minSide*0.006,0,TAU);
+  ctx.beginPath(); ctx.arc(cx,cy,minSide*0.006*compassScale,0,TAU);
   ctx.fillStyle="rgba(18,40,54,0.9)"; ctx.fill();
 
-  // needle-tip soft glow (dimmed; no triple-stacked additive blowout)
-  ctx.globalCompositeOperation="lighter";
-  star4(ctx,nx,ny,minSide*0.042*(0.9+0.1*Math.sin(t*2.1)),1.3,"rgba(252,242,222,0.5)");
-  ctx.globalCompositeOperation="source-over";
-
-  // 8. Vignette seat
+  // 6. Vignette seat
   const vg=ctx.createRadialGradient(cx,cy,minSide*0.32,cx,cy,Math.max(w,h)*0.78);
   vg.addColorStop(0,"rgba(0,0,0,0)");
   vg.addColorStop(1,"rgba(1,3,6,0.55)");

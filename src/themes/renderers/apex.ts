@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { resolveThemeMotion } from "../shared/motion";
 import { createSeededRandom } from "../shared/random";
 import { softGlow, star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
@@ -39,7 +40,20 @@ const CFG=(function(){
   return {towers:towers,stars:stars};
 })();
 
-export const renderApex: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderApex: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const M=resolveThemeMotion(motion);
+  const reduced=Boolean(motion?.reducedMotion);
+  const t=reduced?0:time;
+  const hasStory=M.sectionCount>0;
   const C=CFG;
   const cl=(v:number,a:number,b:number)=>v<a?a:(v>b?b:v);
   const mxs=cl(mx,0,1),mys=cl(my,0,1);
@@ -79,17 +93,20 @@ export const renderApex: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   }
   ctx.restore();
 
-  softGlow(ctx,vanishX,apexY,w*0.30,'rgba(130,205,255,0.20)','transparent');
+  softGlow(ctx,vanishX,apexY,w*0.30,'rgba(130,205,255,0.16)','transparent');
 
   ctx.save();
   ctx.globalCompositeOperation='lighter';
-  for(let i=0;i<4;i++){
-    const sweep=t*(0.11+i*0.024)+i*1.7;
-    const bx=vanishX+Math.sin(sweep)*w*0.30;
+  const targetX=hasStory
+    ? w*(0.58+M.storyProgress*0.28+(reduced?0:Math.sin(t*0.075)*0.025))
+    : vanishX+Math.sin(t*0.075)*w*0.22;
+  for(let i=0;i<2;i++){
+    const bx=targetX+(i===0?-1:1)*w*0.022;
     const len=h*0.95;
-    const bw=w*(0.028+i*0.012);
+    const bw=w*(i===0?0.024:0.034);
+    const beamAlpha=i===0?0.075:0.045;
     const beam=ctx.createLinearGradient(vanishX,apexY,bx,apexY+len);
-    beam.addColorStop(0,'rgba(155,218,255,'+(0.11-i*0.018).toFixed(3)+')');
+    beam.addColorStop(0,'rgba(155,218,255,'+beamAlpha.toFixed(3)+')');
     beam.addColorStop(1,'rgba(30,80,150,0)');
     ctx.fillStyle=beam;
     ctx.beginPath();
@@ -153,18 +170,17 @@ export const renderApex: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   }
   ctx.save();
   ctx.globalCompositeOperation='lighter';
-  for(let p=0;p<2;p++){
-    const prog=((t*0.09+p*0.5)%1+1)%1;
-    const d=prog;
-    const y=horizon+d*d*floorDepth;
-    const aa=cl((1-Math.abs(d-0.55)*1.8)*0.42,0,0.42);
-    const sg=ctx.createLinearGradient(0,y-7,0,y+7);
-    sg.addColorStop(0,'rgba(150,225,255,0)');
-    sg.addColorStop(0.5,'rgba(165,232,255,'+aa.toFixed(3)+')');
-    sg.addColorStop(1,'rgba(150,225,255,0)');
-    ctx.fillStyle=sg;
-    ctx.fillRect(0,y-7,w,14);
-  }
+  const scanU=hasStory
+    ? cl(0.14+M.storyProgress*0.72+(reduced?0:Math.sin(t*0.08)*0.018),0.12,0.88)
+    : ((t*0.045)%1+1)%1;
+  const scanY=horizon+scanU*scanU*floorDepth;
+  const scanAlpha=cl((1-Math.abs(scanU-0.55)*1.8)*0.24,0,0.24);
+  const scanGradient=ctx.createLinearGradient(0,scanY-7,0,scanY+7);
+  scanGradient.addColorStop(0,'rgba(150,225,255,0)');
+  scanGradient.addColorStop(0.5,'rgba(165,232,255,'+scanAlpha.toFixed(3)+')');
+  scanGradient.addColorStop(1,'rgba(150,225,255,0)');
+  ctx.fillStyle=scanGradient;
+  ctx.fillRect(0,scanY-7,w,14);
   ctx.restore();
 
   for(let ti=0;ti<C.towers.length;ti++){

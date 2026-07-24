@@ -1,4 +1,5 @@
 import { fbm, noise2D } from "../shared/noise";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
@@ -149,13 +150,38 @@ const CFG=(function(){
   return {originX, originY, veins, branches, nodes, vents, facets, embers, pools, cache};
 })();
 
-export const renderObsidian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderObsidian: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const M=resolveThemeMotion(motion);
+  const reduced=Boolean(motion?.reducedMotion);
+  const t=reduced?0:time;
   const C=CFG;
   const min=Math.min(w,h)||1;
   const beat=0.5+0.5*Math.sin(t*0.5);
   const beat2=0.5+0.5*Math.sin(t*0.28+1.3);
   const cxp=mx*w, cyp=my*h;
   const ox=C.originX*w, oy=C.originY*h;
+  const hasStory=M.sectionCount>0;
+  const ambientRakeU=reduced?0.32:0.5+Math.sin(t*0.08)*0.38;
+  let rakeU=hasStory
+    ? 0.14+M.storyProgress*0.72+(reduced?0:Math.sin(t*0.08)*0.05)
+    : ambientRakeU;
+  if(M.hasFocus){
+    const focusU=M.focusX*0.65+M.focusY*0.35;
+    rakeU+=(focusU-rakeU)*0.6;
+  }
+  if(!reduced){
+    rakeU+=finiteClamp(M.scrollVelocity/4,-1,1,0)*0.025;
+  }
+  rakeU=finiteClamp(rakeU,0.06,0.94,0.32);
 
   // ---- cache static gradients (facets / vignette / top-depth) — rebuilt only on resize ----
   const cache=C.cache;
@@ -232,6 +258,21 @@ export const renderObsidian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.fillStyle=fgrad[i]; ctx.fill();
     ctx.strokeStyle = f.shade>0.6 ? "rgba(150,64,26,0.06)" : "rgba(120,44,18,0.045)";
     ctx.lineWidth=1; ctx.stroke();
+    const centerX=(f.a[0]+f.b[0]+f.c[0]+f.d[0])*0.25;
+    const centerY=(f.a[1]+f.b[1]+f.c[1]+f.d[1])*0.25;
+    const facetU=centerX*0.65+centerY*0.35;
+    const raw=finiteClamp(1-Math.abs(facetU-rakeU)/0.13,0,1,0);
+    const rakeWeight=raw*raw*(3-2*raw);
+    if(rakeWeight>0){
+      ctx.save();
+      ctx.globalCompositeOperation="screen";
+      ctx.fillStyle=`rgba(178,205,224,${0.055*rakeWeight})`;
+      ctx.fill();
+      ctx.strokeStyle=`rgba(220,233,243,${0.11*rakeWeight})`;
+      ctx.lineWidth=0.9;
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   // 4. Heat-haze / ember-dust texture

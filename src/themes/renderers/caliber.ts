@@ -1,4 +1,5 @@
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -13,12 +14,33 @@ const CFG=(function(){
   return {specks:specks, motes:motes};
 })();
 
-export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderCaliber: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const M=resolveThemeMotion(motion);
+  const reduced=Boolean(motion?.reducedMotion);
+  const t=reduced?0:time;
   const cx=w*0.5+(mx-0.5)*w*0.015;
   const cy=h*(0.52+(my-0.5)*0.04);
   const ms=Math.min(w,h);
   const px=(mx-0.5), py=(my-0.5);
-  const sweep=t*0.5+px*0.7;
+  const hasStory=M.sectionCount>0;
+  const velocity=reduced?0:finiteClamp(M.scrollVelocity/4,-1,1,0);
+  let sweep=hasStory
+    ? -2.35+M.storyProgress*4.7+(reduced?0:Math.sin(t*0.08)*0.08)+velocity*0.06
+    : t*0.12+(reduced?0:px*0.25);
+  if(M.hasFocus){
+    const focusAngle=-2.35+finiteClamp(M.focusY,0,1,0.5)*4.7;
+    const delta=Math.atan2(Math.sin(focusAngle-sweep),Math.cos(focusAngle-sweep));
+    sweep+=delta*0.6;
+  }
   const nSpeck=Math.min(CFG.specks.length, Math.max(36, Math.round(ms/22)));
   const nMote=Math.min(CFG.motes.length, Math.max(20, Math.round(ms/40)));
 
@@ -92,14 +114,14 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
 
   ctx.globalCompositeOperation='lighter';
   const reach=ms*0.36;
-  const span=1.15;
+  const span=0.72;
   const slices=22;
   for(let i=0;i<slices;i++){
     const f=i/slices;
     const a0=sweep-f*span;
     const a1=sweep-(f+1/slices)*span;
     const rr=reach*(1-f*0.12);
-    const alpha=(1-f)*(1-f)*0.048;
+    const alpha=(1-f)*(1-f)*0.03;
     ctx.beginPath();
     ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,rr,a1,a0);
@@ -117,10 +139,10 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const isMid=i%5===0;
     const len=isMaj?ms*0.045:isMid?ms*0.03:ms*0.018;
     const inner=tickR-len;
-    const dd=((sweep-ang)%TAU+TAU)%TAU;
-    const illum=Math.max(0,1-dd/1.1);
+    const delta=Math.abs(Math.atan2(Math.sin(ang-sweep),Math.cos(ang-sweep)));
+    const illum=Math.max(0,1-delta/0.38);
     const base=isMaj?0.34:isMid?0.2:0.1;
-    const alpha=Math.min(0.72,base+illum*0.42);
+    const alpha=Math.min(0.58,base+illum*0.24);
     const x0=cx+Math.cos(ang)*inner, y0=cy+Math.sin(ang)*inner;
     const x1=cx+Math.cos(ang)*tickR, y1=cy+Math.sin(ang)*tickR;
     ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
@@ -133,11 +155,11 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.globalCompositeOperation='lighter';
   for(let i=0;i<NT;i+=10){
     const ang=(i/NT)*TAU;
-    const dd=((sweep-ang)%TAU+TAU)%TAU;
-    const illum=Math.max(0,1-dd/1.1);
-    if(illum>0.15){
+    const delta=Math.abs(Math.atan2(Math.sin(ang-sweep),Math.cos(ang-sweep)));
+    const illum=Math.max(0,1-delta/0.38);
+    if(illum>0.20){
       const x=cx+Math.cos(ang)*tickR, y=cy+Math.sin(ang)*tickR;
-      softGlow(ctx,x,y,ms*0.02*illum+2,'rgba(178,210,250,'+(0.34*illum)+')','transparent');
+      softGlow(ctx,x,y,ms*0.02*illum+2,'rgba(178,210,250,'+(0.22*illum)+')','transparent');
     }
   }
 
@@ -159,12 +181,9 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
 
   ctx.globalCompositeOperation='lighter';
   ctx.lineCap='round';
-  const sp1=-2.2+Math.sin(t*0.18)*0.25;
-  ctx.beginPath(); ctx.arc(cx,cy,ms*0.42,sp1-0.45,sp1+0.45);
-  ctx.strokeStyle='rgba(196,220,252,0.18)'; ctx.lineWidth=ms*0.012; ctx.stroke();
-  const sp2=0.9+Math.cos(t*0.13)*0.2;
-  ctx.beginPath(); ctx.arc(cx,cy,ms*0.42,sp2-0.25,sp2+0.25);
-  ctx.strokeStyle='rgba(146,186,246,0.14)'; ctx.lineWidth=ms*0.01; ctx.stroke();
+  const bezelCatch=sweep-0.12;
+  ctx.beginPath(); ctx.arc(cx,cy,ms*0.42,bezelCatch-0.34,bezelCatch+0.34);
+  ctx.strokeStyle='rgba(196,220,252,0.12)'; ctx.lineWidth=ms*0.01; ctx.stroke();
   ctx.lineCap='butt';
 
   ctx.globalCompositeOperation='lighter';
@@ -172,7 +191,7 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   const hg=ctx.createLinearGradient(cx,cy,hx,hy);
   hg.addColorStop(0,'rgba(140,190,255,0)');
   hg.addColorStop(0.35,'rgba(158,198,250,0.4)');
-  hg.addColorStop(1,'rgba(198,224,255,0.62)');
+  hg.addColorStop(1,'rgba(198,224,255,0.48)');
   ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(hx,hy);
   ctx.strokeStyle=hg; ctx.lineWidth=2.6; ctx.stroke();
@@ -180,8 +199,8 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(tx,ty);
   ctx.strokeStyle='rgba(150,192,250,0.4)'; ctx.lineWidth=3; ctx.stroke();
   ctx.lineCap='butt';
-  softGlow(ctx,hx,hy,ms*0.03,'rgba(198,226,252,0.5)','transparent');
-  star4(ctx,hx,hy,ms*0.045,1.3,'rgba(198,224,255,0.6)');
+  softGlow(ctx,hx,hy,ms*0.03,'rgba(198,226,252,0.34)','transparent');
+  star4(ctx,hx,hy,ms*0.045,1.3,'rgba(198,224,255,0.42)');
 
   softGlow(ctx,cx,cy,ms*0.085,'rgba(50,102,178,0.22)','transparent');
   ctx.globalCompositeOperation='source-over';
@@ -211,7 +230,6 @@ export const renderCaliber: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     if(m.bright>0.78) softGlow(ctx,x,y,sz*4,'rgba(140,190,248,'+(0.18*tw)+')','transparent');
     ctx.beginPath(); ctx.arc(x,y,sz,0,TAU);
     ctx.fillStyle='rgba(174,208,250,'+b+')'; ctx.fill();
-    if(m.bright>0.92) star4(ctx,x,y,sz*5,0.8,'rgba(200,224,250,'+(0.42*tw)+')');
   }
 
   ctx.globalCompositeOperation='source-over';

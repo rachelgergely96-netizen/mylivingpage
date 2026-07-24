@@ -1,17 +1,25 @@
 import { fbm, noise2D } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { resolveThemeMotion } from "../shared/motion";
-import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
+interface ChalkBloom {
+  x: number;
+  y: number;
+  r: number;
+  ph: number;
+  spd: number;
+  tint: number;
+}
+
 const CFG = (function(){
   const rand = createSeededRandom(70413);
-  const blooms = [];
-  for (let i=0;i<3;i++){
+  const blooms: ChalkBloom[] = [];
+  for (let i=0;i<2;i++){
     blooms.push({
-      x: 0.58 + rand()*0.3,
+      x: 0.66 + rand()*0.22,
       y: 0.26 + rand()*0.42,
       r: 0.22 + rand()*0.16,
       ph: rand()*TAU,
@@ -28,6 +36,7 @@ const CFG = (function(){
 
 export const renderFresco: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
   const M = resolveThemeMotion(motion);
+  const effectiveTime = motion?.reducedMotion ? 0 : t;
   const vel = M.scrollVelocity/4;            // [-1,1], 0 at rest
   const absVel = vel<0?-vel:vel;             // [0,1]
   const story = M.storyProgress;             // [0,1], 0 at rest
@@ -51,12 +60,17 @@ export const renderFresco: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
 
   // Raking light source: drifts, follows mouse, and leans toward the focused
   // section when the page reports focus (scroll speed quickens the drift).
-  const driftSpd = 1 + absVel*0.7;
-  let lxN = 0.72 + px*0.05 + Math.sin(t*0.05*driftSpd)*0.02;
-  let lyN = 0.34 + py*0.03 + Math.cos(t*0.043*driftSpd)*0.02;
+  const driftSpd = 1 + absVel*0.25;
+  let lxN = 0.76 + Math.sin(effectiveTime*0.24*driftSpd)*0.13 + px*0.024;
+  let lyN = 0.34 + Math.cos(effectiveTime*0.18*driftSpd)*0.1 + py*0.02;
+  if (M.sectionCount>0){
+    const storyY = 0.22 + story*0.56;
+    lyN += (storyY-lyN)*0.42;
+  }
   if (foc){
-    lxN += (M.focusX - lxN)*0.3;
-    lyN += (M.focusY - lyN)*0.3;
+    const focusX = Math.min(0.86, Math.max(0.68, M.focusX));
+    lxN += (focusX-lxN)*0.38;
+    lyN += (M.focusY-lyN)*0.38;
   }
   const lightX = w*lxN;
   const lightY = h*lyN;
@@ -64,11 +78,11 @@ export const renderFresco: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
 
   // ---- The star: mineral-plaster box grid ----
   const tile = Math.max(46, Math.sqrt((w*h)/340));
-  // storyProgress slowly re-ages / re-lights the wall as chapters advance.
-  const dX = Math.sin(t*0.03)*0.05 + story*0.12;
-  const dY = Math.cos(t*0.024)*0.04 + story*0.09;
-  const crazeT = Math.sin(t*0.06)*0.15 + story*0.2;
-  const warmShift = story*0.1;
+  // The plaster itself stays fixed; the story changes only its warmth.
+  const dX = 0;
+  const dY = 0;
+  const crazeT = 0;
+  const warmShift = story*0.035;
   const warm = CFG.warm, cool = CFG.cool;
 
   for (let x=0; x<w; x+=tile){
@@ -137,35 +151,45 @@ export const renderFresco: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
       // Lower contrast + alpha than before so the tile grid reads calm (not a
       // busy high-frequency light/dark lattice) under any overlaid content.
       const bh = fh*0.15 < 1 ? 1 : fh*0.15;
-      ctx.fillStyle = `rgba(${cl(fr+22)|0},${cl(fg+18)|0},${cl(fb+14)|0},0.3)`;
+      const lightAbove = c01(0.5+(cy-lightY)/Math.max(1,h)*1.8);
+      const lightLeft = c01(0.5+(cx-lightX)/Math.max(1,w)*1.8);
+      ctx.fillStyle = `rgba(${cl(fr+26)|0},${cl(fg+21)|0},${cl(fb+16)|0},${0.22+lightAbove*0.22})`;
       ctx.fillRect(fx, fy, fw+0.6, bh);
-      ctx.fillStyle = `rgba(${cl(fr*0.6)|0},${cl(fg*0.6)|0},${cl(fb*0.62)|0},0.4)`;
+      ctx.fillStyle = `rgba(${cl(fr*0.6)|0},${cl(fg*0.6)|0},${cl(fb*0.62)|0},${0.32+lightAbove*0.16})`;
       ctx.fillRect(fx, fy+fh-bh, fw+0.6, bh+0.6);
+      const bw = fw*0.08 < 1 ? 1 : fw*0.08;
+      ctx.fillStyle = `rgba(${cl(fr+20)|0},${cl(fg+16)|0},${cl(fb+12)|0},${0.12+lightLeft*0.16})`;
+      ctx.fillRect(fx, fy, bw, fh+0.6);
+      ctx.fillStyle = `rgba(${cl(fr*0.62)|0},${cl(fg*0.62)|0},${cl(fb*0.64)|0},${0.18+lightLeft*0.16})`;
+      ctx.fillRect(fx+fw-bw, fy, bw+0.6, fh+0.6);
     }
   }
 
-  // ---- Light only as soft round glows / gradients ----
+  // The moving rake is the visible ambient cue: it travels across the fixed
+  // plaster relief without making the wall itself swim or morph.
   ctx.save();
   ctx.globalCompositeOperation = "screen";
-  const rakeGrad = ctx.createRadialGradient(lightX,lightY,0, w*0.68,h*0.42, maxSide*0.7);
-  rakeGrad.addColorStop(0,"rgba(224,180,130,0.10)");
-  rakeGrad.addColorStop(0.42,"rgba(150,112,80,0.035)");
+  const rakeGrad = ctx.createRadialGradient(lightX,lightY,0, lightX,lightY,maxSide*0.58);
+  rakeGrad.addColorStop(0,"rgba(224,180,130,0.16)");
+  rakeGrad.addColorStop(0.38,"rgba(176,132,92,0.07)");
   rakeGrad.addColorStop(1,"rgba(0,0,0,0)");
   ctx.fillStyle = rakeGrad;
   ctx.fillRect(0,0,w,h);
-  // Focus adds a whisper more glow at the (focus-tracking) light: a soft spotlight.
-  softGlow(ctx, lightX, lightY, maxSide*0.4, `rgba(232,190,138,${0.045 + foc*0.02})`, "transparent");
 
   // Chalk bloom: slow, drifting soft light pools. Pulse speed + brightness lift
   // gently with scroll velocity and pointer/interaction energy.
   for (let i=0;i<CFG.blooms.length;i++){
     const bl = CFG.blooms[i];
-    const pulse = 0.5+0.5*Math.sin(t*bl.spd*(1+absVel*0.5)+bl.ph);
-    const bx = w*bl.x + Math.sin(t*bl.spd*0.7+bl.ph)*minSide*0.02 + px*minSide*0.015;
-    const by = h*bl.y + Math.cos(t*bl.spd*0.6+bl.ph)*minSide*0.016 + py*minSide*0.013;
+    const pulse = 0.5+0.5*Math.sin(effectiveTime*bl.spd*(1+absVel*0.5)+bl.ph);
+    const bx = w*bl.x + Math.sin(effectiveTime*bl.spd*0.7+bl.ph)*minSide*0.02 + px*minSide*0.015;
+    const by = h*bl.y + Math.cos(effectiveTime*bl.spd*0.6+bl.ph)*minSide*0.016 + py*minSide*0.013;
     const rad = minSide*bl.r*(0.9+pulse*0.2);
     const a = (0.024+pulse*0.028)*bl.tint*(1 + bloomEnergy*0.5 + absVel*0.2);
-    softGlow(ctx, bx, by, rad, `rgba(228,208,180,${a})`, "transparent");
+    const bloom = ctx.createRadialGradient(bx,by,0,bx,by,rad);
+    bloom.addColorStop(0,`rgba(228,208,180,${a})`);
+    bloom.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle = bloom;
+    ctx.fillRect(bx-rad,by-rad,rad*2,rad*2);
   }
   ctx.restore();
 

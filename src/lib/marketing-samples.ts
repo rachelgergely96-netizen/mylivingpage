@@ -183,7 +183,7 @@ export const LANDING_FAQS: LandingFaq[] = [
   {
     question: "Is it actually free?",
     answer:
-      "Yes. You can build, publish, and update one living resume, download its ATS-ready PDF, and create a personalized share card without a card, trial, or subscription.",
+      "Yes. You can build, publish, and update one Living Page, download its ATS-ready PDF, and create a personalized share card without a card, trial, or subscription.",
   },
 ];
 
@@ -227,11 +227,11 @@ export const COMPARISON_ROWS = [
 
 export const FREE_PRODUCT_FEATURE_GROUPS = [
   {
-    name: "Living Resume",
+    name: "Living Page",
     eyebrow: "One link, always current",
     body: "Publish one polished page at your personal URL and update it whenever your experience changes.",
     features: [
-      "One public living resume",
+      "One public Living Page",
       "A reusable personal link",
       "Polished, mobile-ready themes",
     ],
@@ -250,7 +250,7 @@ export const FREE_PRODUCT_FEATURE_GROUPS = [
   {
     name: "Share Card + QR",
     eyebrow: "Built to share anywhere",
-    body: "Create a personalized visual card that sends people directly to your living resume.",
+    body: "Create a personalized visual card that sends people directly to your Living Page.",
     features: [
       "Downloadable PNG share card",
       "QR code linked to your page",

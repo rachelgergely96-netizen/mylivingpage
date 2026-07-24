@@ -57,11 +57,12 @@ export default async function ExamplesPage() {
           { href: "/examples", label: "Examples", current: true },
           { href: "/guides", label: "Guides" },
           { href: "/pricing", label: "Free" },
+          { href: "/login", label: "Sign in" },
         ]}
         cta={{
           href: getSignupHref("examples_nav_start"),
-          label: "Create Your Page (Free)",
-          mobileLabel: "Build free",
+          label: "Create my free page",
+          mobileLabel: "Start free",
         }}
       />
 
@@ -125,7 +126,7 @@ export default async function ExamplesPage() {
 
       <MobileStickyCta
         href={getSignupHref("examples_mobile_start")}
-        label="Create my page"
+        label="Create my free page"
         supportingText="Free · private until published"
         targetId="examples-hero-intro"
         hideNearId="examples-final-cta"

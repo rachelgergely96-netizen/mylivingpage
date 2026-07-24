@@ -34,7 +34,7 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
       name: "Turn your résumé into a page you can send as one link.",
     }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Create Your Page (Free)" }).first()).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Create my free page" }).first()).toHaveAttribute(
     "href",
     "/signup?ref=examples_nav_start&next=/create",
   );

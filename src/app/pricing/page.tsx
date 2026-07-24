@@ -45,12 +45,13 @@ export default async function PricingPage() {
         links={[
           { href: "/examples", label: "Examples" },
           { href: "/guides", label: "Guides" },
-          { href: "/pricing", label: "What’s included", current: true },
+          { href: "/pricing", label: "Free", current: true },
+          { href: "/login", label: "Sign in" },
         ]}
         cta={{
           href: "/signup?ref=pricing_nav&next=/create",
-          label: "Create Your Resume",
-          mobileLabel: "Build free",
+          label: "Create my free page",
+          mobileLabel: "Start free",
         }}
       />
 
@@ -100,12 +101,12 @@ export default async function PricingPage() {
                 </ul>
 
                 <Link
-                  href="/signup?ref=pricing_free&next=/create"
+                  href={`/signup?ref=pricing_free_${index + 1}&next=/create`}
                   className={`site-button mt-8 w-full ${
                     featured ? "site-button-primary" : "site-button-secondary"
                   }`}
                 >
-                  Create Your Living Resume
+                  Create my free page
                 </Link>
               </article>
             );
@@ -115,7 +116,7 @@ export default async function PricingPage() {
         <section className="site-callout mt-8 p-5 text-sm sm:p-6">
           <p className="leading-7">
             No card. No trial. No paid plan is required or newly offered. Build and publish one
-            living resume, then keep the same link, ATS-ready PDF, and share card current as your
+            Living Page, then keep the same link, ATS-ready PDF, and share card current as your
             experience grows.
           </p>
           <p className="mt-3 text-xs leading-6 text-site-muted">

@@ -85,10 +85,11 @@ export default async function GuidePage({ params }: GuidePageProps) {
           { href: "/examples", label: "Examples" },
           { href: "/guides", label: "Guides", current: true },
           { href: "/pricing", label: "Free" },
+          { href: "/login", label: "Sign in" },
         ]}
         cta={{
           href: getSignupHref(`guide_${guide.slug}_nav`),
-          label: "Start From My Resume",
+          label: "Create my free page",
           mobileLabel: "Start free",
         }}
       />

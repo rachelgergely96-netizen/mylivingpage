@@ -12,7 +12,7 @@ describe("public free-product copy", () => {
       (item) => item.question === "Is it actually free?",
     )?.answer;
 
-    expect(featureCopy).toContain("Living Resume");
+    expect(featureCopy).toContain("Living Page");
     expect(featureCopy).toContain("ATS-Ready PDF");
     expect(featureCopy).toContain("Deterministic ATS readiness check");
     expect(featureCopy).toContain("Share Card + QR");

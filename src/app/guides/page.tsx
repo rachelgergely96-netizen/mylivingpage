@@ -44,10 +44,11 @@ export default async function GuidesPage() {
           { href: "/examples", label: "Examples" },
           { href: "/guides", label: "Guides", current: true },
           { href: "/pricing", label: "Free" },
+          { href: "/login", label: "Sign in" },
         ]}
         cta={{
           href: getSignupHref("guides_nav_start"),
-          label: "Start From My Resume",
+          label: "Create my free page",
           mobileLabel: "Start free",
         }}
       />
@@ -65,10 +66,10 @@ export default async function GuidesPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link href={getSignupHref("guides_start_here")} className="site-button site-button-primary">
-              Start From My Resume
+              Create my free page
             </Link>
             <Link href="/pricing" className="site-button site-button-secondary">
-              See What&apos;s Included
+              See what&apos;s included
             </Link>
           </div>
         </section>
@@ -90,10 +91,10 @@ export default async function GuidesPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link href={getSignupHref("guides_final_start")} className="site-button site-button-primary">
-              Start From My Resume
+              Create my free page
             </Link>
             <Link href="/examples" className="site-button site-button-secondary">
-              See Sample Pages
+              See sample pages
             </Link>
           </div>
         </section>

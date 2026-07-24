@@ -4,7 +4,6 @@ test("landing page communicates the Living Page outcome and one honest start act
   await page.goto("/");
 
   const header = page.locator("header");
-  const hero = page.locator("#prototype-hero");
 
   await expect(
     page.getByRole("heading", { name: "Your résumé, alive on the web." }),
@@ -15,10 +14,6 @@ test("landing page communicates the Living Page outcome and one honest start act
   await expect(page.getByText("Completely free · No trial", { exact: true })).toBeVisible();
   await expect(page.getByText("Homepage conversion prototype", { exact: true })).toHaveCount(0);
 
-  await expect(hero.getByRole("link", { name: "See it transform" })).toHaveAttribute(
-    "href",
-    "#live-product-story",
-  );
   await expect(page.getByTestId("homepage-primary-cta")).toHaveAttribute(
     "href",
     "/signup?ref=landing_start_free&next=/create",
@@ -27,7 +22,7 @@ test("landing page communicates the Living Page outcome and one honest start act
     "href",
     "#how-it-works",
   );
-  await expect(header.getByRole("link", { name: "ATS + search" })).toHaveAttribute(
+  await expect(header.getByRole("link", { name: "For applications" })).toHaveAttribute(
     "href",
     "#search-ready",
   );
@@ -61,19 +56,19 @@ test("interactive homepage story keeps the Living Page primary while offering th
   await page.goto("/");
 
   const story = page.locator("[data-live-product-story]");
-  const livingPage = story.getByRole("button", { name: /Living Page/ });
-  const application = story.getByRole("button", { name: /Application PDF/ });
-  const introduction = story.getByRole("button", { name: /Share Card \+ QR/ });
+  const livingPage = story.getByRole("button", { name: /Web page/ });
+  const application = story.getByRole("button", { name: /Résumé PDF/ });
+  const introduction = story.getByRole("button", { name: /Card \+ QR code/ });
 
   await expect(livingPage).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "Professional page" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
   await expect(story.locator("[data-story-living-output]")).toHaveAttribute("data-theme-id", "atlas");
   await expect(story.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
 
   await application.click();
-  await expect(story.getByRole("heading", { name: "ATS-ready PDF" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "PDF for applications" })).toBeVisible();
   await introduction.click();
-  await expect(story.getByRole("heading", { name: "Share Card + QR" })).toBeVisible();
+  await expect(story.getByRole("heading", { name: "Card + QR code" })).toBeVisible();
 });
 
 test("reduced-motion visitors retain the complete content and static transformation", async ({ page }) => {
@@ -84,9 +79,9 @@ test("reduced-motion visitors retain the complete content and static transformat
   await expect(page.locator("[data-transform-motion] b").first()).toBeHidden();
   await expect(page.locator("[data-truth-source]")).toBeVisible();
   await expect(page.locator("[data-truth-destination]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Start with what is already true." })).toBeAttached();
+  await expect(page.getByRole("heading", { name: "Start with the résumé you already have." })).toBeAttached();
   await expect(
-    page.getByRole("heading", { name: "A memorable page. Recognizable information." }),
+    page.getByRole("heading", { name: "The design can change. Your details stay easy to read." }),
   ).toBeAttached();
 });
 

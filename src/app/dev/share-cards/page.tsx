@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
+import TiltCard from "@/components/marketing/TiltCard";
 import { DEMO_PAGES } from "@/lib/demo-data";
 import { isEditorPreviewEnabled } from "@/lib/editor-preview";
 import {
@@ -82,14 +83,16 @@ export default function ShareCardFinishesPage() {
                       <p className="mb-2 text-xs font-semibold text-site-secondary">
                         {SHARE_CARD_FINISH_LABELS[finish]}
                       </p>
-                      <ScaledShareCardArtwork
-                        animatedShine
-                        finish={finish}
-                        frameClassName="w-full border border-site-border"
-                        model={model}
-                        testId={`share-card-${themeId}-${finish}`}
-                        visual={visual}
-                      />
+                      <TiltCard>
+                        <ScaledShareCardArtwork
+                          animatedShine
+                          finish={finish}
+                          frameClassName="w-full border border-site-border"
+                          model={model}
+                          testId={`share-card-${themeId}-${finish}`}
+                          visual={visual}
+                        />
+                      </TiltCard>
                     </div>
                   ))}
                 </div>

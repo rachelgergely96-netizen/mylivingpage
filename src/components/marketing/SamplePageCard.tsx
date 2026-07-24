@@ -98,7 +98,7 @@ export default function SamplePageCard({
     <>
       <article
         id={anchorId}
-        className="site-panel overflow-hidden bg-site-canvas"
+        className="site-panel overflow-hidden rounded-2xl bg-site-canvas shadow-[0_22px_54px_-12px_rgba(0,0,0,0.55)]"
         data-example-sample={sample.id}
         data-site-ui
       >

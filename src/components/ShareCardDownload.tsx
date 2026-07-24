@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
 import { ShareCardArtwork } from "@/components/ShareCardArtwork";
+import TiltCard from "@/components/marketing/TiltCard";
 import type { ShareIntentEventName } from "@/lib/analytics/proofSummary";
 import {
   buildShareCardModel,
@@ -300,14 +301,16 @@ export default function ShareCardDownload({
                 data-theme-id={visual.themeId}
                 data-theme-detail={visual.contentProfile}
                 data-theme-collection={visual.collection}
-                className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-2"
+                className="min-w-0 self-start border border-site-border bg-site-canvas-alt p-2"
               >
-                <ScaledShareCardArtwork
-                  animatedShine
-                  finish="holographic"
-                  model={cardModel}
-                  visual={visual}
-                />
+                <TiltCard>
+                  <ScaledShareCardArtwork
+                    animatedShine
+                    finish="holographic"
+                    model={cardModel}
+                    visual={visual}
+                  />
+                </TiltCard>
               </div>
 
               <div className="site-panel flex flex-col justify-between gap-4 p-5">

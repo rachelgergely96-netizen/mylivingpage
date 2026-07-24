@@ -806,11 +806,22 @@
   text-transform: none;
 }
 
+/* The living-page output reads as a premium floating device: a rounded bezel,
+   a layered drop shadow for lift, and a theme-accent-tinted glow cast beneath
+   it (the colored shadow layer follows the selected world). The canvas inside
+   is clipped to the rounded corners without touching its render math. */
 .storyLivingOutput {
   background: #050c18;
   border: 1px solid var(--world-accent-border);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 26px 60px rgba(0, 0, 0, 0.5),
+    0 16px 44px -10px var(--world-accent-soft);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
 
 .storyBrowserBar {

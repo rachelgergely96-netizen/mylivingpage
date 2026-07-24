@@ -1,4 +1,5 @@
 import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
+import TiltCard from "@/components/marketing/TiltCard";
 import { DEMO_PAGES } from "@/lib/demo-data";
 import {
   buildShareCardModel,
@@ -50,19 +51,21 @@ export function LandingStoryShareCard({
       data-theme-id={visual.themeId}
       data-theme-detail={visual.contentProfile}
       data-theme-collection={visual.collection}
-      className="relative overflow-hidden border border-site-border bg-site-canvas-alt p-2 shadow-[0_24px_70px_rgba(2,6,23,0.34)]"
+      className="relative border border-site-border bg-site-canvas-alt p-2 shadow-[0_24px_70px_rgba(2,6,23,0.34)]"
     >
       <Heading className="sr-only">
         {model.name}&rsquo;s {visual.themeName} share card
       </Heading>
-      <ScaledShareCardArtwork
-        animatedShine
-        ctaHeadline={qrLabel}
-        finish="holographic"
-        frameClassName="w-full"
-        model={model}
-        visual={visual}
-      />
+      <TiltCard>
+        <ScaledShareCardArtwork
+          animatedShine
+          ctaHeadline={qrLabel}
+          finish="holographic"
+          frameClassName="w-full"
+          model={model}
+          visual={visual}
+        />
+      </TiltCard>
     </article>
   );
 }

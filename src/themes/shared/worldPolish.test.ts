@@ -28,6 +28,7 @@ function createCanvasContext() {
     restore: vi.fn(),
     rotate: vi.fn(),
     save: vi.fn(),
+    scale: vi.fn(),
     setLineDash: vi.fn(),
     stroke: vi.fn(),
     strokeRect: vi.fn(),

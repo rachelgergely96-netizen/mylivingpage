@@ -141,6 +141,46 @@ function drawAtmosphere(
  * They sit closest to the viewer, so their drift separates the scene into
  * depth planes; alpha stays whisper-quiet and dims over the reading column.
  */
+// One cached unit-radius bokeh gradient, stamped via translate/scale rather
+// than allocating a fresh createRadialGradient per disc per frame. Across 53
+// catalog themes at 60fps those allocations were the pass's main GC pressure.
+const BOKEH_UNIT = 64;
+let bokehGlow: CanvasGradient | null = null;
+let bokehGlowCtx: CanvasRenderingContext2D | null = null;
+let bokehGlowAccent = "";
+function stampBokeh(
+  ctx: CanvasRenderingContext2D,
+  accent: string,
+  x: number,
+  y: number,
+  radius: number,
+  alpha: number,
+) {
+  if (!(alpha > 0) || !(radius > 0)) return;
+  if (!bokehGlow || bokehGlowCtx !== ctx || bokehGlowAccent !== accent) {
+    bokehGlow = ctx.createRadialGradient(
+      0,
+      0,
+      BOKEH_UNIT * 0.2,
+      0,
+      0,
+      BOKEH_UNIT,
+    );
+    bokehGlow.addColorStop(0, accent);
+    bokehGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    bokehGlowCtx = ctx;
+    bokehGlowAccent = accent;
+  }
+  ctx.save();
+  ctx.globalAlpha = alpha > 1 ? 1 : alpha;
+  ctx.translate(x, y);
+  const scale = radius / BOKEH_UNIT;
+  ctx.scale(scale, scale);
+  ctx.fillStyle = bokehGlow;
+  ctx.fillRect(-BOKEH_UNIT, -BOKEH_UNIT, BOKEH_UNIT * 2, BOKEH_UNIT * 2);
+  ctx.restore();
+}
+
 function drawDepthBokeh(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -155,10 +195,10 @@ function drawDepthBokeh(
   ctx.save();
   ctx.globalCompositeOperation = "screen";
 
-  for (let index = 0; index < 4; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     const seed = profile.seed * 0.00003 + index * 7.917;
     const depth = 0.55 + unitValue(seed + 1.3) * 0.45;
-    const drift = time * (0.0024 + depth * 0.003);
+    const drift = time * (0.0016 + depth * 0.002);
     const wrapX = wrapSoft(
       unitValue(seed + 0.7) + drift + storyProgress * 0.05 * depth,
       1,
@@ -167,7 +207,7 @@ function drawDepthBokeh(
     const wrapY = wrapSoft(
       unitValue(seed + 3.9) * 0.9 +
         0.05 +
-        Math.sin(time * (0.05 + depth * 0.04) + seed * 3) * 0.04,
+        Math.sin(time * (0.033 + depth * 0.026) + seed * 3) * 0.04,
       1,
       0.12,
     );
@@ -186,14 +226,7 @@ function drawDepthBokeh(
       (0.02 + depth * 0.03) * wrapX.alpha * wrapY.alpha * readColumnDim;
     if (alpha <= 0.002) continue;
 
-    const glow = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
-    glow.addColorStop(0, accent);
-    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, TAU);
-    ctx.fill();
+    stampBokeh(ctx, accent, x, y, radius, alpha);
   }
 
   ctx.restore();
@@ -261,7 +294,7 @@ function drawSpecularSweep(
   accentBright: string,
   impulse: number,
 ) {
-  const cycle = (time * 0.011 + storyProgress * 0.22) % 1;
+  const cycle = (time * 0.0072 + storyProgress * 0.22) % 1;
   const presence = Math.sin(cycle * Math.PI);
   if (presence <= 0.02) return;
   const y = height * (0.22 + cycle * 0.54);
@@ -296,7 +329,7 @@ function drawPrintGlint(
   accentBright: string,
   seed: number,
 ) {
-  const s = (time * 0.12 + storyProgress * 0.15 + seed * 0.0001) % 1;
+  const s = (time * 0.08 + storyProgress * 0.15 + seed * 0.0001) % 1;
   const presence = Math.sin(Math.PI * s);
   if (presence <= 0.02) return;
   const phase = time * 0.092 + seed * 0.0004 + 1;
@@ -386,7 +419,7 @@ function drawCinematicOrbit(
   }
   const drift = (pointerX - 0.5) * width * 0.02;
   const streakHalf =
-    Math.min(width, height) * (0.32 + Math.sin(time * 0.07) * 0.03);
+    Math.min(width, height) * (0.32 + Math.sin(time * 0.046) * 0.03);
   const streak = ctx.createLinearGradient(
     anchorX - streakHalf + drift,
     anchorY,
@@ -543,7 +576,7 @@ function drawExperimentalFrames(
     if (lightMove && frame === 4) {
       const perimeter = 2 * (size * 2 + size * 1.16);
       ctx.setLineDash([perimeter * 0.1, perimeter * 0.9]);
-      ctx.lineDashOffset = -((time * 0.05) % 1) * perimeter;
+      ctx.lineDashOffset = -((time * 0.033) % 1) * perimeter;
       ctx.globalAlpha = 0.1 + chapterWeight * 0.05;
       ctx.strokeStyle = accentBright;
       ctx.lineWidth = 1.2;

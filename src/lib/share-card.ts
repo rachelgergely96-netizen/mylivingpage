@@ -4,7 +4,6 @@ import type {
   ThemeCollectionId,
   ThemeContentProfileId,
   ThemeId,
-  ThemePresentation,
 } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
 
@@ -31,7 +30,6 @@ export interface ShareCardVisual extends ShareCardGradient {
   border: string;
   collection: ThemeCollectionId;
   contentProfile: ThemeContentProfileId;
-  headingFont: ThemePresentation["headingFont"];
   lightGround: boolean;
   motif: ShareCardMotifId;
   surface: string;
@@ -230,7 +228,6 @@ export function getShareCardVisual(themeId: string): ShareCardVisual {
       lightGround ? 0.18 : 0.3,
       "rgba(59,130,246,0.3)",
     ),
-    headingFont: theme.presentation.headingFont,
     lightGround,
     motif: SHARE_CARD_THEME_MOTIFS[theme.id] ?? theme.contentProfile,
     surface: theme.presentation.surface,

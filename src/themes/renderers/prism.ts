@@ -232,6 +232,29 @@ export const renderPrism: ThemeRenderer = (
   ctx.lineWidth = Math.max(4, minWH * 0.018);
   ctx.stroke();
 
+  const prismTopX = prismCx;
+  const prismTopY = prismCy - prismR;
+  const prismRightX = prismCx + prismR * 0.88;
+  const prismRightY = prismCy + prismR * 0.58;
+  const prismLeftX = prismCx - prismR * 0.88;
+  const prismLeftY = prismRightY;
+  const facetCenterX = prismCx + prismR * 0.06;
+  const facetCenterY = prismCy + prismR * 0.16;
+
+  // A short violet contact shadow anchors the optical source to the reflective
+  // floor. It stays compact so it reads as grounding, not another light beam.
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "rgba(16,10,28,0.18)";
+  ctx.beginPath();
+  ctx.moveTo(prismLeftX + prismR * 0.1, prismLeftY + prismR * 0.02);
+  ctx.lineTo(prismRightX - prismR * 0.1, prismRightY + prismR * 0.02);
+  ctx.lineTo(prismCx + prismR * 0.32, prismRightY + prismR * 0.18);
+  ctx.lineTo(prismCx - prismR * 0.98, prismLeftY + prismR * 0.22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
   const prismFill = ctx.createLinearGradient(
     prismCx - prismR,
     prismCy - prismR,
@@ -242,12 +265,68 @@ export const renderPrism: ThemeRenderer = (
   prismFill.addColorStop(0.5, "rgba(156,182,232,0.10)");
   prismFill.addColorStop(1, "rgba(244,222,255,0.045)");
   ctx.beginPath();
-  ctx.moveTo(prismCx, prismCy - prismR);
-  ctx.lineTo(prismCx + prismR * 0.88, prismCy + prismR * 0.58);
-  ctx.lineTo(prismCx - prismR * 0.88, prismCy + prismR * 0.58);
+  ctx.moveTo(prismTopX, prismTopY);
+  ctx.lineTo(prismRightX, prismRightY);
+  ctx.lineTo(prismLeftX, prismLeftY);
   ctx.closePath();
   ctx.fillStyle = prismFill;
   ctx.fill();
+
+  // Three low-alpha planes turn the glass outline into a restrained volume
+  // while leaving the existing dispersed rays as the only directional light.
+  const fillFacet = (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    color: string,
+  ) => {
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(facetCenterX, facetCenterY);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  fillFacet(
+    prismTopX,
+    prismTopY,
+    prismRightX,
+    prismRightY,
+    "rgba(226,238,255,0.045)",
+  );
+  fillFacet(
+    prismRightX,
+    prismRightY,
+    prismLeftX,
+    prismLeftY,
+    "rgba(196,164,232,0.035)",
+  );
+  fillFacet(
+    prismLeftX,
+    prismLeftY,
+    prismTopX,
+    prismTopY,
+    "rgba(132,164,222,0.026)",
+  );
+
+  ctx.beginPath();
+  ctx.moveTo(prismTopX, prismTopY);
+  ctx.lineTo(facetCenterX, facetCenterY);
+  ctx.moveTo(prismRightX, prismRightY);
+  ctx.lineTo(facetCenterX, facetCenterY);
+  ctx.moveTo(prismLeftX, prismLeftY);
+  ctx.lineTo(facetCenterX, facetCenterY);
+  ctx.strokeStyle = "rgba(220,232,255,0.09)";
+  ctx.lineWidth = Math.max(0.55, minWH * 0.0009);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(prismTopX, prismTopY);
+  ctx.lineTo(prismRightX, prismRightY);
+  ctx.lineTo(prismLeftX, prismLeftY);
+  ctx.closePath();
   ctx.strokeStyle = "rgba(220,232,255,0.24)";
   ctx.lineWidth = Math.max(0.8, minWH * 0.0018);
   ctx.stroke();

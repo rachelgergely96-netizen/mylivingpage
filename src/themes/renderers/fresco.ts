@@ -84,9 +84,12 @@ export const renderFresco: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
   const crazeT = 0;
   const warmShift = story*0.035;
   const warm = CFG.warm, cool = CFG.cool;
+  const crackPaths: Array<Array<[number, number]>> = [];
 
-  for (let x=0; x<w; x+=tile){
-    for (let y=0; y<h; y+=tile){
+  let tileColumn = 0;
+  for (let x=0; x<w; x+=tile, tileColumn+=1){
+    let tileRow = 0;
+    for (let y=0; y<h; y+=tile, tileRow+=1){
       const cx = x + tile*0.5;
       const cy = y + tile*0.5;
 
@@ -162,7 +165,58 @@ export const renderFresco: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
       ctx.fillRect(fx, fy, bw, fh+0.6);
       ctx.fillStyle = `rgba(${cl(fr*0.62)|0},${cl(fg*0.62)|0},${cl(fb*0.64)|0},${0.18+lightLeft*0.16})`;
       ctx.fillRect(fx+fw-bw, fy, bw+0.6, fh+0.6);
+
+      // Sparse, deterministic craquelure adds age to selected plaster faces.
+      // Paths are collected here and stroked in two batches after the grid.
+      if ((tileColumn*17 + tileRow*31)%11===3 && craze>0.38){
+        const reverse = (tileColumn+tileRow)%2===1;
+        const x0 = reverse ? 0.82 : 0.18;
+        const x1 = reverse ? 0.62 : 0.38;
+        const x2 = reverse ? 0.43 : 0.57;
+        const x3 = reverse ? 0.22 : 0.78;
+        const wobble = grain*0.055;
+        const mainCrack: Array<[number, number]> = [
+          [fx+fw*x0, fy+fh*(0.22+wear01*0.08)],
+          [fx+fw*x1, fy+fh*(0.37+wobble)],
+          [fx+fw*x2, fy+fh*(0.52-warm01*0.07)],
+          [fx+fw*x3, fy+fh*(0.7-wear01*0.08)],
+        ];
+        crackPaths.push(mainCrack);
+        const branchX = fw*(reverse ? 0.13 : -0.13);
+        crackPaths.push([
+          mainCrack[1],
+          [mainCrack[1][0]+branchX, mainCrack[1][1]+fh*(0.11+craze*0.045)],
+        ]);
+      }
     }
+  }
+
+  if (crackPaths.length>0){
+    const traceCraquelure = () => {
+      ctx.beginPath();
+      for (let i=0;i<crackPaths.length;i+=1){
+        const path = crackPaths[i];
+        ctx.moveTo(path[0][0],path[0][1]);
+        for (let p=1;p<path.length;p+=1) ctx.lineTo(path[p][0],path[p][1]);
+      }
+    };
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    traceCraquelure();
+    ctx.strokeStyle = "rgba(27,16,12,0.34)";
+    ctx.lineWidth = Math.max(0.7,Math.min(1.15,tile*0.014));
+    ctx.stroke();
+
+    // A subpixel warm edge on the light-facing side turns each dark groove
+    // into shallow relief without allocating gradients for individual tiles.
+    ctx.translate(lightX>=w*0.5 ? 0.34 : -0.34, lightY>=h*0.5 ? 0.28 : -0.28);
+    traceCraquelure();
+    ctx.strokeStyle = "rgba(232,190,145,0.14)";
+    ctx.lineWidth = Math.max(0.4,Math.min(0.65,tile*0.008));
+    ctx.stroke();
+    ctx.restore();
   }
 
   // The moving rake is the visible ambient cue: it travels across the fixed

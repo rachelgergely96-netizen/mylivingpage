@@ -75,6 +75,85 @@ test("paired prototypes keep the Living Page and share card identity in sync", a
   }
 });
 
+test("all themes use one narrative font across Living Pages and share cards", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+  const expectedFonts = await page.evaluate(() => {
+    const styles = window.getComputedStyle(document.body);
+    const normalize = (value: string) =>
+      value.split(",")[0].replaceAll(/["']/g, "").trim();
+    return {
+      narrative: normalize(styles.getPropertyValue("--font-dm-sans")),
+      functional: normalize(styles.getPropertyValue("--font-dm-mono")),
+    };
+  });
+
+  const select = page.getByLabel("Catalog theme");
+  for (const theme of THEME_REGISTRY) {
+    await select.selectOption(theme.id);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
+    );
+    const shareCard = page.locator(
+      `[data-share-card-artwork][data-share-card-theme-id="${theme.id}"]`,
+    );
+
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+    await expect(shareCard).toBeVisible();
+
+    const livingFonts = await livingPage.evaluate((element) => {
+      const primaryFont = (selector: string) => {
+        const node = element.querySelector<HTMLElement>(selector);
+        return node
+          ? window
+              .getComputedStyle(node)
+              .fontFamily.split(",")[0]
+              .replaceAll(/["']/g, "")
+              .trim()
+          : "";
+      };
+
+      return {
+        body: primaryFont(".resume-theme"),
+        name: primaryFont("[data-resume-name]"),
+        monogram: primaryFont(".resume-theme-monogram"),
+        summary: primaryFont("[data-resume-summary]"),
+        functional: primaryFont(".resume-theme .font-mono"),
+      };
+    });
+    const shareFont = await shareCard.evaluate((element) =>
+      window
+        .getComputedStyle(element)
+        .fontFamily.split(",")[0]
+        .replaceAll(/["']/g, "")
+        .trim(),
+    );
+
+    expect(livingFonts.body, `${theme.id} narrative font`).not.toBe("");
+    expect(livingFonts.body, `${theme.id} DM Sans font`).toBe(
+      expectedFonts.narrative,
+    );
+    expect(livingFonts.name, `${theme.id} name font`).toBe(livingFonts.body);
+    expect(livingFonts.monogram, `${theme.id} monogram font`).toBe(
+      livingFonts.body,
+    );
+    expect(livingFonts.summary, `${theme.id} summary font`).toBe(
+      livingFonts.body,
+    );
+    expect(shareFont, `${theme.id} share-card font`).toBe(livingFonts.body);
+    expect(livingFonts.functional, `${theme.id} DM Mono font`).toBe(
+      expectedFonts.functional,
+    );
+  }
+});
+
 test("the real share-card modal exports one complete 1200 by 630 card on every viewport", async ({
   page,
 }) => {

@@ -55,7 +55,7 @@ export const THEME_FRAME_BASELINES = {
   meridian: { hash: "0103030321010103", mean: [6, 13, 18] },
   porcelain: { hash: "0301030303030105", mean: [46, 56, 66] },
   filigree: { hash: "0001010001010101", mean: [10, 8, 11] },
-  cameo: { hash: "030707070706070f", mean: [26, 20, 25] },
+  cameo: { hash: "030705050504070f", mean: [32, 24, 29] },
   solstice: { hash: "0101010303010303", mean: [77, 36, 27] },
   tulle: { hash: "0101000001020309", mean: [37, 37, 48] },
   parasol: { hash: "0302010306070001", mean: [36, 20, 28] },

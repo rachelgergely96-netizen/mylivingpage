@@ -218,7 +218,7 @@ export default function ResumeLayout({
             <div
               data-motion-item="profile-monogram"
               data-motion-kind="profile"
-              className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-heading text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl"
+              className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-body text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl"
             >
               {(data.name || "?").slice(0, 1).toUpperCase()}
             </div>

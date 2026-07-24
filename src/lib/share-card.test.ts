@@ -98,7 +98,7 @@ describe("getShareCardVisual", () => {
       expect(visual.accentBright).toBe(theme.presentation.accentBright);
       expect(visual.contentProfile).toBe(theme.contentProfile);
       expect(visual.collection).toBe(theme.collection);
-      expect(visual.headingFont).toBe(theme.presentation.headingFont);
+      expect("headingFont" in visual).toBe(false);
       expect(visual.text).toBe(theme.presentation.text);
       expect(visual.themeName).toBe(theme.name);
       expect(visual.themeVibe).toBe(theme.vibe);

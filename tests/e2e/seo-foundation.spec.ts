@@ -67,7 +67,7 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
       path: "/",
       title: "Turn Your Résumé Into a Page You Can Share | MyLivingPage",
       description:
-        "Upload your résumé, review a polished private draft, and publish one professional link—completely free.",
+        "Upload your résumé, review a private draft, and publish one professional web page—completely free.",
       pathname: "/",
     },
     {

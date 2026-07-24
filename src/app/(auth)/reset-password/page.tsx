@@ -149,7 +149,7 @@ export default function ResetPasswordPage() {
               disabled={status === "loading"}
               className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
             >
-              {status === "loading" ? "Updating..." : "Reset Password"}
+              {status === "loading" ? "Updating..." : "Reset password"}
             </button>
             {status === "error" ? (
               <p id="reset-message" role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">

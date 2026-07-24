@@ -51,10 +51,10 @@ test("signup page keeps the form above the fold while preserving create intent",
     page.getByText("You're a few minutes away from having something you can actually send."),
   ).toBeVisible();
 
-  const googleButton = page.getByRole("button", { name: "Create Your Page with Google" });
+  const googleButton = page.getByRole("button", { name: "Continue with Google" });
   const emailField = page.getByPlaceholder("Email address");
   const passwordField = page.getByPlaceholder("Create password");
-  const submitButton = page.getByRole("button", { name: "Create My Page" });
+  const submitButton = page.getByRole("button", { name: "Create my free page" });
 
   await expect(googleButton).toBeInViewport();
   await expect(emailField).toBeInViewport();

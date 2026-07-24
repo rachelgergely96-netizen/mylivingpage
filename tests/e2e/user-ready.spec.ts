@@ -126,7 +126,7 @@ test("email signup shows a pending-confirmation message", async ({ page }) => {
   await page.getByRole("checkbox").check();
   await page.getByPlaceholder("Email address").fill(uniqueEmail);
   await page.getByPlaceholder("Create password").fill("PlaywrightPass123!");
-  await page.getByRole("button", { name: "Create My Page" }).click();
+  await page.getByRole("button", { name: "Create my free page" }).click();
 
   await expect(page.getByText("Check your email to confirm your account")).toBeVisible();
 });
@@ -223,7 +223,7 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.getByPlaceholder("Email address").fill(process.env.PLAYWRIGHT_TEST_EMAIL ?? "");
     await page.getByPlaceholder("Password").fill(process.env.PLAYWRIGHT_TEST_PASSWORD ?? "");
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
     await expect(page.getByRole("heading", { name: "Add your info" })).toBeVisible();

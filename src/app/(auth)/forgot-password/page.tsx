@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
               href="/login"
               className="site-button site-button-primary mt-6"
             >
-              Back to Sign In
+              Back to sign in
             </Link>
           </div>
         ) : (
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
               disabled={status === "loading"}
               className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
             >
-              {status === "loading" ? "Sending..." : "Send Reset Link"}
+              {status === "loading" ? "Sending..." : "Send reset link"}
             </button>
             {status === "error" ? (
               <p id="forgot-message" role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">

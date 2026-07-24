@@ -17,6 +17,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [pendingAction, setPendingAction] = useState<"email" | "google" | null>(null);
+  const [fieldInvalid, setFieldInvalid] = useState(false);
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/create");
   const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
@@ -39,6 +41,9 @@ export default function SignupPage() {
 
   const onSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Only a rejected email/password submission marks the fields invalid; the
+    // legal and captcha guards below are not about the inputs.
+    setFieldInvalid(false);
     if (!acceptedLegal) {
       setStatus("error");
       setMessage("You must accept the Terms of Service and Privacy Policy to create an account.");
@@ -51,6 +56,7 @@ export default function SignupPage() {
     }
 
     setStatus("loading");
+    setPendingAction("email");
     setMessage("");
 
     try {
@@ -99,8 +105,10 @@ export default function SignupPage() {
       setMessage("Check your email to confirm your account, then come back to build and publish your page.");
     } catch (error) {
       setStatus("error");
+      setFieldInvalid(true);
       setMessage(error instanceof Error ? error.message : "Unable to create account.");
     } finally {
+      setPendingAction((current) => (current === "email" ? null : current));
       if (requiresCaptcha) {
         setTurnstileResetNonce((current) => current + 1);
       }
@@ -108,6 +116,7 @@ export default function SignupPage() {
   };
 
   const onGoogleSignup = async () => {
+    setFieldInvalid(false);
     if (!acceptedLegal) {
       setStatus("error");
       setMessage("You must accept the Terms of Service and Privacy Policy to continue with Google.");
@@ -115,6 +124,7 @@ export default function SignupPage() {
     }
 
     setStatus("loading");
+    setPendingAction("google");
     setMessage("");
     try {
       const googleAuthUrl = buildGoogleAuthStartUrl({
@@ -127,6 +137,7 @@ export default function SignupPage() {
       window.location.assign(googleAuthUrl);
     } catch (error) {
       setStatus("error");
+      setPendingAction(null);
       setMessage(error instanceof Error ? error.message : "Google signup failed.");
     }
   };
@@ -134,7 +145,7 @@ export default function SignupPage() {
   return (
     <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-8 sm:px-6 sm:py-12">
       <div className="site-panel-raised w-full p-6 sm:p-7">
-        <p className="site-eyebrow">Create your free living résumé</p>
+        <p className="site-eyebrow">Create your free Living Page</p>
         <h1 className="site-page-title mt-3 text-[2rem] sm:text-[2.35rem]">
           Let&apos;s get your page live.
         </h1>
@@ -175,7 +186,7 @@ export default function SignupPage() {
           disabled={status === "loading"}
           className="site-button site-button-secondary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Create Your Page with Google
+          {pendingAction === "google" ? "Redirecting to Google..." : "Continue with Google"}
         </button>
 
         <div className="my-4 flex items-center gap-3 text-xs text-site-muted">
@@ -197,7 +208,7 @@ export default function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
               placeholder="Email address"
-              aria-invalid={status === "error"}
+              aria-invalid={fieldInvalid}
               aria-describedby={message ? "signup-message" : undefined}
               className="site-field px-4"
             />
@@ -215,7 +226,7 @@ export default function SignupPage() {
               required
               minLength={8}
               placeholder="Create password"
-              aria-invalid={status === "error"}
+              aria-invalid={fieldInvalid}
               aria-describedby={message ? "signup-password-help signup-message" : "signup-password-help"}
               className="site-field px-4"
             />
@@ -235,11 +246,11 @@ export default function SignupPage() {
             disabled={status === "loading"}
             className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
           >
-            {status === "loading" ? "Starting..." : "Create My Page"}
+            {pendingAction === "email" ? "Creating your page..." : "Create my free page"}
           </button>
         </form>
 
-        {requiresCaptcha && !turnstileToken && status !== "error" ? (
+        {requiresCaptcha && !turnstileToken ? (
           <p className="mt-3 text-xs text-site-muted">
             Complete the human verification step to enable email signup.
           </p>
@@ -260,7 +271,7 @@ export default function SignupPage() {
         ) : null}
 
         <p className="mt-4 text-xs leading-5 text-site-muted">
-          Publishing is free. No card, trial, or subscription is required to build or keep your living resume online.
+          Publishing is free. No card, trial, or subscription is required to build or keep your Living Page online.
         </p>
 
         <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
@@ -269,10 +280,6 @@ export default function SignupPage() {
             Sign in
           </Link>
         </p>
-
-        <Link href="/" className="mt-4 inline-flex text-sm font-medium text-site-muted hover:text-site-action">
-          Back to Home
-        </Link>
       </div>
     </main>
   );

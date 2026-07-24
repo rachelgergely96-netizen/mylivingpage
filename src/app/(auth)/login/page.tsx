@@ -39,11 +39,20 @@ export default function LoginPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/dashboard");
+  // Carry the destination through to signup only when the URL actually asked
+  // for one, so a funnel visitor (next=/create?ref=…) who switches to signup
+  // keeps their intent, while a bare /login still links to a bare /signup.
+  const [createAccountHref, setCreateAccountHref] = useState("/signup");
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    setNextPath(sanitizeInternalRedirectPath(params.get("next"), "/dashboard"));
+    const requestedNext = params.get("next");
+    const resolvedNext = sanitizeInternalRedirectPath(requestedNext, "/dashboard");
+    setNextPath(resolvedNext);
+    setCreateAccountHref(
+      requestedNext ? `/signup?next=${encodeURIComponent(resolvedNext)}` : "/signup",
+    );
 
     const error = params.get("error");
     if (error) {
@@ -179,7 +188,7 @@ export default function LoginPage() {
             disabled={status === "loading"}
             className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
           >
-            {status === "loading" ? "Signing in..." : "Sign In"}
+            {status === "loading" ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
@@ -197,7 +206,7 @@ export default function LoginPage() {
 
         <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
           New here?{" "}
-          <Link href="/signup" className="font-semibold text-site-action hover:text-site-action-hover">
+          <Link href={createAccountHref} className="font-semibold text-site-action hover:text-site-action-hover">
             Create an account
           </Link>
         </p>

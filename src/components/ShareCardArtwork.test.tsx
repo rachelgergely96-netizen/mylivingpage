@@ -208,6 +208,38 @@ describe("ShareCardArtwork", () => {
     45_000,
   );
 
+  it("only emits the moving shine when explicitly animated (export paths stay static)", () => {
+    const model = buildShareCardModel({
+      appUrl: "https://www.mylivingpage.com",
+      resume: buildResume(),
+      slug: "rachel-gergely",
+    });
+    const visual = getShareCardVisual("obsidian");
+
+    // Export/OG path (no animatedShine) must contain no animated element.
+    const staticMarkup = renderToStaticMarkup(
+      <ShareCardArtwork finish="holographic" model={model} visual={visual} />,
+    );
+    expect(staticMarkup).not.toContain("share-card-shine");
+
+    // Live preview opts in.
+    const liveMarkup = renderToStaticMarkup(
+      <ShareCardArtwork
+        animatedShine
+        finish="holographic"
+        model={model}
+        visual={visual}
+      />,
+    );
+    expect(liveMarkup).toContain("share-card-shine");
+
+    // Classic has no shine even when animated.
+    const classicMarkup = renderToStaticMarkup(
+      <ShareCardArtwork animatedShine finish="classic" model={model} visual={visual} />,
+    );
+    expect(classicMarkup).not.toContain("share-card-shine");
+  });
+
   it.each(["metal", "holographic"] as const)(
     "renders the %s finish through ImageResponse (Satori-safe)",
     async (finish) => {

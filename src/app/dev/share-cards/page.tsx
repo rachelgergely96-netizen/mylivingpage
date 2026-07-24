@@ -83,6 +83,7 @@ export default function ShareCardFinishesPage() {
                         {SHARE_CARD_FINISH_LABELS[finish]}
                       </p>
                       <ScaledShareCardArtwork
+                        animatedShine
                         finish={finish}
                         frameClassName="w-full border border-site-border"
                         model={model}

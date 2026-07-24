@@ -16,6 +16,12 @@ import {
 } from "@/lib/share-card-finish";
 
 export interface ShareCardArtworkProps {
+  /**
+   * Adds a live moving glint to metal/holographic finishes. Live-preview
+   * surfaces set this; the OG and html-to-image export paths must NOT, so both
+   * PNGs stay static (there is simply no animated element in the export tree).
+   */
+  animatedShine?: boolean;
   bodyFontFamily?: string;
   className?: string;
   ctaBody?: string;
@@ -27,6 +33,7 @@ export interface ShareCardArtworkProps {
 }
 
 export function ShareCardArtwork({
+  animatedShine = false,
   bodyFontFamily = "var(--font-dm-sans), Arial, sans-serif",
   className,
   ctaBody = "Scan to explore work, experience, and more.",
@@ -139,6 +146,35 @@ export function ShareCardArtwork({
               top: 0,
             }}
           />
+        ) : null}
+
+        {animatedShine && treatment.shine ? (
+          <div
+            style={{
+              height: "160%",
+              left: 0,
+              overflow: "visible",
+              pointerEvents: "none",
+              position: "absolute",
+              top: "-30%",
+              transform: `rotate(${treatment.shine.rotateDeg}deg)`,
+              transformOrigin: "center",
+              width: treatment.shine.width,
+            }}
+          >
+            <div
+              className="share-card-shine"
+              style={{
+                background: treatment.shine.background,
+                height: "100%",
+                left: 0,
+                opacity: 0,
+                position: "absolute",
+                top: 0,
+                width: "100%",
+              }}
+            />
+          </div>
         ) : null}
 
         {treatment.emblem === null ? (

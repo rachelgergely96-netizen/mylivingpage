@@ -61,6 +61,11 @@ export interface ShareCardFinishTreatment {
   monogramBackground: string;
   monogramColor: string;
   avatarBorder: string;
+  /**
+   * A live-preview-only moving glint. Rendered only when the artwork is asked to
+   * animate; the PNG/OG export paths omit it entirely so both stay static.
+   */
+  shine: { rotateDeg: number; width: string; background: string } | null;
   nameTextShadow: string;
 }
 
@@ -111,6 +116,7 @@ function classicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
     monogramBackground: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
     monogramColor: visual.background,
     avatarBorder: visual.accent,
+    shine: null,
     nameTextShadow: visual.lightGround ? "none" : "0 2px 22px rgba(0,0,0,0.34)",
   };
 }
@@ -155,8 +161,15 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
         top: 0,
         bottom: 0,
         left: 0,
-        width: 2,
-        background: rgba(accent, 0.35),
+        width: 3,
+        background: rgba(accent, 0.42),
+        opacity: 1,
+      },
+      // A faint accent sheen in the top-right corner — the theme catching the
+      // metal without breaking the black-card restraint.
+      {
+        ...FULL_BLEED,
+        background: `radial-gradient(ellipse 55% 50% at 88% 12%, ${rgba(accent, 0.08)} 0%, rgba(0,0,0,0) 65%)`,
         opacity: 1,
       },
     ],
@@ -170,7 +183,7 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
       transformOrigin: "center",
       background:
         "linear-gradient(90deg, rgba(255,255,255,0) 28%, rgba(255,255,255,0.07) 48%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.06) 52%, rgba(255,255,255,0) 72%)",
-      opacity: 0.9,
+      opacity: 0.55,
     },
     bodyScrim: null,
     emblem: "chip",
@@ -181,6 +194,12 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
       "linear-gradient(135deg, #dcdce0 0%, #b6b6bc 45%, #8e8e95 100%)",
     monogramColor: "#141518",
     avatarBorder: "rgba(232,232,236,0.55)",
+    shine: {
+      rotateDeg: 24,
+      width: "32%",
+      background:
+        "linear-gradient(90deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 48%, rgba(255,255,255,0.16) 50%, rgba(255,255,255,0.05) 52%, rgba(255,255,255,0) 60%)",
+    },
     nameTextShadow: "0 2px 22px rgba(0,0,0,0.5)",
   };
 }
@@ -206,30 +225,37 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
     chromeBorder: "rgba(255,255,255,0.16)",
     chromeSurface: "rgba(255,255,255,0.06)",
     sheets: [
-      // B — cool wash, anchored on the theme accent.
+      // A′ — full-bleed accent wash so the whole foil casts toward the theme
+      // color (ember warm, atlas cyan, velvet rose) before the spectrum bands.
       {
         ...FULL_BLEED,
-        background: `linear-gradient(118deg, rgba(0,0,0,0) 18%, ${rgba(accent, 0.22)} 38%, rgba(120,220,255,0.14) 52%, rgba(180,120,255,0.10) 68%, rgba(0,0,0,0) 88%)`,
-        opacity: 0.55,
+        background: `linear-gradient(155deg, ${rgba(accent, 0.14)} 0%, ${rgba(accent, 0.06)} 45%, rgba(0,0,0,0) 78%)`,
+        opacity: 0.9,
       },
-      // C — warm cross.
+      // B — cool wash, accent-led (companion cyan/violet kept as side hues).
       {
         ...FULL_BLEED,
-        background: `linear-gradient(52deg, rgba(0,0,0,0) 8%, rgba(255,80,180,0.12) 28%, ${rgba(accent, 0.18)} 44%, rgba(255,200,80,0.14) 58%, rgba(0,0,0,0) 82%)`,
-        opacity: 0.45,
+        background: `linear-gradient(118deg, rgba(0,0,0,0) 18%, ${rgba(accent, 0.28)} 38%, rgba(120,220,255,0.14) 52%, rgba(180,120,255,0.10) 68%, rgba(0,0,0,0) 88%)`,
+        opacity: 0.62,
       },
-      // D — fine spectrum band.
+      // C — warm cross, accent-led (gold/magenta demoted to flanks).
+      {
+        ...FULL_BLEED,
+        background: `linear-gradient(52deg, rgba(0,0,0,0) 8%, rgba(255,80,180,0.12) 28%, ${rgba(accent, 0.24)} 44%, rgba(255,200,80,0.14) 58%, rgba(0,0,0,0) 82%)`,
+        opacity: 0.5,
+      },
+      // D — fixed spectrum band, subordinate so the theme accent leads.
       {
         ...FULL_BLEED,
         background:
           "linear-gradient(28deg, rgba(0,0,0,0) 30%, rgba(255,60,160,0.16) 42%, rgba(80,220,255,0.18) 50%, rgba(255,210,90,0.14) 58%, rgba(160,90,255,0.12) 66%, rgba(0,0,0,0) 78%)",
-        opacity: 0.4,
+        opacity: 0.28,
       },
       // E — top-left light catch.
       {
         ...FULL_BLEED,
-        background: `radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255,255,255,0.16) 0%, ${rgba(accentBright, 0.1)} 35%, rgba(0,0,0,0) 70%)`,
-        opacity: 0.5,
+        background: `radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255,255,255,0.16) 0%, ${rgba(accentBright, 0.12)} 35%, rgba(0,0,0,0) 70%)`,
+        opacity: 0.45,
       },
     ],
     specular: null,
@@ -249,6 +275,11 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
     monogramBackground: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
     monogramColor: "#06080e",
     avatarBorder: visual.accentBright,
+    shine: {
+      rotateDeg: 26,
+      width: "42%",
+      background: `linear-gradient(90deg, rgba(0,0,0,0) 32%, ${rgba(accent, 0)} 38%, ${rgba(accent, 0.18)} 46%, rgba(255,255,255,0.22) 50%, ${rgba(accentBright, 0.16)} 54%, rgba(120,220,255,0.10) 58%, rgba(0,0,0,0) 68%)`,
+    },
     nameTextShadow: "0 2px 22px rgba(0,0,0,0.4)",
   };
 }

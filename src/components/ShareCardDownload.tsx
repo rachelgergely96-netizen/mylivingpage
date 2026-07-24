@@ -302,7 +302,7 @@ export default function ShareCardDownload({
                 data-theme-collection={visual.collection}
                 className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-2"
               >
-                <ScaledShareCardArtwork model={cardModel} visual={visual} />
+                <ScaledShareCardArtwork animatedShine model={cardModel} visual={visual} />
               </div>
 
               <div className="site-panel flex flex-col justify-between gap-4 p-5">

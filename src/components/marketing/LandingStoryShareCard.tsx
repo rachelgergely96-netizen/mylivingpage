@@ -56,6 +56,7 @@ export function LandingStoryShareCard({
         {model.name}&rsquo;s {visual.themeName} share card
       </Heading>
       <ScaledShareCardArtwork
+        animatedShine
         ctaHeadline={qrLabel}
         frameClassName="w-full"
         model={model}

@@ -1,14 +1,9 @@
-import Image from "next/image";
-import { ShareCardProfileMark } from "@/components/ShareCardProfileMark";
+import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
 import { DEMO_PAGES } from "@/lib/demo-data";
 import {
-  buildQrDataUrl,
-  getShareCardTags,
+  buildShareCardModel,
   getShareCardVisual,
   normalizeAppUrl,
-  toDisplayDomainUrl,
-  toLivePageUrl,
-  truncate,
 } from "@/lib/share-card";
 import { slugifyUsername } from "@/lib/usernames";
 import type { ThemeId } from "@/themes/types";
@@ -27,7 +22,7 @@ const STORY_RESUME = DEMO_PAGES[0]?.data;
 export function LandingStoryShareCard({
   data = STORY_RESUME,
   headingLevel = "h3",
-  qrLabel = "Scan to open the full page",
+  qrLabel = "Open the full living page",
   sharePath,
   themeId,
 }: LandingStoryShareCardProps) {
@@ -37,18 +32,16 @@ export function LandingStoryShareCard({
 
   const slug = slugifyUsername(data.name || "member");
   const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
-  const livePageUrl = sharePath
+  const liveUrl = sharePath
     ? new URL(sharePath, `${appUrl}/`).toString()
-    : toLivePageUrl(appUrl, slug);
-  const displayUrl = truncate(
-    sharePath ? livePageUrl.replace(/^https?:\/\//, "") : toDisplayDomainUrl(appUrl, slug),
-    36,
-  );
+    : undefined;
+  const model = buildShareCardModel({
+    appUrl,
+    liveUrl,
+    resume: data,
+    slug,
+  });
   const visual = getShareCardVisual(themeId);
-  const qrDataUrl = buildQrDataUrl(livePageUrl);
-  const tags = getShareCardTags(data);
-  const name = truncate(data.name || "MyLivingPage User", 34);
-  const headline = truncate(data.headline || "Professional profile", 60);
   const Heading = headingLevel;
 
   return (
@@ -57,126 +50,17 @@ export function LandingStoryShareCard({
       data-theme-id={visual.themeId}
       data-theme-detail={visual.contentProfile}
       data-theme-collection={visual.collection}
-      className="relative overflow-hidden rounded-none border p-4 shadow-[0_24px_70px_rgba(2,6,23,0.46)] sm:p-5"
-      style={{
-        background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
-        borderColor: visual.border,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 70px ${visual.glow}`,
-      }}
+      className="relative overflow-hidden border border-site-border bg-site-canvas-alt p-2 shadow-[0_24px_70px_rgba(2,6,23,0.34)]"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-12 -top-20 h-52 w-52 rounded-full"
-        style={{ background: `radial-gradient(circle, ${visual.glow} 0%, transparent 70%)` }}
+      <Heading className="sr-only">
+        {model.name}&rsquo;s {visual.themeName} share card
+      </Heading>
+      <ScaledShareCardArtwork
+        ctaHeadline={qrLabel}
+        frameClassName="w-full"
+        model={model}
+        visual={visual}
       />
-      <ShareCardProfileMark
-        accent={visual.accent}
-        motif={visual.motif}
-        className="right-[4.75rem] top-4 sm:right-[5.75rem] sm:top-5"
-      />
-
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p
-            className="text-[9px] font-semibold uppercase tracking-[0.2em] sm:text-[10px]"
-            style={{ color: visual.textSubtle }}
-          >
-            Share card
-          </p>
-          <Heading
-            className={`mt-2 truncate text-xl font-bold sm:text-3xl ${
-              visual.headingFont === "editorial" ? "font-heading" : "font-body"
-            }`}
-            style={{ color: visual.text }}
-          >
-            {name}
-          </Heading>
-          <p
-            className="mt-1 line-clamp-2 text-[11px] leading-5 sm:text-sm"
-            style={{ color: visual.textMuted }}
-          >
-            {headline}
-          </p>
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-heading text-lg font-bold shadow-[0_10px_28px_rgba(0,0,0,0.25)] sm:h-14 sm:w-14 sm:text-xl"
-          style={{
-            background: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
-            color: visual.background,
-          }}
-        >
-          {name.slice(0, 1).toUpperCase() || "?"}
-        </div>
-      </div>
-
-      <div className="relative mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
-        {tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag}
-            className="rounded-none border px-2 py-1 text-[9px] sm:px-2.5 sm:text-[10px]"
-            style={{
-              background: visual.surface,
-              borderColor: visual.border,
-              color: visual.textMuted,
-            }}
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <div
-        className="relative mt-4 grid grid-cols-[minmax(0,1fr)_72px] items-center gap-3 rounded-none border p-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:p-4"
-        style={{ background: visual.surfaceStrong, borderColor: visual.border }}
-      >
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold sm:text-xs" style={{ color: visual.text }}>
-            {qrLabel}
-          </p>
-          <p
-            className="mt-1 truncate font-mono text-[8px] sm:text-[10px]"
-            style={{ color: visual.textSubtle }}
-          >
-            {displayUrl}
-          </p>
-        </div>
-        {qrDataUrl ? (
-          <Image
-            src={qrDataUrl}
-            alt={`QR code preview for ${displayUrl}`}
-            width={92}
-            height={92}
-            unoptimized
-            className="h-[72px] w-[72px] rounded-none bg-white p-1.5 sm:h-[92px] sm:w-[92px]"
-          />
-        ) : (
-          <div className="h-[72px] w-[72px] rounded-none bg-white/10 sm:h-[92px] sm:w-[92px]" />
-        )}
-      </div>
-
-      <div
-        className="relative mt-3 flex items-center gap-2 text-[8px] font-semibold uppercase tracking-[0.14em] sm:mt-4 sm:text-[9px]"
-        aria-label="Share options included with the finished card"
-      >
-        <span
-          className="rounded-none border px-2.5 py-1"
-          style={{
-            background: visual.glow,
-            borderColor: visual.accent,
-            color: visual.accentBright,
-          }}
-        >
-          Link included
-        </span>
-        <span
-          className="rounded-none border px-2.5 py-1"
-          style={{ borderColor: visual.border, color: visual.textSubtle }}
-        >
-          PNG export
-        </span>
-      </div>
     </article>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { SIGNAL_FRAME_SAMPLE } from "@/lib/signal-frame-sample";
@@ -11,7 +11,19 @@ const QUALITY_LAB_THEMES = THEME_REGISTRY;
 
 export function ThemeQualityLab() {
   const [themeId, setThemeId] = useState<ThemeId>(QUALITY_LAB_THEMES[0].id);
+  // Paused by default: the lab doubles as the deterministic frame harness for
+  // the visual regression suite. `?motion=1` starts a human review session
+  // with live motion (and optionally `?theme=<id>`), set after mount so the
+  // server-rendered markup stays identical.
   const [animated, setAnimated] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("motion") === "1") setAnimated(true);
+    const requestedTheme = params.get("theme");
+    if (requestedTheme && QUALITY_LAB_THEMES.some((entry) => entry.id === requestedTheme)) {
+      setThemeId(requestedTheme as ThemeId);
+    }
+  }, []);
   const themeIndex = QUALITY_LAB_THEMES.findIndex((theme) => theme.id === themeId);
   const theme = useMemo(
     () => QUALITY_LAB_THEMES[themeIndex] ?? QUALITY_LAB_THEMES[0],

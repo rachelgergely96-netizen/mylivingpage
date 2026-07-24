@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -219,14 +220,17 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const y=((t*vy+p.cycleOff*span)%span+span)%span-h*0.2;
     const par=(1-p.depth);
     const sway=SIN(t*p.swayFreq+p.phase)*p.swayAmp+fbm(p.seedX,t*0.1,2)*p.swayAmp*0.6;
-    const wrap=w+140;
-    const x=((p.baseX*w+sway+px*90*par)%wrap+wrap)%wrap-70;
+    // Wrap only the intrinsic sway path; pointer parallax is added after so a
+    // gust of cursor motion cannot teleport petals across the frame edge.
+    const wrapP=w+140;
+    const wxp=wrapSoft(p.baseX*w+sway,wrapP,0.05);
+    const x=wxp.u-70+px*90*par;
     const rot=p.wobble+t*p.spin*0.6+SIN(t*0.4+p.phase)*0.4;
     let sx=COS(t*p.spin*0.8+p.phase);
     if(Math.abs(sx)<0.12)sx=sx<0?-0.12:0.12;
     const light=0.5+0.5*COS(rot-0.8);
     const topFade=cl((y+h*0.2)/(h*0.22)),botFade=cl((h*1.18-y)/(h*0.22));
-    const life=topFade*botFade;
+    const life=topFade*botFade*wxp.alpha;
     if(life<=0.01)continue;
     const alpha=p.layerA*life,sz=p.size,hi=Math.min(78,p.lig+14*light);
     ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(sx,1);

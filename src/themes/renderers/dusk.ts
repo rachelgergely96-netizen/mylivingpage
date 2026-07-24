@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -292,16 +293,18 @@ export const renderDusk: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   const mxp=mx*w, myp=my*h;
   for(const m of CFG.motes){
     const par=m.depth;
-    let x=(m.bx*w + t*m.drift + Math.sin(t*0.4*m.sp+m.ph)*m.bob - px*60*par);
-    const wrap=w+40;
-    x=((x%wrap)+wrap)%wrap - 20;
+    // Soft wrap on the intrinsic drift path; parallax applies after the wrap
+    // so cursor motion cannot pop motes across the seam.
+    const wrapP=w+40;
+    const wxm=wrapSoft(m.bx*w + t*m.drift + Math.sin(t*0.4*m.sp+m.ph)*m.bob, wrapP, 0.05);
+    const x=wxm.u - 20 - px*60*par;
     const y=m.by*h + Math.sin(t*0.3*m.sp+m.ph*1.7)*m.bob - py*40*par;
     const pulse=0.45+0.55*Math.sin(t*1.3*m.sp+m.ph);
     const dS=Math.hypot(x-sunX,y-sunY);
     const lit=clamp(1-dS/(w*0.5),0,1);
     const md=Math.hypot(x-mxp,y-myp);
     const mB=md<130?(1-md/130)*0.4:0;
-    const a=m.alpha*par*(0.4+0.6*pulse)*(0.5+0.9*lit)+mB;
+    const a=(m.alpha*par*(0.4+0.6*pulse)*(0.5+0.9*lit)+mB)*wxm.alpha;
     if(a<=0.015) continue;
     const sz=m.sz*(0.8+0.4*pulse);
     const hue=m.hue+(395-m.hue)*lit*0.5;

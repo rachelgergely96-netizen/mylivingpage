@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion } from "../shared/motion";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -164,15 +165,18 @@ export const renderVelvet: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
   const twSpeed=1+vel*0.8;
   for(let i=0;i<CFG.motes.length;i++){
     const m=CFG.motes[i];
-    const yy=(((m.y-T*m.speed*0.02)%1)+1)%1;
+    // Soft wrap on the intrinsic drift; the pointer parallax lands after the
+    // wrap so motes never jump at the seam while the cursor moves.
+    const wy=wrapSoft(m.y-T*m.speed*0.02,1,0.05);
     const sway=Math.sin(T*0.3*m.drift+m.phase)*0.012;
-    const xx=(((m.x+sway-px*0.04*m.drift)%1)+1)%1;
+    const wx=wrapSoft(m.x+sway,1,0.05);
+    const xx=wx.u-px*0.04*m.drift;
     const cb=finiteClamp((xx-0.40)/0.34,0,1,0);
     const colBias=0.26+0.74*cb*cb*(3-2*cb);
-    const x=xx*w, y=yy*h;
+    const x=xx*w, y=wy.u*h;
     const tw=0.4+0.6*(0.5+0.5*Math.sin(T*1.1*twSpeed*m.drift+m.phase));
     const rr=m.r*(minD/900+0.55);
-    const a=finiteClamp(m.bright*tw*twGain*0.20*colBias,0,0.22,0);
+    const a=finiteClamp(m.bright*tw*twGain*0.20*colBias*wx.alpha*wy.alpha,0,0.22,0);
     ctx.fillStyle=`rgba(255,${(198+m.bright*34)|0},${(196+m.bright*24)|0},${a.toFixed(3)})`;
     ctx.beginPath();
     ctx.arc(x,y,rr,0,TAU);

@@ -401,7 +401,7 @@ export default function ResumeLayout({
 
                 const cardClassName = `block rounded-none border p-3 transition-all duration-200 sm:p-4 ${
                   projectUrl
-                    ? "resume-theme-card-accent pointer-events-auto hover:brightness-110"
+                    ? "resume-theme-card-accent pointer-events-auto"
                     : "resume-theme-card"
                 }`;
 

@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -407,12 +408,13 @@ export const renderAtelier: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motio
   for(let i=0;i<cfg.motes.length;i++){
     const m=cfg.motes[i];
     const drift=T*m.speed*0.012;
-    const mxp=m.x+Math.sin(T*0.1+m.phase)*0.01+px*0.03*m.depth;
-    const myp=m.y-(drift%1)+py*0.03*m.depth-sVel*0.012*m.depth;
-    const yy=((myp%1)+1)%1;
-    const xx=((mxp%1)+1)%1;
+    // Soft-wrap intrinsic drift only; parallax/scroll offsets applied after so the seam never moves with the pointer.
+    const wx=wrapSoft(m.x+Math.sin(T*0.1+m.phase)*0.01,1,0.05);
+    const wy=wrapSoft(m.y-drift,1,0.05);
+    const xx=wx.u+px*0.03*m.depth;
+    const yy=wy.u+py*0.03*m.depth-sVel*0.012*m.depth;
     const tw=0.4+0.6*Math.sin(T*1.1+m.phase);
-    const a=(0.1+Math.max(0,tw)*0.22)*m.depth*(1+vel*0.3);
+    const a=(0.1+Math.max(0,tw)*0.22)*m.depth*(1+vel*0.3)*wx.alpha*wy.alpha;
     const sz=m.s*(0.5+m.depth*0.7);
     if(m.bright){
       ctx.globalCompositeOperation="lighter";

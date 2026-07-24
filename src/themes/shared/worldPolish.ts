@@ -3,6 +3,7 @@ import {
   resolveThemeMotion,
   storyStepWeight,
 } from "./motion";
+import { wrapSoft } from "./wrap";
 import type {
   ThemeCollectionId,
   ThemeId,
@@ -63,6 +64,21 @@ const COLLECTION_PROFILES = {
   ThemeCollectionId,
   Omit<WorldPolishProfile, "seed">
 >;
+
+/**
+ * Light-ground detection mirroring the host bloom gate: additive screen-blend
+ * light moves and bokeh would wash out a pale scene, so they are skipped.
+ */
+export function isLightGround(background: string): boolean {
+  const match = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(background);
+  if (!match) return false;
+  return (
+    0.299 * parseInt(match[1], 16) +
+      0.587 * parseInt(match[2], 16) +
+      0.114 * parseInt(match[3], 16) >
+    90
+  );
+}
 
 /** Stable FNV-1a hash used to give every theme its own spatial arrangement. */
 export function hashThemeId(themeId: ThemeId): number {
@@ -144,20 +160,27 @@ function drawDepthParticles(
     const seed = profile.seed * 0.00001 + index * 1.731;
     const depth = 0.25 + unitValue(seed + 2.1) * 0.75;
     const drift = time * (0.004 + depth * 0.008);
-    const xProgress = (unitValue(seed + 0.4) + drift + storyProgress * 0.035 * depth) % 1;
-    const yProgress =
-      (unitValue(seed + 4.8) +
-        Math.sin(time * (0.08 + depth * 0.06) + seed * 4) * 0.025 +
-        1) %
-      1;
+    // Wrap the intrinsic path only; parallax is added after so the seam never
+    // moves with the pointer, and the edge fade hides the crossing itself.
+    const wrapX = wrapSoft(
+      unitValue(seed + 0.4) + drift + storyProgress * 0.035 * depth,
+      1,
+      0.06,
+    );
+    const wrapY = wrapSoft(
+      unitValue(seed + 4.8) +
+        Math.sin(time * (0.08 + depth * 0.06) + seed * 4) * 0.025,
+      1,
+      0.06,
+    );
     const x =
-      width * xProgress +
-      (pointerX - 0.5) * width * (0.008 + depth * 0.012);
+      width * wrapX.u +
+      (pointerX - 0.5) * width * (0.012 + depth * 0.018);
     const y =
-      height * yProgress +
-      (pointerY - 0.5) * height * (0.006 + depth * 0.01);
+      height * wrapY.u +
+      (pointerY - 0.5) * height * (0.009 + depth * 0.015);
     const size = 0.45 + depth * 1.05;
-    ctx.globalAlpha = 0.025 + depth * 0.07;
+    ctx.globalAlpha = (0.025 + depth * 0.07) * wrapX.alpha * wrapY.alpha;
 
     if (
       profile.motif === "technical-grid" ||
@@ -169,6 +192,69 @@ function drawDepthParticles(
       ctx.arc(x, y, size * 0.62, 0, TAU);
       ctx.fill();
     }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * A handful of large, soft, near-field discs with pronounced pointer parallax.
+ * They sit closest to the viewer, so their drift separates the scene into
+ * depth planes; alpha stays whisper-quiet and dims over the reading column.
+ */
+function drawDepthBokeh(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  time: number,
+  pointerX: number,
+  pointerY: number,
+  storyProgress: number,
+  accent: string,
+  profile: WorldPolishProfile,
+) {
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+
+  for (let index = 0; index < 4; index += 1) {
+    const seed = profile.seed * 0.00003 + index * 7.917;
+    const depth = 0.55 + unitValue(seed + 1.3) * 0.45;
+    const drift = time * (0.0024 + depth * 0.003);
+    const wrapX = wrapSoft(
+      unitValue(seed + 0.7) + drift + storyProgress * 0.05 * depth,
+      1,
+      0.12,
+    );
+    const wrapY = wrapSoft(
+      unitValue(seed + 3.9) * 0.9 +
+        0.05 +
+        Math.sin(time * (0.05 + depth * 0.04) + seed * 3) * 0.04,
+      1,
+      0.12,
+    );
+    // Keep the reading column calm: fade discs down as they cross the left half.
+    const readColumnDim =
+      0.3 + 0.7 * finiteClamp((wrapX.u - 0.34) / 0.2, 0, 1);
+    const x =
+      width * wrapX.u + (pointerX - 0.5) * width * (0.03 + depth * 0.035);
+    const y =
+      height * wrapY.u + (pointerY - 0.5) * height * (0.024 + depth * 0.028);
+    const radius =
+      Math.min(width, height) *
+      (0.05 + unitValue(seed + 5.2) * 0.06) *
+      (0.7 + depth * 0.3);
+    const alpha =
+      (0.02 + depth * 0.03) * wrapX.alpha * wrapY.alpha * readColumnDim;
+    if (alpha <= 0.002) continue;
+
+    const glow = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
+    glow.addColorStop(0, accent);
+    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, TAU);
+    ctx.fill();
   }
 
   ctx.restore();
@@ -223,6 +309,90 @@ function drawTechnicalGrid(
   ctx.restore();
 }
 
+/**
+ * Executive-tech light move: a thin specular band that slides down the grid on
+ * a slow period with mild scroll coupling — brushed metal, not neon.
+ */
+function drawSpecularSweep(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  time: number,
+  storyProgress: number,
+  accentBright: string,
+  impulse: number,
+) {
+  const cycle = (time * 0.011 + storyProgress * 0.22) % 1;
+  const presence = Math.sin(cycle * Math.PI);
+  if (presence <= 0.02) return;
+  const y = height * (0.22 + cycle * 0.54);
+  const grad = ctx.createLinearGradient(width * 0.5, y, width, y);
+  grad.addColorStop(0, "rgba(0, 0, 0, 0)");
+  grad.addColorStop(0.6, accentBright);
+  grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = grad;
+  ctx.globalAlpha = presence * (0.018 + impulse * 0.012);
+  ctx.fillRect(width * 0.5, y - 8, width * 0.5, 16);
+  ctx.globalAlpha = presence * (0.045 + impulse * 0.025);
+  ctx.fillRect(width * 0.5, y - 1.5, width * 0.5, 3);
+  ctx.restore();
+}
+
+/**
+ * Editorial-luxe light move: a small glint that skates along the ribbon
+ * corridor — the gold catch of light on a printed page. Parametric stand-in
+ * for the ribbon path (same phase family as drawEditorialRibbons, ribbon 1),
+ * so no bezier sampling is needed.
+ */
+function drawPrintGlint(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  time: number,
+  pointerX: number,
+  storyProgress: number,
+  accentBright: string,
+  seed: number,
+) {
+  const s = (time * 0.12 + storyProgress * 0.15 + seed * 0.0001) % 1;
+  const presence = Math.sin(Math.PI * s);
+  if (presence <= 0.02) return;
+  const phase = time * 0.092 + seed * 0.0004 + 1;
+  const yBase = height * 0.37;
+  const x = width * (0.52 + 0.48 * s) + (pointerX - 0.5) * width * 0.025 * (1 - s);
+  const y =
+    yBase -
+    Math.sin(phase) * height * 0.08 * presence +
+    Math.cos(phase) * height * 0.02 * presence;
+  const radius = Math.min(width, height) * 0.012;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  glow.addColorStop(0, accentBright);
+  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.globalAlpha = 0.07 * presence;
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, TAU);
+  ctx.fill();
+
+  const lineLength = Math.min(width, height) * 0.04;
+  const dx = Math.cos(-0.4) * lineLength * 0.5;
+  const dy = Math.sin(-0.4) * lineLength * 0.5;
+  ctx.globalAlpha = 0.06 * presence;
+  ctx.strokeStyle = accentBright;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - dx, y - dy);
+  ctx.lineTo(x + dx, y + dy);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawCinematicOrbit(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -233,6 +403,10 @@ function drawCinematicOrbit(
   anchorX: number,
   anchorY: number,
   seed: number,
+  accentBright: string,
+  impulse: number,
+  pointerX: number,
+  lightMove: boolean,
 ) {
   const radius = Math.min(width, height) * 0.2;
   ctx.save();
@@ -264,6 +438,35 @@ function drawCinematicOrbit(
   ctx.moveTo(width * 0.46, anchorY);
   ctx.lineTo(width, anchorY);
   ctx.stroke();
+
+  // Anamorphic streak: two elongated soft ellipses breathing through the
+  // anchor — the lens-light move of the cinematic collection.
+  if (!lightMove) {
+    ctx.restore();
+    return;
+  }
+  const drift = (pointerX - 0.5) * width * 0.02;
+  const streakHalf =
+    Math.min(width, height) * (0.32 + Math.sin(time * 0.07) * 0.03);
+  const streak = ctx.createLinearGradient(
+    anchorX - streakHalf + drift,
+    anchorY,
+    anchorX + streakHalf + drift,
+    anchorY,
+  );
+  streak.addColorStop(0, "rgba(0, 0, 0, 0)");
+  streak.addColorStop(0.5, accentBright);
+  streak.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = streak;
+  ctx.globalAlpha = 0.045 + impulse * 0.025;
+  ctx.beginPath();
+  ctx.ellipse(anchorX + drift, anchorY, streakHalf, 1.4, 0, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = (0.045 + impulse * 0.025) * 0.5;
+  ctx.beginPath();
+  ctx.ellipse(anchorX + drift, anchorY, streakHalf * 0.7, 4.5, 0, 0, TAU);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -276,6 +479,9 @@ function drawMaterialContours(
   storyProgress: number,
   accent: string,
   seed: number,
+  accentBright: string,
+  impulse: number,
+  lightMove: boolean,
 ) {
   ctx.save();
   ctx.strokeStyle = accent;
@@ -301,6 +507,26 @@ function drawMaterialContours(
       y - height * 0.02,
     );
     ctx.stroke();
+
+    // Wet-light catch on one contour: the same curve re-struck hairline-thin,
+    // nudged up, in the bright accent — light grazing a ridge.
+    if (lightMove && layer === 1) {
+      ctx.globalAlpha = 0.05 + impulse * 0.04;
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = accentBright;
+      ctx.beginPath();
+      ctx.moveTo(width * 0.48, y - 1.4);
+      ctx.bezierCurveTo(
+        width * 0.61,
+        y - 1.4 - height * (0.045 + layer * 0.004),
+        width * 0.78,
+        y - 1.4 + height * 0.055,
+        width * 1.04,
+        y - 1.4 - height * 0.02,
+      );
+      ctx.stroke();
+      ctx.strokeStyle = accent;
+    }
   }
   ctx.restore();
 }
@@ -354,6 +580,8 @@ function drawExperimentalFrames(
   anchorX: number,
   anchorY: number,
   seed: number,
+  accentBright: string,
+  lightMove: boolean,
 ) {
   const scale = Math.min(width, height);
   ctx.save();
@@ -371,6 +599,19 @@ function drawExperimentalFrames(
     ctx.globalAlpha = 0.035 + chapterWeight * 0.07;
     ctx.lineWidth = 0.8 + chapterWeight * 0.8;
     ctx.strokeRect(-size, -size * 0.58, size * 2, size * 1.16);
+
+    // Aperture glint: a short bright dash orbiting the outermost frame edge.
+    if (lightMove && frame === 4) {
+      const perimeter = 2 * (size * 2 + size * 1.16);
+      ctx.setLineDash([perimeter * 0.1, perimeter * 0.9]);
+      ctx.lineDashOffset = -((time * 0.05) % 1) * perimeter;
+      ctx.globalAlpha = 0.1 + chapterWeight * 0.05;
+      ctx.strokeStyle = accentBright;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(-size, -size * 0.58, size * 2, size * 1.16);
+      ctx.setLineDash([]);
+      ctx.strokeStyle = accent;
+    }
     ctx.restore();
   }
   ctx.restore();
@@ -489,6 +730,9 @@ function drawWorldPolish(
     pageMotion.interactionImpulse,
   );
 
+  const accentBright = theme.presentation.accentBright;
+  const lightMoves = !isLightGround(theme.background);
+
   switch (profile.motif) {
     case "technical-grid":
       drawTechnicalGrid(
@@ -501,6 +745,17 @@ function drawWorldPolish(
         anchorX,
         anchorY,
       );
+      if (lightMoves) {
+        drawSpecularSweep(
+          ctx,
+          width,
+          height,
+          effectiveTime,
+          pageMotion.storyProgress,
+          accentBright,
+          pageMotion.interactionImpulse,
+        );
+      }
       break;
     case "cinematic-orbit":
       drawCinematicOrbit(
@@ -513,6 +768,10 @@ function drawWorldPolish(
         anchorX,
         anchorY,
         profile.seed,
+        accentBright,
+        pageMotion.interactionImpulse,
+        targetX,
+        lightMoves,
       );
       break;
     case "material-contour":
@@ -525,6 +784,9 @@ function drawWorldPolish(
         pageMotion.storyProgress,
         accent,
         profile.seed,
+        accentBright,
+        pageMotion.interactionImpulse,
+        lightMoves,
       );
       break;
     case "editorial-ribbon":
@@ -538,6 +800,18 @@ function drawWorldPolish(
         accent,
         profile.seed,
       );
+      if (lightMoves) {
+        drawPrintGlint(
+          ctx,
+          width,
+          height,
+          effectiveTime,
+          targetX,
+          pageMotion.storyProgress,
+          accentBright,
+          profile.seed,
+        );
+      }
       break;
     case "experimental-frame":
       drawExperimentalFrames(
@@ -550,6 +824,8 @@ function drawWorldPolish(
         anchorX,
         anchorY,
         profile.seed,
+        accentBright,
+        lightMoves,
       );
       break;
   }
@@ -562,9 +838,23 @@ function drawWorldPolish(
     targetX,
     targetY,
     pageMotion.storyProgress,
-    theme.presentation.accentBright,
+    accentBright,
     profile,
   );
+
+  if (lightMoves) {
+    drawDepthBokeh(
+      ctx,
+      width,
+      height,
+      effectiveTime,
+      targetX,
+      targetY,
+      pageMotion.storyProgress,
+      accent,
+      profile,
+    );
+  }
 
   if (pageMotion.hasFocus) {
     drawFocusEcho(

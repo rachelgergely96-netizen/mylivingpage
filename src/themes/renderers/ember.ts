@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -187,16 +188,18 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   const cycleLen = sh * 1.5;
   const emberAt = (e:EmberParticle) => {
     const drift = Math.sin(t * 0.3 + e.driftA) * 30 + Math.sin(t * 0.7 + e.driftB) * 11;
-    const rawX = e.xf * sw + drift + wind * e.speed;
+    const rawX = e.xf * sw + drift;
     const cycle = ((t * 16 * e.speed * heat) + e.phase * cycleLen) % cycleLen;
     const rawY = sh + sh * 0.2 - cycle;
     const life = 1 - cycle / cycleLen;
     if (life <= 0) return null;
     const heightRatio = 1 - rawY / sh;
     const shimmer = fbm(rawX * 0.01 + t * 0.1 + e.sway, rawY * 0.01, 2) * heightRatio * 16;
-    const x = (((rawX + shimmer) % sw) + sw) % sw;
+    // wrap intrinsic drift only, fade at the seam; wind (pointer) applies after so the seam can't move with the cursor
+    const wx = wrapSoft(rawX + shimmer, sw, 0.05);
+    const x = wx.u + wind * e.speed;
     const guard = 0.4 + 0.6 * Math.min(1, (x / sw) / 0.72);
-    return { x, y: rawY, life, size: e.size * life, drift, guard };
+    return { x, y: rawY, life, size: e.size * life, drift, guard, fade: wx.alpha };
   };
 
   // Pass 1 — soft halos (additive, low-alpha, dimmed in the left reading column)
@@ -206,7 +209,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const e = EMBERS[i];
     const st = emberAt(e);
     if (!st) continue;
-    const halo = st.life * (e.isSpark ? 0.05 : 0.075) * st.guard;
+    const halo = st.life * (e.isSpark ? 0.05 : 0.075) * st.guard * st.fade;
     if (halo <= 0.004) continue;
     const hue = e.hueBase + st.life * 18;
     ctx.beginPath();
@@ -222,7 +225,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const st = emberAt(e);
     if (!st) continue;
     const hue = e.hueBase + 6 + st.life * 14;
-    const coreA = st.life * (e.isSpark ? 0.7 : 0.6) * (0.55 + 0.45 * st.guard);
+    const coreA = st.life * (e.isSpark ? 0.7 : 0.6) * (0.55 + 0.45 * st.guard) * st.fade;
     ctx.beginPath();
     ctx.arc(st.x, st.y, st.size * (e.isSpark ? 1.3 : 2.3), 0, TAU);
     ctx.fillStyle = `hsla(${hue},94%,${54 + st.life * 14}%,${coreA})`;
@@ -231,7 +234,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
       const trY = st.y + tr * 5 * e.speed;
       ctx.beginPath();
       ctx.arc(st.x - st.drift * 0.02 * tr, trY, st.size * (1 - tr * 0.2), 0, TAU);
-      ctx.fillStyle = `hsla(${hue - tr * 6},78%,46%,${st.life * 0.16 * (1 - tr / 4)})`;
+      ctx.fillStyle = `hsla(${hue - tr * 6},78%,46%,${st.life * st.fade * 0.16 * (1 - tr / 4)})`;
       ctx.fill();
     }
   }
@@ -253,9 +256,10 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   // Falling ash (source-over, faint)
   for (let i = 0; i < ASH.length; i++) {
     const a = ASH[i];
-    const x = (((a.xf * sw + Math.sin(t * 0.2 + a.drift) * 10 + (mx - 0.5) * 8) % sw) + sw) % sw;
+    const wx = wrapSoft(a.xf * sw + Math.sin(t * 0.2 + a.drift) * 10, sw, 0.05);
+    const x = wx.u + (mx - 0.5) * 8;
     const y = ((t * 5 + a.phase * sh * 1.2) % (sh * 1.2)) - sh * 0.1;
-    const alpha = 0.05 + Math.sin(t * 0.5 + a.aSeed) * 0.02;
+    const alpha = (0.05 + Math.sin(t * 0.5 + a.aSeed) * 0.02) * wx.alpha;
     ctx.beginPath();
     ctx.arc(x, y, 0.6, 0, TAU);
     ctx.fillStyle = `hsla(20,14%,54%,${alpha})`;

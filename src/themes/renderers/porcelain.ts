@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -389,13 +390,14 @@ export const renderPorcelain: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,mot
   for(let i=0;i<CFG.motes.length;i++){
     const m=CFG.motes[i];
     const drift=t*m.sp;
-    let mxp=(m.x+Math.sin(drift+m.drift)*0.03-px*0.06*m.depth)%1;
-    if(mxp<0)mxp+=1;
-    let myp=(m.y-drift*0.02+Math.cos(drift*0.8+m.drift)*0.02-py*0.06*m.depth)%1;
-    if(myp<0)myp+=1;
+    // Soft-wrap intrinsic drift only; pointer parallax applied after so the seam never moves with the pointer.
+    const wx=wrapSoft(m.x+Math.sin(drift+m.drift)*0.03,1,0.05);
+    const wy=wrapSoft(m.y-drift*0.02+Math.cos(drift*0.8+m.drift)*0.02,1,0.05);
+    const mxp=wx.u-px*0.06*m.depth;
+    const myp=wy.u-py*0.06*m.depth;
     const dxp=mxp*w,dyp=myp*h;
     const tw=0.4+0.6*Math.sin(t*0.7+m.ph);
-    const fade=Math.min(1,(mxp-0.4)*2.8);
+    const fade=Math.min(1,(mxp-0.4)*2.8)*wx.alpha*wy.alpha;
     if(fade<=0.01)continue;
     const alpha=(0.06+0.08*tw)*m.depth*fade;
     if(alpha<=0.01)continue;

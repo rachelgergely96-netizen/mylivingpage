@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -335,10 +336,11 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.save();ctx.globalCompositeOperation="lighter";
   for(let i=0;i<CFG.dust.length;i++){
     const d=CFG.dust[i];
-    const yy=((d.y+t*d.sp*0.02)%1+1)%1;
+    const wp=wrapSoft(d.y+t*d.sp*0.02,1,0.05); // seam fade: no pop-in at the horizon
+    const yy=wp.u;
     const wy=horizonY+yy*spanFloor;
     const wx=vanishX+Math.sin(t*d.sp+d.ph*TAU)*w*d.amp+(d.x-0.5)*w*0.55*(0.4+yy*0.6);
-    const a=(1-yy)*0.5*(0.45+0.55*Math.sin(t*d.sp*2+d.ph*TAU));
+    const a=(1-yy)*0.5*(0.45+0.55*Math.sin(t*d.sp*2+d.ph*TAU))*wp.alpha;
     if(a>0.02){
       ctx.fillStyle="rgba(172,198,238,"+(a*0.4)+")";
       ctx.beginPath();ctx.arc(wx,wy,d.r*(0.5+yy),0,TAU);ctx.fill();

@@ -1,5 +1,6 @@
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
+import { wrapSoft } from "../shared/wrap";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -282,12 +283,12 @@ export const renderCameo: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
     const sd = i * 2.3999;
     const baseX = 0.5 + 0.5 * Math.sin(sd * 3.1);
     const baseY = 0.5 + 0.5 * Math.cos(sd * 1.7);
-    let yy = (baseY - t * 0.006 * (0.5 + (i % 5) / 5)) % 1;
-    if (yy < 0) yy += 1;
+    // soft wrap: fade the drifting sparkle at the seam instead of teleporting
+    const wy = wrapSoft(baseY - t * 0.006 * (0.5 + (i % 5) / 5), 1, 0.05);
     const mxp = baseX * w + Math.sin(t * 0.1 + sd) * minSide * 0.012;
     const twk = 0.4 + 0.6 * Math.sin(t * 0.8 + sd * 4);
-    const a = (0.04 + 0.09 * twk) * twBoost * leftDamp(mxp / w);
-    glowSprite(GRAD.glow[0], mxp, yy * h, minSide * 0.006 * (1 + (i % 3)), a);
+    const a = (0.04 + 0.09 * twk) * twBoost * leftDamp(mxp / w) * wy.alpha;
+    glowSprite(GRAD.glow[0], mxp, wy.u * h, minSide * 0.006 * (1 + (i % 3)), a);
   }
 
   const vig = ctx.createRadialGradient(w * 0.56, h * 0.46, minSide * 0.25, w * 0.5, h * 0.5, Math.max(w, h) * 0.85);

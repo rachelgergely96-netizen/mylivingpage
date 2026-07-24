@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { resolveThemeMotion } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -317,15 +318,16 @@ export const renderParasol: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motio
   for(let i=0;i<CFG.DUST.length;i++){
     const d=CFG.DUST[i];
     const drift=t*0.01*d.drift;
-    let ux=(d.x-drift*0.5)%1;if(ux<0)ux+=1;
-    let uy=(d.y-drift)%1;if(uy<0)uy+=1;
-    const gx=0.55+ux*0.45;
+    // wrap intrinsic drift only, fade at the seam (parallax stays outside the wrap)
+    const wx=wrapSoft(d.x-drift*0.5,1,0.05);
+    const wy=wrapSoft(d.y-drift,1,0.05);
+    const gx=0.55+wx.u*0.45;
     const x=gx*w-px*minSide*0.05*d.z;
-    const y=uy*h-py*minSide*0.04*d.z;
+    const y=wy.u*h-py*minSide*0.04*d.z;
     const tw=0.35+0.65*(0.5+0.5*Math.sin(t*d.sp+d.ph));
     const twE=cl(tw*(1+energy*0.5),0,1.1);
     const size=d.r*(0.5+d.z);
-    const al=(0.05+0.14*d.bright)*twE;
+    const al=(0.05+0.14*d.bright)*twE*wx.alpha*wy.alpha;
     ctx.beginPath();
     ctx.arc(x,y,size,0,TAU);
     ctx.fillStyle=rgba([255,214,196],al);

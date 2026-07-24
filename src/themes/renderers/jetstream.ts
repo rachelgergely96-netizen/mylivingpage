@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -302,7 +303,9 @@ export const renderJetstream: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,mot
   // ---- lead jet + fresh dissipating contrail (seeded so it is present at rest) ----
   const jetPeriod=30;
   const jpBase=0.46;
-  const jp=((jpBase+t/jetPeriod+story*0.4)%1+1)%1;
+  // wrapSoft fades the contrail at the cycle seam so it never vanishes mid-air
+  const jw=wrapSoft(jpBase+t/jetPeriod+story*0.4,1,0.05);
+  const jp=jw.u;
   const jetPos=(u: number): [number, number]=>{
     const uc=((u%1)+1)%1;
     const x=-0.12*w+1.26*w*uc;
@@ -320,6 +323,7 @@ export const renderJetstream: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,mot
   }
   if(cp.length>2){
     ctx.globalCompositeOperation="lighter";
+    ctx.globalAlpha=jw.alpha;
     ctx.beginPath();
     for(let k=0;k<cp.length;k++){
       const a=cp[k];
@@ -356,6 +360,7 @@ export const renderJetstream: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,mot
     ctx.fillStyle="rgba(232,244,255,0.72)";
     ctx.fill();
     star4(ctx,head[0],head[1],minSide*0.026,minSide*0.0022,"rgba(210,234,255,0.6)");
+    ctx.globalAlpha=1;
   }
 
   // ---- cinematic grade (cached, deepened reading-lane scrim) ----

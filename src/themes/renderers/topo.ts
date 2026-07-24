@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
+import { wrapSoft } from "../shared/wrap";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -295,12 +296,13 @@ export const renderTopo: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=
   }
   ctx.restore();
   const segs=Math.max(1,RP.length-1);
-  const u=(t*0.12+storyP*0.15)%1;const fi=u*segs;let si=Math.floor(fi);if(si>=segs)si=segs-1;const fr2=fi-si;
+  // wrapSoft fades the spark near the cycle seam so it doesn't teleport back to the route start
+  const uw=wrapSoft(t*0.12+storyP*0.15,1,0.05);const u=uw.u;const fi=u*segs;let si=Math.floor(fi);if(si>=segs)si=segs-1;const fr2=fi-si;
   const ax=RP[si][0]*w+px*w*0.01,ay=RP[si][1]*h-Math.sin(t*0.3+si)*h*0.004;
   const bx2=RP[si+1][0]*w+px*w*0.01,by2=RP[si+1][1]*h-Math.sin(t*0.3+(si+1))*h*0.004;
   const sxp=ax+(bx2-ax)*fr2,syp=ay+(by2-ay)*fr2;
   ctx.save();ctx.globalCompositeOperation="lighter";
-  softGlow(ctx,sxp,syp,8+velMag*4,"rgba(196,248,226,"+Math.min(0.48,0.42+velMag*0.06)+")","transparent");
+  softGlow(ctx,sxp,syp,8+velMag*4,"rgba(196,248,226,"+Math.min(0.48,0.42+velMag*0.06)*uw.alpha+")","transparent");
   ctx.restore();
 
   // ---- calm parallax data motes (soft round dots, occasional round bloom, no spikes) ----

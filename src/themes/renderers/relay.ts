@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -164,11 +165,12 @@ export const renderRelay: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
 
   ctx.save(); ctx.globalCompositeOperation="lighter";
   for(const f of CFG.fog){
-    const fx=((f.x+t*0.004*f.spd)%1)*w;
+    const wx=wrapSoft(f.x+t*0.004*f.spd,1,0.05); // soft wrap: fog fades out at the seam instead of teleporting
+    const fx=wx.u*w;
     const n=fbm(f.x*3,t*0.05*f.spd+f.off,3);
     const fy=ground-h*0.015+n*h*0.02;
     const fr=f.r*w*(0.7+0.3*(0.5+0.5*Math.sin(t*0.1+f.off)));
-    const a=clamp((0.04+0.05*f.amp)*(0.8+0.4*n),0,0.12);
+    const a=clamp((0.04+0.05*f.amp)*(0.8+0.4*n),0,0.12)*wx.alpha;
     softGlow(ctx,fx,fy,fr,`hsla(190,72%,54%,${a})`,"transparent");
   }
   ctx.restore();

@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -271,22 +272,24 @@ export const renderAtlas: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)
     ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.quadraticCurveTo(cxp,cyp,b[0],b[1]);
     ctx.lineWidth=2.4; ctx.strokeStyle=glow+clamp(0.10*vis*boost,0,0.2)+")"; ctx.stroke();
     ctx.lineWidth=0.9; ctx.strokeStyle=core+clamp(0.26*vis*boost,0,0.4)+")"; ctx.stroke();
-    const sPos=((t*r.speed + r.phase)%1);
+    // wrapSoft fades the comet near the cycle seam so it doesn't teleport back to the route start
+    const sw=wrapSoft(t*r.speed + r.phase,1,0.05);
+    const sPos=sw.u;
     const trailN=5 + (kin?Math.round(Math.abs(vel)*3 + impulse*3):0);
     for(let ti=1;ti<=trailN;ti++){
       const ss=sPos - ti*0.03; if(ss<0) continue;
       const uu=1-ss;
       const tx=uu*uu*a[0]+2*uu*ss*cxp+ss*ss*b[0];
       const ty=uu*uu*a[1]+2*uu*ss*cyp+ss*ss*b[1];
-      const ta=(1-ti/(trailN+1))*0.45*vis;
+      const ta=(1-ti/(trailN+1))*0.45*vis*sw.alpha;
       ctx.fillStyle=core+ta+")";
       ctx.beginPath(); ctx.arc(tx,ty,Math.max(0.4,2.2-ti*0.28),0,TAU); ctx.fill();
     }
     const u=1-sPos;
     const bx=u*u*a[0]+2*u*sPos*cxp+sPos*sPos*b[0];
     const by=u*u*a[1]+2*u*sPos*cyp+sPos*sPos*b[1];
-    softGlow(ctx,bx,by,9,core+clamp((warm?0.34:0.45)*vis*boost,0,0.5)+")","transparent");
-    ctx.fillStyle=core+clamp(0.8*vis,0,0.8)+")";
+    softGlow(ctx,bx,by,9,core+clamp((warm?0.34:0.45)*vis*boost*sw.alpha,0,0.5)+")","transparent");
+    ctx.fillStyle=core+clamp(0.8*vis*sw.alpha,0,0.8)+")";
     ctx.beginPath(); ctx.arc(bx,by,2.0,0,TAU); ctx.fill();
     const emph=isActive?1:0;
     drawNode(a[0],a[1],fa,emph); drawNode(b[0],b[1],fb,emph);

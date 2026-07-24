@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -202,11 +203,12 @@ export const renderVector: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.setLineDash([6,8]); ctx.strokeStyle=B(0.09); ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(A[0],A[1]); ctx.lineTo(Bn[0],Bn[1]); ctx.stroke();
     ctx.setLineDash([]);
-    const u=(t*0.05)%1;
-    const sxp=A[0]+(Bn[0]-A[0])*u, syp=A[1]+(Bn[1]-A[1])*u;
+    // soft-wrap the link packet: fade at the ends instead of teleporting B->A
+    const wu=wrapSoft(t*0.05,1,0.05);
+    const sxp=A[0]+(Bn[0]-A[0])*wu.u, syp=A[1]+(Bn[1]-A[1])*wu.u;
     ctx.save(); ctx.globalCompositeOperation='lighter';
-    softGlow(ctx,sxp,syp,7,'rgba(170,214,255,0.22)','transparent');
-    ctx.fillStyle=HI(0.42); ctx.beginPath(); ctx.arc(sxp,syp,1.3,0,TAU); ctx.fill();
+    softGlow(ctx,sxp,syp,7,'rgba(170,214,255,'+(0.22*wu.alpha)+')','transparent');
+    ctx.fillStyle=HI(0.42*wu.alpha); ctx.beginPath(); ctx.arc(sxp,syp,1.3,0,TAU); ctx.fill();
     ctx.restore();
   }
 

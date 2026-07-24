@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -87,6 +88,10 @@ const CFG = (function(){
   return { VW, VH, traces, comps, pads, dust, specks, masses, rails };
 })();
 
+let pulseGlowWarm: CanvasGradient|null = null;
+let pulseGlowCold: CanvasGradient|null = null;
+let pulseGlowCtx: CanvasRenderingContext2D|null = null;
+
 export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   const C = CFG;
   const VW=C.VW, VH=C.VH;
@@ -165,10 +170,10 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.strokeStyle=`hsla(${rl.hue|0},68%,50%,0.11)`;
     ctx.lineWidth=1.6;
     ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-    const f=((t*rl.speed*0.12 + rl.phase)%1+1)%1;
-    const ex=x0+(x1-x0)*f, ey=y0+(y1-y0)*f;
+    const rw=wrapSoft(t*rl.speed*0.12 + rl.phase, 1, 0.05);
+    const ex=x0+(x1-x0)*rw.u, ey=y0+(y1-y0)*rw.u;
     ctx.globalCompositeOperation="lighter";
-    softGlow(ctx, ex, ey, 22, `hsla(${rl.hue|0},90%,60%,0.18)`, "transparent");
+    softGlow(ctx, ex, ey, 22, `hsla(${rl.hue|0},90%,60%,${(0.18*rw.alpha).toFixed(4)})`, "transparent");
     ctx.globalCompositeOperation="source-over";
   }
 
@@ -197,6 +202,10 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.restore();
   }
 
+  if(!pulseGlowWarm || pulseGlowCtx!==ctx){
+    const mk=(hu:number)=>{ const g=ctx.createRadialGradient(0,0,0,0,0,12); g.addColorStop(0,`hsla(${hu},96%,64%,0.4)`); g.addColorStop(1,"transparent"); return g; };
+    pulseGlowWarm=mk(172); pulseGlowCold=mk(178); pulseGlowCtx=ctx;
+  }
   for(let i=0;i<C.traces.length;i++){
     const tr=C.traces[i];
     const lp=layerPar[tr.layer];
@@ -204,21 +213,26 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const hue=tr.cold?178:172;
     for(let p=0;p<tr.pulses;p++){
       const base=(t*tr.speed + tr.phase + p*tr.total/tr.pulses);
-      const s=tr.dir>0? base : tr.total-base;
-      const head=ptAt(tr,s);
+      // soft-wrap the pulse run: fade out/in at the trace ends instead of teleporting
+      const wr=wrapSoft(tr.dir>0? base : tr.total-base, tr.total, 0.06);
+      const fade=wr.alpha;
+      if(fade<=0.01) continue;
+      const head=ptAt(tr,wr.u);
       const hx=X(head.x)+ox, hy=Y(head.y)+oy;
       ctx.globalCompositeOperation="lighter";
       for(let q=1;q<=6;q++){
-        const tp=ptAt(tr, s - tr.dir*q*0.55);
+        const tp=ptAt(tr, wr.u - tr.dir*q*0.55);
         const tx=X(tp.x)+ox, ty=Y(tp.y)+oy;
         const fa=(1-q/7);
-        ctx.fillStyle=`hsla(${hue},95%,62%,${(0.18*fa).toFixed(4)})`;
+        ctx.fillStyle=`hsla(${hue},95%,62%,${(0.18*fa*fade).toFixed(4)})`;
         ctx.beginPath(); ctx.arc(tx,ty,2.1*fa+0.5,0,TAU); ctx.fill();
       }
-      softGlow(ctx, hx, hy, 12, `hsla(${hue},96%,64%,0.4)`, "transparent");
-      ctx.fillStyle=`hsla(${hue},92%,70%,0.55)`;
+      ctx.save(); ctx.globalAlpha=fade; ctx.translate(hx,hy);
+      ctx.fillStyle=tr.cold?pulseGlowCold!:pulseGlowWarm!;
+      ctx.fillRect(-12,-12,24,24); ctx.restore();
+      ctx.fillStyle=`hsla(${hue},92%,70%,${(0.55*fade).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(hx,hy,1.7,0,TAU); ctx.fill();
-      if(p===0 && (i%4===0)) star4(ctx,hx,hy,9,1.0,`hsla(${hue},95%,70%,0.28)`);
+      if(p===0 && (i%4===0)) star4(ctx,hx,hy,9,1.0,`hsla(${hue},95%,70%,${(0.28*fade).toFixed(4)})`);
       ctx.globalCompositeOperation="source-over";
     }
   }

@@ -12,8 +12,13 @@ import {
   clearTransientThemeMotion,
   decayTransientThemeMotion,
 } from "@/themes/shared/motion";
+import { createMotionSampler, type MotionSampler } from "@/themes/shared/smoothing";
 import { hasFrameIntervalElapsed } from "@/themes/shared/timing";
 import type { ThemeId, ThemeMotionContext, ThemeRenderer } from "@/themes/types";
+
+// Whether CanvasRenderingContext2D.filter accepts a blur — probed once per
+// session on the bloom buffer; unsupported browsers use a separable fallback.
+let canvasFilterSupported: boolean | null = null;
 
 type ThemeCanvasStyle = React.CSSProperties & {
   "--theme-accent": string;
@@ -70,6 +75,10 @@ export default function ThemeCanvas({
   const elapsedRef = useRef(0);
   const lastFrameRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const samplerRef = useRef<MotionSampler | null>(null);
+  if (!samplerRef.current) {
+    samplerRef.current = createMotionSampler();
+  }
   const touchActiveRef = useRef(false);
   const ambientResumeAtRef = useRef(0);
   const ambientEnabledRef = useRef(false);
@@ -211,6 +220,8 @@ export default function ThemeCanvas({
     })();
     let bloomBuffer: HTMLCanvasElement | null = null;
     let bloomContext: CanvasRenderingContext2D | null = null;
+    let blurBuffer: HTMLCanvasElement | null = null;
+    let blurContext: CanvasRenderingContext2D | null = null;
     let noiseTile: HTMLCanvasElement | null = null;
     const ensureHdBuffers = () => {
       const bw = Math.max(1, Math.floor(canvas.width / 4));
@@ -222,6 +233,23 @@ export default function ThemeCanvas({
       if (bloomBuffer.width !== bw || bloomBuffer.height !== bh) {
         bloomBuffer.width = bw;
         bloomBuffer.height = bh;
+      }
+      if (!blurBuffer) {
+        blurBuffer = document.createElement("canvas");
+        blurContext = blurBuffer.getContext("2d");
+        if (blurContext && canvasFilterSupported === null) {
+          try {
+            blurContext.filter = "blur(2px)";
+            canvasFilterSupported = blurContext.filter !== "none";
+            blurContext.filter = "none";
+          } catch {
+            canvasFilterSupported = false;
+          }
+        }
+      }
+      if (blurBuffer.width !== bw || blurBuffer.height !== bh) {
+        blurBuffer.width = bw;
+        blurBuffer.height = bh;
       }
       if (!noiseTile) {
         noiseTile = document.createElement("canvas");
@@ -243,24 +271,60 @@ export default function ThemeCanvas({
         }
       }
     };
-    const applyHdPost = (elapsed: number) => {
+    const applyHdPost = (elapsed: number, bloomEnabled: boolean) => {
       if (!hd) return;
       ensureHdBuffers();
       const w = canvas.width;
       const h = canvas.height;
-      if (!lightGround && bloomBuffer && bloomContext) {
+      if (bloomEnabled && !lightGround && bloomBuffer && bloomContext) {
+        const bw = bloomBuffer.width;
+        const bh = bloomBuffer.height;
         bloomContext.globalCompositeOperation = "source-over";
-        bloomContext.clearRect(0, 0, bloomBuffer.width, bloomBuffer.height);
-        bloomContext.drawImage(canvas, 0, 0, bloomBuffer.width, bloomBuffer.height);
+        bloomContext.clearRect(0, 0, bw, bh);
+        bloomContext.drawImage(canvas, 0, 0, bw, bh);
         bloomContext.globalCompositeOperation = "multiply"; // ~luminance^2 bright pass
         bloomContext.drawImage(bloomBuffer, 0, 0);
         bloomContext.globalCompositeOperation = "source-over";
+        // Soften the bright pass so highlights halate instead of upscaling
+        // with hard edges. Native filter blur when available, otherwise a
+        // cheap separable two-pass approximation on the ¼-res buffers.
+        let bloomSource: HTMLCanvasElement = bloomBuffer;
+        if (blurBuffer && blurContext) {
+          blurContext.globalCompositeOperation = "source-over";
+          blurContext.clearRect(0, 0, bw, bh);
+          if (canvasFilterSupported) {
+            try {
+              blurContext.filter = "blur(2px)";
+              blurContext.drawImage(bloomBuffer, 0, 0);
+            } finally {
+              blurContext.filter = "none";
+            }
+            bloomSource = blurBuffer;
+          } else {
+            blurContext.globalAlpha = 0.25;
+            blurContext.drawImage(bloomBuffer, -1, 0);
+            blurContext.globalAlpha = 0.5;
+            blurContext.drawImage(bloomBuffer, 0, 0);
+            blurContext.globalAlpha = 0.25;
+            blurContext.drawImage(bloomBuffer, 1, 0);
+            blurContext.globalAlpha = 1;
+            bloomContext.clearRect(0, 0, bw, bh);
+            bloomContext.globalAlpha = 0.25;
+            bloomContext.drawImage(blurBuffer, 0, -1);
+            bloomContext.globalAlpha = 0.5;
+            bloomContext.drawImage(blurBuffer, 0, 0);
+            bloomContext.globalAlpha = 0.25;
+            bloomContext.drawImage(blurBuffer, 0, 1);
+            bloomContext.globalAlpha = 1;
+            bloomSource = bloomBuffer;
+          }
+        }
         context.save();
         context.globalCompositeOperation = "lighter";
-        context.globalAlpha = 0.42;
+        context.globalAlpha = 0.32;
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = "high";
-        context.drawImage(bloomBuffer, 0, 0, w, h);
+        context.drawImage(bloomSource, 0, 0, w, h);
         context.restore();
       }
       if (noiseTile) {
@@ -271,12 +335,55 @@ export default function ThemeCanvas({
           const oy = (Math.floor(elapsed * 97) % 128) * anim;
           context.save();
           context.globalCompositeOperation = "overlay";
-          context.globalAlpha = 0.05;
+          context.globalAlpha = 0.04;
           context.fillStyle = pattern;
           context.translate(ox, oy);
           context.fillRect(-ox, -oy, w, h);
           context.restore();
         }
+      }
+    };
+
+    // ---- Quality ladder: full HD → HD without bloom → 30fps cap. Driven by an
+    // EMA of paint cost so a one-off GC hitch never degrades, with a hysteresis
+    // band and long consecutive-frame requirements so it cannot oscillate.
+    const QUALITY_BUDGET_MS = 14;
+    const QUALITY_RECOVER_MS = 10.5;
+    const QUALITY_DEGRADE_FRAMES = 90;
+    const QUALITY_RECOVER_FRAMES = 200;
+    const QUALITY_EMA_ALPHA = 0.08;
+    let qualityLevel = 0;
+    let qualityCostEma: number | null = null;
+    let overBudgetFrames = 0;
+    let underBudgetFrames = 0;
+    const setQualityLevel = (level: number) => {
+      qualityLevel = level;
+      overBudgetFrames = 0;
+      underBudgetFrames = 0;
+      // Re-measure the new level from mid-band so one hitch cluster cannot
+      // cascade straight through every level.
+      qualityCostEma = (QUALITY_BUDGET_MS + QUALITY_RECOVER_MS) * 0.5;
+    };
+    const recordFrameCost = (costMs: number) => {
+      qualityCostEma =
+        qualityCostEma === null
+          ? costMs
+          : qualityCostEma + QUALITY_EMA_ALPHA * (costMs - qualityCostEma);
+      if (qualityCostEma > QUALITY_BUDGET_MS) {
+        overBudgetFrames += 1;
+        underBudgetFrames = 0;
+        if (overBudgetFrames >= QUALITY_DEGRADE_FRAMES && qualityLevel < 2) {
+          setQualityLevel(qualityLevel + 1);
+        }
+      } else if (qualityCostEma < QUALITY_RECOVER_MS) {
+        underBudgetFrames += 1;
+        overBudgetFrames = 0;
+        if (underBudgetFrames >= QUALITY_RECOVER_FRAMES && qualityLevel > 0) {
+          setQualityLevel(qualityLevel - 1);
+        }
+      } else {
+        overBudgetFrames = Math.max(0, overBudgetFrames - 1);
+        underBudgetFrames = Math.max(0, underBudgetFrames - 1);
       }
     };
 
@@ -290,19 +397,35 @@ export default function ThemeCanvas({
         // there is no flash of empty canvas before the animation appears.
         return;
       }
+      const sampler = samplerRef.current!;
+      sampler.setPointerTarget(mouseRef.current.x, mouseRef.current.y);
+      let stepSeconds = deltaSeconds;
+      if (!runningRef.current) {
+        // Static paints (initial, resize, reduced motion) show the settled
+        // pose immediately instead of a mid-glide sample.
+        sampler.snapPointer(mouseRef.current.x, mouseRef.current.y);
+      } else if (deltaSeconds === 0) {
+        // Out-of-band paint (e.g. resize) while animating: nudge the sampler
+        // instead of passing 0, which would hard-snap every inertial sample.
+        stepSeconds = 0.004;
+      }
+      const smoothedMotion = sampler.step(
+        motionAware ? motionRef.current : undefined,
+        stepSeconds,
+      );
       try {
         renderer(
           context,
           canvas.width,
           canvas.height,
           elapsed,
-          mouseRef.current.x,
-          mouseRef.current.y,
+          sampler.pointer.x,
+          sampler.pointer.y,
           deltaSeconds,
-          motionAware ? motionRef.current : undefined,
+          smoothedMotion,
         );
         consecutiveRenderFailures = 0;
-        applyHdPost(elapsed);
+        applyHdPost(elapsed, qualityLevel === 0);
       } catch (error) {
         consecutiveRenderFailures += 1;
         if (consecutiveRenderFailures < 3) return;
@@ -334,6 +457,8 @@ export default function ThemeCanvas({
     };
 
     const minFrameMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0;
+    const activeFrameMs = () =>
+      qualityLevel === 2 ? Math.max(minFrameMs, 1000 / 30) : minFrameMs;
     const draw = (now: number) => {
       if (!runningRef.current) {
         return;
@@ -342,7 +467,7 @@ export default function ThemeCanvas({
       if (lastFrameRef.current === null) {
         lastFrameRef.current = now;
       }
-      if (!hasFrameIntervalElapsed(now, lastFrameRef.current, minFrameMs)) {
+      if (!hasFrameIntervalElapsed(now, lastFrameRef.current, activeFrameMs())) {
         // Below the frame budget — keep the rAF loop alive but skip this paint.
         return;
       }
@@ -351,7 +476,9 @@ export default function ThemeCanvas({
       elapsedRef.current += delta;
       decayTransientThemeMotion(motionRef.current, delta);
       applyAmbientPointer(elapsedRef.current, now);
+      const paintStart = performance.now();
       renderFrame(elapsedRef.current, delta);
+      recordFrameCost(performance.now() - paintStart);
     };
 
     const start = () => {

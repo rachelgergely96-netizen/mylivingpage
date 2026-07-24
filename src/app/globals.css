@@ -1100,9 +1100,33 @@ a {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover {
-    filter: brightness(1.06);
-    transform: translate3d(2px, -2px, 0);
+  [data-motion-aware="true"] .resume-theme [data-motion-item] {
+    transition:
+      transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      filter 180ms ease,
+      outline-color 180ms ease;
+  }
+
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover:not([data-motion-kind="profile"]) {
+    transform: translate3d(0, -2px, 0);
+  }
+
+  /* Cards answer hover with an accent border and a soft lifted shadow instead
+     of a brightness filter — no text shimmer, and the theme accent does the
+     talking. Scoped to card surfaces so the avatar ring stays intact; pills
+     take the border only (a heavy shadow reads noisy on dense chip rows). */
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover:is(.resume-theme-card, .resume-theme-card-accent, .resume-theme-pill),
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover :is(.resume-theme-card, .resume-theme-card-accent) {
+    border-color: color-mix(in srgb, var(--theme-accent, #93c5fd) 44%, transparent);
+  }
+
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover:is(.resume-theme-card, .resume-theme-card-accent),
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:hover :is(.resume-theme-card, .resume-theme-card-accent) {
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 }
 

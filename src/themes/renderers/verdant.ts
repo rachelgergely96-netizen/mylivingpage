@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -564,14 +565,15 @@ export const renderVerdant: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motio
   ctx.globalCompositeOperation="screen";
   for(let i=0;i<pollenN;i++){
     const p2=CFG.POLLEN[i];
-    const drift=((p2.y-t*p2.rise)%1+1)%1;
+    // soft-wrap the rise so motes fade at the top/bottom seam instead of teleporting
+    const wy=wrapSoft(p2.y-t*p2.rise,1,0.05);
     const x=(0.57+p2.x*0.42)*w+Math.sin(t*p2.sp+p2.phase)*minSide*p2.amp+px*minSide*0.02*p2.depth;
-    const y=drift*h+py*minSide*0.015*p2.depth;
+    const y=wy.u*h+py*minSide*0.015*p2.depth;
     const r=Math.max(0.4,p2.r*minSide*(0.7+0.3*Math.sin(t*0.6+p2.phase)));
     const pulse=0.5+0.5*Math.sin(t*0.8+p2.phase*2);
     ctx.beginPath();
     ctx.arc(x,y,r,0,TAU);
-    ctx.fillStyle="hsla("+p2.hue+",64%,58%,"+(p2.alpha*pulse*0.75)+")";
+    ctx.fillStyle="hsla("+p2.hue+",64%,58%,"+(p2.alpha*pulse*0.75*wy.alpha)+")";
     ctx.fill();
   }
   ctx.restore();

@@ -1,9 +1,40 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
+
+// One cached frost-glow gradient reused for every bright particle: the per
+// particle createRadialGradient allocations were the hottest line in this
+// renderer. The gradient is authored at a fixed radius and scaled into place.
+const GLOW_RADIUS = 48;
+let frostGlow: CanvasGradient | null = null;
+let frostGlowContext: CanvasRenderingContext2D | null = null;
+function stampFrostGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  alpha: number,
+) {
+  if (!(alpha > 0) || !(r > 0)) return;
+  if (!frostGlow || frostGlowContext !== ctx) {
+    frostGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, GLOW_RADIUS);
+    frostGlow.addColorStop(0, "hsla(198, 74%, 80%, 1)");
+    frostGlow.addColorStop(1, "hsla(198, 74%, 80%, 0)");
+    frostGlowContext = ctx;
+  }
+  ctx.save();
+  ctx.globalAlpha = alpha > 1 ? 1 : alpha;
+  ctx.translate(x, y);
+  const s = r / GLOW_RADIUS;
+  ctx.scale(s, s);
+  ctx.fillStyle = frostGlow;
+  ctx.fillRect(-GLOW_RADIUS, -GLOW_RADIUS, GLOW_RADIUS * 2, GLOW_RADIUS * 2);
+  ctx.restore();
+}
 
 const CFG = (function () {
   const R = createSeededRandom(20260721);
@@ -170,32 +201,26 @@ export const renderGlacier: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     ctx.globalCompositeOperation = "lighter";
     for (let i = 0; i < n; i += 1) {
       const p = layer.parts[i];
-      let yy = (p.y - t * p.speed) % 1;
-      if (yy < 0) yy += 1;
+      // Wrap the intrinsic fall/sway only; parallax offsets the wrapped
+      // position afterwards and the seam hides inside the wrap fade.
+      const wy = wrapSoft(p.y - t * p.speed, 1, 0.05);
       const sway = Math.sin(t * p.swaySpeed + p.sway) * p.swayAmp;
-      const rawx = p.x * w + sway - pxo * par;
-      const xx = ((rawx % w) + w) % w;
-      const yv = yy * h - pyo * par * 0.5;
+      const wx = wrapSoft(p.x * w + sway, w, 0.04);
+      const xx = wx.u - pxo * par;
+      const yv = wy.u * h - pyo * par * 0.5;
       const sh = shield(xx / w, yv / h);
       const tw = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(t * p.twSpeed + p.tw));
-      const alpha = tw * (0.14 + p.bright * 0.28) * sh;
+      const alpha = tw * (0.14 + p.bright * 0.28) * sh * wx.alpha * wy.alpha;
       const r = p.r;
       if (p.bright > 0.84) {
-        const rg = r * 5;
-        const gg = ctx.createRadialGradient(xx, yv, 0, xx, yv, rg);
-        gg.addColorStop(0, `hsla(198,74%,80%,${alpha * 0.42})`);
-        gg.addColorStop(1, "transparent");
-        ctx.fillStyle = gg;
-        ctx.beginPath();
-        ctx.arc(xx, yv, rg, 0, TAU);
-        ctx.fill();
+        stampFrostGlow(ctx, xx, yv, r * 5, alpha * 0.42);
       }
       ctx.beginPath();
       ctx.arc(xx, yv, r, 0, TAU);
       ctx.fillStyle = `hsla(200,72%,82%,${alpha})`;
       ctx.fill();
       if (p.bright > 0.9) {
-        star4(ctx, xx, yv, r * 5, r * 0.5, `hsla(196,70%,80%,${alpha * 0.42})`);
+        stampFrostGlow(ctx, xx, yv, r * 5.25, alpha * 0.42);
       }
     }
     ctx.restore();

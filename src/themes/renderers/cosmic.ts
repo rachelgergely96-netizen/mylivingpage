@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { finiteClamp } from "../shared/motion";
 import { star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -88,18 +89,23 @@ export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   const links=[];
   for(let sI=0;sI<COS_STARS.length;sI++){
     const st=COS_STARS[sI]; const depth=st.depth, par=depth*8;
-    const sx=(st.bx*w - px0*par + Math.sin(t*0.15*depth+st.i)*2 + w)%w;
-    const sy=(st.by*h - py0*par + Math.cos(t*0.12*depth+st.i)*2 + h)%h;
+    // Wrap the intrinsic star path only; parallax offsets after the wrap and
+    // the seam fade keeps deep-layer stars from popping under pointer motion.
+    const wxs=wrapSoft(st.bx*w + Math.sin(t*0.15*depth+st.i)*2, w, 0.03);
+    const wys=wrapSoft(st.by*h + Math.cos(t*0.12*depth+st.i)*2, h, 0.03);
+    const wrapA=wxs.alpha*wys.alpha;
+    const sx=wxs.u - px0*par;
+    const sy=wys.u - py0*par;
     const tw=0.35+0.4*Math.sin(t*st.twF+st.twP)+0.15*Math.sin(t*0.4+st.i);
     const twp=tw>0?tw:0;
     const dx=mx*w-sx, dy=my*h-sy; const dist=Math.hypot(dx,dy);
     const boost=dist<140?(1-dist/140)*0.35:0;
     const r=st.base*(0.7+twp*0.5);
-    const coreA=finiteClamp(0.35+tw*0.55+boost,0,0.8,0.4);
+    const coreA=finiteClamp(0.35+tw*0.55+boost,0,0.8,0.4)*wrapA;
     const coreL=finiteClamp(72+boost*16,60,82,72);
     ctx.beginPath(); ctx.arc(sx,sy,r,0,TAU); ctx.fillStyle=`hsla(${st.hue},70%,${coreL}%,${coreA})`; ctx.fill();
-    stamp(sx,sy,r*7, twp*0.11+boost*0.15);
-    if(st.accent){ star4(ctx,sx,sy,r*5,0.6,`hsla(${st.hue},80%,82%,${finiteClamp(0.2+twp*0.28+boost*0.5,0,0.55,0.25)})`); }
+    stamp(sx,sy,r*7, (twp*0.11+boost*0.15)*wrapA);
+    if(st.accent){ star4(ctx,sx,sy,r*5,0.6,`hsla(${st.hue},80%,82%,${finiteClamp(0.2+twp*0.28+boost*0.5,0,0.55,0.25)*wrapA})`); }
     if(st.layer===0){ links.push(sx,sy); }
   }
   // 4 — constellation links with a travelling energy spark (spark alpha tamed al*3 -> al*1.5)

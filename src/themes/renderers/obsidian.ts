@@ -5,6 +5,42 @@ import type { ThemeRenderer } from "../types";
 
 type Point = [number, number];
 
+// Cached unit-radius glow pair for the travelling hot pockets: two
+// createRadialGradient allocations per node per frame were a hotspot.
+// Authored at a fixed radius, stamped via translate/scale with globalAlpha
+// carrying the per-node fade (identical output under "lighter").
+const NODE_GLOW_RADIUS = 48;
+let nodeGlowCtx: CanvasRenderingContext2D | null = null;
+let nodeGlowHalo: CanvasGradient | null = null;
+let nodeGlowCore: CanvasGradient | null = null;
+function stampNodeGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  alpha: number,
+  core: boolean,
+) {
+  if (!(alpha > 0) || !(r > 0)) return;
+  if (nodeGlowCtx !== ctx || !nodeGlowHalo || !nodeGlowCore) {
+    nodeGlowCtx = ctx;
+    nodeGlowHalo = ctx.createRadialGradient(0, 0, 0, 0, 0, NODE_GLOW_RADIUS);
+    nodeGlowHalo.addColorStop(0, "rgba(255,116,40,1)");
+    nodeGlowHalo.addColorStop(1, "rgba(255,116,40,0)");
+    nodeGlowCore = ctx.createRadialGradient(0, 0, 0, 0, 0, NODE_GLOW_RADIUS);
+    nodeGlowCore.addColorStop(0, "rgba(255,192,124,1)");
+    nodeGlowCore.addColorStop(1, "rgba(255,192,124,0)");
+  }
+  ctx.save();
+  ctx.globalAlpha = alpha > 1 ? 1 : alpha;
+  ctx.translate(x, y);
+  const s = r / NODE_GLOW_RADIUS;
+  ctx.scale(s, s);
+  ctx.fillStyle = core ? nodeGlowCore : nodeGlowHalo;
+  ctx.fillRect(-NODE_GLOW_RADIUS, -NODE_GLOW_RADIUS, NODE_GLOW_RADIUS * 2, NODE_GLOW_RADIUS * 2);
+  ctx.restore();
+}
+
 interface ObsidianGeometryPoint {
   x: number;
   y: number;
@@ -330,8 +366,8 @@ export const renderObsidian: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     if(b<0.08) continue;
     const x=nd.x*w, y=nd.y*h;
     const r=Math.max(1, min*(0.010+nd.size*0.02)*(0.6+b*0.8));
-    softGlow(ctx, x, y, r*2.2, "rgba(255,116,40,"+(0.20*b)+")", "transparent");
-    softGlow(ctx, x, y, r*0.85, "rgba(255,192,124,"+(Math.min(0.4,0.42*b))+")", "transparent");
+    stampNodeGlow(ctx, x, y, r*2.2, 0.20*b, false);
+    stampNodeGlow(ctx, x, y, r*0.85, Math.min(0.4,0.42*b), true);
   }
 
   // 8. Vents where veins reach the surface — soft round blooms, warmed + capped

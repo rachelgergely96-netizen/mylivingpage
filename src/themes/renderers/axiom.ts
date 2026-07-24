@@ -195,11 +195,14 @@ export const renderAxiom: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)
   for(let y=-dY;y<=h;y+=step){ctx.moveTo(0,y);ctx.lineTo(w,y);}
   ctx.stroke();
   const major=step*4;
+  /* major lines need their own wrap period — reusing the minor-step phase made them jump a full step at every wrap */
+  const dXM=(((t*3-mxo*30)%major)+major)%major;
+  const dYM=(((t*2-myo*24)%major)+major)%major;
   ctx.lineWidth=1.0;
   ctx.strokeStyle="rgba(140,180,255,0.06)";
   ctx.beginPath();
-  for(let x=-dX;x<=w;x+=major){ctx.moveTo(x,0);ctx.lineTo(x,h);}
-  for(let y=-dY;y<=h;y+=major){ctx.moveTo(0,y);ctx.lineTo(w,y);}
+  for(let x=-dXM;x<=w;x+=major){ctx.moveTo(x,0);ctx.lineTo(x,h);}
+  for(let y=-dYM;y<=h;y+=major){ctx.moveTo(0,y);ctx.lineTo(w,y);}
   ctx.stroke();
 
   /* ---- 4. far motes (parallax depth, dim) ---- */

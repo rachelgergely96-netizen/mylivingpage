@@ -58,10 +58,9 @@ export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   const ny = (typeof my === "number" && isFinite(my)) ? my : 0.5;
   const tx = nx * w, ty = ny * h;
   if (!S.init) { S.px = tx; S.py = ty; S.init = true; }
-  // inertial spring: momentum on the way in, eased return when the hand rests
-  S.vx = (S.vx + (tx - S.px) * 0.08) * 0.78;
-  S.vy = (S.vy + (ty - S.py) * 0.08) * 0.78;
-  S.px += S.vx; S.py += S.vy;
+  // host smooths the pointer now — track it directly; per-frame delta still feeds the lift envelope
+  S.vx = tx - S.px; S.vy = ty - S.py;
+  S.px = tx; S.py = ty;
   const speed = Math.hypot(S.vx, S.vy);
   const liftTarget = Math.min(1, speed * 0.045);
   S.lift += (liftTarget - S.lift) * (liftTarget > S.lift ? 0.16 : 0.05);

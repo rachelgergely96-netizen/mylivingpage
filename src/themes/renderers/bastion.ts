@@ -1,6 +1,7 @@
 import { fbm, noise2D } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -177,12 +178,13 @@ export const renderBastion: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // Motes — few, low-alpha soft round embers drifting over the lattice (cached gradient)
   for(let i=0;i<CFG.motes.length;i++){
     const m=CFG.motes[i];
-    const mxp=m.x+Math.sin(t*m.sp+m.ph)*m.amp+cxp*0.06*m.depth;
-    const myp=m.y+Math.cos(t*m.sp*0.9+m.ph)*m.amp+cyp*0.06*m.depth;
-    const x=(((mxp%1)+1)%1)*w;
-    const y=(((myp%1)+1)%1)*h;
+    // wrap intrinsic drift only (parallax added after) + fade at the seam — no teleport pop
+    const wx=wrapSoft(m.x+Math.sin(t*m.sp+m.ph)*m.amp,1,0.05);
+    const wy=wrapSoft(m.y+Math.cos(t*m.sp*0.9+m.ph)*m.amp,1,0.05);
+    const x=(wx.u+cxp*0.06*m.depth)*w;
+    const y=(wy.u+cyp*0.06*m.depth)*h;
     const tw=0.5+0.5*Math.sin(t*m.tw+m.ph*3);
-    blob(gMote,x,y,m.r*(1.6+1.0*tw),(0.05+0.09*tw)*m.depth,"lighter");
+    blob(gMote,x,y,m.r*(1.6+1.0*tw),(0.05+0.09*tw)*m.depth*wx.alpha*wy.alpha,"lighter");
   }
 
   // Pointer focus — a soft round glow, calmed so the pointer-centred rest frame isn't brightest where content sits

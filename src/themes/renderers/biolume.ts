@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -223,27 +224,29 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   for (let i = 0; i < snowN; i++) {
     const s = C.snow[i];
     const par = (s.layer + 1) * 0.012;
-    let yy = (s.y + t * s.speed) % 1;
-    if (yy < 0) yy += 1;
-    let sx = (s.x + Math.sin(t * 0.1 * s.sway + s.swayPh) * 0.01 - px * par) * w;
-    sx = ((sx % w) + w) % w;
-    const nxs = sx / w - 0.42, nys = yy - 0.46;
+    // Wrap the intrinsic drift only and fade at the seam; parallax shifts the
+    // wrapped position afterwards so pointer motion can never cause a pop.
+    const wy = wrapSoft(s.y + t * s.speed, 1, 0.05);
+    const wx = wrapSoft(s.x + Math.sin(t * 0.1 * s.sway + s.swayPh) * 0.01, 1, 0.05);
+    const sx = (wx.u - px * par) * w;
+    const nxs = wx.u - 0.42, nys = wy.u - 0.46;
     let rf = Math.sqrt(nxs * nxs * 1.2 + nys * nys) / 0.42;
     rf = rf > 1 ? 1 : rf;
     rf = 0.5 + 0.5 * rf;
     ctx.beginPath();
-    ctx.arc(sx, yy * h, s.size, 0, TAU);
-    ctx.fillStyle = "rgba(150, 232, 212, " + (s.bright * rf) + ")";
+    ctx.arc(sx, wy.u * h, s.size, 0, TAU);
+    ctx.fillStyle = "rgba(150, 232, 212, " + (s.bright * rf * wx.alpha * wy.alpha) + ")";
     ctx.fill();
   }
 
   for (let i = 0; i < C.plankton.length; i++) {
     const p = C.plankton[i];
     const par = 0.02 + p.layer * 0.04;
-    let bx = p.x + Math.sin(t * 0.08 * p.drift + p.ph) * 0.02 - px * par;
-    let by = p.y + Math.cos(t * 0.07 * p.drift + p.ph) * 0.015 - py * par;
-    bx = ((bx % 1) + 1) % 1;
-    by = ((by % 1) + 1) % 1;
+    const wbx = wrapSoft(p.x + Math.sin(t * 0.08 * p.drift + p.ph) * 0.02, 1, 0.06);
+    const wby = wrapSoft(p.y + Math.cos(t * 0.07 * p.drift + p.ph) * 0.015, 1, 0.06);
+    const wrapA = wbx.alpha * wby.alpha;
+    const bx = wbx.u - px * par;
+    const by = wby.u - py * par;
     let x = bx * w, y = by * h;
     const ddx = mxp - x, ddy = myp - y;
     const dd = Math.hypot(ddx, ddy);
@@ -260,9 +263,9 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     let flash = ftv > 0.9 ? (ftv - 0.9) / 0.1 : 0;
     flash *= readF;
     const base = 0.12 + 0.1 * Math.sin(t * 1.1 + p.ph);
-    const bri = Math.max(0.015, (base + flash * 0.5) * readF);
-    if (flash > 0.15) {
-      softGlow(ctx, x, y, 6 + flash * 9, "hsla(" + p.hue + ", 82%, 66%, " + (flash * 0.11) + ")", "transparent");
+    const bri = Math.max(0.015, (base + flash * 0.5) * readF) * wrapA;
+    if (flash * wrapA > 0.15) {
+      softGlow(ctx, x, y, 6 + flash * 9, "hsla(" + p.hue + ", 82%, 66%, " + (flash * wrapA * 0.11) + ")", "transparent");
     }
     ctx.beginPath();
     ctx.arc(x, y, p.size + flash * 1.5, 0, TAU);

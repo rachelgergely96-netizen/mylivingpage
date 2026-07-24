@@ -78,6 +78,7 @@ export function ThemeQualityLab() {
           interactive
           motionAware
           mobileAmbientMotion
+          maxFps={60}
         >
           <div data-analytics-scroll-root="true" className="relative h-full overflow-y-auto">
             <ResumeLayout

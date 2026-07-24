@@ -1,6 +1,7 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { softGlow, star4 } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -231,11 +232,12 @@ export const renderSonata: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     if (i % 3 === 2) continue;
     const nt = CFG.notes[i];
     const r = CFG.ribbons[nt.ri];
-    const prog = (t*nt.spd + nt.off) % 1;
-    const x = prog*w;
+    // soft wrap: fade the note out near the x seam instead of teleporting right->left
+    const wr = wrapSoft(t*nt.spd + nt.off, 1, 0.05);
+    const x = wr.u*w;
     const y = ribY(x,r,t,h,lift,ab);
     const sz = nt.size;
-    const pulse = 0.78 + 0.22*Math.sin(t*2.2 + nt.off*TAU);
+    const pulse = (0.78 + 0.22*Math.sin(t*2.2 + nt.off*TAU)) * wr.alpha;
 
     const tlen = 34 + sz*22;
     const tg = ctx.createLinearGradient(x, y, x - tlen, ribY(x-tlen,r,t,h,lift,ab));
@@ -270,7 +272,7 @@ export const renderSonata: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.fill();
     ctx.beginPath();
     ctx.arc(x, y, 0.7 + sz*0.6, 0, TAU);
-    ctx.fillStyle = "rgba(255,248,238,0.55)";
+    ctx.fillStyle = `rgba(255,248,238,${(0.55*wr.alpha).toFixed(3)})`;
     ctx.fill();
 
     if (nt.star && hasStar){

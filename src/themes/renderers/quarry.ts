@@ -2,6 +2,7 @@ import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
 import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
+import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -250,10 +251,11 @@ export const renderQuarry: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
   // dimmed + warmed; drift/brightness gently react to scroll velocity (clamped).
   ctx.save();ctx.globalCompositeOperation='lighter';
   for(let k=0;k<2;k++){
-    const sq=((t*0.075+k*0.5+vel*0.05)%1+1)%1;
-    const P=seamAt(sq),pulse=0.6+0.4*Math.sin(t*2.4+k);
-    const gi=finiteClamp(0.17*pulse*(1+0.4*velAbs),0,0.24);
-    const go=finiteClamp(0.10*pulse*(1+0.4*velAbs),0,0.15);
+    // soft wrap: globule fades out at the seam ends instead of popping back to the top
+    const wq=wrapSoft(t*0.075+k*0.5+vel*0.05,1,0.05);
+    const P=seamAt(wq.u),pulse=0.6+0.4*Math.sin(t*2.4+k);
+    const gi=finiteClamp(0.17*pulse*(1+0.4*velAbs),0,0.24)*wq.alpha;
+    const go=finiteClamp(0.10*pulse*(1+0.4*velAbs),0,0.15)*wq.alpha;
     softGlow(ctx,P[0],P[1],w*0.02*pulse+8,'rgba(255,216,150,'+gi.toFixed(3)+')','transparent');
     softGlow(ctx,P[0],P[1],w*0.05*pulse+14,'rgba(255,150,80,'+go.toFixed(3)+')','transparent');
   }
@@ -344,10 +346,12 @@ export const renderQuarry: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
   const dustCount=Math.min(9,CFG.dust.length);
   for(let d=0;d<dustCount;d++){
     const dm=CFG.dust[d];
-    const dy=((dm.y-t*0.01*dm.sp-vel*0.03*dm.depth)%1+1)%1;
+    // soft wrap: intrinsic drift only; scroll offset applied after so the seam stays put
+    const wy=wrapSoft(dm.y-t*0.01*dm.sp,1,0.05);
+    const dy=wy.u-vel*0.03*dm.depth;
     const dx=dm.x+px*0.03*dm.depth+Math.sin(t*0.3*dm.sp+dm.ph)*0.01;
     const tw=0.4+0.6*Math.abs(Math.sin(t*dm.sp+dm.ph));
-    const da=finiteClamp(0.11*tw*dm.depth*(1+0.4*velAbs),0,0.16);
+    const da=finiteClamp(0.11*tw*dm.depth*(1+0.4*velAbs),0,0.16)*wy.alpha;
     softGlow(ctx,dx*w,dy*h,dm.r*w*(0.6+0.5*tw),'rgba(240,205,160,'+da.toFixed(3)+')','transparent');
   }
   softGlow(ctx,mx*w,my*h,Math.min(w,h)*0.16,'rgba(233,175,114,0.05)','transparent');

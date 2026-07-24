@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { wrapSoft } from "../shared/wrap";
 import { finiteClamp, resolveThemeMotion, storyStepWeight } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
@@ -347,9 +348,11 @@ export const renderNocturne: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < moteN; i++) {
     const m = CFG.motes[i];
-    const mxp = ((m.x + time * 0.005 * m.sp) % 1) * w - px * minWH * 0.03;
+    // Soft seam: wrap intrinsic drift only, apply parallax after, fade at edge.
+    const wx = wrapSoft(m.x + time * 0.005 * m.sp, 1, 0.05);
+    const mxp = wx.u * w - px * minWH * 0.03;
     const myp = m.y * h + Math.sin(time * 0.2 * m.sp + m.ph) * h * (0.01 + 0.005 * velNorm) - py * minWH * 0.02;
-    const a = 0.05 + 0.05 * Math.sin(time * 0.8 + m.ph);
+    const a = (0.05 + 0.05 * Math.sin(time * 0.8 + m.ph)) * wx.alpha;
     if (a <= 0.002) continue;
     ctx.fillStyle = "rgba(200,214,255," + a.toFixed(3) + ")";
     ctx.beginPath();
@@ -373,10 +376,11 @@ export const renderNocturne: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,moti
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < mistN; i++) {
     const m = CFG.mist[i];
-    const bx = (((m.x + time * 0.006 * m.drift) % 1.2) - 0.1) * w;
+    const wx = wrapSoft(m.x + time * 0.006 * m.drift, 1.2, 0.05);
+    const bx = (wx.u - 0.1) * w;
     const by = h * (0.5 + m.band * 0.11) + m.yoff * h * 0.05;
     const n = fbm(m.x * 3 + time * 0.03 * m.drift, m.band * 1.7 + m.ph, 3);
-    const a = m.a * (0.5 + 0.5 * n);
+    const a = m.a * (0.5 + 0.5 * n) * wx.alpha;
     if (a <= 0.002) continue;
     const r = m.r * w * (0.8 + 0.4 * (0.5 + 0.5 * n));
     softGlow(ctx, bx, by, r, "rgba(150,168,224," + a.toFixed(3) + ")", "transparent");

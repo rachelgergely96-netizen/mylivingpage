@@ -476,11 +476,12 @@ a {
 
 .resume-theme {
   color: var(--theme-text, #f0f4ff);
+  font-family: var(--font-dm-sans), sans-serif;
 }
 
 .resume-theme-name {
   color: var(--theme-text, #f0f4ff);
-  font-family: var(--theme-heading-font, var(--font-playfair)), serif;
+  font-family: var(--font-dm-sans), sans-serif;
   text-shadow: 0 2px 22px rgba(0, 0, 0, 0.52);
 }
 
@@ -846,9 +847,9 @@ a {
 .resume-theme[data-resume-density="full"] .resume-theme-section-title::before {
   content: counter(living-page-section, decimal-leading-zero);
   color: var(--theme-text-subtle);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 0.58rem;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0.08em;
   line-height: 1;
 }
@@ -946,7 +947,7 @@ a {
   top: -0.25rem;
   right: 0.45rem;
   color: var(--theme-accent-soft);
-  font-family: var(--theme-heading-font);
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 3.5rem;
   line-height: 1;
   pointer-events: none;
@@ -1052,7 +1053,7 @@ a {
 
 [data-theme-id="nocturne"] [data-resume-summary] {
   max-width: 42rem;
-  font-family: var(--theme-heading-font);
+  font-family: var(--font-dm-sans), sans-serif;
 }
 
 [data-theme-id="nocturne"] [data-resume-stats] {

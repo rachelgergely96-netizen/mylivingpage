@@ -34,7 +34,7 @@ const config: Config = {
       },
       fontFamily: {
         site: ["var(--font-dm-sans)", "sans-serif"],
-        heading: ["var(--font-playfair)", "serif"],
+        heading: ["var(--font-dm-sans)", "sans-serif"],
         body: ["var(--font-dm-sans)", "sans-serif"],
         mono: ["var(--font-dm-mono)", "monospace"],
       },

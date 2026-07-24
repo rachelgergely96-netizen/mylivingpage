@@ -15,7 +15,6 @@ export interface ShareCardArtworkProps {
   className?: string;
   ctaBody?: string;
   ctaHeadline?: string;
-  headingFontFamily?: string;
   model: ShareCardModel;
   style?: CSSProperties;
   visual: ShareCardVisual;
@@ -26,17 +25,10 @@ export function ShareCardArtwork({
   className,
   ctaBody = "Scan to explore work, experience, and more.",
   ctaHeadline,
-  headingFontFamily,
   model,
   style,
   visual,
 }: ShareCardArtworkProps) {
-  const resolvedHeadingFont =
-    headingFontFamily ??
-    (visual.headingFont === "editorial"
-      ? "var(--font-playfair), Georgia, serif"
-      : bodyFontFamily);
-
   return (
     <div
       aria-label={`${model.name} share card in the ${visual.themeName} theme`}
@@ -174,7 +166,7 @@ export function ShareCardArtwork({
               style={{
                 color: visual.text,
                 display: "flex",
-                fontFamily: resolvedHeadingFont,
+                fontFamily: bodyFontFamily,
                 fontSize: model.nameFontSize,
                 fontWeight: 700,
                 letterSpacing: "-0.035em",
@@ -264,7 +256,7 @@ export function ShareCardArtwork({
                 color: visual.background,
                 display: "flex",
                 flex: "none",
-                fontFamily: resolvedHeadingFont,
+                fontFamily: bodyFontFamily,
                 fontSize: 49,
                 fontWeight: 700,
                 height: 126,

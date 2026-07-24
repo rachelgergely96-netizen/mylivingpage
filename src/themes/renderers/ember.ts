@@ -159,24 +159,50 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   }
   ctx.restore();
 
-  // Coal bed — source-over material glow (flat fills, no per-coal gradient)
+  // Coal bed — layered flat facets keep the material dimensional without
+  // adding per-coal gradients or blur.
   for (let i = 0; i < COALS.length; i++) {
     const c = COALS[i];
     const cx = c.xf * sw;
     const cy = sh - 8 - c.yj * 12;
     const pulse = 0.5 + Math.sin(t * 1.5 + c.pulse) * 0.5;
+    const points: Array<[number, number]> = [];
     ctx.beginPath();
     for (let s = 0; s <= c.sides; s++) {
       const ang = (s / c.sides) * TAU;
       const r = (3 + Math.sin(c.rSeed + s) * 1.5) * (1 + pulse * 0.32);
       const px = cx + Math.cos(ang) * r;
       const py = cy + Math.sin(ang) * r * 0.6;
+      points.push([px, py]);
       if (s === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
     ctx.closePath();
     ctx.fillStyle = `hsla(${c.hue},82%,${26 + pulse * 24}%,${0.12 + pulse * 0.12})`;
     ctx.fill();
+
+    // A quiet lower plane and a thin upper heat catch make each irregular coal
+    // read as a small faceted volume while preserving the existing silhouette.
+    const lowerEnd = Math.floor(c.sides / 2);
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let s = 1; s <= lowerEnd; s++) {
+      ctx.lineTo(points[s][0], points[s][1]);
+    }
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fillStyle = `hsla(${c.hue - 4},54%,8%,${0.1 + pulse * 0.045})`;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(points[lowerEnd][0], points[lowerEnd][1]);
+    for (let s = lowerEnd + 1; s < points.length; s++) {
+      ctx.lineTo(points[s][0], points[s][1]);
+    }
+    ctx.strokeStyle = `hsla(${c.hue + 18},88%,62%,${0.07 + pulse * 0.08})`;
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+
     ctx.beginPath();
     ctx.arc(cx, cy, 12 + pulse * 7, 0, TAU);
     ctx.fillStyle = `hsla(${c.hue + 6},80%,44%,${pulse * 0.05})`;

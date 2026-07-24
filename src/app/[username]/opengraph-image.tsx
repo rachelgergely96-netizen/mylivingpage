@@ -21,7 +21,7 @@ interface OgImageProps {
 
 interface OgFont {
   data: ArrayBuffer;
-  name: "DM Sans" | "Playfair";
+  name: "DM Sans";
   style: "normal";
   weight: 400 | 700;
 }
@@ -48,11 +48,7 @@ function createPublicPageClient() {
   });
 }
 
-function renderFallbackCard(
-  fonts: OgFont[],
-  playfairLoaded: boolean,
-  dmSansLoaded: boolean,
-) {
+function renderFallbackCard(fonts: OgFont[], dmSansLoaded: boolean) {
   return new ImageResponse(
     (
       <div
@@ -62,7 +58,7 @@ function renderFallbackCard(
           color: "#F0F4FF",
           display: "flex",
           flexDirection: "column",
-          fontFamily: playfairLoaded ? "Playfair" : "serif",
+          fontFamily: dmSansLoaded ? "DM Sans" : "sans-serif",
           height: "100%",
           justifyContent: "center",
           width: "100%",
@@ -99,24 +95,11 @@ function renderFallbackCard(
 
 export default async function OGImage({ params }: OgImageProps) {
   const { username } = await params;
-  const [playfairFont, dmSansFont] = await Promise.all([
-    fetchFont(
-      "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiukDQ.ttf",
-    ),
-    fetchFont(
-      "https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf",
-    ),
-  ]);
+  const dmSansFont = await fetchFont(
+    "https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf",
+  );
   const fonts: OgFont[] = [];
 
-  if (playfairFont) {
-    fonts.push({
-      data: playfairFont,
-      name: "Playfair",
-      style: "normal",
-      weight: 700,
-    });
-  }
   if (dmSansFont) {
     fonts.push(
       {
@@ -137,11 +120,7 @@ export default async function OGImage({ params }: OgImageProps) {
   const supabase = createPublicPageClient();
   const page = supabase ? await fetchPublicLivePage(supabase, username) : null;
   if (!page) {
-    return renderFallbackCard(
-      fonts,
-      Boolean(playfairFont),
-      Boolean(dmSansFont),
-    );
+    return renderFallbackCard(fonts, Boolean(dmSansFont));
   }
 
   const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
@@ -152,18 +131,11 @@ export default async function OGImage({ params }: OgImageProps) {
     slug: page.slug,
   });
   const bodyFontFamily = dmSansFont ? "DM Sans" : "sans-serif";
-  const headingFontFamily =
-    visual.headingFont === "editorial"
-      ? playfairFont
-        ? "Playfair"
-        : "serif"
-      : bodyFontFamily;
 
   return new ImageResponse(
     (
       <ShareCardArtwork
         bodyFontFamily={bodyFontFamily}
-        headingFontFamily={headingFontFamily}
         model={model}
         visual={visual}
       />

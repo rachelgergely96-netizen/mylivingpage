@@ -26,7 +26,6 @@ type ThemeCanvasStyle = React.CSSProperties & {
   "--theme-surface": string;
   "--theme-surface-strong": string;
   "--theme-border": string;
-  "--theme-heading-font": string;
 };
 
 interface ThemeCanvasProps {
@@ -91,10 +90,7 @@ export default function ThemeCanvas({
       "--theme-surface": presentation.surface,
       "--theme-surface-strong": presentation.surfaceStrong,
       "--theme-border": presentation.border,
-      "--theme-heading-font":
-        presentation.headingFont === "editorial"
-          ? "var(--font-playfair), serif"
-          : "var(--font-dm-sans), sans-serif",
+      fontFamily: "var(--font-dm-sans), sans-serif",
     };
   }, [theme]);
 

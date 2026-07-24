@@ -256,21 +256,36 @@ export const renderCircuit: ThemeRenderer = (
     const act=clamp(bl*cp.bright + mouse*0.35, 0, 0.72);
     const S=cp.size;
     const hue=cp.hue|0;
+    const extrusion=Math.max(1,Math.min(2,1.15*S));
+    const catchAlpha=(0.12+0.18*act).toFixed(4);
+    const extrusionColor=`hsla(${hue},18%,3%,0.68)`;
+    const catchColor=`hsla(${hue},58%,68%,${catchAlpha})`;
 
     if(cp.type==="via"){
+      // A flat lower-right underlay gives the plated via a physical lip without
+      // paying for shadowBlur. The short upper-left arc is its restrained catch.
+      ctx.fillStyle=extrusionColor;
+      ctx.beginPath(); ctx.arc(x+extrusion,y+extrusion,3.2*S,0,TAU); ctx.fill();
       ctx.strokeStyle=`hsla(${hue},35%,28%,0.5)`; ctx.lineWidth=1.4*S;
       ctx.beginPath(); ctx.arc(x,y,3.2*S,0,TAU); ctx.stroke();
       ctx.fillStyle=`hsla(${hue},18%,10%,0.6)`;
       ctx.beginPath(); ctx.arc(x,y,2.0*S,0,TAU); ctx.fill();
       ctx.fillStyle=`hsla(${hue},82%,${(54+10*act).toFixed(1)}%,${(0.16+0.18*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x,y,1.2*S,0,TAU); ctx.fill();
+      ctx.strokeStyle=catchColor; ctx.lineWidth=Math.max(0.7,0.75*S);
+      ctx.beginPath(); ctx.arc(x,y,3.2*S,Math.PI*1.06,Math.PI*1.58); ctx.stroke();
       if(act>0.55){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,9*S,`hsla(${hue},90%,62%,${(0.12*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
     } else if(cp.type==="chip"){
       const wch=(cp.horiz?9:6)*S, hch=(cp.horiz?6:9)*S;
+      ctx.fillStyle=extrusionColor;
+      ctx.fillRect(x-wch/2+extrusion,y-hch/2+extrusion,wch,hch);
       ctx.fillStyle=`hsla(${hue},22%,${(9+6*act).toFixed(1)}%,0.85)`;
       ctx.fillRect(x-wch/2,y-hch/2,wch,hch);
       ctx.strokeStyle=`hsla(${hue},60%,${(45+18*act).toFixed(1)}%,${(0.35+0.4*act).toFixed(4)})`; ctx.lineWidth=1;
       ctx.strokeRect(x-wch/2,y-hch/2,wch,hch);
+      ctx.fillStyle=catchColor;
+      ctx.fillRect(x-wch/2,y-hch/2,wch,Math.max(0.7,0.75*S));
+      ctx.fillRect(x-wch/2,y-hch/2,Math.max(0.7,0.75*S),hch);
       ctx.fillStyle=`hsla(${hue},50%,55%,${(0.3+0.3*act).toFixed(4)})`;
       const n=Math.min(4,cp.pins);
       for(let k=0;k<n;k++){
@@ -283,19 +298,28 @@ export const renderCircuit: ThemeRenderer = (
       if(act>0.6){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,Math.max(wch,hch)*1.3,`hsla(${hue},90%,60%,${(0.10*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
     } else if(cp.type==="cap"){
       const wc=5*S, hc=7*S;
+      ctx.fillStyle=extrusionColor;
+      ctx.fillRect(x-wc/2+extrusion,y-hc/2+extrusion,wc,hc);
       ctx.fillStyle=`hsla(${hue},30%,${(14+8*act).toFixed(1)}%,0.85)`;
       ctx.fillRect(x-wc/2,y-hc/2,wc,hc);
       ctx.strokeStyle=`hsla(${hue},55%,50%,${(0.3+0.35*act).toFixed(4)})`; ctx.lineWidth=0.8;
       ctx.strokeRect(x-wc/2,y-hc/2,wc,hc);
       ctx.fillStyle=`hsla(${hue},66%,56%,${(0.34+0.32*act).toFixed(4)})`;
       ctx.fillRect(x-wc/2, y-hc/2, wc, 1.4);
+      ctx.fillStyle=catchColor;
+      ctx.fillRect(x-wc/2,y-hc/2,Math.max(0.7,0.75*S),hc);
     } else if(cp.type==="res"){
       const wr=8*S, hr=3*S;
       ctx.strokeStyle=`hsla(${hue},30%,40%,0.3)`; ctx.lineWidth=0.8;
       ctx.beginPath(); ctx.moveTo(x-wr/2-3,y); ctx.lineTo(x+wr/2+3,y); ctx.stroke();
+      ctx.fillStyle=extrusionColor;
+      ctx.fillRect(x-wr/2+extrusion,y-hr/2+extrusion,wr,hr);
       ctx.fillStyle=`hsla(${hue},28%,${(16+8*act).toFixed(1)}%,0.85)`;
       ctx.fillRect(x-wr/2,y-hr/2,wr,hr);
       for(let k=0;k<3;k++){ ctx.fillStyle=`hsla(${(hue+k*20)%360},60%,55%,${(0.3+0.3*act).toFixed(4)})`; ctx.fillRect(x-wr/2+1.5+k*2.2, y-hr/2, 1.1, hr); }
+      ctx.fillStyle=catchColor;
+      ctx.fillRect(x-wr/2,y-hr/2,wr,Math.max(0.6,0.65*S));
+      ctx.fillRect(x-wr/2,y-hr/2,Math.max(0.6,0.65*S),hr);
     } else {
       ctx.globalCompositeOperation="lighter";
       softGlow(ctx,x,y,9.5*S*(0.7+0.6*act),`hsla(${hue},96%,60%,${(0.08+0.16*act).toFixed(4)})`,"transparent");

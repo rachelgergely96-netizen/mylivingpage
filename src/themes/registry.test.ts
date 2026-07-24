@@ -81,6 +81,12 @@ describe("theme registry", () => {
     }
   });
 
+  it("keeps typography uniform instead of varying it by theme", () => {
+    for (const theme of THEME_REGISTRY) {
+      expect("headingFont" in theme.presentation).toBe(false);
+    }
+  });
+
   it("identifies the redesigned signature set", () => {
     expect(
       THEME_REGISTRY.filter((theme) => theme.signature).map((theme) => theme.id),

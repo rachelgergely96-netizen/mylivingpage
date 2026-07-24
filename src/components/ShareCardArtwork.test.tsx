@@ -46,7 +46,6 @@ function buildArtwork(
   const markup = renderToStaticMarkup(
     <ShareCardArtwork
       bodyFontFamily="Arial, sans-serif"
-      headingFontFamily="Georgia, serif"
       model={model}
       visual={visual}
     />,
@@ -74,6 +73,8 @@ describe("ShareCardArtwork", () => {
     expect(markup).toContain(model.headline);
     expect(markup).toContain(`@${model.slug}`);
     expect(markup).toContain(model.displayUrl);
+    expect(markup).not.toContain("Georgia");
+    expect(markup).not.toContain("--font-playfair");
     expect(markup).toContain(
       `aria-label="QR code for ${model.displayUrl}"`,
     );
@@ -189,7 +190,6 @@ describe("ShareCardArtwork", () => {
         (
           <ShareCardArtwork
             bodyFontFamily="sans-serif"
-            headingFontFamily="serif"
             model={model}
             visual={visual}
           />

@@ -10,6 +10,12 @@ const getAccountAccessStateMock = vi.fn();
 const syncPageHostingStateMock = vi.fn();
 const isPubliclyAvailablePageMock = vi.fn();
 
+// The live-page preview mounts a client ThemeCanvas island; this desk test
+// exercises the proof/action/copy logic, not canvas rendering, so stub it.
+vi.mock("@/components/dashboard/DashboardPagePreview", () => ({
+  default: () => <div data-dashboard-page-preview />,
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     children,

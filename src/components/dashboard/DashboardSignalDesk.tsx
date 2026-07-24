@@ -7,6 +7,7 @@ import type { PageRecord } from "@/types/resume";
 import DeletePageButton from "@/components/DeletePageButton";
 import PublishPageButton from "@/components/PublishPageButton";
 import DashboardCopyLinkButton from "@/components/dashboard/DashboardCopyLinkButton";
+import DashboardPagePreview from "@/components/dashboard/DashboardPagePreview";
 
 export interface DashboardSignalPage {
   offlineAttemptAt: string | null;
@@ -205,9 +206,12 @@ function SignalMetric({
   value: string;
 }) {
   return (
-    <div className="min-w-0 border-l border-site-border pl-3 sm:pl-4">
+    <div
+      className="min-w-0 border border-site-border bg-site-canvas-alt p-3"
+      style={{ borderLeftColor: "var(--site-action)", borderLeftWidth: 2 }}
+    >
       <p className="site-eyebrow text-[9px] text-site-muted">{label}</p>
-      <p className="dashboard-signal-metric mt-1 font-mono text-2xl font-semibold text-site-action-hover">
+      <p className="dashboard-signal-metric mt-1.5 font-mono text-2xl font-semibold text-site-action-hover">
         {value}
       </p>
       <p className="mt-1 text-[10px] leading-4 text-site-muted">{detail}</p>
@@ -371,7 +375,21 @@ export default function DashboardSignalDesk({
                       </div>
                     </header>
 
-                    <div className="grid gap-0 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]">
+                    <div className="grid gap-0 lg:grid-cols-[minmax(15rem,0.82fr)_minmax(0,1.18fr)_minmax(15rem,0.6fr)]">
+                      <div
+                        className="border-b border-site-border px-4 py-6 sm:px-5 sm:py-7 lg:border-b-0 lg:border-r"
+                        data-dashboard-preview-column
+                      >
+                        <p className="site-eyebrow text-[9px] text-site-muted">
+                          {publicViewAvailable ? "Your live page" : "Draft preview"}
+                        </p>
+                        <div className="mt-3">
+                          <DashboardPagePreview
+                            resumeData={page.resume_data}
+                            themeId={page.theme_id}
+                          />
+                        </div>
+                      </div>
                       <section
                         aria-labelledby={`dashboard-next-signal-${page.id}`}
                         className="px-4 py-6 sm:px-5 sm:py-7 lg:border-r lg:border-site-border"
@@ -406,7 +424,7 @@ export default function DashboardSignalDesk({
                             <p className="mt-1 text-xs text-site-secondary">Page activity</p>
                           </div>
                         </div>
-                        <div className="mt-5 grid grid-cols-3 gap-3">
+                        <div className="mt-5 grid grid-cols-3 gap-2 lg:grid-cols-1">
                           <SignalMetric
                             label="Views"
                             value={String(proof.viewsLast7d)}

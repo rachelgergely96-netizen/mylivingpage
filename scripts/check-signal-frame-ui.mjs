@@ -49,6 +49,21 @@ const CSS_IN_SCOPE = [
   "src/components/marketing/LivingHomepagePrototype.module.css",
 ];
 
+// Pictured product objects — the device-framed Living Page previews and the
+// sample-page cards — may round, the same intentional exception as the 12px
+// metal/holographic share cards. Genuine app chrome still must stay sharp, so
+// this list is deliberately tight: one specific declaration per entry.
+const PICTURED_OBJECT_ROUNDING = [
+  ["src/components/marketing/SamplePageCard.tsx", "rounded-2xl"],
+  ["src/components/marketing/LivingHomepagePrototype.module.css", "border-radius: 16px"],
+];
+
+function isPicturedObjectRounding(file, line) {
+  return PICTURED_OBJECT_ROUNDING.some(
+    ([allowFile, snippet]) => file === allowFile && line.includes(snippet),
+  );
+}
+
 const CHECKS = [
   { label: "Playfair website heading", pattern: /\bfont-heading\b/ },
   { label: "legacy glass helper", pattern: /\bglass-card\b/ },
@@ -93,6 +108,12 @@ for (const file of files) {
   for (const [index, line] of lines.entries()) {
     for (const check of CHECKS) {
       if (check.pattern.test(line)) {
+        if (
+          check.label === "rounded website geometry" &&
+          isPicturedObjectRounding(file, line)
+        ) {
+          continue;
+        }
         failures.push(`${file}:${index + 1} ${check.label}: ${line.trim()}`);
       }
     }
@@ -108,7 +129,8 @@ for (const file of CSS_IN_SCOPE) {
     if (
       radius &&
       !/^0(?:px|rem|em|%)?$/.test(radius) &&
-      radius !== "var(--site-radius)"
+      radius !== "var(--site-radius)" &&
+      !isPicturedObjectRounding(file, line)
     ) {
       failures.push(
         `${file}:${index + 1} rounded website geometry: ${line.trim()}`,

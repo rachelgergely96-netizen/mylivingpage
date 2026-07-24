@@ -291,7 +291,7 @@ export default function ShareCardDownload({
                 zIndex: -1,
               }}
             >
-              <ShareCardArtwork model={cardModel} visual={visual} />
+              <ShareCardArtwork finish="holographic" model={cardModel} visual={visual} />
             </div>
 
             <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px] sm:p-6">
@@ -302,7 +302,12 @@ export default function ShareCardDownload({
                 data-theme-collection={visual.collection}
                 className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-2"
               >
-                <ScaledShareCardArtwork animatedShine model={cardModel} visual={visual} />
+                <ScaledShareCardArtwork
+                  animatedShine
+                  finish="holographic"
+                  model={cardModel}
+                  visual={visual}
+                />
               </div>
 
               <div className="site-panel flex flex-col justify-between gap-4 p-5">

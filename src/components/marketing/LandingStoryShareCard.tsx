@@ -58,6 +58,7 @@ export function LandingStoryShareCard({
       <ScaledShareCardArtwork
         animatedShine
         ctaHeadline={qrLabel}
+        finish="holographic"
         frameClassName="w-full"
         model={model}
         visual={visual}

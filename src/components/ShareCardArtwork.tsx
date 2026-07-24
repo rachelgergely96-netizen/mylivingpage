@@ -177,13 +177,16 @@ export function ShareCardArtwork({
           </div>
         ) : null}
 
-        {treatment.emblem === null ? (
+        {/* The motif watermark carries the theme identity; keep it on classic
+            and holographic (which welcomes the extra theme character), but not
+            on metal, whose restraint comes from the accent hairline alone. */}
+        {treatment.emblem !== "chip" ? (
           <ShareCardProfileMark
             accent={visual.accent}
             motif={visual.motif}
             style={{
               height: 68,
-              opacity: 0.64,
+              opacity: treatment.id === "holographic" ? 0.5 : 0.64,
               right: 184,
               top: 34,
               width: 68,

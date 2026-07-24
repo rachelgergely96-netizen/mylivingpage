@@ -136,6 +136,7 @@ export default async function OGImage({ params }: OgImageProps) {
     (
       <ShareCardArtwork
         bodyFontFamily={bodyFontFamily}
+        finish="holographic"
         model={model}
         visual={visual}
       />

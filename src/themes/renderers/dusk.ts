@@ -74,7 +74,17 @@ const GRAD: {
   vig: CanvasGradient | null;
 } = { w: -1, h: -1, sky: null, hb: null, haze: null, water: null, glit: null, vig: null };
 
-export const renderDusk: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderDusk: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const t = motion?.reducedMotion ? 0 : time;
   const clamp=(v:number,a:number,b:number)=> v<a?a:(v>b?b:v);
   const hy = h*0.60;
   const px = mx-0.5, py = my-0.5;
@@ -184,12 +194,10 @@ export const renderDusk: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
 
   // 5. sun: soft volumetric bloom + disc ONLY, capped so the bright-pass bloom can't clip to white
   ctx.globalCompositeOperation="lighter";
-  const breathe=0.9+0.1*Math.sin(t*0.35);
-  softGlow(ctx,sunX,sunY,w*0.44*breathe,"hsla(30,88%,52%,0.05)","transparent");
-  softGlow(ctx,sunX,sunY,w*0.24,"hsla(36,95%,58%,0.08)","transparent");
-  softGlow(ctx,sunX,sunY,w*0.13,"hsla(24,96%,56%,0.11)","transparent");
+  const breathe=0.97+0.03*Math.sin(t*0.22);
+  softGlow(ctx,sunX,sunY,w*0.30*breathe,"hsla(30,88%,52%,0.035)","transparent");
   const sunR=w*0.028;
-  softGlow(ctx,sunX,sunY,sunR*3.2,"hsla(34,96%,60%,0.14)","transparent");
+  softGlow(ctx,sunX,sunY,sunR*2.8,"hsla(34,96%,60%,0.10)","transparent");
   const disc=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR);
   disc.addColorStop(0,"hsla(45,95%,80%,0.58)");
   disc.addColorStop(0.55,"hsla(36,98%,66%,0.44)");

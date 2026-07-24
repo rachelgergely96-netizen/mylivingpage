@@ -301,17 +301,20 @@ export const MARKETING_SAMPLE_GROUPS: MarketingSampleGroup[] = [
   {
     id: "after-you-apply",
     title: "After you apply",
-    description: "Use one Living Page and one Resume PDF from the same source so follow-up stays clear and consistent.",
+    description:
+      "You already sent the application. Share one clear link in your follow-up so the person reviewing you can understand the details faster.",
   },
   {
     id: "when-a-recruiter-clicks",
     title: "When a recruiter clicks",
-    description: "The search already worked. These pages help the next human decision happen faster.",
+    description:
+      "A recruiter already has your résumé. Give them one place to scan your experience, proof, and contact links.",
   },
   {
     id: "when-a-referral-asks",
     title: "When a referral asks for your link",
-    description: "Networking and warm intros move faster when you can send one page instead of another attachment.",
+    description:
+      "Someone is willing to introduce you. Send a link they can understand and pass along without another attachment.",
   },
 ];
 
@@ -344,7 +347,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     id: "early-career-attorney",
     groupId: "after-you-apply",
     audienceLabel: "Application follow-up",
-    roleLabel: "Attorney who needs polish fast",
+    roleLabel: "Early-career litigation attorney",
     bestUsedAfter: "You submitted the application and need a cleaner follow-up asset for emails, bios, or recruiter outreach.",
     humanBenefit: "It keeps a formal tone while giving your credentials, writing, and case work more context than a one-page resume.",
     resumeBoundary: "Use the PDF for formal submissions. Use the page once credibility and clarity matter more than attachment friction.",

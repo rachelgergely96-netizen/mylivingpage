@@ -1,22 +1,309 @@
-import { fbm } from "../shared/noise";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { createSeededRandom } from "../shared/random";
-import { softGlow, star4 } from "../shared/draw";
+import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
 
-interface HelixNode {
-  y: number;
-  s: number;
-  c: number;
-  xA: number;
-  xB: number;
-  dA: number;
-  dB: number;
-  hwA: number;
-  hwB: number;
+interface HelixBead {
+  progress: number;
+  speed: number;
+  orbit: number;
+  orbitSpeed: number;
+  strand: -1 | 1;
+  size: number;
 }
 
-const CFG=(function(){const rnd=createSeededRandom(20240717);const haze=[];for(let i=0;i<10;i++){haze.push({x:rnd(),y:rnd(),r:0.12+rnd()*0.16,drift:0.02+rnd()*0.05,ph:rnd()*TAU,tint:rnd()});}const motes=[];for(let i=0;i<64;i++){motes.push({x:rnd(),y:rnd(),z:rnd(),r:0.5+rnd()*1.6,tw:rnd()*TAU,tws:0.5+rnd()*1.6,spark:rnd()});}const beads=[];for(let i=0;i<10;i++){beads.push({speed:0.045+rnd()*0.05,off:rnd(),orbit:rnd()*TAU,orbitSpd:0.7+rnd()*1.3,size:2.4+rnd()*2.2,hue:rnd()});}const pulses=[];for(let i=0;i<6;i++){pulses.push({speed:0.11+rnd()*0.10,off:rnd(),strand:i%2});}return {haze:haze,motes:motes,beads:beads,pulses:pulses};})();
+interface HelixNode {
+  y: number;
+  phase: number;
+  xA: number;
+  xB: number;
+  depthA: number;
+  depthB: number;
+  widthA: number;
+  widthB: number;
+}
 
-export const renderHelix: ThemeRenderer = (ctx,w,h,t,mx,my)=>{const pxm=(mx-0.5),pym=(my-0.5);const cx=w*0.5+pxm*w*0.05;const cy=h*0.5;const MK=0.026,MSPD=1.35,MAMP=w*0.135,MBW=Math.max(3.2,w*0.0055);const orbTilt=pym*14;ctx.save();ctx.globalCompositeOperation="lighter";const gA=ctx.createLinearGradient(0,0,0,h);gA.addColorStop(0,"rgba(24,60,78,0.36)");gA.addColorStop(0.42,"rgba(12,32,46,0.16)");gA.addColorStop(1,"rgba(2,6,14,0)");ctx.fillStyle=gA;ctx.fillRect(0,0,w,h);softGlow(ctx,cx,h*0.42,w*0.28,"rgba(58,148,168,0.24)","transparent");softGlow(ctx,w*0.16,h*0.30,w*0.30,"rgba(40,110,150,0.14)","transparent");softGlow(ctx,w*0.86,h*0.72,w*0.30,"rgba(48,128,150,0.15)","transparent");ctx.restore();ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<CFG.haze.length;i++){const b=CFG.haze[i];const n=fbm(b.x*3+t*b.drift,b.y*3-t*b.drift*0.6+b.ph,3);const a=0.045+0.085*(0.5+0.5*n);const hx=(b.x+Math.sin(t*b.drift+b.ph)*0.03)*w;const hy=(b.y+Math.cos(t*b.drift*0.8+b.ph)*0.03)*h;const rr=b.r*Math.min(w,h);const col=b.tint<0.5?"rgba(70,170,190,":"rgba(92,150,212,";softGlow(ctx,hx,hy,rr,col+a.toFixed(3)+")","transparent");}ctx.restore();const drawHelixLayer=(cxx: number,amp: number,k: number,spd: number,ph0: number,bw: number,aMul: number,isMain: boolean)=>{const stp=isMain?12:16;const n: HelixNode[]=[];for(let y=-26;y<=h+26;y+=stp){const p=y*k-t*spd+ph0;const s=Math.sin(p),c=Math.cos(p);const xA=cxx+s*amp,xB=cxx-s*amp;const dA=c,dB=-c;const hwA=bw*(0.30+0.70*(0.5+0.5*dA));const hwB=bw*(0.30+0.70*(0.5+0.5*dB));n.push({y:y,s:s,c:c,xA:xA,xB:xB,dA:dA,dB:dB,hwA:hwA,hwB:hwB});}const N=n.length;ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<N;i++){const q=n[i];if(q.c<-0.12)continue;const front=0.5+0.5*q.c;const a=(isMain?0.05:0.024)+(isMain?0.24:0.10)*front;ctx.beginPath();ctx.moveTo(q.xA,q.y);ctx.lineTo(q.xB,q.y);ctx.strokeStyle="rgba(120,214,232,"+a.toFixed(3)+")";ctx.lineWidth=(isMain?1.6:1.0)*(0.6+0.8*front);ctx.stroke();if(isMain&&q.c>0.4){const mp=(q.xA+q.xB)*0.5;ctx.beginPath();ctx.arc(mp,q.y,1.6+1.4*front,0,TAU);ctx.fillStyle="rgba(186,232,246,"+(0.14+0.24*front).toFixed(3)+")";ctx.fill();}}ctx.restore();const ribbon=(key: "xA" | "xB",hwKey: "hwA" | "hwB",dKey: "dA" | "dB",topC: string,midC: string,botC: string)=>{ctx.beginPath();for(let i=0;i<N;i++){const q=n[i];const x=q[key]-q[hwKey];if(i===0)ctx.moveTo(x,q.y);else ctx.lineTo(x,q.y);}for(let i=N-1;i>=0;i--){const q=n[i];ctx.lineTo(q[key]+q[hwKey],q.y);}ctx.closePath();const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,topC);g.addColorStop(0.5,midC);g.addColorStop(1,botC);ctx.fillStyle=g;ctx.fill();ctx.strokeStyle="rgba(180,226,240,"+(0.10*aMul).toFixed(3)+")";ctx.lineWidth=1;ctx.stroke();if(isMain){ctx.save();ctx.globalCompositeOperation="lighter";ctx.lineCap="round";for(let i=0;i<N-1;i++){const q=n[i],q2=n[i+1];const d=q[dKey];if(d<0.12)continue;ctx.beginPath();ctx.moveTo(q[key],q.y);ctx.lineTo(q2[key],q2.y);ctx.lineWidth=Math.max(1,q[hwKey]*0.5);ctx.strokeStyle="rgba(208,234,250,"+(0.20*d).toFixed(3)+")";ctx.stroke();}ctx.restore();}};ribbon("xB","hwB","dB","rgba(150,204,238,"+(0.52*aMul).toFixed(3)+")","rgba(110,166,220,"+(0.62*aMul).toFixed(3)+")","rgba(46,92,148,"+(0.50*aMul).toFixed(3)+")");ribbon("xA","hwA","dA","rgba(202,228,244,"+(0.52*aMul).toFixed(3)+")","rgba(150,198,226,"+(0.66*aMul).toFixed(3)+")","rgba(64,112,146,"+(0.56*aMul).toFixed(3)+")");};drawHelixLayer(w*0.5-pxm*w*0.02,w*0.085,0.030,0.95,1.6,Math.max(2,w*0.0032),0.42,false);ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<CFG.motes.length;i++){const m=CFG.motes[i];const mxp=m.x*w-pxm*(6+m.z*30);const myp=m.y*h-pym*(6+m.z*24);const tw=0.35+0.65*(0.5+0.5*Math.sin(t*m.tws+m.tw));const sz=(0.5+m.z*1.6)*m.r;const a=(0.10+0.5*m.z)*tw;ctx.beginPath();ctx.arc(mxp,myp,sz,0,TAU);ctx.fillStyle="rgba(150,215,230,"+a.toFixed(3)+")";ctx.fill();if(m.spark>0.87&&tw>0.7)star4(ctx,mxp,myp,sz*5,0.8,"rgba(180,232,246,"+(0.3*tw).toFixed(3)+")");}ctx.restore();drawHelixLayer(cx,MAMP,MK,MSPD,0,MBW,1,true);ctx.save();for(let i=0;i<CFG.beads.length;i++){const b=CFG.beads[i];const prog=(((t*b.speed+b.off)%1)+1)%1;const by=prog*(h+80)-40;const p=by*MK-t*MSPD;const dir=b.hue<0.5?1:-1;const baseX=cx+dir*Math.sin(p)*MAMP;const depth=dir*Math.cos(p);const oa=t*b.orbitSpd+b.orbit;const bx=baseX+Math.cos(oa)*(13+orbTilt*dir);const byy=by+Math.sin(oa)*7;const front=0.5+0.5*depth;const sz=b.size*(0.7+0.5*front);ctx.globalCompositeOperation="lighter";softGlow(ctx,bx,byy,sz*5.5,"rgba(90,200,222,"+(0.10+0.16*front).toFixed(3)+")","transparent");ctx.beginPath();ctx.arc(bx,byy,sz,0,TAU);ctx.fillStyle="rgba(192,226,244,"+(0.36+0.20*front).toFixed(3)+")";ctx.fill();ctx.beginPath();ctx.arc(bx,byy,sz*0.5,0,TAU);ctx.fillStyle="rgba(214,238,250,"+(0.24+0.18*front).toFixed(3)+")";ctx.fill();if(front>0.72)star4(ctx,bx,byy,sz*4.5,1.2,"rgba(190,238,250,"+(0.26*front).toFixed(3)+")");}ctx.restore();ctx.save();ctx.globalCompositeOperation="lighter";for(let i=0;i<CFG.pulses.length;i++){const b=CFG.pulses[i];const prog=(((t*b.speed+b.off)%1)+1)%1;const yy=prog*(h+40)-20;const dir=b.strand?1:-1;const p=yy*MK-t*MSPD;const x=cx+dir*Math.sin(p)*MAMP;softGlow(ctx,x,yy,10,"rgba(150,230,245,0.24)","transparent");ctx.beginPath();ctx.arc(x,yy,2.2,0,TAU);ctx.fillStyle="rgba(206,234,248,0.50)";ctx.fill();for(let kk=1;kk<=3;kk++){const ty=yy-kk*7;const tp=ty*MK-t*MSPD;const tx=cx+dir*Math.sin(tp)*MAMP;ctx.beginPath();ctx.arc(tx,ty,Math.max(0.4,2.2-kk*0.5),0,TAU);ctx.fillStyle="rgba(150,225,245,"+(0.4-kk*0.1).toFixed(3)+")";ctx.fill();}}ctx.restore();ctx.save();ctx.globalCompositeOperation="lighter";softGlow(ctx,cx,h*0.11,w*0.16,"rgba(80,170,190,0.12)","transparent");star4(ctx,cx,h*0.13,w*0.05,2,"rgba(190,232,248,0.22)");ctx.restore();const topScrim=ctx.createLinearGradient(0,0,0,h*0.46);topScrim.addColorStop(0,"rgba(3,6,13,0.34)");topScrim.addColorStop(1,"rgba(3,6,13,0)");ctx.fillStyle=topScrim;ctx.fillRect(0,0,w,h*0.46);const vg=ctx.createRadialGradient(cx,cy,Math.min(w,h)*0.24,cx,cy,Math.max(w,h)*0.75);vg.addColorStop(0,"rgba(2,4,10,0)");vg.addColorStop(1,"rgba(1,2,7,0.62)");ctx.fillStyle=vg;ctx.fillRect(0,0,w,h);};
+const BEADS: HelixBead[] = (() => {
+  const random = createSeededRandom(20240717);
+  return Array.from({ length: 3 }, (_, index) => ({
+    progress: random(),
+    speed: 0.017 + random() * 0.011,
+    orbit: random() * TAU,
+    orbitSpeed: 0.12 + random() * 0.1,
+    strand: index % 2 === 0 ? 1 : -1,
+    size: 2.8 + random() * 1.8,
+  }));
+})();
+
+export const renderHelix: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  if (!(w > 0) || !(h > 0)) return;
+
+  const M = resolveThemeMotion(motion);
+  const effectiveTime = motion?.reducedMotion ? 0 : t;
+  const pointerX = finiteClamp(mx, 0, 1, 0.5) - 0.5;
+  const portrait = h > w * 1.05;
+  const centerX =
+    w * (portrait ? 0.82 : 0.78) + pointerX * w * 0.012;
+  const amplitude = Math.min(
+    w * (portrait ? 0.13 : 0.125),
+    centerX - w * 0.62,
+  );
+  const minSide = Math.min(w, h);
+  const ribbonWidth = Math.max(2.8, w * 0.0046);
+  const pitch = 0.026;
+  const storyPhase =
+    (M.sectionCount > 0 ? M.storyProgress - 0.5 : 0) * 0.45;
+  const velocityPhase = finiteClamp(M.scrollVelocity / 4, -1, 1) * 0.07;
+  const phaseOffset =
+    -effectiveTime * 0.13 + storyPhase + velocityPhase;
+
+  ctx.save();
+
+  const atmosphere = ctx.createLinearGradient(0, 0, w, h);
+  atmosphere.addColorStop(0, "rgba(3, 8, 16, 0.58)");
+  atmosphere.addColorStop(0.58, "rgba(7, 23, 34, 0.2)");
+  atmosphere.addColorStop(1, "rgba(2, 7, 14, 0.64)");
+  ctx.fillStyle = atmosphere;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  const hazePositions: Array<[number, number, number, string]> = [
+    [0.73, 0.2, 0.25, "rgba(52, 126, 154, 0.07)"],
+    [0.86, 0.5, 0.31, "rgba(57, 151, 164, 0.08)"],
+    [0.72, 0.82, 0.24, "rgba(54, 111, 164, 0.06)"],
+  ];
+  hazePositions.forEach(([x, y, radius, color], index) => {
+    const driftX =
+      motion?.reducedMotion
+        ? 0
+        : Math.sin(effectiveTime * (0.035 + index * 0.009) + index) *
+          minSide *
+          0.012;
+    const driftY =
+      motion?.reducedMotion
+        ? 0
+        : Math.cos(effectiveTime * (0.03 + index * 0.007) + index * 1.7) *
+          minSide *
+          0.01;
+    softGlow(
+      ctx,
+      w * x + driftX,
+      h * y + driftY,
+      minSide * radius,
+      color,
+      "transparent",
+    );
+  });
+  ctx.restore();
+
+  const nodes: HelixNode[] = [];
+  for (let y = -24; y <= h + 24; y += 11) {
+    const phase = y * pitch + phaseOffset;
+    const wave = Math.sin(phase);
+    const depth = Math.cos(phase);
+    const depthA = 0.5 + 0.5 * depth;
+    const depthB = 1 - depthA;
+    nodes.push({
+      y,
+      phase,
+      xA: centerX + wave * amplitude,
+      xB: centerX - wave * amplitude,
+      depthA,
+      depthB,
+      widthA: ribbonWidth * (0.38 + depthA * 0.88),
+      widthB: ribbonWidth * (0.38 + depthB * 0.88),
+    });
+  }
+
+  for (let index = 0; index < nodes.length; index += 2) {
+    const node = nodes[index];
+    const front = Math.max(node.depthA, node.depthB);
+    const rungAlpha = 0.035 + front * 0.14;
+    ctx.strokeStyle = `rgba(137, 214, 231, ${rungAlpha})`;
+    ctx.lineWidth = 0.7 + front * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(node.xA, node.y);
+    ctx.lineTo(node.xB, node.y);
+    ctx.stroke();
+  }
+
+  const drawRibbon = (
+    xKey: "xA" | "xB",
+    widthKey: "widthA" | "widthB",
+    depthKey: "depthA" | "depthB",
+    colors: readonly [string, string, string],
+  ) => {
+    ctx.beginPath();
+    nodes.forEach((node, index) => {
+      const x = node[xKey] - node[widthKey];
+      if (index === 0) ctx.moveTo(x, node.y);
+      else ctx.lineTo(x, node.y);
+    });
+    for (let index = nodes.length - 1; index >= 0; index -= 1) {
+      const node = nodes[index];
+      ctx.lineTo(node[xKey] + node[widthKey], node.y);
+    }
+    ctx.closePath();
+    const metal = ctx.createLinearGradient(0, 0, 0, h);
+    metal.addColorStop(0, colors[0]);
+    metal.addColorStop(0.5, colors[1]);
+    metal.addColorStop(1, colors[2]);
+    ctx.fillStyle = metal;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(180, 226, 240, 0.12)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.lineCap = "round";
+    for (let index = 0; index < nodes.length - 1; index += 1) {
+      const node = nodes[index];
+      const next = nodes[index + 1];
+      const depth = node[depthKey];
+      if (depth < 0.18) continue;
+      const sheen =
+        0.06 +
+        depth * 0.13 +
+        0.035 *
+          Math.max(
+            0,
+            Math.sin(effectiveTime * 0.25 - node.y * 0.012),
+          );
+      ctx.strokeStyle = `rgba(216, 239, 248, ${sheen})`;
+      ctx.lineWidth = Math.max(0.8, node[widthKey] * 0.42);
+      ctx.beginPath();
+      ctx.moveTo(node[xKey], node.y);
+      ctx.lineTo(next[xKey], next.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  drawRibbon(
+    "xB",
+    "widthB",
+    "depthB",
+    [
+      "rgba(125, 185, 218, 0.42)",
+      "rgba(78, 139, 184, 0.54)",
+      "rgba(31, 70, 116, 0.44)",
+    ],
+  );
+  drawRibbon(
+    "xA",
+    "widthA",
+    "depthA",
+    [
+      "rgba(196, 225, 239, 0.46)",
+      "rgba(126, 184, 211, 0.58)",
+      "rgba(45, 91, 125, 0.48)",
+    ],
+  );
+
+  if (!motion?.reducedMotion) {
+    BEADS.forEach((bead) => {
+      const progress =
+        (bead.progress + effectiveTime * bead.speed) % 1;
+      const y = -20 + progress * (h + 40);
+      const phase = y * pitch + phaseOffset;
+      const strandX =
+        centerX + bead.strand * Math.sin(phase) * amplitude;
+      const depth =
+        0.5 + 0.5 * bead.strand * Math.cos(phase);
+      const orbit = effectiveTime * bead.orbitSpeed + bead.orbit;
+      const x = strandX + Math.cos(orbit) * (8 + depth * 7);
+      const beadY = y + Math.sin(orbit) * 5;
+      const size = bead.size * (0.72 + depth * 0.42);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      softGlow(
+        ctx,
+        x,
+        beadY,
+        size * 4.5,
+        `rgba(112, 213, 229, ${0.07 + depth * 0.09})`,
+        "transparent",
+      );
+      ctx.fillStyle = `rgba(205, 236, 246, ${0.28 + depth * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(x, beadY, size, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  const hasStory = M.sectionCount > 0;
+  if (hasStory || M.hasFocus) {
+    const storyY = h * (0.16 + M.storyProgress * 0.68);
+    const targetY = M.hasFocus
+      ? storyY * 0.45 + finiteClamp(M.focusY, 0, 1, 0.5) * h * 0.55
+      : storyY;
+    const signalPhase = targetY * pitch + phaseOffset;
+    const frontStrand = Math.cos(signalPhase) >= 0 ? 1 : -1;
+    const signalX =
+      centerX + frontStrand * Math.sin(signalPhase) * amplitude;
+    const trailLength =
+      motion?.reducedMotion
+        ? 0
+        : Math.abs(finiteClamp(M.scrollVelocity, -4, 4)) * 3.5;
+    const signalRadius = minSide * (M.hasFocus ? 0.052 : 0.038);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    softGlow(
+      ctx,
+      signalX,
+      targetY,
+      signalRadius,
+      `rgba(151, 231, 242, ${0.12 + M.interactionImpulse * 0.06})`,
+      "transparent",
+    );
+    ctx.strokeStyle = "rgba(213, 241, 248, 0.52)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(signalX, targetY - trailLength);
+    ctx.lineTo(signalX, targetY + trailLength);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(218, 244, 250, 0.7)";
+    ctx.beginPath();
+    ctx.arc(signalX, targetY, 2.4, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  const readingLane = ctx.createLinearGradient(0, 0, w * 0.7, 0);
+  readingLane.addColorStop(0, "rgba(3, 8, 16, 0.9)");
+  readingLane.addColorStop(0.62, "rgba(3, 8, 16, 0.58)");
+  readingLane.addColorStop(1, "rgba(3, 8, 16, 0)");
+  ctx.fillStyle = readingLane;
+  ctx.fillRect(0, 0, w * 0.72, h);
+
+  const vignette = ctx.createRadialGradient(
+    centerX,
+    h * 0.48,
+    minSide * 0.2,
+    w * 0.58,
+    h * 0.5,
+    Math.max(w, h) * 0.8,
+  );
+  vignette.addColorStop(0, "rgba(2, 4, 10, 0)");
+  vignette.addColorStop(1, "rgba(1, 3, 8, 0.58)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.restore();
+};

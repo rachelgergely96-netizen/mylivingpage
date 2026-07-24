@@ -1,0 +1,633 @@
+import type { ThemeId } from "@/themes/types";
+
+/**
+ * A compact vocabulary of artwork primitives that can be composed into every
+ * share-card identity. Recipes stay structural: their colors always come from
+ * the selected Living Page theme at render time.
+ */
+export const SHARE_CARD_PRIMITIVE_IDS = [
+  "orbital",
+  "flow",
+  "particles",
+  "grid",
+  "contour",
+  "facets",
+  "botanical",
+  "architecture",
+  "weave",
+  "print",
+  "ornament",
+  "atmosphere",
+] as const;
+
+export type ShareCardPrimitiveId = (typeof SHARE_CARD_PRIMITIVE_IDS)[number];
+
+export const SHARE_CARD_FRAME_IDS = [
+  "signal",
+  "cinematic",
+  "folio",
+  "material",
+  "gallery",
+  "instrument",
+] as const;
+
+export type ShareCardFrameId = (typeof SHARE_CARD_FRAME_IDS)[number];
+
+export const SHARE_CARD_ART_ANCHOR_IDS = [
+  "north-east",
+  "center-right",
+  "south-east",
+  "center",
+  "south-west",
+] as const;
+
+export type ShareCardArtAnchorId = (typeof SHARE_CARD_ART_ANCHOR_IDS)[number];
+
+export interface ThemeShareCardRecipe<TThemeId extends ThemeId = ThemeId> {
+  readonly themeId: TThemeId;
+  readonly primitive: ShareCardPrimitiveId;
+  readonly secondaryPrimitive: ShareCardPrimitiveId | null;
+  readonly frame: ShareCardFrameId;
+  readonly anchor: ShareCardArtAnchorId;
+  readonly density: 1 | 2 | 3;
+  /** Deterministic geometry variation, never a random seed. */
+  readonly variant: number;
+  readonly rotation: number;
+  readonly scale: number;
+  readonly opacity: number;
+  readonly mirror: boolean;
+}
+
+type ThemeShareCardRecipeMap = {
+  readonly [TThemeId in ThemeId]: ThemeShareCardRecipe<TThemeId>;
+};
+
+type RecipeOptions = Partial<
+  Omit<ThemeShareCardRecipe, "themeId" | "primitive" | "variant">
+>;
+
+function recipe<TThemeId extends ThemeId>(
+  themeId: TThemeId,
+  primitive: ShareCardPrimitiveId,
+  variant: number,
+  options: RecipeOptions = {},
+): ThemeShareCardRecipe<TThemeId> {
+  return {
+    themeId,
+    primitive,
+    secondaryPrimitive: null,
+    frame: "signal",
+    anchor: "center-right",
+    density: 2,
+    variant,
+    rotation: 0,
+    scale: 1,
+    opacity: 0.32,
+    mirror: false,
+    ...options,
+  };
+}
+
+/**
+ * Every renderer deliberately chooses a card recipe. The mapped type makes a
+ * new ThemeId fail type-checking until it has an export-safe visual identity.
+ *
+ * Themes share primitives, not layouts. The numeric recipe tokens alter the
+ * geometry inside those primitives while the card's information hierarchy
+ * remains stable and easy to scan.
+ */
+export const THEME_SHARE_CARD_RECIPES = {
+  cosmic: recipe("cosmic", "orbital", 1, {
+    secondaryPrimitive: "particles",
+    frame: "cinematic",
+    anchor: "center-right",
+    density: 3,
+    rotation: -9,
+    scale: 1.12,
+    opacity: 0.38,
+  }),
+  fluid: recipe("fluid", "flow", 2, {
+    secondaryPrimitive: "particles",
+    frame: "material",
+    anchor: "south-east",
+    rotation: -8,
+    scale: 1.08,
+  }),
+  ember: recipe("ember", "particles", 3, {
+    secondaryPrimitive: "flow",
+    frame: "cinematic",
+    anchor: "south-east",
+    density: 3,
+    rotation: -13,
+    opacity: 0.4,
+  }),
+  monolith: recipe("monolith", "facets", 4, {
+    secondaryPrimitive: "architecture",
+    frame: "signal",
+    anchor: "center-right",
+    scale: 1.16,
+    opacity: 0.3,
+  }),
+  aurora: recipe("aurora", "flow", 5, {
+    secondaryPrimitive: "atmosphere",
+    frame: "cinematic",
+    anchor: "north-east",
+    density: 3,
+    rotation: 8,
+    scale: 1.18,
+    opacity: 0.38,
+    mirror: true,
+  }),
+  terracotta: recipe("terracotta", "contour", 6, {
+    secondaryPrimitive: "facets",
+    frame: "material",
+    anchor: "south-east",
+    rotation: -4,
+    opacity: 0.3,
+  }),
+  prism: recipe("prism", "facets", 7, {
+    secondaryPrimitive: "orbital",
+    frame: "gallery",
+    anchor: "center-right",
+    density: 3,
+    rotation: 17,
+    scale: 1.14,
+    opacity: 0.4,
+  }),
+  biolume: recipe("biolume", "botanical", 8, {
+    secondaryPrimitive: "particles",
+    frame: "material",
+    anchor: "south-east",
+    density: 3,
+    rotation: 10,
+    opacity: 0.38,
+  }),
+  circuit: recipe("circuit", "grid", 9, {
+    secondaryPrimitive: "particles",
+    frame: "signal",
+    anchor: "center-right",
+    density: 3,
+    rotation: 0,
+    opacity: 0.34,
+  }),
+  sakura: recipe("sakura", "botanical", 10, {
+    secondaryPrimitive: "particles",
+    frame: "gallery",
+    anchor: "north-east",
+    density: 2,
+    rotation: -16,
+    scale: 1.08,
+    opacity: 0.36,
+    mirror: true,
+  }),
+  glacier: recipe("glacier", "facets", 11, {
+    secondaryPrimitive: "atmosphere",
+    frame: "cinematic",
+    anchor: "center-right",
+    density: 2,
+    rotation: -5,
+    opacity: 0.28,
+  }),
+  verdant: recipe("verdant", "botanical", 12, {
+    secondaryPrimitive: "atmosphere",
+    frame: "material",
+    anchor: "south-east",
+    density: 3,
+    rotation: 6,
+    scale: 1.18,
+    opacity: 0.34,
+  }),
+  neon: recipe("neon", "grid", 13, {
+    secondaryPrimitive: "orbital",
+    frame: "instrument",
+    anchor: "south-east",
+    density: 3,
+    rotation: 0,
+    scale: 1.1,
+    opacity: 0.4,
+  }),
+  topo: recipe("topo", "contour", 14, {
+    secondaryPrimitive: "grid",
+    frame: "signal",
+    anchor: "center-right",
+    density: 3,
+    rotation: -12,
+    scale: 1.14,
+    opacity: 0.36,
+  }),
+  luxe: recipe("luxe", "flow", 15, {
+    secondaryPrimitive: "facets",
+    frame: "folio",
+    anchor: "center-right",
+    density: 1,
+    rotation: -18,
+    scale: 1.26,
+    opacity: 0.44,
+  }),
+  dusk: recipe("dusk", "atmosphere", 16, {
+    secondaryPrimitive: "particles",
+    frame: "cinematic",
+    anchor: "south-east",
+    density: 2,
+    rotation: 0,
+    opacity: 0.34,
+  }),
+  matrix: recipe("matrix", "grid", 17, {
+    secondaryPrimitive: "particles",
+    frame: "signal",
+    anchor: "center-right",
+    density: 3,
+    rotation: 0,
+    scale: 1.06,
+    opacity: 0.42,
+    mirror: true,
+  }),
+  coral: recipe("coral", "botanical", 18, {
+    secondaryPrimitive: "atmosphere",
+    frame: "material",
+    anchor: "south-east",
+    density: 3,
+    rotation: -8,
+    scale: 1.2,
+    opacity: 0.38,
+  }),
+  stardust: recipe("stardust", "orbital", 19, {
+    secondaryPrimitive: "particles",
+    frame: "cinematic",
+    anchor: "center-right",
+    density: 3,
+    rotation: 22,
+    scale: 1.22,
+    opacity: 0.4,
+    mirror: true,
+  }),
+  ink: recipe("ink", "print", 20, {
+    secondaryPrimitive: "flow",
+    frame: "gallery",
+    anchor: "south-east",
+    density: 2,
+    rotation: -6,
+    scale: 1.08,
+    opacity: 0.3,
+  }),
+  bloom: recipe("bloom", "botanical", 21, {
+    secondaryPrimitive: "orbital",
+    frame: "gallery",
+    anchor: "center-right",
+    density: 3,
+    rotation: 14,
+    scale: 1.16,
+    opacity: 0.4,
+  }),
+  silk: recipe("silk", "weave", 22, {
+    secondaryPrimitive: "flow",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: -12,
+    scale: 1.2,
+    opacity: 0.38,
+  }),
+  tempest: recipe("tempest", "atmosphere", 23, {
+    secondaryPrimitive: "particles",
+    frame: "cinematic",
+    anchor: "center-right",
+    density: 3,
+    rotation: -19,
+    scale: 1.14,
+    opacity: 0.42,
+  }),
+  obsidian: recipe("obsidian", "facets", 24, {
+    secondaryPrimitive: "contour",
+    frame: "material",
+    anchor: "center-right",
+    density: 2,
+    rotation: 8,
+    scale: 1.18,
+    opacity: 0.36,
+  }),
+  apex: recipe("apex", "architecture", 25, {
+    secondaryPrimitive: "grid",
+    frame: "signal",
+    anchor: "south-east",
+    density: 3,
+    rotation: 0,
+    scale: 1.12,
+    opacity: 0.36,
+  }),
+  atlas: recipe("atlas", "orbital", 26, {
+    secondaryPrimitive: "grid",
+    frame: "instrument",
+    anchor: "center-right",
+    density: 3,
+    rotation: -12,
+    scale: 1.16,
+    opacity: 0.4,
+  }),
+  forge: recipe("forge", "orbital", 27, {
+    secondaryPrimitive: "particles",
+    frame: "material",
+    anchor: "center-right",
+    density: 3,
+    rotation: 13,
+    scale: 1.08,
+    opacity: 0.42,
+  }),
+  vector: recipe("vector", "grid", 28, {
+    secondaryPrimitive: "orbital",
+    frame: "instrument",
+    anchor: "center-right",
+    density: 2,
+    rotation: 5,
+    scale: 1.06,
+    opacity: 0.36,
+  }),
+  vault: recipe("vault", "architecture", 29, {
+    secondaryPrimitive: "atmosphere",
+    frame: "cinematic",
+    anchor: "center",
+    density: 2,
+    rotation: 0,
+    scale: 1.16,
+    opacity: 0.3,
+  }),
+  velvet: recipe("velvet", "print", 30, {
+    secondaryPrimitive: "weave",
+    frame: "folio",
+    anchor: "center-right",
+    density: 1,
+    rotation: 0,
+    scale: 1.04,
+    opacity: 0.3,
+  }),
+  opaline: recipe("opaline", "orbital", 31, {
+    secondaryPrimitive: "facets",
+    frame: "gallery",
+    anchor: "north-east",
+    density: 3,
+    rotation: 11,
+    scale: 1.12,
+    opacity: 0.36,
+  }),
+  halo: recipe("halo", "orbital", 32, {
+    secondaryPrimitive: "particles",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: -18,
+    scale: 1.18,
+    opacity: 0.42,
+  }),
+  sonata: recipe("sonata", "flow", 33, {
+    secondaryPrimitive: "particles",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: -5,
+    scale: 1.12,
+    opacity: 0.36,
+  }),
+  mosaic: recipe("mosaic", "facets", 34, {
+    secondaryPrimitive: "grid",
+    frame: "gallery",
+    anchor: "center-right",
+    density: 3,
+    rotation: 7,
+    scale: 1.16,
+    opacity: 0.38,
+    mirror: true,
+  }),
+  bastion: recipe("bastion", "architecture", 35, {
+    secondaryPrimitive: "grid",
+    frame: "signal",
+    anchor: "center-right",
+    density: 3,
+    rotation: 0,
+    scale: 1.08,
+    opacity: 0.32,
+  }),
+  carbon: recipe("carbon", "weave", 36, {
+    secondaryPrimitive: "facets",
+    frame: "material",
+    anchor: "center-right",
+    density: 3,
+    rotation: -14,
+    scale: 1.12,
+    opacity: 0.28,
+  }),
+  caliber: recipe("caliber", "orbital", 37, {
+    secondaryPrimitive: "grid",
+    frame: "instrument",
+    anchor: "center-right",
+    density: 3,
+    rotation: 4,
+    scale: 1.08,
+    opacity: 0.42,
+  }),
+  quarry: recipe("quarry", "contour", 38, {
+    secondaryPrimitive: "facets",
+    frame: "material",
+    anchor: "south-east",
+    density: 2,
+    rotation: -6,
+    scale: 1.18,
+    opacity: 0.34,
+  }),
+  harbor: recipe("harbor", "atmosphere", 39, {
+    secondaryPrimitive: "orbital",
+    frame: "cinematic",
+    anchor: "south-east",
+    density: 2,
+    rotation: 0,
+    scale: 1.1,
+    opacity: 0.34,
+  }),
+  relay: recipe("relay", "grid", 40, {
+    secondaryPrimitive: "orbital",
+    frame: "signal",
+    anchor: "center-right",
+    density: 3,
+    rotation: -7,
+    scale: 1.08,
+    opacity: 0.38,
+  }),
+  meridian: recipe("meridian", "orbital", 41, {
+    secondaryPrimitive: "grid",
+    frame: "instrument",
+    anchor: "center-right",
+    density: 2,
+    rotation: -22,
+    scale: 1.14,
+    opacity: 0.4,
+  }),
+  atelier: recipe("atelier", "print", 42, {
+    secondaryPrimitive: "facets",
+    frame: "gallery",
+    anchor: "center-right",
+    density: 2,
+    rotation: -3,
+    scale: 1.06,
+    opacity: 0.34,
+  }),
+  porcelain: recipe("porcelain", "contour", 43, {
+    secondaryPrimitive: "botanical",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: 14,
+    scale: 1.16,
+    opacity: 0.28,
+  }),
+  filigree: recipe("filigree", "ornament", 44, {
+    secondaryPrimitive: "botanical",
+    frame: "folio",
+    anchor: "center-right",
+    density: 3,
+    rotation: -4,
+    scale: 1.18,
+    opacity: 0.44,
+  }),
+  cameo: recipe("cameo", "ornament", 45, {
+    secondaryPrimitive: "botanical",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: 0,
+    scale: 1.04,
+    opacity: 0.38,
+  }),
+  solstice: recipe("solstice", "orbital", 46, {
+    secondaryPrimitive: "particles",
+    frame: "cinematic",
+    anchor: "north-east",
+    density: 3,
+    rotation: 9,
+    scale: 1.24,
+    opacity: 0.44,
+  }),
+  tulle: recipe("tulle", "weave", 47, {
+    secondaryPrimitive: "particles",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: 12,
+    scale: 1.14,
+    opacity: 0.3,
+  }),
+  parasol: recipe("parasol", "ornament", 48, {
+    secondaryPrimitive: "orbital",
+    frame: "gallery",
+    anchor: "north-east",
+    density: 2,
+    rotation: -18,
+    scale: 1.2,
+    opacity: 0.38,
+    mirror: true,
+  }),
+  gossamer: recipe("gossamer", "weave", 49, {
+    secondaryPrimitive: "particles",
+    frame: "gallery",
+    anchor: "center-right",
+    density: 3,
+    rotation: -9,
+    scale: 1.22,
+    opacity: 0.3,
+  }),
+  citadel: recipe("citadel", "architecture", 50, {
+    secondaryPrimitive: "grid",
+    frame: "signal",
+    anchor: "center",
+    density: 3,
+    rotation: 0,
+    scale: 1.18,
+    opacity: 0.32,
+  }),
+  axiom: recipe("axiom", "grid", 51, {
+    secondaryPrimitive: "orbital",
+    frame: "instrument",
+    anchor: "center-right",
+    density: 2,
+    rotation: -11,
+    scale: 1.06,
+    opacity: 0.38,
+  }),
+  helix: recipe("helix", "weave", 52, {
+    secondaryPrimitive: "orbital",
+    frame: "instrument",
+    anchor: "center-right",
+    density: 3,
+    rotation: -4,
+    scale: 1.16,
+    opacity: 0.4,
+  }),
+  jetstream: recipe("jetstream", "atmosphere", 53, {
+    secondaryPrimitive: "flow",
+    frame: "cinematic",
+    anchor: "center-right",
+    density: 3,
+    rotation: -16,
+    scale: 1.2,
+    opacity: 0.36,
+  }),
+  echelon: recipe("echelon", "architecture", 54, {
+    secondaryPrimitive: "grid",
+    frame: "signal",
+    anchor: "center-right",
+    density: 3,
+    rotation: -8,
+    scale: 1.12,
+    opacity: 0.36,
+    mirror: true,
+  }),
+  vellum: recipe("vellum", "print", 55, {
+    secondaryPrimitive: "flow",
+    frame: "folio",
+    anchor: "south-east",
+    density: 2,
+    rotation: -5,
+    scale: 1.14,
+    opacity: 0.26,
+  }),
+  nocturne: recipe("nocturne", "orbital", 56, {
+    secondaryPrimitive: "print",
+    frame: "folio",
+    anchor: "north-east",
+    density: 2,
+    rotation: -13,
+    scale: 1.14,
+    opacity: 0.34,
+  }),
+  lustre: recipe("lustre", "flow", 57, {
+    secondaryPrimitive: "facets",
+    frame: "folio",
+    anchor: "center-right",
+    density: 2,
+    rotation: -22,
+    scale: 1.24,
+    opacity: 0.42,
+  }),
+  fresco: recipe("fresco", "contour", 58, {
+    secondaryPrimitive: "atmosphere",
+    frame: "material",
+    anchor: "center-right",
+    density: 2,
+    rotation: 6,
+    scale: 1.18,
+    opacity: 0.28,
+  }),
+  rosaline: recipe("rosaline", "facets", 59, {
+    secondaryPrimitive: "orbital",
+    frame: "gallery",
+    anchor: "center-right",
+    density: 3,
+    rotation: 12,
+    scale: 1.16,
+    opacity: 0.4,
+  }),
+} satisfies ThemeShareCardRecipeMap;
+
+export function getThemeShareCardRecipe(
+  themeId: ThemeId,
+): ThemeShareCardRecipe {
+  return THEME_SHARE_CARD_RECIPES[themeId];
+}

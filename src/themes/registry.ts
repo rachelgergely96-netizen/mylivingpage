@@ -147,7 +147,6 @@ const THEME_PRESENTATION_DEFAULTS = {
     border: "rgba(157, 220, 250, 0.14)",
     scrim:
       "radial-gradient(ellipse at 76% 18%, rgba(1, 7, 12, 0.04) 0%, rgba(1, 7, 12, 0.28) 48%, rgba(1, 7, 12, 0.62) 100%)",
-    headingFont: "modern",
   },
   cinematic: {
     accent: "#AFC9FF",
@@ -162,7 +161,6 @@ const THEME_PRESENTATION_DEFAULTS = {
     border: "rgba(205, 214, 255, 0.14)",
     scrim:
       "radial-gradient(ellipse at 72% 16%, rgba(3, 5, 14, 0.02) 0%, rgba(3, 5, 14, 0.3) 50%, rgba(3, 5, 14, 0.64) 100%)",
-    headingFont: "editorial",
   },
   "organic-material": {
     accent: "#E9C89B",
@@ -177,7 +175,6 @@ const THEME_PRESENTATION_DEFAULTS = {
     border: "rgba(239, 216, 184, 0.14)",
     scrim:
       "radial-gradient(ellipse at 75% 16%, rgba(14, 9, 5, 0.02) 0%, rgba(14, 9, 5, 0.28) 48%, rgba(14, 9, 5, 0.63) 100%)",
-    headingFont: "editorial",
   },
   "editorial-luxe": {
     accent: "#E8BC85",
@@ -192,7 +189,6 @@ const THEME_PRESENTATION_DEFAULTS = {
     border: "rgba(245, 214, 180, 0.15)",
     scrim:
       "radial-gradient(ellipse at 78% 14%, rgba(11, 5, 8, 0.01) 0%, rgba(11, 5, 8, 0.26) 48%, rgba(11, 5, 8, 0.62) 100%)",
-    headingFont: "editorial",
   },
   "art-lab": {
     accent: "#FFAE8C",
@@ -207,7 +203,6 @@ const THEME_PRESENTATION_DEFAULTS = {
     border: "rgba(247, 210, 200, 0.14)",
     scrim:
       "radial-gradient(ellipse at 76% 16%, rgba(8, 6, 13, 0.01) 0%, rgba(8, 6, 13, 0.27) 48%, rgba(8, 6, 13, 0.62) 100%)",
-    headingFont: "modern",
   },
 } as const satisfies Record<ThemeCollectionId, ThemePresentation>;
 
@@ -503,7 +498,7 @@ const THEME_DEFINITIONS: Array<
     id: "luxe",
     name: "Luxe",
     description:
-      "A slow, heavy river of melted gold flows in broad viscous swells, mirror-bright sheens rolling across the liquid-metal surface under a warm, expensive bloom.",
+      "One monumental fold of liquid gold moves through black lacquer, its mirror ridge following the page story.",
     vibe: "Prestigious & Confident",
     background: "#0A0808",
   },
@@ -739,7 +734,7 @@ const THEME_DEFINITIONS: Array<
     id: "filigree",
     name: "Filigree",
     description:
-      "Ornamental metallic curls unfurl from the center in elegant looping arabesques.",
+      "A continuous line of chased gold climbs the page in asymmetric openwork, catching a jeweler's light as each chapter comes forward.",
     vibe: "Intricate & Regal",
     background: "#05060A",
   },

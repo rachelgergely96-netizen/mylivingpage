@@ -87,6 +87,11 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
                 <p className="mt-0.5 font-mono text-[11px] text-site-muted">
                   /{p.slug} &middot; by @{p.ownerUsername}
                 </p>
+                {p.ownerEmail ? (
+                  <p className="mt-1 truncate text-[11px] text-site-muted">
+                    {p.ownerEmail}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <span className="site-badge py-0.5 font-mono text-[10px]">

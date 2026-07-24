@@ -55,6 +55,7 @@ interface CameoGradientCache {
   pearl: CanvasGradient[];
   glow: CanvasGradient[];
   petal: CanvasGradient[];
+  medallion: CanvasGradient[];
 }
 
 const RNG = createSeededRandom(0x9a12c7f1);
@@ -94,7 +95,7 @@ for (let b = 0; b < 26; b += 1) {
 }
 // Reusable gradients: built once per context, repositioned/scaled via the CTM
 // so per-frame gradient allocations drop from ~180 to a small handful.
-const GRAD: CameoGradientCache = { ctx: null, pearl: [], glow: [], petal: [] };
+const GRAD: CameoGradientCache = { ctx: null, pearl: [], glow: [], petal: [], medallion: [] };
 
 export const renderCameo: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, motion) => {
   const M = resolveThemeMotion(motion);
@@ -137,6 +138,19 @@ export const renderCameo: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
       petalGrad(242, 206, 223, 201, 142, 176),
       petalGrad(236, 192, 207, 184, 112, 151),
     ];
+    const stone = ctx.createRadialGradient(-0.34, -0.38, 0.04, 0.08, 0.1, 1.12);
+    stone.addColorStop(0, "rgba(150,101,125,0.98)");
+    stone.addColorStop(0.48, "rgba(102,63,84,0.98)");
+    stone.addColorStop(1, "rgba(42,27,38,0.99)");
+    const shell = ctx.createLinearGradient(-0.8, -0.9, 0.9, 1);
+    shell.addColorStop(0, "rgba(238,221,204,0.98)");
+    shell.addColorStop(0.52, "rgba(215,183,173,0.98)");
+    shell.addColorStop(1, "rgba(152,105,121,0.98)");
+    const reliefLight = ctx.createRadialGradient(-0.42, -0.5, 0.02, -0.16, -0.18, 0.95);
+    reliefLight.addColorStop(0, "rgba(249,232,213,0.28)");
+    reliefLight.addColorStop(0.5, "rgba(231,197,182,0.08)");
+    reliefLight.addColorStop(1, "rgba(231,197,182,0)");
+    GRAD.medallion = [stone, shell, reliefLight];
   }
 
   // Motion scalars — every one resolves to 0 / neutral at rest.
@@ -235,6 +249,54 @@ export const renderCameo: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
 
   const bezX = (a:number, c:number, b:number, u:number) => { const iu = 1 - u; return iu * iu * a + 2 * iu * u * c + u * u * b; };
 
+  const traceReliefPetal = (length:number, width:number) => {
+    ctx.beginPath();
+    ctx.moveTo(0, -0.03);
+    ctx.bezierCurveTo(width * 0.68, -length * 0.18, width * 0.5, -length * 0.78, 0, -length);
+    ctx.bezierCurveTo(-width * 0.5, -length * 0.78, -width * 0.68, -length * 0.18, 0, -0.03);
+    ctx.closePath();
+  };
+
+  const drawRoseRelief = (
+    offsetX:number,
+    offsetY:number,
+    fillStyle:string | CanvasGradient,
+    strokeStyle:string | null,
+  ) => {
+    const drawRing = (count:number, radius:number, length:number, width:number, phase:number) => {
+      for (let i = 0; i < count; i += 1) {
+        ctx.save();
+        ctx.rotate(phase + i * TAU / count);
+        ctx.translate(0, radius);
+        traceReliefPetal(length, width);
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+        if (strokeStyle) {
+          ctx.strokeStyle = strokeStyle;
+          ctx.lineWidth = 0.009;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    };
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    drawRing(8, 0.19, 0.48, 0.25, 0);
+    drawRing(6, 0.1, 0.34, 0.19, Math.PI / 6);
+    drawRing(4, 0.035, 0.23, 0.14, Math.PI / 4);
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.085, 0, TAU);
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+    if (strokeStyle) {
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = 0.009;
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
   const drawPearl = (x:number, y:number, r:number, storySweep:number) => {
     const dx = lightX - x, dy = lightY - y;
     const d = Math.hypot(dx, dy) || 1;
@@ -254,6 +316,62 @@ export const renderCameo: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, 
 
   for (let i = 0; i < BOKEH.length; i += 1) drawBokeh(BOKEH[i], false);
   for (let i = 0; i < PETALS.length; i += 1) drawPetal(PETALS[i], false);
+
+  // A single carved shell-rose cameo anchors the right side. Its lower-right
+  // underlay and offset relief pass are baked shadows, keeping this dimensional
+  // focal object inexpensive while the pearl strands remain free to cross it.
+  const portrait = h > w * 1.05;
+  const cameoX = w * (portrait ? 0.94 : 0.82) + pxr * minSide * 0.012;
+  const cameoY = h * (portrait ? 0.43 : 0.46) + pyr * minSide * 0.01;
+  const cameoRx = minSide * (portrait ? 0.14 : 0.19);
+  const cameoRy = cameoRx * 1.28;
+  const cameoShadow = minSide * 0.012;
+
+  ctx.save();
+  ctx.translate(cameoX + cameoShadow * 0.7, cameoY + cameoShadow);
+  ctx.scale(cameoRx, cameoRy);
+  ctx.beginPath();
+  ctx.arc(0, 0, 1.03, 0, TAU);
+  ctx.fillStyle = "rgba(19,11,17,0.62)";
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(cameoX, cameoY);
+  ctx.scale(cameoRx, cameoRy);
+  ctx.beginPath();
+  ctx.arc(0, 0, 1, 0, TAU);
+  ctx.fillStyle = GRAD.medallion[0];
+  ctx.fill();
+  ctx.strokeStyle = "rgba(37,21,31,0.9)";
+  ctx.lineWidth = 0.055;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.88, 0, TAU);
+  ctx.strokeStyle = "rgba(202,151,164,0.38)";
+  ctx.lineWidth = 0.035;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.scale(1, cameoRx / cameoRy);
+  drawRoseRelief(0.03, 0.035, "rgba(39,22,31,0.34)", null);
+  drawRoseRelief(0, 0, GRAD.medallion[1], "rgba(99,60,76,0.44)");
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.67, 0, TAU);
+  ctx.fillStyle = GRAD.medallion[2];
+  ctx.fill();
+  ctx.restore();
+
+  const lightAngle = Math.atan2(
+    (lightY - cameoY) / Math.max(1, cameoRy),
+    (lightX - cameoX) / Math.max(1, cameoRx),
+  );
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.94, lightAngle - 0.72, lightAngle + 0.72);
+  ctx.strokeStyle = "rgba(244,218,201,0.24)";
+  ctx.lineWidth = 0.025;
+  ctx.stroke();
+  ctx.restore();
 
   for (let s = 0; s < STRANDS.length; s += 1) {
     const st = STRANDS[s];

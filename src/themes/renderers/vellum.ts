@@ -68,11 +68,13 @@ const CFG=(function(){
   return {leaves:leaves,dust:dust};
 })();
 
-export const renderVellum: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+export const renderVellum: ThemeRenderer = (ctx,w,h,timeValue,mx,my,_deltaSeconds,motion)=>{
   const M=resolveThemeMotion(motion);
-  const vel=finiteClamp(M.scrollVelocity/3,-1,1,0);
+  const reduced=motion?.reducedMotion===true;
+  const t=reduced?0:timeValue;
+  const vel=reduced?0:finiteClamp(M.scrollVelocity/3,-1,1,0);
   const story=M.storyProgress;
-  const swayAmt=Math.min(1,M.pointerSpeed);
+  const swayAmt=reduced?0:Math.min(1,M.pointerSpeed);
   const swayMul=1+Math.abs(vel)*0.5+swayAmt*0.3;   // 1 at rest
   const stackDrift=story*h*0.02;                    // 0 at rest
   const parY=vel*h*0.02;                            // 0 at rest
@@ -82,6 +84,9 @@ export const renderVellum: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
   const px=mx-0.5, py=my-0.5;
   const maxS=Math.max(w,h), minS=Math.min(w,h);
   const ox=w*(0.82+px*0.02)-storyShift, oy=h*(0.12+py*0.02);
+  const focusLift=M.hasFocus
+    ? 0.02+finiteClamp(M.interactionImpulse,0,1,0)*0.04
+    : 0;
 
   function leafPath(cx: number,cy: number,hw: number,hh: number,curl: number){
     const lx=cx-hw, rx=cx+hw, ty=cy-hh, by=cy+hh;
@@ -204,7 +209,8 @@ export const renderVellum: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
     if(dep>0.5){
       ctx.save();
       ctx.globalCompositeOperation="screen";
-      softGlow(ctx,cx+hw*0.45,cy-hh*0.35,hw*0.55,"rgba(255,242,220,"+(0.05+dep*0.05+cw*0.035).toFixed(4)+")","transparent");
+      const catchAlpha=Math.min(0.18,0.05+dep*0.05+cw*0.035+cw*focusLift);
+      softGlow(ctx,cx+hw*0.45,cy-hh*0.35,hw*0.55,"rgba(255,242,220,"+catchAlpha.toFixed(4)+")","transparent");
       ctx.restore();
     }
   }
@@ -212,18 +218,6 @@ export const renderVellum: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion
   // Near dust (soft, in front of the leaves).
   for(let i=0;i<dust.length;i++){ if(dust[i].z<=0.5) continue; drawMote(dust[i]); }
   ctx.globalAlpha=1;
-
-  // Focus response: a soft warm bloom gathers where the reader's focus lands — a round glow
-  // only (never a stitch/bar), attenuated on the left by the clear-space drawn just below.
-  // Absent at rest (hasFocus is false), so the resting scene is unchanged.
-  if(M.hasFocus){
-    const fx=M.focusX*w, fy=M.focusY*h;
-    const fa=0.045+M.interactionImpulse*0.08;
-    ctx.save();
-    ctx.globalCompositeOperation="screen";
-    softGlow(ctx,fx,fy,minS*(0.16+M.interactionImpulse*0.05),"rgba(246,232,214,"+fa.toFixed(3)+")","transparent");
-    ctx.restore();
-  }
 
   // Right-edge deckle glow.
   ctx.save();

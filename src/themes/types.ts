@@ -164,7 +164,6 @@ export interface ThemePresentation {
   surfaceStrong: string;
   border: string;
   scrim: string;
-  headingFont: "editorial" | "modern";
 }
 
 export interface ThemeMeta {

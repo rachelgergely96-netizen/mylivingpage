@@ -45,7 +45,8 @@ Secret rotation checklist:
   - resume preview (`ats_export_preview`),
   - resume validation (`ats_export_check`),
   - resume import (`resume_import`),
-  - client analytics event (`client_event`).
+  - client analytics event (`client_event`),
+  - authenticated feedback submission (`feedback_submit`).
 - Enforcement is an atomic database RPC, `enforce_rate_limit` (see `supabase/migrations/20260718160000_database_security_hardening.sql` and `20260718170000_rate_limit_write_hardening.sql`). The RPC takes a per-policy/identifier `pg_advisory_xact_lock`, counts the sliding-window `security.rate_limit.request` events, and writes the request/block row in the same transaction. This replaces the earlier count-then-insert application logic, which had a race between counting and writing.
 - The RPC is `SECURITY DEFINER` and executable only by the service role; browser roles cannot insert into `events` or call the limiter directly.
 - Rate-limit state persists through the existing `events` table so serverless instances share the same sliding window.

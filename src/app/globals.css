@@ -476,11 +476,12 @@ a {
 
 .resume-theme {
   color: var(--theme-text, #f0f4ff);
+  font-family: var(--font-dm-sans), sans-serif;
 }
 
 .resume-theme-name {
   color: var(--theme-text, #f0f4ff);
-  font-family: var(--theme-heading-font, var(--font-playfair)), serif;
+  font-family: var(--font-dm-sans), sans-serif;
   text-shadow: 0 2px 22px rgba(0, 0, 0, 0.52);
 }
 
@@ -763,12 +764,94 @@ a {
 .resume-theme-content {
   position: relative;
   isolation: isolate;
+  counter-reset: living-page-section;
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-masthead {
+  position: relative;
+  padding-top: clamp(0.9rem, 2vw, 1.35rem);
+}
+
+.resume-theme[data-resume-density="full"] {
+  --living-entry-distance: 6px;
+  --living-signal-distance: 3px;
+}
+
+@media (max-width: 639px) {
+  .resume-theme[data-resume-density="full"] {
+    --living-entry-distance: 3px;
+    --living-signal-distance: 1px;
+  }
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-masthead::before,
+.resume-theme[data-resume-density="full"] .resume-theme-masthead::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-masthead::before {
+  left: 0;
+  width: min(12rem, 42%);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--theme-accent),
+    var(--theme-accent-border) 64%,
+    transparent
+  );
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-masthead::after {
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--theme-accent);
+  background: var(--theme-surface-strong);
+  transform: translateY(-2px);
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-identity {
+  max-width: 48rem;
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-name {
+  max-width: 15ch;
+  text-wrap: balance;
+}
+
+.resume-theme[data-resume-density="full"] [data-resume-headline] {
+  max-width: 56rem;
+  text-wrap: balance;
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-summary {
+  position: relative;
+  padding-left: clamp(0.85rem, 1.8vw, 1.2rem);
+  border-left: 1px solid var(--theme-accent-border);
+}
+
+.resume-theme[data-resume-density="full"] [data-motion-section] {
+  position: relative;
+  counter-increment: living-page-section;
 }
 
 .resume-theme-section-title {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+}
+
+.resume-theme[data-resume-density="full"] .resume-theme-section-title::before {
+  content: counter(living-page-section, decimal-leading-zero);
+  color: var(--theme-text-subtle);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
 .resume-theme-section-title::after {
@@ -778,6 +861,27 @@ a {
   flex: 1;
   background: var(--theme-accent-border, rgba(147, 197, 253, 0.3));
   pointer-events: none;
+}
+
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  .resume-theme-section[data-motion-active="true"]
+  .resume-theme-section-title {
+  color: var(--theme-accent-bright);
+}
+
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  .resume-theme-section[data-motion-active="true"]
+  .resume-theme-section-title::before {
+  color: var(--theme-accent);
+}
+
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  .resume-theme-section[data-motion-active="true"]
+  .resume-theme-section-title::after {
+  animation: living-signal-trace 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .resume-theme-card,
@@ -843,7 +947,7 @@ a {
   top: -0.25rem;
   right: 0.45rem;
   color: var(--theme-accent-soft);
-  font-family: var(--theme-heading-font);
+  font-family: var(--font-dm-sans), sans-serif;
   font-size: 3.5rem;
   line-height: 1;
   pointer-events: none;
@@ -949,7 +1053,7 @@ a {
 
 [data-theme-id="nocturne"] [data-resume-summary] {
   max-width: 42rem;
-  font-family: var(--theme-heading-font);
+  font-family: var(--font-dm-sans), sans-serif;
 }
 
 [data-theme-id="nocturne"] [data-resume-stats] {
@@ -1051,6 +1155,42 @@ a {
   animation: editor-signal-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.dashboard-signal-card {
+  isolation: isolate;
+  animation: dashboard-signal-settle 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.dashboard-signal-card::after {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--site-action) 70%, transparent),
+    transparent
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  animation: dashboard-signal-scan 620ms 100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.dashboard-signal-content {
+  z-index: 2;
+}
+
+.dashboard-signal-status {
+  animation: dashboard-signal-status-in 260ms 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.dashboard-signal-metric {
+  animation: editor-signal-in 320ms 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 @keyframes editor-signal-in {
   from {
     opacity: 0.35;
@@ -1060,6 +1200,46 @@ a {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes dashboard-signal-settle {
+  from {
+    opacity: 0.7;
+    transform: translateY(0.4rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dashboard-signal-scan {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  25% {
+    opacity: 0.85;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(18rem);
+  }
+}
+
+@keyframes dashboard-signal-status-in {
+  from {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -1076,9 +1256,85 @@ a {
   }
 }
 
-/* Living Page content and its canvas share the same motion model. The tiny
-   square offset makes cards feel spatial without turning the resume into a
-   motion demo, and is scoped to surfaces that explicitly opt into the bridge. */
+@keyframes living-identity-resolve {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--living-entry-distance, 6px), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes living-signal-trace {
+  from {
+    opacity: 0.38;
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes living-signal-lock {
+  0% {
+    filter: brightness(1);
+    text-shadow: none;
+    transform: translate3d(0, var(--living-signal-distance, 3px), 0);
+  }
+
+  52% {
+    filter: brightness(1.22);
+    text-shadow: 0 0 18px var(--theme-accent-soft);
+  }
+
+  100% {
+    filter: brightness(1);
+    text-shadow: none;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Living Page content and its canvas share one restrained attention model:
+   identity resolves once, the active chapter traces its rule, and only the
+   most useful metric or outcome receives a brief signal lock. */
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  [data-motion-kind="identity"] {
+  animation: living-identity-resolve 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  [data-motion-kind="headline"] {
+  animation: living-identity-resolve 460ms 90ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  [data-motion-kind="summary"] {
+  animation: living-identity-resolve 440ms 180ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  [data-resume-stats][data-motion-active="true"]
+  [data-attention-signal="metric"],
+[data-motion-aware="true"]
+  .resume-theme[data-resume-density="full"]
+  .resume-theme-section[data-motion-active="true"]
+  [data-attention-signal="outcome"] {
+  animation: living-signal-lock 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The tiny square offset makes cards feel spatial without turning the resume
+   into a motion demo, and is scoped to surfaces that opt into the bridge. */
 [data-motion-aware="true"] .resume-theme [data-motion-item] {
   transform: translate3d(0, 0, 0);
   transition:
@@ -1149,9 +1405,21 @@ a {
 
   [data-motion-aware="true"] .resume-theme [data-motion-item],
   [data-motion-aware="true"] .resume-theme [data-motion-item]:hover,
-  [data-motion-aware="true"] .resume-theme [data-motion-item]:focus-within {
+  [data-motion-aware="true"] .resume-theme [data-motion-item]:focus-within,
+  [data-motion-aware="true"] .resume-theme [data-attention-rank],
+  [data-motion-aware="true"] .resume-theme [data-attention-signal] {
+    animation: none !important;
+    opacity: 1;
     filter: none;
     transform: none;
+  }
+
+  [data-motion-aware="true"]
+    .resume-theme
+    .resume-theme-section[data-motion-active="true"]
+    .resume-theme-section-title::after {
+    animation: none !important;
+    clip-path: none;
   }
 
   [data-site-ui],

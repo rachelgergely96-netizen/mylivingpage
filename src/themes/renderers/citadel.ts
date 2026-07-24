@@ -1,7 +1,6 @@
-import { fbm } from "../shared/noise";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { createSeededRandom } from "../shared/random";
 import { softGlow } from "../shared/draw";
-import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -22,7 +21,6 @@ const CFG=(function(){
       cols:2+Math.floor(rand()*3),
       rows:6+Math.floor(rand()*5),
       phase:rand(),
-      scanSpeed:0.05+rand()*0.06,
       streak:rand()
     };
   }
@@ -34,14 +32,22 @@ const CFG=(function(){
   for(let i=0;i<28;i++){
     far.push({xf:rand(),wf:0.015+rand()*0.03,hf:0.05+rand()*0.14,shade:0.08+rand()*0.22,crown:rand()});
   }
-  const dust=[];
-  for(let i=0;i<20;i++){
-    dust.push({x:rand(),y:rand(),r:0.5+rand()*1.5,sp:0.15+rand()*0.6,ph:rand(),amp:0.02+rand()*0.06});
-  }
-  return {left:left,right:right,far:far,dust:dust,N:N};
+  return {left:left,right:right,far:far,N:N};
 })();
 
-export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderCitadel: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  timeValue,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const M=resolveThemeMotion(motion);
+  const reduced=motion?.reducedMotion===true;
+  const t=reduced?0:timeValue;
   const minS=Math.min(w,h);
   const maxS=Math.max(w,h);
   const px=mx-0.5, py=my-0.5;
@@ -49,6 +55,15 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   const horizonY=h*(0.36+py*0.045);
   const cx=w*0.5;
   const spanFloor=h-horizonY;
+  const hasStory=M.sectionCount>0;
+  let activeDepth=hasStory
+    ? finiteClamp(M.storyProgress,0,1,0)
+    : 0.5+Math.sin(t*TAU/26)*0.35;
+  if(M.hasFocus){
+    activeDepth+=(finiteClamp(M.focusY,0,1,0.5)-activeDepth)*0.2;
+  }
+  activeDepth=finiteClamp(activeDepth,0,1,0.5);
+  const activeRow=0.18+activeDepth*0.64;
 
   function ws(a:number,b:number,s:number){const v=Math.sin(a*127.1+b*311.7+s*0.017)*43758.5453;return v-Math.floor(v);}
 
@@ -68,17 +83,9 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   atmo.addColorStop(0.5,"rgba(60,78,110,0.15)");
   atmo.addColorStop(1,"rgba(18,26,40,0)");
   ctx.fillStyle=atmo;ctx.fillRect(0,horizonY-h*0.2,w,h*0.34);
-  for(let i=0;i<3;i++){
-    const fx=(i+0.5)/3;
-    const nx=fbm(fx*3+t*0.02,1.7,2);
-    const ny=fbm(fx*2+9.3,t*0.015,2);
-    const bx=w*fx+nx*w*0.07;
-    const by=horizonY+h*0.015+ny*h*0.03;
-    softGlow(ctx,bx,by,minS*(0.1+0.04*i),"rgba(48,64,92,0.08)","transparent");
-  }
-  const bp=0.5+0.5*Math.sin(t*0.7);
-  softGlow(ctx,vanishX,horizonY,minS*(0.16+bp*0.015),"rgba(138,164,206,0.15)","transparent");
-  softGlow(ctx,vanishX,horizonY,minS*0.055,"rgba(188,206,238,0.2)","transparent");
+  const beaconPulse=0.5+0.5*Math.sin(t*TAU/24);
+  softGlow(ctx,vanishX,horizonY,minS*(0.14+beaconPulse*0.008),"rgba(138,164,206,0.11)","transparent");
+  softGlow(ctx,vanishX,horizonY,minS*0.045,"rgba(188,206,238,0.14)","transparent");
   ctx.restore();
 
   // ---- far skyline behind the canyon ----
@@ -141,31 +148,6 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     ctx.lineTo(vanishX+spread,yy);
     ctx.stroke();
   }
-
-  // ---- sweeping searchlight beams (additive, sources tamed) ----
-  ctx.save();ctx.globalCompositeOperation="lighter";
-  for(let b=0;b<2;b++){
-    const sgn=b===0?-1:1;
-    const srcX=w*(0.5+sgn*0.32);
-    const srcY=h*0.06+b*h*0.02;
-    const ang=Math.PI*0.5+sgn*(0.55+Math.sin(t*0.18+b*2.1)*0.45);
-    const len=h*1.15;
-    const ex=srcX+Math.cos(ang)*len, ey=srcY+Math.sin(ang)*len;
-    const wid=minS*0.06;
-    const perpx=Math.cos(ang+Math.PI*0.5)*wid, perpy=Math.sin(ang+Math.PI*0.5)*wid;
-    const bg=ctx.createLinearGradient(srcX,srcY,ex,ey);
-    bg.addColorStop(0,"rgba(150,180,226,0.1)");
-    bg.addColorStop(0.5,"rgba(108,138,190,0.04)");
-    bg.addColorStop(1,"rgba(60,80,120,0)");
-    ctx.fillStyle=bg;
-    ctx.beginPath();
-    ctx.moveTo(srcX,srcY);
-    ctx.lineTo(ex-perpx,ey-perpy);
-    ctx.lineTo(ex+perpx,ey+perpy);
-    ctx.closePath();ctx.fill();
-    softGlow(ctx,srcX,srcY,minS*0.05,"rgba(168,192,232,0.16)","transparent");
-  }
-  ctx.restore();
 
   // ---- brutalist canyon towers ----
   // cache the ambient-occlusion gradient once (identical stops for every tower)
@@ -234,8 +216,8 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     }
     ctx.stroke();
 
-    // slit windows with a scanning band of light
-    const scan=((t*T.scanSpeed+T.phase)%1+1)%1;
+    // One chapter-selected window level catches the distant beacon.
+    const depthWeight=Math.max(0,1-Math.abs(T.depth-activeDepth)/0.18);
     const cellH=avail/T.rows;
     for(let r=0;r<T.rows;r++){
       const rf=(r+0.5)/T.rows;
@@ -248,18 +230,17 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
         const wx=lx+rowW*cf;
         const s1=ws(r+1,c+3,T.texSeed);
         const litBase=s1>0.6?(0.22+(s1-0.6)*1.5):0;
-        const tw=0.55+0.45*Math.sin(t*(0.7+s1*0.9)+s1*TAU);
-        const ambient=litBase*tw;
-        const dist=Math.abs(rf-scan);
-        const band=dist<0.14?(1-dist/0.14):0;
-        const inten=Math.min(1,ambient+band*(0.65+0.35*s1));
+        const tw=0.85+0.15*Math.sin(t*TAU/22+s1*TAU);
+        const ambient=litBase*tw*0.55;
+        const band=Math.max(0,1-Math.abs(rf-activeRow)/0.11)*depthWeight;
+        const inten=Math.min(1,ambient+band*(0.55+s1*0.2));
         if(inten>0.05){
           const warm=ws(c+5,r+2,T.texSeed)>0.85;
           const cr=warm?246:184, cg=warm?208:206, cb=warm?160:246;
           const ww=rowW/T.cols*0.42, wh=cellH*0.5;
-          ctx.fillStyle="rgba("+cr+","+cg+","+cb+","+Math.min(0.82,0.05+inten*0.8)+")";
+          ctx.fillStyle="rgba("+cr+","+cg+","+cb+","+Math.min(0.26,0.04+inten*0.22)+")";
           ctx.fillRect(wx-ww*0.5,wy-wh*0.5,ww,wh);
-          if(inten>0.5&&glows.length<40){glows.push([wx,wy,Math.max(ww,wh),cr,cg,cb,inten]);}
+          if(inten>0.5&&glows.length<12){glows.push([wx,wy,Math.max(ww,wh),cr,cg,cb,inten]);}
         }
       }
     }
@@ -269,7 +250,7 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const rimBx=side<0?x1:x0, rimTx=side<0?tx1:tx0;
     const rg=ctx.createLinearGradient(0,topY,0,h);
     rg.addColorStop(0,"rgba(150,180,226,0)");
-    rg.addColorStop(0.32,"rgba(158,186,230,"+(0.1+tn*0.14)+")");
+    rg.addColorStop(0.32,"rgba(158,186,230,"+(0.1+tn*0.14+depthWeight*0.09)+")");
     rg.addColorStop(1,"rgba(80,105,150,0)");
     ctx.strokeStyle=rg;ctx.lineWidth=Math.max(1,width*0.018);
     ctx.beginPath();ctx.moveTo(rimTx,topY);ctx.lineTo(rimBx,h);ctx.stroke();
@@ -287,10 +268,10 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // bright-pass bloom cannot stack them to pure white, and to cut gradient cost
   if(glows.length>1){glows.sort(function(a,b){return b[6]-a[6];});}
   ctx.save();ctx.globalCompositeOperation="lighter";
-  const nb=glows.length<14?glows.length:14;
+  const nb=glows.length<6?glows.length:6;
   for(let i=0;i<nb;i++){
     const g=glows[i];
-    softGlow(ctx,g[0],g[1],g[2]*(2.0+g[6]*1.6),"rgba("+g[3]+","+g[4]+","+g[5]+","+(0.12*g[6])+")","transparent");
+    softGlow(ctx,g[0],g[1],g[2]*(2.0+g[6]*1.6),"rgba("+g[3]+","+g[4]+","+g[5]+","+(0.08*g[6])+")","transparent");
   }
   ctx.restore();
 
@@ -331,22 +312,6 @@ export const renderCitadel: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     }
   }
   foreground(-1);foreground(1);
-
-  // ---- drifting dust motes in the corridor light (additive) ----
-  ctx.save();ctx.globalCompositeOperation="lighter";
-  for(let i=0;i<CFG.dust.length;i++){
-    const d=CFG.dust[i];
-    const wp=wrapSoft(d.y+t*d.sp*0.02,1,0.05); // seam fade: no pop-in at the horizon
-    const yy=wp.u;
-    const wy=horizonY+yy*spanFloor;
-    const wx=vanishX+Math.sin(t*d.sp+d.ph*TAU)*w*d.amp+(d.x-0.5)*w*0.55*(0.4+yy*0.6);
-    const a=(1-yy)*0.5*(0.45+0.55*Math.sin(t*d.sp*2+d.ph*TAU))*wp.alpha;
-    if(a>0.02){
-      ctx.fillStyle="rgba(172,198,238,"+(a*0.4)+")";
-      ctx.beginPath();ctx.arc(wx,wy,d.r*(0.5+yy),0,TAU);ctx.fill();
-    }
-  }
-  ctx.restore();
 
   // ---- cool color grade + readability scrim + vignette ----
   const grade=ctx.createLinearGradient(0,0,0,h);

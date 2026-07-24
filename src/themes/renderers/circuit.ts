@@ -1,6 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
-import { softGlow, star4 } from "../shared/draw";
+import { softGlow } from "../shared/draw";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
@@ -92,7 +92,17 @@ let pulseGlowWarm: CanvasGradient|null = null;
 let pulseGlowCold: CanvasGradient|null = null;
 let pulseGlowCtx: CanvasRenderingContext2D|null = null;
 
-export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderCircuit: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  const t = motion?.reducedMotion ? 0 : time;
   const C = CFG;
   const VW=C.VW, VH=C.VH;
   const clamp=(v:number,a:number,b:number)=> v<a?a:(v>b?b:v);
@@ -173,7 +183,7 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const rw=wrapSoft(t*rl.speed*0.12 + rl.phase, 1, 0.05);
     const ex=x0+(x1-x0)*rw.u, ey=y0+(y1-y0)*rw.u;
     ctx.globalCompositeOperation="lighter";
-    softGlow(ctx, ex, ey, 22, `hsla(${rl.hue|0},90%,60%,${(0.18*rw.alpha).toFixed(4)})`, "transparent");
+    softGlow(ctx, ex, ey, 16, `hsla(${rl.hue|0},90%,60%,${(0.10*rw.alpha).toFixed(4)})`, "transparent");
     ctx.globalCompositeOperation="source-over";
   }
 
@@ -232,7 +242,6 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       ctx.fillRect(-12,-12,24,24); ctx.restore();
       ctx.fillStyle=`hsla(${hue},92%,70%,${(0.55*fade).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(hx,hy,1.7,0,TAU); ctx.fill();
-      if(p===0 && (i%4===0)) star4(ctx,hx,hy,9,1.0,`hsla(${hue},95%,70%,${(0.28*fade).toFixed(4)})`);
       ctx.globalCompositeOperation="source-over";
     }
   }
@@ -242,10 +251,10 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for(let i=0;i<C.pads.length;i++){
     const pd=C.pads[i];
     const x=X(pd.p.x), y=Y(pd.p.y);
-    const b=0.35+0.35*Math.sin(t*0.9+pd.phase);
+    const b=0.5+0.5*Math.sin(t*0.9+pd.phase);
     ctx.strokeStyle=`hsla(${pd.hue|0},40%,30%,0.35)`; ctx.lineWidth=1;
     ctx.beginPath(); ctx.arc(x,y,3.2,0,TAU); ctx.stroke();
-    ctx.fillStyle=`hsla(${pd.hue|0},76%,${(52+12*b).toFixed(1)}%,${(0.18+0.34*b).toFixed(4)})`;
+    ctx.fillStyle=`hsla(${pd.hue|0},76%,${(50+8*b).toFixed(1)}%,${(0.12+0.16*b).toFixed(4)})`;
     ctx.beginPath(); ctx.arc(x,y,1.5,0,TAU); ctx.fill();
   }
   ctx.restore();
@@ -258,24 +267,39 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const md=Math.hypot(x-mpx, y-mpy);
     const mouse=clamp(1-md/(mind*0.18),0,1);
     const bl=0.5+0.5*Math.sin(t*cp.blink+cp.phase);
-    const act=clamp(bl*cp.bright + mouse*0.9, 0, 1.2);
+    const act=clamp(bl*cp.bright + mouse*0.35, 0, 0.72);
     const S=cp.size;
     const hue=cp.hue|0;
+    const extrusion=Math.max(1,Math.min(2,1.15*S));
+    const catchAlpha=(0.12+0.18*act).toFixed(4);
+    const extrusionColor=`hsla(${hue},18%,3%,0.68)`;
+    const catchColor=`hsla(${hue},58%,68%,${catchAlpha})`;
 
     if(cp.type==="via"){
+      // A flat lower-right underlay gives the plated via a physical lip without
+      // paying for shadowBlur. The short upper-left arc is its restrained catch.
+      ctx.fillStyle=extrusionColor;
+      ctx.beginPath(); ctx.arc(x+extrusion,y+extrusion,3.2*S,0,TAU); ctx.fill();
       ctx.strokeStyle=`hsla(${hue},35%,28%,0.5)`; ctx.lineWidth=1.4*S;
       ctx.beginPath(); ctx.arc(x,y,3.2*S,0,TAU); ctx.stroke();
       ctx.fillStyle=`hsla(${hue},18%,10%,0.6)`;
       ctx.beginPath(); ctx.arc(x,y,2.0*S,0,TAU); ctx.fill();
-      ctx.fillStyle=`hsla(${hue},82%,${(56+13*act).toFixed(1)}%,${(0.22+0.38*act).toFixed(4)})`;
+      ctx.fillStyle=`hsla(${hue},82%,${(54+10*act).toFixed(1)}%,${(0.16+0.18*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x,y,1.2*S,0,TAU); ctx.fill();
-      if(act>0.55){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,9*S,`hsla(${hue},90%,62%,${(0.24*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
+      ctx.strokeStyle=catchColor; ctx.lineWidth=Math.max(0.7,0.75*S);
+      ctx.beginPath(); ctx.arc(x,y,3.2*S,Math.PI*1.06,Math.PI*1.58); ctx.stroke();
+      if(act>0.55){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,9*S,`hsla(${hue},90%,62%,${(0.12*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
     } else if(cp.type==="chip"){
       const wch=(cp.horiz?9:6)*S, hch=(cp.horiz?6:9)*S;
+      ctx.fillStyle=extrusionColor;
+      ctx.fillRect(x-wch/2+extrusion,y-hch/2+extrusion,wch,hch);
       ctx.fillStyle=`hsla(${hue},22%,${(9+6*act).toFixed(1)}%,0.85)`;
       ctx.fillRect(x-wch/2,y-hch/2,wch,hch);
       ctx.strokeStyle=`hsla(${hue},60%,${(45+18*act).toFixed(1)}%,${(0.35+0.4*act).toFixed(4)})`; ctx.lineWidth=1;
       ctx.strokeRect(x-wch/2,y-hch/2,wch,hch);
+      ctx.fillStyle=catchColor;
+      ctx.fillRect(x-wch/2,y-hch/2,wch,Math.max(0.7,0.75*S));
+      ctx.fillRect(x-wch/2,y-hch/2,Math.max(0.7,0.75*S),hch);
       ctx.fillStyle=`hsla(${hue},50%,55%,${(0.3+0.3*act).toFixed(4)})`;
       const n=Math.min(4,cp.pins);
       for(let k=0;k<n;k++){
@@ -285,28 +309,36 @@ export const renderCircuit: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       }
       ctx.fillStyle=`hsla(172,92%,66%,${(0.3+0.34*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x-wch/2+2.2*S, y-hch/2+2.2*S, 1.0*S, 0, TAU); ctx.fill();
-      if(act>0.6){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,Math.max(wch,hch)*1.3,`hsla(${hue},90%,60%,${(0.14*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
+      if(act>0.6){ ctx.globalCompositeOperation="lighter"; softGlow(ctx,x,y,Math.max(wch,hch)*1.3,`hsla(${hue},90%,60%,${(0.10*act).toFixed(4)})`,"transparent"); ctx.globalCompositeOperation="source-over"; }
     } else if(cp.type==="cap"){
       const wc=5*S, hc=7*S;
+      ctx.fillStyle=extrusionColor;
+      ctx.fillRect(x-wc/2+extrusion,y-hc/2+extrusion,wc,hc);
       ctx.fillStyle=`hsla(${hue},30%,${(14+8*act).toFixed(1)}%,0.85)`;
       ctx.fillRect(x-wc/2,y-hc/2,wc,hc);
       ctx.strokeStyle=`hsla(${hue},55%,50%,${(0.3+0.35*act).toFixed(4)})`; ctx.lineWidth=0.8;
       ctx.strokeRect(x-wc/2,y-hc/2,wc,hc);
       ctx.fillStyle=`hsla(${hue},66%,56%,${(0.34+0.32*act).toFixed(4)})`;
       ctx.fillRect(x-wc/2, y-hc/2, wc, 1.4);
+      ctx.fillStyle=catchColor;
+      ctx.fillRect(x-wc/2,y-hc/2,Math.max(0.7,0.75*S),hc);
     } else if(cp.type==="res"){
       const wr=8*S, hr=3*S;
       ctx.strokeStyle=`hsla(${hue},30%,40%,0.3)`; ctx.lineWidth=0.8;
       ctx.beginPath(); ctx.moveTo(x-wr/2-3,y); ctx.lineTo(x+wr/2+3,y); ctx.stroke();
+      ctx.fillStyle=extrusionColor;
+      ctx.fillRect(x-wr/2+extrusion,y-hr/2+extrusion,wr,hr);
       ctx.fillStyle=`hsla(${hue},28%,${(16+8*act).toFixed(1)}%,0.85)`;
       ctx.fillRect(x-wr/2,y-hr/2,wr,hr);
       for(let k=0;k<3;k++){ ctx.fillStyle=`hsla(${(hue+k*20)%360},60%,55%,${(0.3+0.3*act).toFixed(4)})`; ctx.fillRect(x-wr/2+1.5+k*2.2, y-hr/2, 1.1, hr); }
+      ctx.fillStyle=catchColor;
+      ctx.fillRect(x-wr/2,y-hr/2,wr,Math.max(0.6,0.65*S));
+      ctx.fillRect(x-wr/2,y-hr/2,Math.max(0.6,0.65*S),hr);
     } else {
       ctx.globalCompositeOperation="lighter";
-      softGlow(ctx,x,y,9.5*S*(0.7+0.6*act),`hsla(${hue},96%,60%,${(0.22+0.4*act).toFixed(4)})`,"transparent");
-      ctx.fillStyle=`hsla(${hue},94%,${(62+8*act).toFixed(1)}%,${(0.42+0.34*act).toFixed(4)})`;
+      softGlow(ctx,x,y,9.5*S*(0.7+0.6*act),`hsla(${hue},96%,60%,${(0.08+0.16*act).toFixed(4)})`,"transparent");
+      ctx.fillStyle=`hsla(${hue},94%,${(60+7*act).toFixed(1)}%,${(0.30+0.18*act).toFixed(4)})`;
       ctx.beginPath(); ctx.arc(x,y,1.9*S,0,TAU); ctx.fill();
-      if(act>0.7) star4(ctx,x,y,8.5*S,1.0,`hsla(${hue},95%,70%,${(0.32*act).toFixed(4)})`);
       ctx.globalCompositeOperation="source-over";
     }
   }

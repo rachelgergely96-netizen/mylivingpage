@@ -64,6 +64,16 @@ vi.mock("@/components/DeletePageButton", () => ({
   default: ({ pageId }: { pageId: string }) => <button type="button">Delete {pageId}</button>,
 }));
 
+vi.mock("@/components/PublishPageButton", () => ({
+  default: ({
+    label = "Publish",
+    pageId,
+  }: {
+    label?: string;
+    pageId: string;
+  }) => <button type="button">{label} {pageId}</button>,
+}));
+
 import DashboardPage from "./page";
 
 function makeServiceRoleClient(overrides?: {
@@ -235,24 +245,29 @@ describe("dashboard page", () => {
     vi.useRealTimers();
   });
 
-  it("uses only the row-level analytics action and keeps proof panels focused on status", async () => {
+  it("turns page activity into one clear primary action without losing page tools", async () => {
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).not.toContain("See when people open your page and what happens next.");
-    expect(markup).not.toContain("Open Page Analytics");
+    expect(markup).toContain("Check if your page is live, then edit, share, or review recent views.");
     expect(markup).toContain('href="/dashboard/analytics/page-1"');
     expect(markup).toContain('href="/dashboard/analytics/page-2"');
     expect(markup).toContain('href="/dashboard/edit/page-1/living-page#ats-readiness"');
     expect(markup).toContain('href="/dashboard/edit/page-2/living-page#ats-readiness"');
-    expect((markup.match(/>Check ATS<\/a>/g) ?? []).length).toBe(2);
-    expect((markup.match(/>Page Analytics<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>ATS check<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>View activity<\/a>/g) ?? []).length).toBe(2);
+    expect((markup.match(/>Copy link<\/button>/g) ?? []).length).toBe(2);
+    expect((markup.match(/data-dashboard-primary-action/g) ?? []).length).toBe(2);
+    expect((markup.match(/>Live<\/span>/g) ?? []).length).toBe(2);
     expect(markup).toContain(
-      "Use the Page Analytics button on this page card to see device mix, referrers, and reading behavior.",
+      "Open activity for device, referrer, and reading time.",
     );
     expect(markup).toContain(
-      "Use the Page Analytics button on this page card to check whether your page is still getting looked at between follow-ups.",
+      "Open activity for the full picture.",
     );
+    expect(markup).not.toContain("Signal Studio");
+    expect(markup).not.toContain("Proof landed");
+    expect(markup).not.toContain("Visual world");
   });
 
   it("surfaces an offline-page reactivation banner when a public link gets opened while hosting is inactive", async () => {
@@ -269,12 +284,33 @@ describe("dashboard page", () => {
         ],
       }),
     );
+    isPubliclyAvailablePageMock.mockReturnValue(false);
 
     const element = await DashboardPage();
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Someone tried to open your page while it was offline");
+    expect(markup).toContain("Someone opened this link while the page was offline");
     expect(markup).toContain('href="/dashboard/settings"');
-    expect(markup).toContain("Use the Publish button on the page card below");
+    expect(markup).toContain("Publish below to put it back online");
+    expect(markup).toContain("Publish page page-1");
+    expect((markup.match(/>Offline<\/span>/g) ?? []).length).toBe(1);
+    expect((markup.match(/>Draft<\/span>/g) ?? []).length).toBe(1);
+    expect(markup).toContain("Put your page back online.");
+    expect(markup).toContain("Private draft");
+  });
+
+  it("describes an unpublished page as a private draft", async () => {
+    isPubliclyAvailablePageMock.mockReturnValue(false);
+
+    const element = await DashboardPage();
+    const markup = renderToStaticMarkup(element);
+
+    expect(markup).toContain(">Draft</span>");
+    expect(markup).toContain("Private draft");
+    expect(markup).toContain("Your page is ready when you are.");
+    expect(markup).toContain(
+      "Until then, only you can open it.",
+    );
+    expect(markup).toContain("Publish page page-1");
   });
 });

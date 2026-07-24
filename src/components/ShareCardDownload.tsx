@@ -1,17 +1,14 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from "react";
+import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
+import { ShareCardArtwork } from "@/components/ShareCardArtwork";
 import type { ShareIntentEventName } from "@/lib/analytics/proofSummary";
 import {
-  buildQrDataUrl,
-  getFirstName,
-  getShareCardTags,
+  buildShareCardModel,
   getShareCardVisual,
   normalizeAppUrl,
-  toDisplayDomainUrl,
-  toLivePageUrl,
-  truncate,
+  SHARE_CARD_SIZE,
 } from "@/lib/share-card";
 import type { ResumeData } from "@/types/resume";
 
@@ -38,6 +35,24 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
+async function prepareCardImages(node: HTMLElement): Promise<void> {
+  if ("fonts" in document) {
+    await document.fonts.ready;
+  }
+
+  await Promise.all(
+    Array.from(node.querySelectorAll("img")).map(async (image) => {
+      if (!image.complete) {
+        await new Promise<void>((resolve) => {
+          image.addEventListener("load", () => resolve(), { once: true });
+          image.addEventListener("error", () => resolve(), { once: true });
+        });
+      }
+      await image.decode().catch(() => undefined);
+    }),
+  );
+}
+
 export default function ShareCardDownload({
   pageId,
   isOwner,
@@ -51,11 +66,12 @@ export default function ShareCardDownload({
   analyticsCtaLabel = "Open Page Analytics",
   className,
 }: ShareCardDownloadProps) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  const exportCardRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
   const [appUrl, setAppUrl] = useState(() => normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL));
@@ -120,20 +136,13 @@ export default function ShareCardDownload({
   if (!enabled) return null;
 
   const visual = getShareCardVisual(themeId);
-  const safeName = truncate(resumeData.name || "MyLivingPage User", 40);
-  const safeHeadline = truncate(resumeData.headline || "Professional profile", 78);
-  const safeLocation = truncate(resumeData.location || "", 40);
-  const firstName = getFirstName(safeName);
-  const shareTags = getShareCardTags(resumeData);
-  const livePageUrl = liveUrl ?? toLivePageUrl(appUrl, slug);
-  const displayUrl = truncate(
-    liveUrl
-      ? livePageUrl.replace(/^https?:\/\/(www\.)?/i, "")
-      : toDisplayDomainUrl(appUrl, slug),
-    42,
-  );
-  const qrDataUrl = buildQrDataUrl(livePageUrl);
-  const initial = safeName.slice(0, 1).toUpperCase() || "?";
+  const cardModel = buildShareCardModel({
+    appUrl,
+    liveUrl,
+    resume: resumeData,
+    slug,
+  });
+  const { firstName, livePageUrl, name: safeName } = cardModel;
   const resolvedAnalyticsHref = analyticsHref ?? `/dashboard/analytics/${pageId}`;
 
   const trackShareIntent = async (eventName: ShareIntentEventName) => {
@@ -162,52 +171,73 @@ export default function ShareCardDownload({
     setShareFeedback({
       title,
       body:
-        "Once someone opens your page, you'll be able to see that people looked, whether they viewed on mobile, and how long they stayed reading.",
+        "When someone opens your page, Analytics records the visit so you can see that your link was used.",
     });
   };
 
   const handleDownload = async () => {
-    if (!cardRef.current) {
+    const exportNode =
+      exportCardRef.current?.querySelector<HTMLElement>(
+        "[data-share-card-artwork]",
+      ) ?? null;
+    if (!exportNode) {
       return;
     }
 
+    setDownloadError(null);
     setDownloading(true);
     try {
       void trackShareIntent("page.share.download_card");
+      await prepareCardImages(exportNode);
       const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(cardRef.current, {
+      const dataUrl = await toPng(exportNode, {
+        backgroundColor: visual.background,
         cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#07111C",
+        canvasHeight: SHARE_CARD_SIZE.height,
+        canvasWidth: SHARE_CARD_SIZE.width,
+        height: SHARE_CARD_SIZE.height,
+        pixelRatio: 1,
+        style: {
+          margin: "0",
+          position: "relative",
+          transform: "none",
+        },
+        width: SHARE_CARD_SIZE.width,
       });
 
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = `${slug}-share-card.png`;
       a.click();
-      showProofFeedback("Tracked share card downloaded");
+      showProofFeedback("Share card downloaded");
     } catch {
-      // Silently fail
+      setDownloadError(
+        "We couldn't create the PNG. Check the profile photo connection and try again.",
+      );
     } finally {
       setDownloading(false);
     }
   };
 
   const handleCopyLink = async () => {
+    setDownloadError(null);
     try {
       await navigator.clipboard.writeText(livePageUrl);
       void trackShareIntent("page.share.copy_link");
       setCopied(true);
-      showProofFeedback("Tracked page link copied");
+      showProofFeedback("Page link copied");
       window.setTimeout(() => setCopied(false), 2400);
     } catch {
       setCopied(false);
+      setDownloadError(
+        "We couldn't copy the link automatically. Select the page link above and copy it manually.",
+      );
     }
   };
 
   const handleOpenLivePage = () => {
     void trackShareIntent("page.share.open_live_page");
-    showProofFeedback("Tracked live page opened");
+    showProofFeedback("Live page opened");
   };
 
   return (
@@ -220,7 +250,7 @@ export default function ShareCardDownload({
         >
           <div
             ref={dialogRef}
-            className="site-panel-raised max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto"
+            className="site-panel-raised max-h-[calc(100dvh-2rem)] w-full max-w-6xl overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -248,109 +278,59 @@ export default function ShareCardDownload({
               </button>
             </div>
 
-            <div className="grid gap-5 p-5 sm:grid-cols-[minmax(0,1.25fr)_320px] sm:p-6">
+            <div
+              ref={exportCardRef}
+              aria-hidden="true"
+              style={{
+                height: SHARE_CARD_SIZE.height,
+                left: -20000,
+                pointerEvents: "none",
+                position: "fixed",
+                top: 0,
+                width: SHARE_CARD_SIZE.width,
+                zIndex: -1,
+              }}
+            >
+              <ShareCardArtwork model={cardModel} visual={visual} />
+            </div>
+
+            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px] sm:p-6">
               <div
-                ref={cardRef}
                 data-living-output
-                className="relative overflow-hidden rounded-[26px] border border-[rgba(255,255,255,0.1)] p-5 sm:p-6"
-                style={{
-                  background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 60px ${visual.glow}`,
-                }}
+                data-theme-id={visual.themeId}
+                data-theme-detail={visual.contentProfile}
+                data-theme-collection={visual.collection}
+                className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-2"
               >
-                <div
-                  className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full"
-                  style={{ background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)` }}
-                />
-                <div className="relative flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[rgba(240,244,255,0.56)]">
-                      <span className="inline-block h-px w-5 rounded-full" style={{ background: visual.accent }} />
-                      Personalized Share Card
-                    </div>
-                    <h4 className="mt-3 font-heading text-3xl font-bold leading-tight text-[#F0F4FF] sm:text-4xl">
-                      {safeName}
-                    </h4>
-                    <p className="mt-2 max-w-xl text-sm text-[rgba(240,244,255,0.82)] sm:text-base">{safeHeadline}</p>
-                    {safeLocation ? (
-                      <p className="mt-2 text-sm text-[rgba(240,244,255,0.56)]">{safeLocation}</p>
-                    ) : null}
-                    <div className="mt-4 inline-flex rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(10,22,40,0.38)] px-3 py-1 text-xs text-[#93C5FD]">
-                      @{slug}
-                    </div>
-                  </div>
-
-                  {resumeData.avatar_url ? (
-                    <img
-                      src={resumeData.avatar_url}
-                      alt={safeName}
-                      crossOrigin="anonymous"
-                      className="h-20 w-20 shrink-0 rounded-full border-2 object-cover shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
-                      style={{ borderColor: visual.accent }}
-                    />
-                  ) : (
-                    <div
-                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full font-heading text-3xl font-bold text-[#0A1628] shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
-                      style={{ background: `linear-gradient(135deg, ${visual.accent}, #E2E8F0)` }}
-                    >
-                      {initial}
-                    </div>
-                  )}
-                </div>
-
-                {shareTags.length ? (
-                  <div className="relative mt-5 flex flex-wrap gap-2">
-                    {shareTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="max-w-full rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(10,22,40,0.4)] px-3 py-1 text-xs leading-5 text-[rgba(240,244,255,0.78)] whitespace-normal break-words"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div className="relative mt-5 grid gap-4 rounded-[22px] border border-[rgba(255,255,255,0.1)] bg-[rgba(6,14,28,0.54)] p-4 sm:grid-cols-[1fr_156px] sm:items-center">
-                  <div>
-                    <p className="text-sm font-semibold text-[#F0F4FF]">Scan to visit {firstName}&rsquo;s living page</p>
-                    <p className="mt-1 text-xs text-[rgba(240,244,255,0.56)]">
-                      This QR code is unique to @{slug} and opens {displayUrl}.
-                    </p>
-                  </div>
-                  {qrDataUrl ? (
-                    <img
-                      src={qrDataUrl}
-                      alt={`QR code for ${displayUrl}`}
-                      className="h-32 w-32 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-white p-2 justify-self-start sm:h-[156px] sm:w-[156px] sm:justify-self-end"
-                    />
-                  ) : (
-                    <div className="h-32 w-32 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.08)] sm:h-[156px] sm:w-[156px] sm:justify-self-end" />
-                  )}
-                </div>
-
-                <p className="relative mt-4 font-mono text-xs text-[rgba(240,244,255,0.56)]">{displayUrl}</p>
+                <ScaledShareCardArtwork model={cardModel} visual={visual} />
               </div>
 
               <div className="site-panel flex flex-col justify-between gap-4 p-5">
                 <div>
                   <p className="site-eyebrow">Share actions</p>
                   <h4 className="site-panel-title mt-3 text-xl">
-                    Send people straight to {firstName}
+                    Choose how to share {firstName}&rsquo;s page
                   </h4>
                   <p className="site-muted mt-2 text-sm leading-6">
-                    Download the branded PNG, copy the tracked page URL, or let someone scan the QR code on this card.
+                    Download the themed card, copy the page link, or preview the live page before you send it.
                   </p>
                 </div>
 
                 <div className="border border-site-border bg-site-canvas-alt p-4">
-                  <p className="text-xs font-semibold text-site-muted">Tracked URL</p>
+                  <p className="text-xs font-semibold text-site-muted">Page link</p>
                   <p className="mt-2 break-all font-mono text-sm text-site-text">{livePageUrl}</p>
                 </div>
 
+                {downloadError ? (
+                  <div className="site-callout p-4" role="alert">
+                    <p className="site-eyebrow">Sharing needs another try</p>
+                    <p className="site-muted mt-2 text-sm leading-6">{downloadError}</p>
+                  </div>
+                ) : null}
+
                 {shareFeedback ? (
                   <div className="site-callout p-4" role="status">
-                    <p className="site-eyebrow">Proof ready</p>
+                    <p className="site-eyebrow">Ready to share</p>
                     <p className="mt-2 font-semibold text-site-text">{shareFeedback.title}</p>
                     <p className="site-muted mt-2 text-sm leading-6">
                       {shareFeedback.body}
@@ -367,18 +347,18 @@ export default function ShareCardDownload({
                 <div className="flex flex-col gap-2.5">
                   <button
                     type="button"
-                    onClick={handleCopyLink}
-                    className="site-button site-button-primary w-full"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="site-button site-button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {copied ? "Link copied" : "Copy Tracked Page Link"}
+                    {downloading ? "Creating PNG..." : "Download share card"}
                   </button>
                   <button
                     type="button"
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    className="site-button site-button-secondary w-full disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleCopyLink}
+                    className="site-button site-button-secondary w-full"
                   >
-                    {downloading ? "Downloading..." : "Download PNG Share Card"}
+                    {copied ? "Link copied" : "Copy page link"}
                   </button>
                   <a
                     href={livePageUrl}
@@ -387,7 +367,7 @@ export default function ShareCardDownload({
                     onClick={handleOpenLivePage}
                     className="site-button site-button-secondary w-full text-center"
                   >
-                    Open Tracked Live Page
+                    Preview live page
                   </a>
                 </div>
               </div>
@@ -405,7 +385,7 @@ export default function ShareCardDownload({
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
         </svg>
-        <span>Share {firstName}</span>
+        <span>Share {firstName}&rsquo;s page</span>
       </button>
     </>
   );

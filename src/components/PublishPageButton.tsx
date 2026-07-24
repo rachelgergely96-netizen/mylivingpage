@@ -5,9 +5,15 @@ import { useRouter } from "next/navigation";
 
 interface PublishPageButtonProps {
   pageId: string;
+  emphasis?: "primary" | "success";
+  label?: string;
 }
 
-export default function PublishPageButton({ pageId }: PublishPageButtonProps) {
+export default function PublishPageButton({
+  pageId,
+  emphasis = "success",
+  label = "Publish",
+}: PublishPageButtonProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,9 +57,13 @@ export default function PublishPageButton({ pageId }: PublishPageButtonProps) {
         type="button"
         disabled={publishing}
         onClick={() => void publishPage()}
-        className="site-button site-button-success px-3 py-2 text-xs disabled:opacity-50 sm:px-4"
+        className={`site-button disabled:opacity-50 ${
+          emphasis === "primary"
+            ? "site-button-primary w-full sm:w-auto"
+            : "site-button-success px-3 py-2 text-xs sm:px-4"
+        }`}
       >
-        {publishing ? "Publishing..." : "Publish"}
+        {publishing ? "Publishing..." : label}
       </button>
       {error ? <p className="mt-2 text-xs text-site-danger" role="alert">{error}</p> : null}
     </div>

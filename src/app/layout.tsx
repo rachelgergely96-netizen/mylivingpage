@@ -1,16 +1,9 @@
 import type { Metadata } from "next";
-import { DM_Mono, DM_Sans, Playfair_Display } from "next/font/google";
+import { DM_Mono, DM_Sans } from "next/font/google";
 import JsonLd from "@/components/seo/JsonLd";
 import AnalyticsConsent from "@/components/privacy/AnalyticsConsent";
 import { getAbsoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import "./globals.css";
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  style: ["normal", "italic"],
-});
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -62,7 +55,7 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${playfair.variable} ${dmSans.variable} ${dmMono.variable} antialiased`}>
+      <body className={`${dmSans.variable} ${dmMono.variable} antialiased`}>
         <JsonLd data={[organizationJsonLd, websiteJsonLd]} />
         {children}
         <AnalyticsConsent />

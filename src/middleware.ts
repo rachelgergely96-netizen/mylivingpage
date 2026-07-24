@@ -7,6 +7,9 @@ import { isEditorPreviewEnabled } from "@/lib/editor-preview";
 const PROTECTED_PATHS = ["/create", "/dashboard", "/admin"];
 const ADMIN_PATHS = ["/admin"];
 const LOCAL_PREVIEW_PATHS = new Set([
+  "/dev/ats-preview",
+  "/dev/admin-preview",
+  "/dev/dashboard-preview",
   "/dev/editor-preview",
   "/dev/theme-lab",
 ]);

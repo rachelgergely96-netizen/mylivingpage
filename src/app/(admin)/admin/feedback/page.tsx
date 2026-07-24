@@ -1,129 +1,90 @@
+import AdminFeedbackInbox from "@/components/admin/AdminFeedbackInbox";
+import styles from "@/components/admin/AdminExperience.module.css";
+import {
+  buildAdminFeedbackItems,
+  countFeedbackByType,
+  type AdminFeedbackEventRow,
+  type AdminFeedbackProfileRow,
+} from "@/lib/admin-feedback";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
-interface EventRow {
-  id: string;
-  user_id: string | null;
-  metadata: { message?: string; type?: string; page?: string } | null;
-  created_at: string;
-}
-
-interface ProfileRow {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-  email: string | null;
-}
-
-const TYPE_STYLES: Record<string, string> = {
-  bug: "site-badge-danger",
-  feature: "border-site-action bg-site-selected text-site-action-hover",
-  general: "",
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  bug: "Bug",
-  feature: "Feature",
-  general: "General",
-};
+export const dynamic = "force-dynamic";
 
 export default async function AdminFeedbackPage() {
   const supabase = createServiceRoleSupabaseClient();
-
-  const { data: events } = await supabase
+  const { data: events, error: feedbackError, count: feedbackCount } = await supabase
     .from("events")
-    .select("id, user_id, metadata, created_at")
+    .select("id, user_id, metadata, created_at", { count: "exact" })
     .eq("event_name", "feedback.submitted")
     .order("created_at", { ascending: false })
     .limit(200)
-    .returns<EventRow[]>();
+    .returns<AdminFeedbackEventRow[]>();
+
+  if (feedbackError) {
+    throw new Error("Unable to load user feedback.");
+  }
 
   const rows = events ?? [];
+  const userIds = [...new Set(rows.flatMap((row) => (row.user_id ? [row.user_id] : [])))];
+  let profiles: AdminFeedbackProfileRow[] = [];
 
-  // Fetch profiles for all user_ids in one query
-  const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))] as string[];
-  const profileMap: Record<string, ProfileRow> = {};
-
-  if (userIds.length > 0) {
-    const { data: profiles } = await supabase
+  if (userIds.length) {
+    const { data, error: profileError } = await supabase
       .from("profiles")
       .select("id, username, full_name, email")
       .in("id", userIds)
-      .returns<ProfileRow[]>();
+      .returns<AdminFeedbackProfileRow[]>();
 
-    if (profiles) {
-      for (const p of profiles) {
-        profileMap[p.id] = p;
-      }
+    if (profileError) {
+      throw new Error("Unable to load feedback sender details.");
     }
+    profiles = data ?? [];
   }
 
+  const items = buildAdminFeedbackItems({ events: rows, profiles });
+  const counts = countFeedbackByType(items);
+  const totalFeedback = feedbackCount ?? items.length;
+  const feedbackNoun = totalFeedback === 1 ? "message" : "messages";
+
   return (
-    <main className="site-container py-10">
-      <div className="mb-8">
-        <p className="site-eyebrow">Admin</p>
-        <h1 className="site-page-title mt-2">User Feedback</h1>
-        <p className="mt-2 text-sm tabular-nums text-site-muted">
-          {rows.length} submission{rows.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="site-panel p-8 text-center text-sm text-site-muted">
-          No feedback submitted yet.
+    <main className={styles.page}>
+      <header className={styles.pageHeader}>
+        <div className={styles.pageIntro}>
+          <p className="site-eyebrow">Work queue / Feedback</p>
+          <h1 className="site-page-title mt-2">What users are telling you</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary sm:text-base">
+            {totalFeedback > items.length
+              ? `Showing the newest ${items.length} of ${totalFeedback} messages.`
+              : `All ${totalFeedback} ${feedbackNoun} sent from the signed-in app are here.`}{" "}
+            Search by person, page, or message, then follow up directly by email.
+          </p>
         </div>
+        <div className="flex flex-wrap gap-2" aria-label="Feedback summary">
+          <span className="site-badge site-badge-danger">{counts.bug} bugs</span>
+          <span className="site-badge border-site-action bg-site-selected text-site-action-hover">
+            {counts.feature} ideas
+          </span>
+          <span className="site-badge">{counts.general} notes</span>
+        </div>
+      </header>
+
+      {items.length ? (
+        <AdminFeedbackInbox items={items} />
       ) : (
-        <div className="space-y-3">
-          {rows.map((row) => {
-            const message = row.metadata?.message ?? "(no message)";
-            const feedbackType = row.metadata?.type ?? "general";
-            const feedbackPage = row.metadata?.page ?? null;
-            const profile = row.user_id ? profileMap[row.user_id] : null;
-            const username = profile?.username ?? null;
-            const fullName = profile?.full_name ?? null;
-            const email = profile?.email ?? null;
-            const displayName = fullName ?? username ?? "Unknown user";
-            const typeBadgeClass = TYPE_STYLES[feedbackType] ?? TYPE_STYLES.general;
-            const typeLabel = TYPE_LABELS[feedbackType] ?? feedbackType;
-            const date = new Date(row.created_at).toLocaleString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-
-            return (
-              <article key={row.id} className="site-panel p-5">
-                <div className="mb-2 flex items-start justify-between gap-4">
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-semibold text-site-text">{displayName}</h2>
-                      {username && (
-                        <span className="font-mono text-xs text-site-muted">@{username}</span>
-                      )}
-                      <span className={`site-badge text-[10px] ${typeBadgeClass}`}>
-                        {typeLabel}
-                      </span>
-                    </div>
-                    {email && (
-                      <span className="text-xs text-site-muted">{email}</span>
-                    )}
-                  </div>
-                  <time dateTime={row.created_at} className="shrink-0 font-mono text-xs text-site-muted">{date}</time>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-site-secondary">
-                  {message}
-                </p>
-                {feedbackPage && (
-                  <p className="mt-2 font-mono text-[11px] text-site-muted">
-                    Page: {feedbackPage}
-                  </p>
-                )}
-              </article>
-            );
-          })}
-        </div>
+        <section className={styles.emptyState}>
+          <p className="site-eyebrow">Inbox clear</p>
+          <h2 className="site-section-title mt-2">No feedback has arrived yet.</h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6">
+            Signed-in users can send a bug report, idea, or general note from the
+            Feedback button inside the app. Their message will appear here.
+          </p>
+        </section>
       )}
+
+      <p className="mt-4 text-xs leading-5 text-site-muted">
+        Feedback is stored privately in Supabase as a <code>feedback.submitted</code>{" "}
+        event. It is not emailed or sent to another service.
+      </p>
     </main>
   );
 }

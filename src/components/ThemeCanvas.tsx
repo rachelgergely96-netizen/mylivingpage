@@ -13,7 +13,7 @@ import {
   decayTransientThemeMotion,
 } from "@/themes/shared/motion";
 import { createMotionSampler, type MotionSampler } from "@/themes/shared/smoothing";
-import { hasFrameIntervalElapsed } from "@/themes/shared/timing";
+import { shouldPresentFrame } from "@/themes/shared/timing";
 import type { ThemeId, ThemeMotionContext, ThemeRenderer } from "@/themes/types";
 
 // Whether CanvasRenderingContext2D.filter accepts a blur — probed once per
@@ -342,11 +342,14 @@ export default function ThemeCanvas({
 
     // ---- Quality ladder: full HD → HD without bloom → 30fps cap. Driven by an
     // EMA of paint cost so a one-off GC hitch never degrades, with a hysteresis
-    // band and long consecutive-frame requirements so it cannot oscillate.
-    const QUALITY_BUDGET_MS = 14;
-    const QUALITY_RECOVER_MS = 10.5;
-    const QUALITY_DEGRADE_FRAMES = 90;
-    const QUALITY_RECOVER_FRAMES = 200;
+    // band. Degrades quickly (~0.75s) so an overloaded session reaches a smooth
+    // state fast. Bloom is a ONE-WAY ratchet: once dropped (level ≥ 1) it never
+    // returns for this mount, so the glow can't visibly pop back in and out.
+    // Only the 30fps floor (level 2) may recover to level 1 when cost allows.
+    const QUALITY_BUDGET_MS = 12;
+    const QUALITY_RECOVER_MS = 9;
+    const QUALITY_DEGRADE_FRAMES = 45;
+    const QUALITY_RECOVER_FRAMES = 240;
     const QUALITY_EMA_ALPHA = 0.08;
     let qualityLevel = 0;
     let qualityCostEma: number | null = null;
@@ -374,7 +377,8 @@ export default function ThemeCanvas({
       } else if (qualityCostEma < QUALITY_RECOVER_MS) {
         underBudgetFrames += 1;
         overBudgetFrames = 0;
-        if (underBudgetFrames >= QUALITY_RECOVER_FRAMES && qualityLevel > 0) {
+        // Recover fps (level 2 → 1) only; bloom (level 0) never comes back.
+        if (underBudgetFrames >= QUALITY_RECOVER_FRAMES && qualityLevel > 1) {
           setQualityLevel(qualityLevel - 1);
         }
       } else {
@@ -453,8 +457,6 @@ export default function ThemeCanvas({
     };
 
     const minFrameMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0;
-    const activeFrameMs = () =>
-      qualityLevel === 2 ? Math.max(minFrameMs, 1000 / 30) : minFrameMs;
     const draw = (now: number) => {
       if (!runningRef.current) {
         return;
@@ -463,7 +465,11 @@ export default function ThemeCanvas({
       if (lastFrameRef.current === null) {
         lastFrameRef.current = now;
       }
-      if (!hasFrameIntervalElapsed(now, lastFrameRef.current, activeFrameMs())) {
+      // Level 2 drops to a 30fps floor; every other level honors the prop cap
+      // (which, at 60, ungates so vsync paces every frame).
+      const targetIntervalMs =
+        qualityLevel === 2 ? Math.max(minFrameMs, 1000 / 30) : minFrameMs;
+      if (!shouldPresentFrame(now, lastFrameRef.current, targetIntervalMs)) {
         // Below the frame budget — keep the rAF loop alive but skip this paint.
         return;
       }

@@ -25,3 +25,29 @@ export function hasFrameIntervalElapsed(
   return minimumIntervalMs <= 0
     || now - lastPaint + FRAME_TIMESTAMP_EPSILON_MS >= minimumIntervalMs;
 }
+
+// A target at/above this rate is treated as "present every animation frame":
+// gating a 60fps target on a 60Hz panel skipped frames unevenly because a
+// slightly-early rAF (16.5ms vs the 16.67ms threshold) just-missed and pushed
+// the paint to the next vsync, producing 16.7/33.3/50ms judder.
+const DISPLAY_RATE_INTERVAL_MS = 1000 / 58;
+
+/**
+ * Decides whether to paint this animation frame for a given target interval.
+ *
+ * Targets at or above roughly display rate present on every rAF and let vsync
+ * pace them — the elapsed-time accumulation elsewhere already makes animation
+ * speed frame-rate independent, so this only governs cadence. Deliberate low
+ * caps (small previews, the 30fps degrade floor) still gate, but a half-frame
+ * tolerance means vsync jitter can never turn an intended paint into a skip.
+ */
+export function shouldPresentFrame(
+  now: number,
+  lastPaint: number,
+  targetIntervalMs: number,
+): boolean {
+  if (!(targetIntervalMs > 0) || targetIntervalMs <= DISPLAY_RATE_INTERVAL_MS) {
+    return true;
+  }
+  return now - lastPaint >= targetIntervalMs - Math.min(8, targetIntervalMs * 0.5);
+}

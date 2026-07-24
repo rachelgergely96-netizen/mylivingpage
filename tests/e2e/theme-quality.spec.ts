@@ -26,6 +26,17 @@ function perceptualHashDistance(left: string, right: string): number {
   return distance;
 }
 
+async function downloadToBuffer(
+  download: import("@playwright/test").Download,
+): Promise<Buffer> {
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 test("paired prototypes keep the Living Page and share card identity in sync", async ({
   page,
 }) => {
@@ -62,6 +73,61 @@ test("paired prototypes keep the Living Page and share card identity in sync", a
       shareCard.locator("[data-share-card-profile]"),
     ).toHaveAttribute("data-share-card-profile", motif);
   }
+});
+
+test("the real share-card modal exports one complete 1200 by 630 card on every viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.goto("/dev/theme-lab");
+
+  const trigger = page.getByRole("button", {
+    name: "Share Avery’s page",
+  });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const dialog = page.getByRole("dialog", { name: "Avery Morgan" });
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close share card" })).toBeFocused();
+
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download share card" }).click();
+  const download = await downloadPromise;
+  const png = await downloadToBuffer(download);
+
+  expect(download.suggestedFilename()).toBe("avery-morgan-share-card.png");
+  expect(Array.from(png.subarray(0, 8))).toEqual([
+    137, 80, 78, 71, 13, 10, 26, 10,
+  ]);
+  expect(png.readUInt32BE(16)).toBe(1200);
+  expect(png.readUInt32BE(20)).toBe(630);
+  expect(png.byteLength).toBeGreaterThan(100_000);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dialog).toBeVisible();
+  const mobileGeometry = await page.evaluate(() => {
+    const activeDialog = document.querySelector<HTMLElement>("[role='dialog']");
+    const preview = activeDialog?.querySelector<HTMLElement>(
+      "[data-scaled-share-card]",
+    );
+    return {
+      bodyOverflow:
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+      dialogOverflow: activeDialog
+        ? activeDialog.scrollWidth - activeDialog.clientWidth
+        : -1,
+      previewWidth: preview?.getBoundingClientRect().width ?? 0,
+    };
+  });
+  expect(mobileGeometry.bodyOverflow).toBe(0);
+  expect(mobileGeometry.dialogOverflow).toBe(0);
+  expect(mobileGeometry.previewWidth).toBeGreaterThan(250);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
 });
 
 test("attention motion stays brief and fully respects reduced motion", async ({

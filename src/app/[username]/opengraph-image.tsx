@@ -1,20 +1,13 @@
-/* eslint-disable @next/next/no-img-element */
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
-import { ShareCardProfileMark } from "@/components/ShareCardProfileMark";
+import { ShareCardArtwork } from "@/components/ShareCardArtwork";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
 import {
-  buildQrMatrix,
-  getFirstName,
-  getShareCardTags,
+  buildShareCardModel,
   getShareCardVisual,
   normalizeAppUrl,
-  toDisplayDomainUrl,
-  toLivePageUrl,
-  truncate,
 } from "@/lib/share-card";
 import { getSupabaseSecretKey, getSupabaseUrl } from "@/lib/supabase/env";
-import type { ResumeData } from "@/types/resume";
 
 export const runtime = "nodejs";
 export const revalidate = 60;
@@ -26,12 +19,12 @@ interface OgImageProps {
   params: Promise<{ username: string }>;
 }
 
-type OgFont = {
-  name: string;
+interface OgFont {
   data: ArrayBuffer;
-  weight: 400 | 700;
+  name: "DM Sans" | "Playfair";
   style: "normal";
-};
+  weight: 400 | 700;
+}
 
 async function fetchFont(url: string): Promise<ArrayBuffer | null> {
   try {
@@ -43,19 +36,7 @@ async function fetchFont(url: string): Promise<ArrayBuffer | null> {
   }
 }
 
-function getSafeName(resume: ResumeData): string {
-  return truncate(resume.name || "MyLivingPage User", 44);
-}
-
-function getSafeHeadline(resume: ResumeData): string {
-  return truncate(resume.headline || "Professional profile", 72);
-}
-
-function getSafeLocation(resume: ResumeData): string {
-  return truncate(resume.location || "", 42);
-}
-
-function createEdgeSupabaseClient() {
+function createPublicPageClient() {
   const url = getSupabaseUrl();
   const secretKey = getSupabaseSecretKey();
   if (!url || !secretKey) {
@@ -67,31 +48,42 @@ function createEdgeSupabaseClient() {
   });
 }
 
-function renderFallbackCard(fonts: OgFont[], playfairLoaded: boolean, dmSansLoaded: boolean) {
+function renderFallbackCard(
+  fonts: OgFont[],
+  playfairLoaded: boolean,
+  dmSansLoaded: boolean,
+) {
   return new ImageResponse(
     (
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
           background: "linear-gradient(135deg, #0A1628 0%, #0F0519 100%)",
           color: "#F0F4FF",
+          display: "flex",
+          flexDirection: "column",
           fontFamily: playfairLoaded ? "Playfair" : "serif",
+          height: "100%",
+          justifyContent: "center",
+          width: "100%",
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", fontSize: 48, fontWeight: 700 }}>
+        <div
+          style={{
+            alignItems: "baseline",
+            display: "flex",
+            fontSize: 48,
+            fontWeight: 700,
+          }}
+        >
           my<span style={{ color: "#3B82F6" }}>living</span>page
         </div>
         <div
           style={{
-            marginTop: 18,
-            fontSize: 22,
-            color: "rgba(240,244,255,0.62)",
+            color: "rgba(240,244,255,0.68)",
             fontFamily: dmSansLoaded ? "DM Sans" : "sans-serif",
+            fontSize: 22,
+            marginTop: 18,
           }}
         >
           Your resume, alive.
@@ -108,347 +100,73 @@ function renderFallbackCard(fonts: OgFont[], playfairLoaded: boolean, dmSansLoad
 export default async function OGImage({ params }: OgImageProps) {
   const { username } = await params;
   const [playfairFont, dmSansFont] = await Promise.all([
-    fetchFont("https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiukDQ.ttf"),
-    fetchFont("https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf"),
+    fetchFont(
+      "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKeiukDQ.ttf",
+    ),
+    fetchFont(
+      "https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf",
+    ),
   ]);
+  const fonts: OgFont[] = [];
 
-  const fonts = [
-    playfairFont ? { name: "Playfair", data: playfairFont, weight: 700 as const, style: "normal" as const } : null,
-    dmSansFont ? { name: "DM Sans", data: dmSansFont, weight: 400 as const, style: "normal" as const } : null,
-  ].filter((font): font is OgFont => Boolean(font));
+  if (playfairFont) {
+    fonts.push({
+      data: playfairFont,
+      name: "Playfair",
+      style: "normal",
+      weight: 700,
+    });
+  }
+  if (dmSansFont) {
+    fonts.push(
+      {
+        data: dmSansFont,
+        name: "DM Sans",
+        style: "normal",
+        weight: 400,
+      },
+      {
+        data: dmSansFont.slice(0),
+        name: "DM Sans",
+        style: "normal",
+        weight: 700,
+      },
+    );
+  }
 
-  const supabase = createEdgeSupabaseClient();
+  const supabase = createPublicPageClient();
   const page = supabase ? await fetchPublicLivePage(supabase, username) : null;
   if (!page) {
-    return renderFallbackCard(fonts, Boolean(playfairFont), Boolean(dmSansFont));
+    return renderFallbackCard(
+      fonts,
+      Boolean(playfairFont),
+      Boolean(dmSansFont),
+    );
   }
 
   const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
-  const livePageUrl = toLivePageUrl(appUrl, page.slug);
-  const displayUrl = truncate(toDisplayDomainUrl(appUrl, page.slug), 48);
-  const qrMatrix = buildQrMatrix(livePageUrl);
-  const qrCellSize = qrMatrix?.length ? Math.max(3, Math.floor(148 / qrMatrix.length)) : 0;
-  const qrRenderSize = qrMatrix?.length ? qrMatrix.length * qrCellSize : 0;
-  const resume = page.resume_data;
   const visual = getShareCardVisual(page.theme_id);
-  const safeName = getSafeName(resume);
-  const safeHeadline = getSafeHeadline(resume);
-  const safeLocation = getSafeLocation(resume);
-  const shareTags = getShareCardTags(resume);
-  const firstName = getFirstName(safeName);
-  const initial = safeName.slice(0, 1).toUpperCase() || "?";
+  const model = buildShareCardModel({
+    appUrl,
+    resume: page.resume_data,
+    slug: page.slug,
+  });
+  const bodyFontFamily = dmSansFont ? "DM Sans" : "sans-serif";
   const headingFontFamily =
     visual.headingFont === "editorial"
       ? playfairFont
         ? "Playfair"
         : "serif"
-      : dmSansFont
-        ? "DM Sans"
-        : "sans-serif";
+      : bodyFontFamily;
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          position: "relative",
-          overflow: "hidden",
-          padding: "32px",
-          background: visual.background,
-          color: visual.text,
-          fontFamily: dmSansFont ? "DM Sans" : "sans-serif",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: -180,
-            right: -120,
-            width: 480,
-            height: 480,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)`,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: -140,
-            bottom: -220,
-            width: 520,
-            height: 520,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 76%)`,
-            opacity: 0.48,
-          }}
-        />
-
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            padding: "34px 36px 30px",
-            borderRadius: 0,
-            border: `1px solid ${visual.border}`,
-            background: `linear-gradient(138deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 70px ${visual.glow}`,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: -100,
-              right: -40,
-              width: 300,
-              height: 300,
-              borderRadius: "50%",
-              background: `radial-gradient(circle, ${visual.glow} 0%, rgba(0,0,0,0) 72%)`,
-            }}
-          />
-          <ShareCardProfileMark
-            accent={visual.accent}
-            motif={visual.motif}
-            style={{
-              height: 72,
-              opacity: 0.58,
-              right: 178,
-              top: 42,
-              width: 72,
-              zIndex: 2,
-            }}
-          />
-
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 28 }}>
-            <div style={{ display: "flex", flexDirection: "column", maxWidth: 760 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  fontSize: 14,
-                  letterSpacing: "0.18em",
-                  color: visual.textSubtle,
-                  textTransform: "uppercase",
-                }}
-              >
-                <span style={{ width: 28, height: 2, background: visual.accent }} />
-                Personalized Share Card
-              </div>
-              <div
-                style={{
-                  marginTop: 16,
-                  fontFamily: headingFontFamily,
-                  fontSize: 66,
-                  lineHeight: 0.98,
-                  fontWeight: 700,
-                  letterSpacing: "-0.03em",
-                  color: visual.text,
-                  textShadow: visual.lightGround
-                    ? "none"
-                    : "0 2px 22px rgba(0,0,0,0.35)",
-                  maxWidth: 720,
-                }}
-              >
-                {safeName}
-              </div>
-              <div style={{ marginTop: 16, fontSize: 24, color: visual.textMuted, maxWidth: 700 }}>
-                {safeHeadline}
-              </div>
-              {safeLocation ? (
-                <div style={{ marginTop: 14, fontSize: 18, color: visual.textSubtle }}>
-                  {safeLocation}
-                </div>
-              ) : null}
-              <div
-                style={{
-                  marginTop: 20,
-                  display: "flex",
-                  alignItems: "center",
-                  alignSelf: "flex-start",
-                  padding: "9px 16px",
-                  borderRadius: 0,
-                  border: `1px solid ${visual.border}`,
-                  background: visual.surface,
-                  fontSize: 18,
-                  color: visual.accentBright,
-                }}
-              >
-                @{page.slug}
-              </div>
-            </div>
-
-            {resume.avatar_url ? (
-              <img
-                src={resume.avatar_url}
-                alt=""
-                width={128}
-                height={128}
-                style={{
-                  width: 128,
-                  height: 128,
-                  borderRadius: 0,
-                  objectFit: "cover",
-                  border: `3px solid ${visual.accent}`,
-                  boxShadow: `0 0 36px ${visual.glow}`,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 128,
-                  height: 128,
-                  borderRadius: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: headingFontFamily,
-                  fontSize: 50,
-                  fontWeight: 700,
-                  color: visual.background,
-                  background: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
-                  boxShadow: `0 0 36px ${visual.glow}`,
-                }}
-              >
-                {initial}
-              </div>
-            )}
-          </div>
-
-          {shareTags.length ? (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 10,
-                marginTop: 22,
-                maxWidth: 760,
-              }}
-            >
-              {shareTags.map((tag) => (
-                <div
-                  key={tag}
-                  style={{
-                    padding: "9px 14px",
-                    borderRadius: 0,
-                    border: `1px solid ${visual.border}`,
-                    background: visual.surface,
-                    fontSize: 15,
-                    color: visual.textMuted,
-                    maxWidth: "100%",
-                  }}
-                >
-                  {tag}
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          <div style={{ flex: 1 }} />
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "stretch",
-              justifyContent: "space-between",
-              gap: 22,
-              padding: "22px 24px",
-              borderRadius: 0,
-              border: `1px solid ${visual.border}`,
-              background: visual.surfaceStrong,
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", maxWidth: 520 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: visual.text }}>
-                Scan to visit {firstName}
-              </div>
-              <div
-                style={{
-                  marginTop: 10,
-                  fontSize: 16,
-                  lineHeight: 1.45,
-                  color: visual.textSubtle,
-                }}
-              >
-                This QR code is unique to @{page.slug} and opens {truncate(livePageUrl, 44)}.
-              </div>
-            </div>
-
-            {qrMatrix?.length ? (
-              <div
-                style={{
-                  width: 172,
-                  height: 172,
-                  borderRadius: 0,
-                  border: `1px solid ${visual.border}`,
-                  background: "#FFFFFF",
-                  padding: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div
-                  style={{
-                    width: qrRenderSize,
-                    height: qrRenderSize,
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  {qrMatrix.map((row, rowIndex) => (
-                    <div
-                      key={`row-${rowIndex}`}
-                      style={{
-                        display: "flex",
-                        width: qrRenderSize,
-                        height: qrCellSize,
-                      }}
-                    >
-                      {row.map((isDark, cellIndex) => (
-                        <div
-                          key={`cell-${rowIndex}-${cellIndex}`}
-                          style={{
-                            width: qrCellSize,
-                            height: qrCellSize,
-                            background: isDark ? "#0A1628" : "#FFFFFF",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{
-                  width: 172,
-                  height: 172,
-                  borderRadius: 0,
-                  border: `1px solid ${visual.border}`,
-                  background: visual.surface,
-                }}
-              />
-            )}
-          </div>
-
-          <div
-            style={{
-              marginTop: 18,
-              fontSize: 18,
-              color: visual.textSubtle,
-            }}
-          >
-            {displayUrl}
-          </div>
-        </div>
-      </div>
+      <ShareCardArtwork
+        bodyFontFamily={bodyFontFamily}
+        headingFontFamily={headingFontFamily}
+        model={model}
+        visual={visual}
+      />
     ),
     {
       ...size,

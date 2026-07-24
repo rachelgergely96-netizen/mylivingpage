@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getShareCardTags, getShareCardVisual } from "@/lib/share-card";
+import {
+  buildQrMatrix,
+  buildShareCardModel,
+  getShareCardTags,
+  getShareCardVisual,
+  SHARE_CARD_SIZE,
+} from "@/lib/share-card";
 import { THEME_MAP, THEME_REGISTRY } from "@/themes/registry";
 import type { ResumeData } from "@/types/resume";
 
@@ -94,7 +100,16 @@ describe("getShareCardVisual", () => {
       expect(visual.collection).toBe(theme.collection);
       expect(visual.headingFont).toBe(theme.presentation.headingFont);
       expect(visual.text).toBe(theme.presentation.text);
+      expect(visual.themeName).toBe(theme.name);
+      expect(visual.themeVibe).toBe(theme.vibe);
     }
+  });
+
+  it("derives refreshed dark gradients from the current registry palette", () => {
+    expect(getShareCardVisual("neon").gradientMid).not.toBe("#17102E");
+    expect(getShareCardVisual("coral").gradientMid).not.toBe("#0C2128");
+    expect(getShareCardVisual("topo").gradientMid).not.toBe("#121924");
+    expect(getShareCardVisual("halo").gradientMid).not.toBe("#23111F");
   });
 
   it("keeps the six paired prototypes visually distinct", () => {
@@ -115,5 +130,34 @@ describe("getShareCardVisual", () => {
     expect(atelier.gradientFrom).not.toMatch(/^#0[0-9A-F]/i);
     expect(fallback.themeId).toBe("cosmic");
     expect(fallback.accent).toBe(THEME_MAP.cosmic.presentation.accent);
+  });
+});
+
+describe("buildShareCardModel", () => {
+  it("builds one canonical 1200 by 630 card model for every output surface", () => {
+    const model = buildShareCardModel({
+      appUrl: "https://www.mylivingpage.com/",
+      resume: buildResume({
+        avatar_url: "https://example.com/avatar.png",
+        skills: [{ category: "Focus", items: ["Product Architecture"] }],
+      }),
+      slug: "rachel-gergely",
+    });
+
+    expect(SHARE_CARD_SIZE).toEqual({ width: 1200, height: 630 });
+    expect(model.livePageUrl).toBe("https://www.mylivingpage.com/rachel-gergely");
+    expect(model.displayUrl).toBe("www.mylivingpage.com/rachel-gergely");
+    expect(model.firstName).toBe("Rachel");
+    expect(model.tags).toEqual(["Product Architecture"]);
+    expect(model.qrMatrix?.length).toBeGreaterThan(20);
+  });
+
+  it("keeps a four-module quiet zone around the QR matrix", () => {
+    const matrix = buildQrMatrix("https://www.mylivingpage.com/rachel-gergely");
+
+    expect(matrix).not.toBeNull();
+    expect(matrix?.slice(0, 4).every((row) => row.every((cell) => !cell))).toBe(true);
+    expect(matrix?.every((row) => row.slice(0, 4).every((cell) => !cell))).toBe(true);
+    expect(matrix?.some((row) => row.some(Boolean))).toBe(true);
   });
 });

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import ResumeLayout from "@/components/ResumeLayout";
+import ShareCardDownload from "@/components/ShareCardDownload";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import { LandingStoryShareCard } from "@/components/marketing/LandingStoryShareCard";
 import { SIGNAL_FRAME_SAMPLE } from "@/lib/signal-frame-sample";
@@ -169,6 +170,16 @@ export function ThemeQualityLab() {
               themeId={theme.id}
             />
           </div>
+          <ShareCardDownload
+            analyticsCtaLabel="Return to theme lab"
+            analyticsHref="/dev/theme-lab"
+            className="mt-3 w-full justify-center"
+            isOwner
+            pageId="theme-quality-preview"
+            resumeData={SIGNAL_FRAME_SAMPLE}
+            slug="avery-morgan"
+            themeId={theme.id}
+          />
           <dl className="mt-4 grid grid-cols-2 border border-site-border">
             <div className="border-r border-site-border p-3">
               <dt className="site-eyebrow">Accent</dt>

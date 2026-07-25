@@ -3,12 +3,15 @@ import { ImageResponse } from "next/og";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ShareCardArtwork } from "@/components/ShareCardArtwork";
-import { THEME_SHARE_CARD_RECIPES } from "@/lib/share-card-art";
 import {
   buildShareCardModel,
   getShareCardVisual,
   SHARE_CARD_SIZE,
 } from "@/lib/share-card";
+import {
+  getShareCardFinish,
+  SHARE_CARD_FINISHES,
+} from "@/lib/share-card-finish";
 import type { ThemeId } from "@/themes/types";
 import type { ResumeData } from "@/types/resume";
 
@@ -92,10 +95,9 @@ describe("ShareCardArtwork", () => {
     "filigree",
     "atelier",
   ] satisfies ThemeId[])(
-    "preserves the %s Living Page identity across every artwork attribute",
+    "uses the canonical skeleton with the %s Living Page palette",
     (themeId) => {
       const { markup, visual } = buildArtwork(themeId);
-      const recipe = THEME_SHARE_CARD_RECIPES[themeId];
 
       expect(markup).toContain(
         `data-share-card-theme-id="${themeId}"`,
@@ -103,19 +105,66 @@ describe("ShareCardArtwork", () => {
       expect(markup).toContain(
         `data-share-card-collection="${visual.collection}"`,
       );
-      expect(markup).toContain(`data-share-card-theme="${themeId}"`);
-      expect(markup).toContain(
-        `data-share-card-primitive="${recipe.primitive}"`,
-      );
-      expect(markup).toContain(
-        `data-share-card-frame="${recipe.frame}"`,
-      );
-      expect(markup).toContain(
-        `data-share-card-profile="${visual.motif}"`,
-      );
+      expect(markup).toContain('data-share-card-skeleton="canonical"');
+      expect(markup).toContain('data-share-card-skeleton-layer="signal-frame"');
+      expect(markup).toContain("MyLivingPage / Living Resume");
+      expect(markup).not.toContain("data-share-card-primitive");
+      expect(markup).not.toContain("data-share-card-frame");
+      expect(markup).not.toContain("data-share-card-profile");
       expect(markup).toContain(
         `share card in the ${visual.themeName} theme`,
       );
+    },
+  );
+
+  it("inherits the same DM Sans typography contract as the Living Page", () => {
+    const model = buildShareCardModel({
+      appUrl: "https://www.mylivingpage.com",
+      resume: buildResume(),
+      slug: "rachel-gergely",
+    });
+    const markup = renderToStaticMarkup(
+      <ShareCardArtwork model={model} visual={getShareCardVisual("cosmic")} />,
+    );
+
+    expect(markup).toContain("font-family:var(--font-dm-sans), sans-serif");
+    expect(markup).not.toContain("--font-dm-mono");
+    expect(markup).not.toContain("--font-playfair");
+  });
+
+  it("keeps the holographic palette theme-led while protecting text contrast", () => {
+    const visual = getShareCardVisual("velvet");
+    const treatment = getShareCardFinish("holographic", visual);
+
+    expect(treatment.panelBackground).toContain(visual.gradientFrom);
+    expect(treatment.panelBackground).toContain(visual.gradientMid);
+    expect(treatment.panelBackground).toContain(visual.gradientTo);
+    expect(treatment.textMuted).toBe("rgba(240,243,255,0.9)");
+    expect(treatment.bodyScrim).toMatchObject({ width: "78%" });
+    expect(treatment.bodyScrim?.background).toContain("rgba(3,6,12,0.88)");
+    expect(treatment.chromeSurface).toBe("rgba(4,7,14,0.78)");
+    expect(treatment.footerBackground).toBe("rgba(4,7,14,0.96)");
+  });
+
+  it.each(SHARE_CARD_FINISHES)(
+    "keeps the canonical skeleton mounted in the %s finish",
+    (finish) => {
+      const model = buildShareCardModel({
+        appUrl: "https://www.mylivingpage.com",
+        resume: buildResume(),
+        slug: "rachel-gergely",
+      });
+      const markup = renderToStaticMarkup(
+        <ShareCardArtwork
+          finish={finish}
+          model={model}
+          visual={getShareCardVisual("velvet")}
+        />,
+      );
+
+      expect(markup).toContain('data-share-card-skeleton="canonical"');
+      expect(markup).toContain('data-share-card-skeleton-layer="signal-frame"');
+      expect(markup).not.toContain("data-share-card-primitive");
     },
   );
 

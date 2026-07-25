@@ -2,9 +2,8 @@
 import React from "react";
 import type { CSSProperties } from "react";
 import { ShareCardEmblem } from "@/components/ShareCardEmblem";
-import { ShareCardProfileMark } from "@/components/ShareCardProfileMark";
 import { ShareCardQr } from "@/components/ShareCardQr";
-import { ShareCardThemeArtwork } from "@/components/ShareCardThemeArtwork";
+import { ShareCardSkeletonArtwork } from "@/components/ShareCardSkeletonArtwork";
 import {
   SHARE_CARD_SIZE,
   type ShareCardModel,
@@ -34,7 +33,7 @@ export interface ShareCardArtworkProps {
 
 export function ShareCardArtwork({
   animatedShine = false,
-  bodyFontFamily = "var(--font-dm-sans), Arial, sans-serif",
+  bodyFontFamily = "var(--font-dm-sans), sans-serif",
   className,
   ctaBody = "Scan to explore work, experience, and more.",
   ctaHeadline,
@@ -45,7 +44,7 @@ export function ShareCardArtwork({
 }: ShareCardArtworkProps) {
   const treatment = getShareCardFinish(finish, visual);
   const serial = treatment.signatureSerial
-    ? `${treatment.signatureSerial} · ${model.slug.toUpperCase()} · ${visual.themeName.toUpperCase()}`
+    ? `${treatment.signatureSerial} · ${model.slug.toUpperCase()} · LIVING PAGE`
     : null;
 
   return (
@@ -114,18 +113,16 @@ export function ShareCardArtwork({
           width: "100%",
         }}
       >
-        <ShareCardThemeArtwork
+        <ShareCardSkeletonArtwork
           accent={visual.accent}
           accentBright={visual.accentBright}
-          background={visual.background}
           border={visual.border}
           glow={visual.glow}
-          style={{ opacity: treatment.themeArtOpacity }}
+          style={{ opacity: treatment.skeletonOpacity }}
           surface={visual.surface}
-          themeId={visual.themeId}
         />
 
-        {/* Finish material sheets sit above the theme motif, below content. */}
+        {/* Finish material sheets sit above the canonical skeleton, below content. */}
         {treatment.sheets.map((sheet, index) => (
           <div key={index} style={sheet} />
         ))}
@@ -197,23 +194,6 @@ export function ShareCardArtwork({
           </div>
         ) : null}
 
-        {/* The motif watermark carries the theme identity; keep it on classic
-            and holographic (which welcomes the extra theme character), but not
-            on metal, whose restraint comes from the accent hairline alone. */}
-        {treatment.emblem !== "chip" ? (
-          <ShareCardProfileMark
-            accent={visual.accent}
-            motif={visual.motif}
-            style={{
-              height: 68,
-              opacity: treatment.id === "holographic" ? 0.5 : 0.64,
-              right: 184,
-              top: 34,
-              width: 68,
-            }}
-          />
-        ) : null}
-
         <div
           style={{
             alignItems: "flex-start",
@@ -251,7 +231,7 @@ export function ShareCardArtwork({
                   width: 28,
                 }}
               />
-              MyLivingPage / {visual.themeName}
+              MyLivingPage / Living Resume
             </div>
 
             <div

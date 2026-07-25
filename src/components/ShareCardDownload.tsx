@@ -245,8 +245,9 @@ export default function ShareCardDownload({
     <>
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-site-canvas p-0 sm:items-center sm:p-4"
           onClick={() => setOpen(false)}
+          data-share-card-backdrop="static"
           data-site-ui
         >
           <div

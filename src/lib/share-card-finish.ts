@@ -35,8 +35,8 @@ export interface ShareCardFinishTreatment {
   panelBorder: string;
   panelBoxShadow: string;
   panelRadius: number;
-  /** Opacity applied to the underlying per-theme motif so it does not fight the finish. */
-  themeArtOpacity: number;
+  /** Opacity applied to the canonical skeleton so it does not fight the finish. */
+  skeletonOpacity: number;
   showGlowOrbs: boolean;
   text: string;
   textMuted: string;
@@ -104,7 +104,7 @@ function classicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
     panelBorder: `1px solid ${visual.border}`,
     panelBoxShadow: `inset 0 1px 0 rgba(255,255,255,0.07), 0 24px 70px ${visual.glow}`,
     panelRadius: 0,
-    themeArtOpacity: 1,
+    skeletonOpacity: 1,
     showGlowOrbs: true,
     text: visual.text,
     textMuted: visual.textMuted,
@@ -138,7 +138,7 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
     panelBoxShadow:
       "inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.55), 0 26px 74px rgba(0,0,0,0.6)",
     panelRadius: 12,
-    themeArtOpacity: 0.16,
+    skeletonOpacity: 0.16,
     showGlowOrbs: false,
     text: "#f2f0ea",
     textMuted: "rgba(220,215,200,0.62)",
@@ -215,21 +215,19 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
   const accentBright = parseRgb(visual.accentBright);
   return {
     id: "holographic",
-    outerBackground:
-      "linear-gradient(155deg, #0a0c12 0%, #12151f 45%, #0b0e16 100%)",
-    panelBackground:
-      "linear-gradient(155deg, #0a0c12 0%, #12151f 45%, #0b0e16 100%)",
-    panelBorder: "1px solid rgba(255,255,255,0.10)",
+    outerBackground: visual.background,
+    panelBackground: `linear-gradient(145deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
+    panelBorder: `1px solid ${visual.border}`,
     panelBoxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.45), inset 1px 0 0 rgba(255,255,255,0.12), inset -1px 0 0 rgba(180,120,255,0.18), 0 26px 74px ${rgba(accent, 0.32)}`,
     panelRadius: 12,
-    themeArtOpacity: 0.24,
+    skeletonOpacity: 0.42,
     showGlowOrbs: true,
     text: "#f6f7ff",
-    textMuted: "rgba(226,230,246,0.72)",
+    textMuted: "rgba(240,243,255,0.9)",
     accent: visual.accentBright,
     accentBright: visual.accentBright,
-    chromeBorder: "rgba(255,255,255,0.16)",
-    chromeSurface: "rgba(255,255,255,0.06)",
+    chromeBorder: "rgba(255,255,255,0.34)",
+    chromeSurface: "rgba(4,7,14,0.78)",
     sheets: [
       // A′ — full-bleed accent wash so the whole foil casts toward the theme
       // color (ember warm, atlas cyan, velvet rose) before the spectrum bands.
@@ -285,14 +283,14 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
       top: 0,
       bottom: 0,
       left: 0,
-      width: "62%",
+      width: "78%",
       background:
-        "linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.28) 48%, rgba(0,0,0,0) 100%)",
+        "linear-gradient(90deg, rgba(3,6,12,0.88) 0%, rgba(3,6,12,0.76) 52%, rgba(3,6,12,0.34) 78%, rgba(3,6,12,0) 100%)",
     },
     emblem: "seal",
     signatureSerial: "MLP",
     serialColor: "rgba(230,234,250,0.34)",
-    footerBackground: "rgba(8,9,14,0.9)",
+    footerBackground: "rgba(4,7,14,0.96)",
     monogramBackground: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
     monogramColor: "#06080e",
     avatarBorder: visual.accentBright,
@@ -303,7 +301,7 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
       secondaryBackground: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(130,244,255,0.04) 28%, rgba(255,255,255,0.16) 48%, ${rgba(accentBright, 0.12)} 56%, rgba(255,76,184,0.05) 70%, rgba(0,0,0,0) 100%)`,
       secondaryWidth: "16%",
     },
-    nameTextShadow: "0 2px 22px rgba(0,0,0,0.4)",
+    nameTextShadow: "0 2px 22px rgba(0,0,0,0.72)",
   };
 }
 

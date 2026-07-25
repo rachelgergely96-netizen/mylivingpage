@@ -248,8 +248,16 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
       {
         ...FULL_BLEED,
         background:
-          "linear-gradient(28deg, rgba(0,0,0,0) 30%, rgba(255,60,160,0.16) 42%, rgba(80,220,255,0.18) 50%, rgba(255,210,90,0.14) 58%, rgba(160,90,255,0.12) 66%, rgba(0,0,0,0) 78%)",
-        opacity: 0.28,
+          "linear-gradient(28deg, rgba(0,0,0,0) 24%, rgba(255,72,180,0.18) 37%, rgba(255,210,96,0.15) 43%, rgba(100,240,220,0.19) 50%, rgba(92,176,255,0.2) 57%, rgba(184,108,255,0.18) 64%, rgba(0,0,0,0) 78%)",
+        opacity: 0.42,
+      },
+      // D2 — fine diffraction grooves. At full export resolution these read
+      // as foil texture; scaled previews retain a quiet pearlescent grain.
+      {
+        ...FULL_BLEED,
+        background:
+          "linear-gradient(112deg, rgba(0,0,0,0) 18%, rgba(255,255,255,0.07) 18.3%, rgba(0,0,0,0) 18.8%, rgba(0,0,0,0) 39%, rgba(120,220,255,0.06) 39.3%, rgba(0,0,0,0) 39.9%, rgba(0,0,0,0) 61%, rgba(255,255,255,0.06) 61.3%, rgba(0,0,0,0) 61.9%, rgba(0,0,0,0) 82%)",
+        opacity: 0.32,
       },
       // E — top-left light catch.
       {
@@ -277,8 +285,8 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
     avatarBorder: visual.accentBright,
     shine: {
       rotateDeg: 26,
-      width: "42%",
-      background: `linear-gradient(90deg, rgba(0,0,0,0) 32%, ${rgba(accent, 0)} 38%, ${rgba(accent, 0.18)} 46%, rgba(255,255,255,0.22) 50%, ${rgba(accentBright, 0.16)} 54%, rgba(120,220,255,0.10) 58%, rgba(0,0,0,0) 68%)`,
+      width: "48%",
+      background: `linear-gradient(90deg, rgba(0,0,0,0) 20%, rgba(255,76,184,0.08) 31%, ${rgba(accent, 0.2)} 42%, rgba(255,255,255,0.34) 49%, rgba(130,244,255,0.2) 54%, ${rgba(accentBright, 0.18)} 61%, rgba(190,118,255,0.1) 70%, rgba(0,0,0,0) 82%)`,
     },
     nameTextShadow: "0 2px 22px rgba(0,0,0,0.4)",
   };

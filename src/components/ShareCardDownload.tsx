@@ -245,24 +245,24 @@ export default function ShareCardDownload({
     <>
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={() => setOpen(false)}
           data-site-ui
         >
           <div
             ref={dialogRef}
-            className="site-panel-raised max-h-[calc(100dvh-2rem)] w-full max-w-6xl overflow-y-auto"
+            className="site-panel-raised min-h-dvh w-full max-w-6xl overflow-y-auto sm:min-h-0 sm:max-h-[calc(100dvh-2rem)]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-card-dialog-title"
             tabIndex={-1}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-site-border px-5 py-4 sm:px-6">
-              <div>
+            <div className="sticky top-0 z-20 flex items-start justify-between gap-3 border-b border-site-border bg-site-surface-raised px-4 py-3 sm:static sm:gap-4 sm:px-6 sm:py-4">
+              <div className="min-w-0">
                 <p className="site-eyebrow">Share Card</p>
-                <h3 id="share-card-dialog-title" className="site-panel-title mt-2">{safeName}</h3>
-                <p className="site-muted mt-1 text-sm">
+                <h3 id="share-card-dialog-title" className="site-panel-title mt-1 truncate sm:mt-2">{safeName}</h3>
+                <p className="site-muted mt-1 truncate text-xs sm:text-sm">
                   Unique QR code and downloadable card for @{slug}
                 </p>
               </div>
@@ -295,13 +295,13 @@ export default function ShareCardDownload({
               <ShareCardArtwork finish="holographic" model={cardModel} visual={visual} />
             </div>
 
-            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px] sm:p-6">
+            <div className="grid gap-4 p-3 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div
                 data-living-output
                 data-theme-id={visual.themeId}
                 data-theme-detail={visual.contentProfile}
                 data-theme-collection={visual.collection}
-                className="min-w-0 self-start border border-site-border bg-site-canvas-alt p-2"
+                className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-1 sm:p-2"
               >
                 <TiltCard>
                   <ScaledShareCardArtwork
@@ -313,7 +313,7 @@ export default function ShareCardDownload({
                 </TiltCard>
               </div>
 
-              <div className="site-panel flex flex-col justify-between gap-4 p-5">
+              <div className="site-panel flex min-w-0 flex-col justify-between gap-4 p-4 sm:p-5">
                 <div>
                   <p className="site-eyebrow">Share actions</p>
                   <h4 className="site-panel-title mt-3 text-xl">

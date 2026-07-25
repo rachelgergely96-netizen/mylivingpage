@@ -42,6 +42,9 @@ export function ScaledShareCardArtwork({
       data-testid={testId}
       style={{
         aspectRatio: `${SHARE_CARD_SIZE.width} / ${SHARE_CARD_SIZE.height}`,
+        contain: "layout paint",
+        maxWidth: "100%",
+        minWidth: 0,
         overflow: "hidden",
         position: "relative",
         width: "100%",
@@ -56,6 +59,7 @@ export function ScaledShareCardArtwork({
           top: 0,
           transform: `scale(${scale || 1})`,
           transformOrigin: "top left",
+          willChange: scale > 0 ? "transform" : "auto",
           width: SHARE_CARD_SIZE.width,
         }}
       >

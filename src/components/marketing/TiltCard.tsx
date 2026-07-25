@@ -76,7 +76,7 @@ export default function TiltCard({
   };
 
   return (
-    <div className={className} style={{ perspective: 900, ...style }}>
+    <div className={className} style={{ maxWidth: "100%", minWidth: 0, perspective: 900, ...style }}>
       <div
         ref={innerRef}
         onPointerMove={handleMove}

@@ -1445,16 +1445,17 @@ a {
    single keyframe serves every finish angle. Export paths omit the element
    entirely, and reduced-motion holds it still. */
 @keyframes shareCardShine {
-  0% { transform: translateX(-130%); opacity: 0; }
-  8% { opacity: 0.6; }
-  45% { opacity: 0.7; }
-  60% { transform: translateX(190%); opacity: 0; }
-  100% { transform: translateX(190%); opacity: 0; }
+  0% { filter: hue-rotate(-12deg); transform: translateX(-145%); opacity: 0; }
+  8% { opacity: 0.42; }
+  34% { opacity: 0.76; }
+  58% { filter: hue-rotate(18deg); transform: translateX(205%); opacity: 0; }
+  100% { filter: hue-rotate(18deg); transform: translateX(205%); opacity: 0; }
 }
 
 .share-card-shine {
-  animation: shareCardShine 5.5s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
-  will-change: transform, opacity;
+  animation: shareCardShine 6.4s cubic-bezier(0.42, 0.05, 0.24, 1) infinite;
+  mix-blend-mode: screen;
+  will-change: filter, transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {

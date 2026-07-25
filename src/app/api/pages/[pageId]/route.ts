@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAccountAccessState } from "@/lib/account-access";
+import { buildEditorPreviewPage } from "@/lib/demo-data";
+import {
+  EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+  isEditorPreviewEnabled,
+} from "@/lib/editor-preview";
 import { sanitizePageVariants } from "@/lib/page-variants";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { MAX_FREE_ARCHIVES, isThemeAllowed } from "@/lib/plans";
@@ -36,6 +41,14 @@ async function fetchOwnedPage(pageId: string, userId: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const { pageId } = await params;
+
+  // Local/CI editor-preview harness: serve fully-populated demo data for the
+  // sentinel id so /dev/editor-preview renders without an auth session. Inert
+  // in production (isEditorPreviewEnabled is false on Vercel).
+  if (isEditorPreviewEnabled() && pageId === EDITOR_LAYOUT_PREVIEW_PAGE_ID) {
+    return NextResponse.json(buildEditorPreviewPage().page);
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -58,6 +71,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
   }
 
   const { pageId } = await params;
+
+  // Editor-preview harness saves nothing; acknowledge so the UI can settle back
+  // to a clean "saved" state. Inert in production.
+  if (isEditorPreviewEnabled() && pageId === EDITOR_LAYOUT_PREVIEW_PAGE_ID) {
+    return NextResponse.json({ success: true });
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

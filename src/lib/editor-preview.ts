@@ -1,3 +1,10 @@
+/**
+ * Sentinel page id the local editor-preview harness passes to PageEditorClient.
+ * It is only ever supplied by the env-gated /dev/editor-preview route, so the
+ * editor treats it as "load demo data, skip auth, don't persist."
+ */
+export const EDITOR_LAYOUT_PREVIEW_PAGE_ID = "editor-layout-preview";
+
 interface EditorPreviewEnvironment {
   CI?: string;
   ENABLE_EDITOR_PREVIEW?: string;

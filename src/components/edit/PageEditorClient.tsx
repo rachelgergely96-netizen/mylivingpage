@@ -490,27 +490,16 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           </div>
 
           {readiness ? (
+            // Persistent status readout. The per-check segmented bars live only
+            // in the readiness briefing (their accessible home); here we name the
+            // next gap in text, which stays useful once the briefing scrolls off.
             <div className="border-l border-site-border pl-3 sm:pl-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="site-eyebrow text-[9px] text-site-muted">
-                    Page signal
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-site-text">
-                    {readiness.readyCount}/{readiness.totalChecks} checks strong
-                  </p>
-                </div>
-                <div className="grid grid-cols-6 gap-1" aria-hidden="true">
-                  {readiness.checks.map((check) => (
-                    <span
-                      key={check.id}
-                      className={`h-5 w-1.5 transition-colors ${
-                        check.status === "ready" ? "bg-site-success" : "bg-site-border-strong"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
+              <p className="site-eyebrow text-[9px] text-site-muted">
+                Page signal
+              </p>
+              <p className="mt-1 text-xs font-semibold text-site-text">
+                {readiness.readyCount}/{readiness.totalChecks} checks strong
+              </p>
               <p className="mt-1.5 truncate text-[10px] text-site-muted">
                 {nextReadinessTarget
                   ? `Next: ${nextReadinessTarget.label}`

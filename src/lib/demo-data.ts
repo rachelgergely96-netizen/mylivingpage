@@ -1,9 +1,44 @@
-import type { ResumeData } from "@/types/resume";
+import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
+import type { PageRecord, ResumeData } from "@/types/resume";
 import type { ThemeId } from "@/themes/types";
 
 export interface DemoPage {
   themeId: ThemeId;
   data: ResumeData;
+}
+
+/**
+ * Fabricates a fully-populated draft PageRecord for the local editor-preview
+ * harness so PageEditorClient can render without an authenticated session or a
+ * real Supabase row. Never used in production (the harness route is env-gated).
+ */
+export function buildEditorPreviewPage(): {
+  page: PageRecord;
+  data: ResumeData;
+  themeId: ThemeId;
+} {
+  const demo = DEMO_PAGES[0];
+  // Fixed timestamps keep the preview deterministic (Date.now would churn snapshots).
+  const timestamp = "2026-01-01T00:00:00.000Z";
+  return {
+    themeId: demo.themeId,
+    data: demo.data,
+    page: {
+      id: EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+      slug: "preview",
+      status: "draft",
+      visibility: "private",
+      theme_id: demo.themeId,
+      resume_data: demo.data,
+      raw_resume: null,
+      portfolio_url: null,
+      page_config: null,
+      views: 0,
+      published_at: null,
+      created_at: timestamp,
+      updated_at: timestamp,
+    },
+  };
 }
 
 export const DEMO_PAGES: DemoPage[] = [

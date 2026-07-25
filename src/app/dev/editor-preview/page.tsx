@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageEditorClient from "@/components/edit/PageEditorClient";
-import { isEditorPreviewEnabled } from "@/lib/editor-preview";
+import {
+  EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+  isEditorPreviewEnabled,
+} from "@/lib/editor-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +34,7 @@ export default function EditorLayoutPreviewPage() {
           </span>
         </div>
       </header>
-      <PageEditorClient pageId="editor-layout-preview" />
+      <PageEditorClient pageId={EDITOR_LAYOUT_PREVIEW_PAGE_ID} />
     </div>
   );
 }

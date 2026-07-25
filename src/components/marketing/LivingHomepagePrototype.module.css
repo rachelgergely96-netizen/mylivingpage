@@ -1505,26 +1505,36 @@
     padding-top: 0;
   }
 
+  .eyebrow {
+    margin-bottom: 14px;
+  }
+
   .heroCopy h1 {
-    font-size: clamp(52px, 4.85vw, 68px);
+    font-size: clamp(52px, 4.5vw, 60px);
   }
 
   .heroLead {
-    font-size: clamp(18px, 1.35vw, 21px);
-    margin-top: 20px;
+    font-size: clamp(18px, 1.3vw, 20px);
+    margin-top: 14px;
   }
 
   .heroBody {
-    line-height: 1.5;
-    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-top: 8px;
   }
 
   .heroActions {
-    margin-top: 18px;
+    margin-top: 12px;
+  }
+
+  .heroActions .primaryButton {
+    min-height: 52px;
   }
 
   .trustStrip {
-    margin-top: 14px;
+    gap: 6px 12px;
+    margin-top: 8px;
   }
 }
 

@@ -37,22 +37,23 @@ async function downloadToBuffer(
   return Buffer.concat(chunks);
 }
 
-test("paired prototypes keep the Living Page and share card identity in sync", async ({
+test("paired prototypes keep the Living Page palette and canonical share-card skeleton in sync", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/dev/theme-lab");
 
   const prototypeThemes = [
-    ["Meridian", "meridian", "bearing"],
-    ["Halo", "halo", "orbit"],
-    ["Sakura", "sakura", "petal"],
-    ["Aurora", "aurora", "curtain"],
-    ["Silk", "silk", "weave"],
-    ["Topo", "topo", "contour"],
+    ["Meridian", "meridian"],
+    ["Halo", "halo"],
+    ["Sakura", "sakura"],
+    ["Aurora", "aurora"],
+    ["Silk", "silk"],
+    ["Topo", "topo"],
   ] as const;
+  let canonicalLayerOrder: string[] | null = null;
 
-  for (const [name, themeId, motif] of prototypeThemes) {
+  for (const [name, themeId] of prototypeThemes) {
     await page
       .locator("[data-theme-prototype-selector]")
       .getByRole("button", { name, exact: true })
@@ -69,9 +70,24 @@ test("paired prototypes keep the Living Page and share card identity in sync", a
       "data-theme-detail",
       THEME_MAP[themeId].contentProfile,
     );
-    await expect(
-      shareCard.locator("[data-share-card-profile]"),
-    ).toHaveAttribute("data-share-card-profile", motif);
+    const skeleton = shareCard.locator(
+      '[data-share-card-skeleton="canonical"]',
+    );
+    await expect(skeleton).toBeVisible();
+    await expect(shareCard.locator("[data-share-card-profile]")).toHaveCount(0);
+
+    const layerOrder = await skeleton
+      .locator("[data-share-card-skeleton-layer]")
+      .evaluateAll((layers) =>
+        layers.map((layer) =>
+          layer.getAttribute("data-share-card-skeleton-layer") ?? "",
+        ),
+      );
+    if (canonicalLayerOrder === null) {
+      canonicalLayerOrder = layerOrder;
+    } else {
+      expect(layerOrder).toEqual(canonicalLayerOrder);
+    }
   }
 });
 

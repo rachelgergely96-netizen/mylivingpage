@@ -27,6 +27,8 @@ export interface WorldPolishProfile {
   seed: number;
   anchorX: number;
   anchorY: number;
+  /** Collection-specific parallax gain; depth comes from separation, not travel. */
+  depthStrength: number;
 }
 
 const COLLECTION_PROFILES = {
@@ -34,26 +36,31 @@ const COLLECTION_PROFILES = {
     motif: "cinematic-orbit",
     anchorX: 0.76,
     anchorY: 0.34,
+    depthStrength: 1,
   },
   "editorial-luxe": {
     motif: "editorial-ribbon",
     anchorX: 0.74,
     anchorY: 0.38,
+    depthStrength: 0.72,
   },
   "art-lab": {
     motif: "experimental-frame",
     anchorX: 0.72,
     anchorY: 0.4,
+    depthStrength: 0.82,
   },
   "organic-material": {
     motif: "material-contour",
     anchorX: 0.75,
     anchorY: 0.42,
+    depthStrength: 0.86,
   },
   "executive-tech": {
     motif: "technical-grid",
     anchorX: 0.76,
     anchorY: 0.39,
+    depthStrength: 0.78,
   },
 } as const satisfies Record<
   ThemeCollectionId,
@@ -195,9 +202,9 @@ function drawDepthBokeh(
   ctx.save();
   ctx.globalCompositeOperation = "screen";
 
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < 4; index += 1) {
     const seed = profile.seed * 0.00003 + index * 7.917;
-    const depth = 0.55 + unitValue(seed + 1.3) * 0.45;
+    const depth = 0.2 + unitValue(seed + 1.3) * 0.8;
     const drift = time * (0.0016 + depth * 0.002);
     const wrapX = wrapSoft(
       unitValue(seed + 0.7) + drift + storyProgress * 0.05 * depth,
@@ -214,18 +221,25 @@ function drawDepthBokeh(
     // Keep the reading column calm: fade discs down as they cross the left half.
     const readColumnDim =
       0.3 + 0.7 * finiteClamp((wrapX.u - 0.34) / 0.2, 0, 1);
-    // Near-field discs travel a touch more than the mid motif, so the depth
-    // planes separate as the (already-smoothed) pointer moves.
+    // Four restrained far-to-near planes separate through differential travel.
+    // Radius and contrast carry most of the depth, keeping pointer motion calm.
+    const parallaxX =
+      profile.depthStrength * (0.012 + depth * 0.03);
+    const parallaxY =
+      profile.depthStrength * (0.009 + depth * 0.022);
     const x =
-      width * wrapX.u + (pointerX - 0.5) * width * (0.045 + depth * 0.025);
+      width * wrapX.u + (pointerX - 0.5) * width * parallaxX;
     const y =
-      height * wrapY.u + (pointerY - 0.5) * height * (0.035 + depth * 0.02);
+      height * wrapY.u + (pointerY - 0.5) * height * parallaxY;
     const radius =
       Math.min(width, height) *
-      (0.05 + unitValue(seed + 5.2) * 0.06) *
-      (0.7 + depth * 0.3);
+      (0.035 + unitValue(seed + 5.2) * 0.055) *
+      (0.62 + depth * 0.48);
     const alpha =
-      (0.02 + depth * 0.03) * wrapX.alpha * wrapY.alpha * readColumnDim;
+      (0.012 + depth * 0.034) *
+      wrapX.alpha *
+      wrapY.alpha *
+      readColumnDim;
     if (alpha <= 0.002) continue;
 
     stampBokeh(ctx, accent, x, y, radius, alpha);
@@ -634,6 +648,53 @@ function drawFocusEcho(
   ctx.restore();
 }
 
+/**
+ * A quiet opposing falloff gives the procedural layers a shared key-light
+ * direction. Its center moves less than the near plane, so depth reads through
+ * differential motion rather than a conspicuous cursor-following spotlight.
+ */
+function drawDepthShade(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  pointerX: number,
+  pointerY: number,
+  depthStrength: number,
+  lightGround: boolean,
+) {
+  const innerX =
+    width * (0.5 - (pointerX - 0.5) * 0.035 * depthStrength);
+  const innerY =
+    height * (0.46 - (pointerY - 0.5) * 0.026 * depthStrength);
+  const outerX =
+    width * (0.55 + (pointerX - 0.5) * 0.018 * depthStrength);
+  const outerY =
+    height * (0.48 + (pointerY - 0.5) * 0.014 * depthStrength);
+  const shade = ctx.createRadialGradient(
+    innerX,
+    innerY,
+    Math.min(width, height) * 0.2,
+    outerX,
+    outerY,
+    Math.max(width, height) * 0.86,
+  );
+  shade.addColorStop(0, "rgba(0, 0, 0, 0)");
+  shade.addColorStop(
+    0.68,
+    lightGround ? "rgba(0, 0, 0, 0.025)" : "rgba(0, 0, 0, 0.04)",
+  );
+  shade.addColorStop(
+    1,
+    lightGround ? "rgba(0, 0, 0, 0.1)" : "rgba(0, 0, 0, 0.16)",
+  );
+
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
 function drawVignette(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -669,12 +730,9 @@ function drawWorldPolish(
 ) {
   const pageMotion = resolveThemeMotion(motion);
   const effectiveTime = motion?.reducedMotion ? 0 : finiteClamp(time, 0, 1_000_000);
-  const targetX = pageMotion.hasFocus
-    ? pointerX * 0.25 + pageMotion.focusX * 0.75
-    : pointerX;
-  const targetY = pageMotion.hasFocus
-    ? pointerY * 0.25 + pageMotion.focusY * 0.75
-    : pointerY;
+  const focusMix = pageMotion.focusStrength * 0.65;
+  const targetX = pointerX * (1 - focusMix) + pageMotion.focusX * focusMix;
+  const targetY = pointerY * (1 - focusMix) + pageMotion.focusY * focusMix;
   const velocity = finiteClamp(pageMotion.scrollVelocity / 4, -1, 1);
   // The mid (motif) layer parallax is held slightly back so the near (bokeh)
   // layer can move a touch more — widening the near/mid depth-band separation
@@ -684,7 +742,7 @@ function drawWorldPolish(
     width *
     finiteClamp(
       profile.anchorX +
-        (targetX - 0.5) * 0.04 +
+        (targetX - 0.5) * 0.028 * profile.depthStrength +
         (pageMotion.storyProgress - 0.5) * 0.035,
       0.58,
       0.9,
@@ -692,7 +750,9 @@ function drawWorldPolish(
   const anchorY =
     height *
     finiteClamp(
-      profile.anchorY + (targetY - 0.5) * 0.03 + velocity * 0.012,
+      profile.anchorY +
+        (targetY - 0.5) * 0.021 * profile.depthStrength +
+        velocity * 0.012,
       0.2,
       0.58,
     );
@@ -709,7 +769,8 @@ function drawWorldPolish(
   );
 
   const accentBright = theme.presentation.accentBright;
-  const lightMoves = !isLightGround(theme.background);
+  const lightGround = isLightGround(theme.background);
+  const lightMoves = !lightGround;
 
   switch (profile.motif) {
     case "technical-grid":
@@ -822,7 +883,17 @@ function drawWorldPolish(
     );
   }
 
-  if (pageMotion.hasFocus) {
+  drawDepthShade(
+    ctx,
+    width,
+    height,
+    targetX,
+    targetY,
+    profile.depthStrength,
+    lightGround,
+  );
+
+  if (pageMotion.focusStrength > 0.01) {
     drawFocusEcho(
       ctx,
       width,
@@ -832,7 +903,10 @@ function drawWorldPolish(
       anchorY,
       pageMotion.focusX,
       pageMotion.focusY,
-      pageMotion.interactionImpulse,
+      Math.max(
+        pageMotion.interactionImpulse,
+        pageMotion.focusStrength * 0.35,
+      ),
       profile.motif,
     );
   }

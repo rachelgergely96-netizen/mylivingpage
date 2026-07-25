@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createMotionSampler, smoothingFactor } from "./smoothing";
+import {
+  createMotionSampler,
+  smoothDampedStep,
+  smoothingFactor,
+} from "./smoothing";
 import type { ThemeMotionContext } from "../types";
 
 function liveMotion(overrides: Partial<ThemeMotionContext> = {}): ThemeMotionContext {
@@ -40,18 +44,90 @@ describe("smoothingFactor", () => {
   });
 });
 
+describe("smoothDampedStep", () => {
+  it("is framerate independent for a held target", () => {
+    let sixty = { value: 0, velocity: 0 };
+    for (let index = 0; index < 30; index += 1) {
+      sixty = smoothDampedStep(
+        sixty.value,
+        sixty.velocity,
+        1,
+        1 / 60,
+        0.14,
+      );
+    }
+
+    let thirty = { value: 0, velocity: 0 };
+    for (let index = 0; index < 15; index += 1) {
+      thirty = smoothDampedStep(
+        thirty.value,
+        thirty.velocity,
+        1,
+        1 / 30,
+        0.14,
+      );
+    }
+
+    expect(thirty.value).toBeCloseTo(sixty.value, 10);
+    expect(thirty.velocity).toBeCloseTo(sixty.velocity, 10);
+  });
+
+  it("settles without overshooting and preserves velocity through reversals", () => {
+    let sample = { value: 0, velocity: 0 };
+    for (let index = 0; index < 8; index += 1) {
+      sample = smoothDampedStep(
+        sample.value,
+        sample.velocity,
+        1,
+        1 / 60,
+        0.14,
+      );
+    }
+    const beforeReverse = sample;
+    const afterReverse = smoothDampedStep(
+      sample.value,
+      sample.velocity,
+      0,
+      1 / 60,
+      0.14,
+    );
+
+    expect(beforeReverse.value).toBeGreaterThan(0);
+    expect(beforeReverse.value).toBeLessThan(1);
+    expect(afterReverse.value).toBeGreaterThanOrEqual(0);
+    expect(afterReverse.value).toBeLessThanOrEqual(1);
+    expect(Math.abs(afterReverse.velocity - beforeReverse.velocity)).toBeLessThan(
+      4,
+    );
+  });
+});
+
 describe("createMotionSampler", () => {
   it("glides the pointer toward the target instead of jumping", () => {
     const sampler = createMotionSampler(0, 0);
     sampler.setPointerTarget(1, 1);
     sampler.step(undefined, 1 / 60);
-    // A whole-canvas jump fast-tracks but still lands short of the target.
-    expect(sampler.pointer.x).toBeGreaterThan(0.2);
-    expect(sampler.pointer.x).toBeLessThan(0.6);
+    expect(sampler.pointer.x).toBeGreaterThan(0);
+    expect(sampler.pointer.x).toBeLessThan(0.1);
     for (let index = 0; index < 120; index += 1) {
       sampler.step(undefined, 1 / 60);
     }
     expect(sampler.pointer.x).toBeGreaterThan(0.99);
+  });
+
+  it("keeps rapid pointer reversals inside normalized canvas bounds", () => {
+    const sampler = createMotionSampler(0.99, 0.01);
+
+    for (let index = 0; index < 120; index += 1) {
+      const target = index % 2 === 0 ? 0 : 1;
+      sampler.setPointerTarget(target, 1 - target);
+      sampler.step(undefined, 1 / 60);
+
+      expect(sampler.pointer.x).toBeGreaterThanOrEqual(0);
+      expect(sampler.pointer.x).toBeLessThanOrEqual(1);
+      expect(sampler.pointer.y).toBeGreaterThanOrEqual(0);
+      expect(sampler.pointer.y).toBeLessThanOrEqual(1);
+    }
   });
 
   it("snapPointer moves the sample immediately", () => {
@@ -77,6 +153,29 @@ describe("createMotionSampler", () => {
     expect(smoothed!.scrollProgress).toBeLessThan(0.1);
     expect(smoothed!.activeSection).toBe("experience");
     expect(smoothed!.interactionImpulse).toBe(0.7);
+  });
+
+  it("crossfades focus ownership instead of switching the light target abruptly", () => {
+    const sampler = createMotionSampler();
+    sampler.step(liveMotion(), 1 / 60);
+    const entering = sampler.step(
+      liveMotion({
+        focusedItem: "project-1",
+        focusKind: "project",
+        focusX: 0.9,
+      }),
+      1 / 60,
+    );
+
+    expect(entering!.focusedItem).toBe("project-1");
+    expect(entering!.focusStrength).toBeGreaterThan(0);
+    expect(entering!.focusStrength).toBeLessThan(1);
+    const enteringStrength = entering!.focusStrength!;
+
+    const leaving = sampler.step(liveMotion(), 1 / 60);
+    expect(leaving!.focusedItem).toBeNull();
+    expect(leaving!.focusStrength).toBeGreaterThan(0);
+    expect(leaving!.focusStrength).toBeLessThan(enteringStrength);
   });
 
   it("keeps story position continuous across a section boundary", () => {

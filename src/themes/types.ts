@@ -122,6 +122,8 @@ export interface ThemeMotionContext {
   focusKind: string | null;
   focusX: number;
   focusY: number;
+  /** Optional host-smoothed focus blend used by shared visual polish. */
+  focusStrength?: number;
   interactionImpulse: number;
   /** Normalized canvas-widths / canvas-heights per second. */
   pointerVelocityX: number;

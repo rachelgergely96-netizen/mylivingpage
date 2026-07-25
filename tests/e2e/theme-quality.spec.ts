@@ -407,6 +407,54 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
   }
 });
 
+test("every theme stays renderer-ready through an animated pointer sweep", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/dev/theme-lab?motion=1");
+
+  const select = page.getByLabel("Catalog theme");
+  for (const [index, theme] of THEME_REGISTRY.entries()) {
+    await select.selectOption(theme.id);
+    const world = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
+    );
+    await expect(world).toHaveAttribute("data-theme-renderer-status", "ready");
+    expect(
+      await world.getAttribute("data-theme-quality"),
+      `${theme.id} adaptive quality state`,
+    ).toMatch(/^(full|no-bloom|scaled)$/);
+
+    const bounds = await world.boundingBox();
+    expect(bounds, `${theme.id} interactive bounds`).not.toBeNull();
+    if (!bounds) continue;
+
+    const direction = index % 2 === 0 ? 1 : -1;
+    await page.mouse.move(
+      bounds.x + bounds.width * (direction > 0 ? 0.2 : 0.8),
+      bounds.y + Math.min(bounds.height * 0.35, 260),
+    );
+    await page.mouse.move(
+      bounds.x + bounds.width * (direction > 0 ? 0.8 : 0.2),
+      bounds.y + Math.min(bounds.height * 0.6, 420),
+      { steps: 4 },
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+
+    await expect(world).toHaveAttribute("data-theme-renderer-status", "ready");
+  }
+
+  expect(pageErrors, "renderer errors during catalog pointer sweep").toEqual([]);
+});
+
 test("signature themes expose authored content profiles and deterministic detail", async ({
   page,
 }) => {

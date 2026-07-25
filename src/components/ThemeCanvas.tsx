@@ -190,8 +190,19 @@ export default function ThemeCanvas({
       mouseRef.current = getAmbientPointer(elapsed);
     };
 
+    // Preserve display-rate motion under load. The last quality tier reduces
+    // internal canvas resolution instead of halving cursor/light cadence.
+    let renderScale = 1;
     const resize = () => {
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const cappedDevicePixelRatio = Math.min(
+        window.devicePixelRatio || 1,
+        2,
+      );
+      const pixelRatio = clamp(
+        cappedDevicePixelRatio * renderScale,
+        0.85,
+        2,
+      );
       const w = Math.max(1, Math.floor(canvas.offsetWidth * pixelRatio));
       const h = Math.max(1, Math.floor(canvas.offsetHeight * pixelRatio));
       if (canvas.width !== w || canvas.height !== h) {
@@ -340,28 +351,35 @@ export default function ThemeCanvas({
       }
     };
 
-    // ---- Quality ladder: full HD → HD without bloom → 30fps cap. Driven by an
+    // ---- Quality ladder: full HD → HD without bloom → reduced render scale.
+    // Cursor/light presentation stays at the requested cadence at every tier;
+    // lowering resolution under sustained load looks substantially smoother
+    // than stepping the entire interaction down to 30fps. Driven by an
     // EMA of paint cost so a one-off GC hitch never degrades, with a hysteresis
-    // band. Degrades quickly (~0.75s) so an overloaded session reaches a smooth
-    // state fast. Bloom is a ONE-WAY ratchet: once dropped (level ≥ 1) it never
-    // returns for this mount, so the glow can't visibly pop back in and out.
-    // Only the 30fps floor (level 2) may recover to level 1 when cost allows.
+    // band. Both degradations are one-way for this mount, preventing bloom or
+    // sharpness from visibly popping in and out during a presentation.
     const QUALITY_BUDGET_MS = 12;
-    const QUALITY_RECOVER_MS = 9;
     const QUALITY_DEGRADE_FRAMES = 45;
-    const QUALITY_RECOVER_FRAMES = 240;
     const QUALITY_EMA_ALPHA = 0.08;
     let qualityLevel = 0;
     let qualityCostEma: number | null = null;
     let overBudgetFrames = 0;
-    let underBudgetFrames = 0;
     const setQualityLevel = (level: number) => {
       qualityLevel = level;
       overBudgetFrames = 0;
-      underBudgetFrames = 0;
       // Re-measure the new level from mid-band so one hitch cluster cannot
       // cascade straight through every level.
-      qualityCostEma = (QUALITY_BUDGET_MS + QUALITY_RECOVER_MS) * 0.5;
+      qualityCostEma = QUALITY_BUDGET_MS * 0.8;
+      renderScale = qualityLevel >= 2 ? 0.75 : 1;
+      resize();
+      container?.setAttribute(
+        "data-theme-quality",
+        qualityLevel === 0
+          ? "full"
+          : qualityLevel === 1
+            ? "no-bloom"
+            : "scaled",
+      );
     };
     const recordFrameCost = (costMs: number) => {
       qualityCostEma =
@@ -370,20 +388,11 @@ export default function ThemeCanvas({
           : qualityCostEma + QUALITY_EMA_ALPHA * (costMs - qualityCostEma);
       if (qualityCostEma > QUALITY_BUDGET_MS) {
         overBudgetFrames += 1;
-        underBudgetFrames = 0;
         if (overBudgetFrames >= QUALITY_DEGRADE_FRAMES && qualityLevel < 2) {
           setQualityLevel(qualityLevel + 1);
         }
-      } else if (qualityCostEma < QUALITY_RECOVER_MS) {
-        underBudgetFrames += 1;
-        overBudgetFrames = 0;
-        // Recover fps (level 2 → 1) only; bloom (level 0) never comes back.
-        if (underBudgetFrames >= QUALITY_RECOVER_FRAMES && qualityLevel > 1) {
-          setQualityLevel(qualityLevel - 1);
-        }
       } else {
         overBudgetFrames = Math.max(0, overBudgetFrames - 1);
-        underBudgetFrames = Math.max(0, underBudgetFrames - 1);
       }
     };
 
@@ -465,11 +474,7 @@ export default function ThemeCanvas({
       if (lastFrameRef.current === null) {
         lastFrameRef.current = now;
       }
-      // Level 2 drops to a 30fps floor; every other level honors the prop cap
-      // (which, at 60, ungates so vsync paces every frame).
-      const targetIntervalMs =
-        qualityLevel === 2 ? Math.max(minFrameMs, 1000 / 30) : minFrameMs;
-      if (!shouldPresentFrame(now, lastFrameRef.current, targetIntervalMs)) {
+      if (!shouldPresentFrame(now, lastFrameRef.current, minFrameMs)) {
         // Below the frame budget — keep the rAF loop alive but skip this paint.
         return;
       }
@@ -620,6 +625,7 @@ export default function ThemeCanvas({
 
     syncAmbientMode();
     resize();
+    container?.setAttribute("data-theme-quality", "full");
     applyAmbientPointer(elapsedRef.current, performance.now());
     renderFrame(elapsedRef.current);
     window.addEventListener("resize", handleResize);

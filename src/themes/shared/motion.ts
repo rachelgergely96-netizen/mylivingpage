@@ -10,6 +10,7 @@ export interface ResolvedThemeMotion {
   /** Continuous position through the ordered page story, normalized to [0, 1]. */
   storyProgress: number;
   hasFocus: boolean;
+  focusStrength: number;
   focusX: number;
   focusY: number;
   interactionImpulse: number;
@@ -59,6 +60,7 @@ export function resolveThemeMotion(
     ),
   );
   const sectionProgress = finiteClamp(motion?.sectionProgress, 0, 1);
+  const hasFocus = Boolean(motion?.focusedItem || motion?.focusKind);
   const storyProgress =
     sectionCount > 0
       ? finiteClamp(
@@ -78,7 +80,13 @@ export function resolveThemeMotion(
     sectionCount,
     sectionProgress,
     storyProgress,
-    hasFocus: Boolean(motion?.focusedItem || motion?.focusKind),
+    hasFocus,
+    focusStrength: finiteClamp(
+      motion?.focusStrength,
+      0,
+      1,
+      hasFocus ? 1 : 0,
+    ),
     focusX: finiteClamp(motion?.focusX, 0, 1, 0.5),
     focusY: finiteClamp(motion?.focusY, 0, 1, 0.5),
     interactionImpulse: reducedMotion

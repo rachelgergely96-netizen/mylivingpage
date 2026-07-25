@@ -88,20 +88,33 @@ describe("world polish", () => {
       expect(profile.anchorX).toBeLessThanOrEqual(0.82);
       expect(profile.anchorY).toBeGreaterThanOrEqual(0.28);
       expect(profile.anchorY).toBeLessThanOrEqual(0.48);
+      expect(profile.depthStrength).toBeGreaterThanOrEqual(0.7);
+      expect(profile.depthStrength).toBeLessThanOrEqual(1);
     }
   });
 
-  it("keeps signature renderers untouched", () => {
+  it("covers every theme while preserving only authored signature and bespoke worlds", () => {
     const renderer = vi.fn() as unknown as ThemeRenderer;
+    const preservedIds: string[] = [];
+    const polishedIds: string[] = [];
 
-    expect(withWorldPolish(THEME_MAP.aurora, renderer)).toBe(renderer);
-  });
+    for (const theme of THEME_REGISTRY) {
+      const result = withWorldPolish(theme, renderer);
+      if (result === renderer) preservedIds.push(theme.id);
+      else polishedIds.push(theme.id);
+    }
 
-  it("keeps explicitly bespoke catalog worlds untouched", () => {
-    const renderer = vi.fn() as unknown as ThemeRenderer;
-
-    expect(withWorldPolish(THEME_MAP.filigree, renderer)).toBe(renderer);
-    expect(withWorldPolish(THEME_MAP.luxe, renderer)).toBe(renderer);
+    expect(preservedIds).toEqual([
+      "aurora",
+      "luxe",
+      "atlas",
+      "velvet",
+      "quarry",
+      "atelier",
+      "filigree",
+      "nocturne",
+    ]);
+    expect(polishedIds).toHaveLength(THEME_REGISTRY.length - preservedIds.length);
   });
 
   it("adds bounded motif and focus drawing after a catalog renderer", () => {

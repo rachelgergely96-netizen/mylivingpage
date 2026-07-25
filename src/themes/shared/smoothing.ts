@@ -12,8 +12,14 @@ export function smoothingFactor(deltaSeconds: number, timeConstant: number): num
   return 1 - Math.exp(-deltaSeconds / timeConstant);
 }
 
-const POINTER_TAU = 0.12;
+/**
+ * Settling time for the pointer's critically damped spring. A spring preserves
+ * velocity when the target changes, so a cursor reversal decelerates and turns
+ * instead of producing the hard derivative change of first-order lerp easing.
+ */
+const POINTER_SMOOTH_TIME = 0.14;
 const FOCUS_TAU = 0.2;
+const FOCUS_STRENGTH_TAU = 0.16;
 const SCROLL_TAU = 0.24;
 /** Large-error fast-track: jump scrolls and teleporting targets should not swim. */
 const FAST_TRACK_DELTA = 0.25;
@@ -29,11 +35,53 @@ function approach(
   fastTrackDelta = FAST_TRACK_DELTA,
 ): number {
   const error = target - sample;
-  const tau =
-    Math.abs(error) > fastTrackDelta
-      ? timeConstant * FAST_TRACK_TAU_SCALE
-      : timeConstant;
+  const excess = Number.isFinite(fastTrackDelta)
+    ? Math.max(0, Math.abs(error) - fastTrackDelta)
+    : 0;
+  const boost =
+    excess > 0
+      ? 1 +
+        (1 / FAST_TRACK_TAU_SCALE - 1) *
+          (1 - Math.exp(-excess / Math.max(fastTrackDelta, 0.001)))
+      : 1;
+  const tau = timeConstant / boost;
   return sample + error * smoothingFactor(deltaSeconds, tau);
+}
+
+interface SpringSample {
+  value: number;
+  velocity: number;
+}
+
+/**
+ * Exact critically damped spring integration for a target held during one
+ * frame. Unlike per-frame lerp, the response is framerate independent and
+ * carries velocity through target changes without overshoot.
+ */
+export function smoothDampedStep(
+  value: number,
+  velocity: number,
+  target: number,
+  deltaSeconds: number,
+  smoothTime: number,
+): SpringSample {
+  if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) {
+    return { value, velocity };
+  }
+  if (!Number.isFinite(smoothTime) || smoothTime <= 0) {
+    return { value: target, velocity: 0 };
+  }
+
+  const delta = Math.min(deltaSeconds, 0.05);
+  const omega = 2 / smoothTime;
+  const displacement = value - target;
+  const coefficient = velocity + omega * displacement;
+  const decay = Math.exp(-omega * delta);
+
+  return {
+    value: target + (displacement + coefficient * delta) * decay,
+    velocity: (velocity - omega * coefficient * delta) * decay,
+  };
 }
 
 export interface PointerSample {
@@ -78,9 +126,12 @@ export function createMotionSampler(
   let targetX = finiteClamp(initialX, 0, 1, 0.5);
   let targetY = finiteClamp(initialY, 0, 1, 0.5);
   const pointer: PointerSample = { x: targetX, y: targetY };
+  let pointerVelocityX = 0;
+  let pointerVelocityY = 0;
 
   let focusX = 0.5;
   let focusY = 0.5;
+  let focusStrength = 0;
   let scrollProgress = 0;
   let storyPosition = 0;
   let motionInitialized = false;
@@ -96,6 +147,8 @@ export function createMotionSampler(
       targetY = finiteClamp(y, 0, 1, targetY);
       pointer.x = targetX;
       pointer.y = targetY;
+      pointerVelocityX = 0;
+      pointerVelocityY = 0;
     },
     pointer,
     step(live, deltaSeconds) {
@@ -108,9 +161,35 @@ export function createMotionSampler(
       if (snap) {
         pointer.x = targetX;
         pointer.y = targetY;
+        pointerVelocityX = 0;
+        pointerVelocityY = 0;
       } else {
-        pointer.x = approach(pointer.x, targetX, delta, POINTER_TAU);
-        pointer.y = approach(pointer.y, targetY, delta, POINTER_TAU);
+        const x = smoothDampedStep(
+          pointer.x,
+          pointerVelocityX,
+          targetX,
+          delta,
+          POINTER_SMOOTH_TIME,
+        );
+        const y = smoothDampedStep(
+          pointer.y,
+          pointerVelocityY,
+          targetY,
+          delta,
+          POINTER_SMOOTH_TIME,
+        );
+        pointer.x = finiteClamp(x.value, 0, 1, targetX);
+        pointer.y = finiteClamp(y.value, 0, 1, targetY);
+        pointerVelocityX =
+          pointer.x !== x.value &&
+          Math.sign(x.velocity) === Math.sign(x.value - pointer.x)
+            ? 0
+            : x.velocity;
+        pointerVelocityY =
+          pointer.y !== y.value &&
+          Math.sign(y.velocity) === Math.sign(y.value - pointer.y)
+            ? 0
+            : y.velocity;
       }
 
       if (!live) {
@@ -123,6 +202,7 @@ export function createMotionSampler(
       }
 
       const sectionCount = Math.max(0, Math.round(live.sectionCount));
+      const focusTarget = live.focusedItem || live.focusKind ? 1 : 0;
       const storyTarget =
         sectionCount > 0
           ? finiteClamp(live.activeSectionIndex, 0, sectionCount - 1) +
@@ -132,12 +212,20 @@ export function createMotionSampler(
       if (!motionInitialized || snap) {
         focusX = live.focusX;
         focusY = live.focusY;
+        focusStrength = focusTarget;
         scrollProgress = live.scrollProgress;
         storyPosition = storyTarget;
         motionInitialized = true;
       } else {
         focusX = approach(focusX, live.focusX, delta, FOCUS_TAU);
         focusY = approach(focusY, live.focusY, delta, FOCUS_TAU);
+        focusStrength = approach(
+          focusStrength,
+          focusTarget,
+          delta,
+          FOCUS_STRENGTH_TAU,
+          Number.POSITIVE_INFINITY,
+        );
         scrollProgress = approach(
           scrollProgress,
           live.scrollProgress,
@@ -161,6 +249,7 @@ export function createMotionSampler(
       Object.assign(smoothed, live);
       smoothed.focusX = focusX;
       smoothed.focusY = focusY;
+      smoothed.focusStrength = finiteClamp(focusStrength, 0, 1);
       smoothed.scrollProgress = finiteClamp(scrollProgress, 0, 1);
       if (sectionCount > 0) {
         // Clamp the index (not the position) so the very end of the last
@@ -171,23 +260,15 @@ export function createMotionSampler(
         smoothed.sectionProgress = finiteClamp(boundedStory - index, 0, 1);
       }
 
-      // Pointer velocity from the smoothed path: converges to zero on its own
-      // and cannot spike from a single noisy input event.
+      // Pointer velocity comes from the same spring as the visible path, so
+      // impulse-driven effects share its continuous acceleration/deceleration.
       if (snap) {
         smoothed.pointerVelocityX = 0;
         smoothed.pointerVelocityY = 0;
         smoothed.pointerSpeed = 0;
       } else {
-        const velocityX = finiteClamp(
-          (targetX - pointer.x) / POINTER_TAU,
-          -4,
-          4,
-        );
-        const velocityY = finiteClamp(
-          (targetY - pointer.y) / POINTER_TAU,
-          -4,
-          4,
-        );
+        const velocityX = finiteClamp(pointerVelocityX, -4, 4);
+        const velocityY = finiteClamp(pointerVelocityY, -4, 4);
         smoothed.pointerVelocityX = velocityX;
         smoothed.pointerVelocityY = velocityY;
         smoothed.pointerSpeed = finiteClamp(

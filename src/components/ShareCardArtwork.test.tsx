@@ -221,6 +221,8 @@ describe("ShareCardArtwork", () => {
       <ShareCardArtwork finish="holographic" model={model} visual={visual} />,
     );
     expect(staticMarkup).not.toContain("share-card-shine");
+    expect(staticMarkup).not.toContain("share-card-diffraction");
+    expect(staticMarkup).not.toContain("data-share-card-light-stage");
 
     // Live preview opts in.
     const liveMarkup = renderToStaticMarkup(
@@ -232,12 +234,22 @@ describe("ShareCardArtwork", () => {
       />,
     );
     expect(liveMarkup).toContain("share-card-shine");
+    expect(liveMarkup).toContain("share-card-diffraction");
+    expect(liveMarkup).toContain("data-share-card-light-stage");
 
     // Classic has no shine even when animated.
     const classicMarkup = renderToStaticMarkup(
       <ShareCardArtwork animatedShine finish="classic" model={model} visual={visual} />,
     );
     expect(classicMarkup).not.toContain("share-card-shine");
+    expect(classicMarkup).not.toContain("share-card-metal-shine");
+    expect(classicMarkup).not.toContain("share-card-diffraction");
+
+    const metalMarkup = renderToStaticMarkup(
+      <ShareCardArtwork animatedShine finish="metal" model={model} visual={visual} />,
+    );
+    expect(metalMarkup).toContain("share-card-metal-shine");
+    expect(metalMarkup).not.toContain("share-card-diffraction");
   });
 
   it.each(["metal", "holographic"] as const)(

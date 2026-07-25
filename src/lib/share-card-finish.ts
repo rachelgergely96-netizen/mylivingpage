@@ -65,7 +65,13 @@ export interface ShareCardFinishTreatment {
    * A live-preview-only moving glint. Rendered only when the artwork is asked to
    * animate; the PNG/OG export paths omit it entirely so both stay static.
    */
-  shine: { rotateDeg: number; width: string; background: string } | null;
+  shine: {
+    rotateDeg: number;
+    width: string;
+    background: string;
+    secondaryBackground?: string;
+    secondaryWidth?: string;
+  } | null;
   nameTextShadow: string;
 }
 
@@ -196,7 +202,7 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
     avatarBorder: "rgba(232,232,236,0.55)",
     shine: {
       rotateDeg: 24,
-      width: "32%",
+      width: "24%",
       background:
         "linear-gradient(90deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 48%, rgba(255,255,255,0.16) 50%, rgba(255,255,255,0.05) 52%, rgba(255,255,255,0) 60%)",
     },
@@ -265,6 +271,13 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
         background: `radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255,255,255,0.16) 0%, ${rgba(accentBright, 0.12)} 35%, rgba(0,0,0,0) 70%)`,
         opacity: 0.45,
       },
+      // F — a quiet opposing catch gives the foil dimensional continuity at
+      // the far corner without depending on the live animation.
+      {
+        ...FULL_BLEED,
+        background: `radial-gradient(ellipse 52% 64% at 92% 4%, rgba(255,255,255,0.13) 0%, ${rgba(accentBright, 0.1)} 34%, rgba(0,0,0,0) 72%)`,
+        opacity: 0.52,
+      },
     ],
     specular: null,
     bodyScrim: {
@@ -285,8 +298,10 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
     avatarBorder: visual.accentBright,
     shine: {
       rotateDeg: 26,
-      width: "48%",
-      background: `linear-gradient(90deg, rgba(0,0,0,0) 20%, rgba(255,76,184,0.08) 31%, ${rgba(accent, 0.2)} 42%, rgba(255,255,255,0.34) 49%, rgba(130,244,255,0.2) 54%, ${rgba(accentBright, 0.18)} 61%, rgba(190,118,255,0.1) 70%, rgba(0,0,0,0) 82%)`,
+      width: "34%",
+      background: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(255,76,184,0.06) 24%, ${rgba(accent, 0.2)} 39%, rgba(255,255,255,0.28) 49%, rgba(130,244,255,0.18) 56%, ${rgba(accentBright, 0.16)} 64%, rgba(190,118,255,0.08) 76%, rgba(0,0,0,0) 100%)`,
+      secondaryBackground: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(130,244,255,0.04) 28%, rgba(255,255,255,0.16) 48%, ${rgba(accentBright, 0.12)} 56%, rgba(255,76,184,0.05) 70%, rgba(0,0,0,0) 100%)`,
+      secondaryWidth: "16%",
     },
     nameTextShadow: "0 2px 22px rgba(0,0,0,0.4)",
   };

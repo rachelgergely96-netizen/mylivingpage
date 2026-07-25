@@ -150,20 +150,26 @@ export function ShareCardArtwork({
 
         {animatedShine && treatment.shine ? (
           <div
+            data-share-card-light-stage
             style={{
-              height: "160%",
-              left: 0,
+              height: "190%",
+              isolation: "isolate",
+              left: "-18%",
               overflow: "visible",
               pointerEvents: "none",
               position: "absolute",
-              top: "-30%",
+              top: "-45%",
               transform: `rotate(${treatment.shine.rotateDeg}deg)`,
               transformOrigin: "center",
-              width: treatment.shine.width,
+              width: "136%",
             }}
           >
             <div
-              className="share-card-shine"
+              className={
+                treatment.id === "metal"
+                  ? "share-card-metal-shine"
+                  : "share-card-shine"
+              }
               style={{
                 background: treatment.shine.background,
                 height: "100%",
@@ -171,9 +177,23 @@ export function ShareCardArtwork({
                 opacity: 0,
                 position: "absolute",
                 top: 0,
-                width: "100%",
+                width: treatment.shine.width,
               }}
             />
+            {treatment.shine.secondaryBackground ? (
+              <div
+                className="share-card-diffraction"
+                style={{
+                  background: treatment.shine.secondaryBackground,
+                  height: "100%",
+                  left: 0,
+                  opacity: 0,
+                  position: "absolute",
+                  top: 0,
+                  width: treatment.shine.secondaryWidth ?? "16%",
+                }}
+              />
+            ) : null}
           </div>
         ) : null}
 

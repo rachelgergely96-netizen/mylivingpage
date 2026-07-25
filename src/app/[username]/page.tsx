@@ -227,9 +227,15 @@ export default async function PublicLivingPage({
       >
         <PageOwnerBar pageId={page.id} isOwner={isOwner}>
           <div className="h-full">
+            {/*
+              Reserve room for the fixed action dock + "made with" badge so the
+              final section stays readable at full scroll. Sized to clear the
+              tallest stack: signed-out = lifted dock + badge; signed-in owner =
+              unlifted dock carrying the extra share-card button.
+            */}
             <div
               data-analytics-scroll-root="true"
-              className="h-full overflow-y-auto scrollbar-hide"
+              className="h-full overflow-y-auto scrollbar-hide pb-[calc(env(safe-area-inset-bottom,0px)+8.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)]"
             >
               <LivingPageSectionRail sectionIds={livingPageSectionIds} />
               {recruiterSkim ? (
@@ -254,6 +260,8 @@ export default async function PublicLivingPage({
           </div>
         </PageOwnerBar>
       </ThemeCanvas>
+      {/* avoidBadge: the badge only renders for signed-out viewers, so only
+          lift the dock for them; signed-in owners keep the natural offset. */}
       <PublicPageActionDock
         pageId={page.id}
         isOwner={isOwner}
@@ -273,7 +281,7 @@ export default async function PublicLivingPage({
             ? "Open Page Analytics"
             : "Open Dashboard"
         }
-        avoidBadge
+        avoidBadge={!viewer}
       />
       <MadeWithBadge isSignedIn={Boolean(viewer)} />
     </main>

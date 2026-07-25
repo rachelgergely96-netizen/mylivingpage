@@ -1,4 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildPublicPagePreviewPage } from "@/lib/demo-data";
+import {
+  PUBLIC_PAGE_PREVIEW_USERNAME,
+  isEditorPreviewEnabled,
+} from "@/lib/editor-preview";
 import { syncPageHostingState } from "@/lib/hosting-state";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import type { PageRecord } from "@/types/resume";
@@ -9,6 +14,12 @@ export async function fetchPublicLivePage(
 ): Promise<PageRecord | null> {
   if (!username) {
     return null;
+  }
+
+  // Local/CI visual harness: serve demo data for the reserved preview username
+  // so the published page renders without seeded rows. Inert in production.
+  if (isEditorPreviewEnabled() && username === PUBLIC_PAGE_PREVIEW_USERNAME) {
+    return buildPublicPagePreviewPage();
   }
 
   const { data: profile, error: profileError } =

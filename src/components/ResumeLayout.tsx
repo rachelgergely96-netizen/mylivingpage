@@ -432,16 +432,23 @@ export default function ResumeLayout({
                     <p className="resume-theme-subtle font-mono text-[11px]">{exp.dates}</p>
                   </div>
                   {!compact && exp.highlights?.length ? (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    // The editor authors highlights one per line, so render them
+                    // as a list rather than wrapped chips: sentence-length
+                    // achievements read as a run-on when they sit side by side.
+                    <ul className="mt-2 space-y-1">
                       {exp.highlights.map((highlight) => (
-                        <span
+                        <li
                           key={`${exp.company}-${highlight}`}
-                          className="resume-theme-chip rounded-none px-2 py-1 text-[11px]"
+                          className="resume-theme-subtle flex gap-2 text-[11px] leading-5"
                         >
-                          {highlight}
-                        </span>
+                          <span
+                            aria-hidden="true"
+                            className="resume-theme-marker mt-[0.55em] h-1 w-1 shrink-0"
+                          />
+                          <span>{highlight}</span>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   ) : null}
                 </article>
               ))}

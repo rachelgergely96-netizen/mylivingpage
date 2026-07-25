@@ -539,6 +539,12 @@ a {
   color: var(--theme-text-muted, rgba(240, 244, 255, 0.62));
 }
 
+/* Bullet marker for experience highlights (one achievement per line). */
+.resume-theme-marker {
+  background: var(--theme-accent, #93c5fd);
+  opacity: 0.7;
+}
+
 .resume-theme-link,
 .theme-link {
   color: var(--theme-accent, #93c5fd);

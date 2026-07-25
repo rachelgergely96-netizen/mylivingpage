@@ -1,4 +1,7 @@
-import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
+import {
+  EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+  PUBLIC_PAGE_PREVIEW_USERNAME,
+} from "@/lib/editor-preview";
 import type { PageRecord, ResumeData } from "@/types/resume";
 import type { ThemeId } from "@/themes/types";
 
@@ -38,6 +41,31 @@ export function buildEditorPreviewPage(): {
       created_at: timestamp,
       updated_at: timestamp,
     },
+  };
+}
+
+/**
+ * Fabricates a live, publicly-visible PageRecord so the real /[username] route
+ * can be reviewed locally without seeded Supabase rows. Only reachable through
+ * the reserved preview username while the env-gated harness is enabled.
+ */
+export function buildPublicPagePreviewPage(): PageRecord {
+  const demo = DEMO_PAGES[0];
+  const timestamp = "2026-01-01T00:00:00.000Z";
+  return {
+    id: "public-page-preview",
+    slug: PUBLIC_PAGE_PREVIEW_USERNAME,
+    status: "live",
+    visibility: "public",
+    theme_id: demo.themeId,
+    resume_data: demo.data,
+    raw_resume: null,
+    portfolio_url: null,
+    page_config: null,
+    views: 0,
+    published_at: timestamp,
+    created_at: timestamp,
+    updated_at: timestamp,
   };
 }
 

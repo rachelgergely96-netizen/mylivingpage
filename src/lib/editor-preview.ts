@@ -5,6 +5,13 @@
  */
 export const EDITOR_LAYOUT_PREVIEW_PAGE_ID = "editor-layout-preview";
 
+/**
+ * Sentinel username that renders the real /[username] route against demo data,
+ * so the published page can be reviewed locally without seeded Supabase rows.
+ * Reserved in RESERVED_USERNAME_SLUGS so a real profile can never claim it.
+ */
+export const PUBLIC_PAGE_PREVIEW_USERNAME = "preview-living-page";
+
 interface EditorPreviewEnvironment {
   CI?: string;
   ENABLE_EDITOR_PREVIEW?: string;

@@ -18,6 +18,7 @@ export const RESERVED_USERNAME_SLUGS = new Set([
   "homepage-preview",
   "legal",
   "login",
+  "preview-living-page",
   "pricing",
   "privacy",
   "reset-password",

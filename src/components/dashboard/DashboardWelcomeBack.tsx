@@ -36,7 +36,15 @@ type WelcomeStyle = CSSProperties & {
   "--welcome-accent": string;
   "--welcome-accent-bright": string;
   "--welcome-accent-soft": string;
+  "--welcome-hold-duration": string;
 };
+
+type WelcomePhase = "entering" | "holding" | "revealing";
+
+const ENTRY_DURATION_MS = 900;
+const HOLD_DURATION_MS = 2300;
+const REDUCED_HOLD_DURATION_MS = 1400;
+const REVEAL_DURATION_MS = 480;
 
 function firstName(displayName: string | null): string | null {
   return displayName?.trim().split(/\s+/)[0] || null;
@@ -93,34 +101,114 @@ function consumeWelcomeIntent() {
 
 export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
   const [visible, setVisible] = useState(Boolean(snapshot));
-  const [closing, setClosing] = useState(false);
+  const [phase, setPhase] = useState<WelcomePhase>("entering");
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const [visibilityPaused, setVisibilityPaused] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const continueRef = useRef<HTMLButtonElement | null>(null);
-  const dismissTimerRef = useRef<number | null>(null);
-  const closingRef = useRef(false);
+  const phaseRef = useRef<WelcomePhase>("entering");
+  const holdRemainingRef = useRef(HOLD_DURATION_MS);
+  const holdStartedAtRef = useRef(0);
+  const paused = userPaused || visibilityPaused;
 
-  const dismiss = useCallback(() => {
-    if (closingRef.current) {
+  const moveToPhase = useCallback((nextPhase: WelcomePhase) => {
+    phaseRef.current = nextPhase;
+    setPhase(nextPhase);
+  }, []);
+
+  const revealDashboard = useCallback(() => {
+    if (phaseRef.current === "revealing") {
       return;
     }
 
-    closingRef.current = true;
-    setClosing(true);
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    dismissTimerRef.current = window.setTimeout(
-      () => {
-        setVisible(false);
-        document.getElementById("main-content")?.focus();
-      },
-      reducedMotion ? 0 : 220,
-    );
-  }, []);
+    moveToPhase("revealing");
+  }, [moveToPhase]);
 
   useEffect(() => {
     consumeWelcomeIntent();
   }, []);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setReducedMotion(motionQuery.matches);
+
+    updateMotionPreference();
+    motionQuery.addEventListener("change", updateMotionPreference);
+    return () => {
+      motionQuery.removeEventListener("change", updateMotionPreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateVisibility = () => setVisibilityPaused(document.hidden);
+
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", updateVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!snapshot || !visible || phase !== "entering") {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => {
+        holdRemainingRef.current = reducedMotion
+          ? REDUCED_HOLD_DURATION_MS
+          : HOLD_DURATION_MS;
+        moveToPhase("holding");
+      },
+      reducedMotion ? 0 : ENTRY_DURATION_MS,
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [moveToPhase, phase, reducedMotion, snapshot, visible]);
+
+  useEffect(() => {
+    if (!snapshot || !visible || phase !== "holding" || paused) {
+      return;
+    }
+
+    holdStartedAtRef.current = performance.now();
+    const timer = window.setTimeout(revealDashboard, holdRemainingRef.current);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (phaseRef.current === "holding") {
+        const elapsed = performance.now() - holdStartedAtRef.current;
+        holdRemainingRef.current = Math.max(
+          0,
+          holdRemainingRef.current - elapsed,
+        );
+      }
+    };
+  }, [paused, phase, revealDashboard, snapshot, visible]);
+
+  useEffect(() => {
+    if (!snapshot || !visible || phase !== "revealing") {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => {
+        setVisible(false);
+        window.requestAnimationFrame(() => {
+          document.getElementById("main-content")?.focus();
+        });
+      },
+      reducedMotion ? 0 : REVEAL_DURATION_MS,
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [phase, reducedMotion, snapshot, visible]);
 
   useEffect(() => {
     if (!snapshot || !visible) {
@@ -136,7 +224,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        dismiss();
+        revealDashboard();
         return;
       }
 
@@ -170,11 +258,8 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
       window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
-      if (dismissTimerRef.current !== null) {
-        window.clearTimeout(dismissTimerRef.current);
-      }
     };
-  }, [dismiss, snapshot, visible]);
+  }, [revealDashboard, snapshot, visible]);
 
   if (!snapshot || !visible) {
     return null;
@@ -190,7 +275,18 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     "--welcome-accent": snapshot.accent,
     "--welcome-accent-bright": snapshot.accentBright,
     "--welcome-accent-soft": snapshot.accentSoft,
+    "--welcome-hold-duration": `${
+      reducedMotion ? REDUCED_HOLD_DURATION_MS : HOLD_DURATION_MS
+    }ms`,
   };
+  const handoffStatus =
+    phase === "entering"
+      ? "Reconnecting to your page…"
+      : phase === "revealing"
+        ? "Opening your dashboard"
+        : paused
+          ? "Handoff paused"
+          : "Signal locked. Opening your dashboard…";
 
   return (
     <div
@@ -198,9 +294,10 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
       aria-describedby="dashboard-welcome-description"
       aria-labelledby="dashboard-welcome-title"
       aria-modal="true"
-      className={`${styles.root} ${closing ? styles.closing : ""}`}
+      className={styles.root}
       data-dashboard-welcome
-      data-state={closing ? "closing" : "open"}
+      data-paused={paused ? "true" : "false"}
+      data-state={phase}
       role="dialog"
       style={welcomeStyle}
     >
@@ -209,9 +306,23 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
           <span className={styles.wordmark} aria-hidden="true">
             my<span>living</span>page
           </span>
-          <button type="button" className={styles.skip} onClick={dismiss}>
-            Skip intro
-          </button>
+          <div className={styles.topbarActions}>
+            <button
+              type="button"
+              aria-pressed={userPaused}
+              className={styles.pause}
+              onClick={() => setUserPaused((isPaused) => !isPaused)}
+            >
+              {userPaused ? "Resume intro" : "Pause intro"}
+            </button>
+            <button
+              type="button"
+              className={styles.skip}
+              onClick={revealDashboard}
+            >
+              Skip intro
+            </button>
+          </div>
         </div>
 
         <section className={styles.stage}>
@@ -240,16 +351,35 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
               </div>
             </div>
 
+            <div className={styles.handoff}>
+              <div className={styles.handoffMeta}>
+                <span>Dashboard handoff</span>
+                <span aria-live="polite" aria-atomic="true">
+                  {handoffStatus}
+                </span>
+              </div>
+              <div
+                className={styles.handoffTrack}
+                role="progressbar"
+                aria-label="Opening your dashboard"
+                aria-valuetext={handoffStatus}
+              >
+                <span className={styles.handoffFill} />
+              </div>
+            </div>
+
             <div className={styles.actions}>
               <button
                 ref={continueRef}
                 type="button"
                 className={styles.continue}
-                onClick={dismiss}
+                onClick={revealDashboard}
               >
-                Continue to your page desk
+                Enter dashboard now
               </button>
-              <span className={styles.escapeHint}>Esc also skips</span>
+              <span className={styles.escapeHint}>
+                Opens automatically · Esc skips
+              </span>
             </div>
           </div>
 

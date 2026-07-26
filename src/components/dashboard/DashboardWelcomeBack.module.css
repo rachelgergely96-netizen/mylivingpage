@@ -57,8 +57,18 @@
     both;
 }
 
-.closing {
-  animation: welcome-backdrop-out 220ms ease-in both;
+.root[data-state="revealing"] {
+  overflow: hidden;
+  pointer-events: none;
+  animation: welcome-dashboard-reveal 480ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.root[data-state="revealing"] .stage {
+  animation: welcome-stage-reveal 480ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.root[data-state="revealing"] .preview {
+  animation: welcome-preview-reveal 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .shell {
@@ -92,6 +102,13 @@
   color: var(--welcome-accent-bright);
 }
 
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pause,
 .skip {
   min-height: 2.75rem;
   border-bottom: 1px solid
@@ -104,6 +121,8 @@
     color 160ms ease;
 }
 
+.pause:hover,
+.pause:focus-visible,
 .skip:hover,
 .skip:focus-visible {
   border-color: var(--welcome-accent-bright);
@@ -259,6 +278,65 @@
   animation: welcome-status-lock 480ms 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.handoff {
+  max-width: 35rem;
+  margin-top: 1.25rem;
+  animation: welcome-copy-in 460ms 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.handoffMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(193, 210, 229, 0.5);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.handoffMeta span:last-child {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--welcome-accent-bright) 78%, #fff);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handoffTrack {
+  height: 2px;
+  margin-top: 0.7rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--welcome-accent) 18%, #1b2a3e);
+}
+
+.handoffFill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--welcome-accent),
+    var(--welcome-accent-bright)
+  );
+  box-shadow: 0 0 14px var(--welcome-accent);
+}
+
+.root[data-state="holding"] .handoffFill {
+  animation: welcome-handoff-progress var(--welcome-hold-duration) linear both;
+  animation-play-state: running;
+}
+
+.root[data-state="holding"][data-paused="true"] .handoffFill {
+  animation-play-state: paused;
+}
+
+.root[data-state="revealing"] .handoffFill {
+  width: 100%;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -412,13 +490,19 @@
   }
 }
 
-@keyframes welcome-backdrop-out {
-  from {
+@keyframes welcome-dashboard-reveal {
+  0% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+
+  72% {
     opacity: 1;
   }
 
-  to {
+  100% {
     opacity: 0;
+    clip-path: inset(0 0 100% 0);
   }
 }
 
@@ -512,6 +596,41 @@
   }
 }
 
+@keyframes welcome-handoff-progress {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes welcome-stage-reveal {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-1.25rem) scale(0.985);
+  }
+}
+
+@keyframes welcome-preview-reveal {
+  from {
+    opacity: 1;
+    transform: perspective(75rem) translate3d(0, 0, 0) rotateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: perspective(75rem) translate3d(0, 1.2rem, 4rem) rotateX(1.5deg)
+      scale(1.035);
+  }
+}
+
 @media (max-width: 767px) {
   .shell {
     min-height: 100dvh;
@@ -543,6 +662,21 @@
 
   .signalRail {
     margin-top: 1.25rem;
+  }
+
+  .handoff {
+    margin-top: 1rem;
+  }
+
+  .handoffMeta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .handoffMeta span:last-child {
+    max-width: 100%;
+    text-align: left;
   }
 
   .actions {
@@ -582,6 +716,8 @@
   .title,
   .body,
   .signalRail,
+  .handoff,
+  .handoffFill,
   .actions,
   .statusDot,
   .preview,
@@ -590,7 +726,8 @@
     transition: none !important;
   }
 
-  .closing {
+  .root[data-state="revealing"] {
+    clip-path: none;
     opacity: 0;
   }
 }

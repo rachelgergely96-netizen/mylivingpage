@@ -54,7 +54,7 @@ test("returning users enter through their real Living Page signal", async ({
 
   const welcome = page.locator("[data-dashboard-welcome]");
   const continueButton = welcome.getByRole("button", {
-    name: "Continue to your page desk",
+    name: "Enter dashboard now",
   });
 
   await expect(welcome).toBeVisible();
@@ -69,27 +69,51 @@ test("returning users enter through their real Living Page signal", async ({
   await expect(
     welcome.locator("[data-dashboard-welcome-preview]"),
   ).toBeVisible();
+  await expect(
+    welcome.getByRole("progressbar", { name: "Opening your dashboard" }),
+  ).toBeVisible();
   await expect(page).toHaveURL("/dev/dashboard-preview");
   await expect(continueButton).toBeFocused();
-
-  await page.keyboard.press("Tab");
-  await expect(
-    welcome.getByRole("button", { name: "Skip intro" }),
-  ).toBeFocused();
-  await page.keyboard.press("Shift+Tab");
-  await expect(continueButton).toBeFocused();
-
-  await continueButton.click();
-  await expect(welcome).toHaveCount(0);
+  await expect(welcome).toHaveAttribute("data-state", "holding", {
+    timeout: 2_000,
+  });
+  await expect(welcome).toContainText("Signal locked. Opening your dashboard");
+  await expect(welcome).toHaveCount(0, { timeout: 5_000 });
   await expect(page.locator("#main-content")).toBeFocused();
   await expect(
     page.getByRole("heading", { name: /Welcome back, Avery/i }),
   ).toBeVisible();
+});
+
+test("welcome handoff can be paused, resumed, or skipped from the keyboard", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto("/dev/dashboard-preview?welcome=1");
+
+  const welcome = page.locator("[data-dashboard-welcome]");
+  const continueButton = welcome.getByRole("button", {
+    name: "Enter dashboard now",
+  });
+  await expect(continueButton).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    welcome.getByRole("button", { name: "Pause intro" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(welcome).toHaveAttribute("data-paused", "true");
+  await expect(
+    welcome.getByRole("button", { name: "Resume intro" }),
+  ).toBeFocused();
+  await page.waitForTimeout(3_600);
+  await expect(welcome).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(welcome).toHaveAttribute("data-paused", "false");
+  await expect(welcome).toHaveCount(0, { timeout: 4_000 });
 
   await page.goto("/dev/dashboard-preview?welcome=1");
-  await expect(page.locator("[data-dashboard-welcome]")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Continue to your page desk" }),
+    page.getByRole("button", { name: "Enter dashboard now" }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator("[data-dashboard-welcome]")).toHaveCount(0);
@@ -105,7 +129,7 @@ test("welcome-back reveal is static and contained on reduced-motion mobile", asy
   const welcome = page.locator("[data-dashboard-welcome]");
   await expect(welcome).toBeVisible();
   await expect(
-    welcome.getByRole("button", { name: "Continue to your page desk" }),
+    welcome.getByRole("button", { name: "Enter dashboard now" }),
   ).toBeVisible();
   await expect(
     welcome.getByRole("button", { name: "Skip intro" }),
@@ -120,6 +144,8 @@ test("welcome-back reveal is static and contained on reduced-motion mobile", asy
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+  await expect(welcome).toHaveCount(0, { timeout: 2_500 });
+  await expect(page.locator("#main-content")).toBeFocused();
 });
 
 test("welcome intent is consumed without a reveal when the account has no page", async ({

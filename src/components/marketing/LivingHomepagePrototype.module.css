@@ -121,6 +121,7 @@
 
 .mobileNavLinks {
   display: none;
+  gap: 10px;
 }
 
 .navCtaShort {
@@ -217,7 +218,7 @@
   opacity: 0.9;
   pointer-events: none;
   position: absolute;
-  transition: background 450ms ease;
+  transition: background 380ms ease;
 }
 
 .heroGrid {
@@ -571,7 +572,7 @@
 }
 
 .truthTokens b {
-  animation: truthTravel 900ms cubic-bezier(0.45, 0, 0.2, 1) both;
+  animation: truthTravel 720ms cubic-bezier(0.45, 0, 0.2, 1) both;
   background: var(--canvas-alt);
   border: 1px solid var(--world-accent-border);
   color: var(--world-accent-bright);
@@ -587,12 +588,12 @@
 }
 
 .truthTokens b:nth-child(2) {
-  animation-delay: 120ms;
+  animation-delay: 90ms;
   top: 43px;
 }
 
 .truthTokens b:nth-child(3) {
-  animation-delay: 240ms;
+  animation-delay: 180ms;
   top: 78px;
 }
 
@@ -664,7 +665,7 @@
 }
 
 .storyActiveOutput > * {
-  animation: outputReveal 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: outputReveal 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .storyOutputNote {
@@ -1442,10 +1443,10 @@
    is always visible without JS, under reduced motion, or in old browsers. */
 .prototype[data-motion-ready="true"] [data-reveal] {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(8px);
   transition:
-    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .prototype[data-motion-ready="true"] [data-reveal][data-visible="true"] {
@@ -1465,28 +1466,25 @@
 @keyframes truthTravel {
   0% {
     opacity: 0;
-    transform: translateX(-38px);
+    transform: translateX(-24px);
   }
-  22% {
-    opacity: 1;
-  }
-  75% {
+  30% {
     opacity: 1;
   }
   100% {
-    opacity: 0;
-    transform: translateX(20px);
+    opacity: 0.9;
+    transform: translateX(8px);
   }
 }
 
 @keyframes outputReveal {
   from {
-    clip-path: inset(0 100% 0 0);
-    opacity: 0.45;
+    opacity: 0.55;
+    transform: translateX(8px);
   }
   to {
-    clip-path: inset(0 0 0 0);
     opacity: 1;
+    transform: none;
   }
 }
 
@@ -1947,17 +1945,14 @@
 @keyframes truthTravelMobile {
   0% {
     opacity: 0;
-    transform: translateY(-22px);
+    transform: translateX(-14px);
   }
-  22% {
-    opacity: 1;
-  }
-  75% {
+  30% {
     opacity: 1;
   }
   100% {
-    opacity: 0;
-    transform: translateY(20px);
+    opacity: 0.9;
+    transform: translateX(6px);
   }
 }
 
@@ -1973,6 +1968,10 @@
 
   .truthTokens {
     display: none;
+  }
+
+  .storyActiveOutput > * {
+    animation: none !important;
   }
 
   .truthTransfer small {

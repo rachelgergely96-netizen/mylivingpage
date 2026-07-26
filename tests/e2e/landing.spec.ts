@@ -9,7 +9,7 @@ test("landing page communicates the Living Page outcome and one honest start act
     page.getByRole("heading", { name: "Your résumé, alive on the web." }),
   ).toBeVisible();
   await expect(
-    page.getByText("Turn the résumé you already have into a professional page", { exact: false }),
+    page.getByText("Turn the résumé you already have into one link", { exact: false }),
   ).toBeVisible();
   await expect(page.getByText("Completely free · No trial", { exact: true })).toBeVisible();
   await expect(page.getByText("Homepage conversion prototype", { exact: true })).toHaveCount(0);
@@ -79,9 +79,9 @@ test("reduced-motion visitors retain the complete content and static transformat
   await expect(page.locator("[data-transform-motion] b").first()).toBeHidden();
   await expect(page.locator("[data-truth-source]")).toBeVisible();
   await expect(page.locator("[data-truth-destination]")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Start with the résumé you already have." })).toBeAttached();
+  await expect(page.getByRole("heading", { name: "From résumé to published page." })).toBeAttached();
   await expect(
-    page.getByRole("heading", { name: "The design can change. Your details stay easy to read." }),
+    page.getByRole("heading", { name: "Your style can change. Your details stay clear." }),
   ).toBeAttached();
 });
 

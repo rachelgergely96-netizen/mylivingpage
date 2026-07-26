@@ -42,9 +42,9 @@ type WelcomeStyle = CSSProperties & {
 type WelcomePhase = "entering" | "holding" | "revealing";
 
 const ENTRY_DURATION_MS = 900;
-const HOLD_DURATION_MS = 2300;
-const REDUCED_HOLD_DURATION_MS = 1400;
-const REVEAL_DURATION_MS = 480;
+const HOLD_DURATION_MS = 1900;
+const REDUCED_HOLD_DURATION_MS = 1100;
+const REVEAL_DURATION_MS = 560;
 
 function firstName(displayName: string | null): string | null {
   return displayName?.trim().split(/\s+/)[0] || null;
@@ -281,12 +281,12 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
   };
   const handoffStatus =
     phase === "entering"
-      ? "Reconnecting to your page…"
+      ? "Bringing your page into view…"
       : phase === "revealing"
         ? "Opening your dashboard"
         : paused
-          ? "Handoff paused"
-          : "Signal locked. Opening your dashboard…";
+          ? "Automatic opening paused"
+          : "Page ready. Opening your dashboard…";
 
   return (
     <div
@@ -327,7 +327,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
 
         <section className={styles.stage}>
           <div className={styles.copy}>
-            <p className={styles.eyebrow}>Signal reconnected</p>
+            <p className={styles.eyebrow}>Welcome back · page reconnected</p>
             <h2 id="dashboard-welcome-title" className={styles.title}>
               {copy.title}
             </h2>
@@ -337,14 +337,14 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
 
             <div className={styles.signalRail}>
               <div className={styles.signalCell}>
-                <p className={styles.signalLabel}>Status</p>
+                <p className={styles.signalLabel}>Page status</p>
                 <p className={styles.signalValue}>
                   <span className={styles.statusDot} aria-hidden="true" />
                   <span>{status}</span>
                 </p>
               </div>
               <div className={styles.signalCell}>
-                <p className={styles.signalLabel}>Your public path</p>
+                <p className={styles.signalLabel}>Current link</p>
                 <p className={styles.signalValue}>
                   <span>{snapshot.livePath}</span>
                 </p>
@@ -353,7 +353,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
 
             <div className={styles.handoff}>
               <div className={styles.handoffMeta}>
-                <span>Dashboard handoff</span>
+                <span>Opening your workspace</span>
                 <span aria-live="polite" aria-atomic="true">
                   {handoffStatus}
                 </span>
@@ -362,6 +362,8 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
                 className={styles.handoffTrack}
                 role="progressbar"
                 aria-label="Opening your dashboard"
+                aria-valuemin={0}
+                aria-valuemax={100}
                 aria-valuetext={handoffStatus}
               >
                 <span className={styles.handoffFill} />
@@ -375,10 +377,10 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
                 className={styles.continue}
                 onClick={revealDashboard}
               >
-                Enter dashboard now
+                Open dashboard now
               </button>
               <span className={styles.escapeHint}>
-                Opens automatically · Esc skips
+                No click needed · Esc skips
               </span>
             </div>
           </div>

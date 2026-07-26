@@ -38,10 +38,10 @@ export async function GET() {
   // Include auth provider info so the UI knows whether to show password change
   const providers = user.app_metadata?.providers as string[] | undefined;
   const hasPassword = providers?.includes("email") ?? !!user.email;
-  const { data: latestPage } = await supabase
+  const { data: latestPage, error: latestPageError } = await supabase
     .from("pages")
     .select("id, status, visibility, published_at, owner_id, user_id")
-    .eq("owner_id", user.id)
+    .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -65,6 +65,7 @@ export async function GET() {
       stripe_trial_ends_at: profile.stripe_trial_ends_at,
     }),
     latestPage: syncedPage?.page ?? null,
+    hasLivingPage: latestPageError ? null : Boolean(latestPage),
     signup_referrer:
       profile.signup_referrer ?? ((user.user_metadata?.signup_referrer as string | undefined) ?? null),
     hasPassword,

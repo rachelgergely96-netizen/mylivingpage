@@ -18,6 +18,7 @@
     linear-gradient(135deg, #050b14 0%, #08111f 48%, #040912 100%);
   color: var(--site-text);
   animation: welcome-backdrop-in 240ms ease-out both;
+  will-change: clip-path, opacity;
 }
 
 .root::before {
@@ -60,15 +61,21 @@
 .root[data-state="revealing"] {
   overflow: hidden;
   pointer-events: none;
-  animation: welcome-dashboard-reveal 480ms cubic-bezier(0.76, 0, 0.24, 1) both;
+  animation: welcome-dashboard-reveal 560ms cubic-bezier(0.76, 0, 0.24, 1)
+    both;
 }
 
 .root[data-state="revealing"] .stage {
-  animation: welcome-stage-reveal 480ms cubic-bezier(0.76, 0, 0.24, 1) both;
+  animation: welcome-stage-reveal 560ms cubic-bezier(0.76, 0, 0.24, 1) both;
 }
 
 .root[data-state="revealing"] .preview {
-  animation: welcome-preview-reveal 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-preview-reveal 560ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+.root[data-state="holding"] .preview {
+  animation: welcome-preview-hold var(--welcome-hold-duration) ease-in-out both;
 }
 
 .shell {
@@ -145,7 +152,8 @@
   );
   box-shadow:
     0 32px 100px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 color-mix(in srgb, var(--welcome-accent) 10%, transparent);
   grid-template-columns: minmax(0, 0.86fr) minmax(24rem, 1.14fr);
   animation: welcome-stage-in 720ms 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -383,8 +391,13 @@
   background:
     radial-gradient(
       circle at 50% 44%,
-      color-mix(in srgb, var(--welcome-accent) 13%, transparent),
+      color-mix(in srgb, var(--welcome-accent) 17%, transparent),
       transparent 60%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035),
+      transparent 44%
     ),
     rgba(2, 7, 14, 0.62);
   padding: clamp(2rem, 5vw, 5rem);
@@ -432,8 +445,17 @@
 .preview {
   position: relative;
   z-index: 2;
+  border: 1px solid
+    color-mix(in srgb, var(--welcome-accent-bright) 26%, rgba(255, 255, 255, 0.08));
+  background: rgba(2, 7, 14, 0.56);
+  box-shadow:
+    0 2.5rem 5rem rgba(0, 0, 0, 0.38),
+    0 0 4rem color-mix(in srgb, var(--welcome-accent) 10%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform-origin: 50% 60%;
-  animation: welcome-preview-in 820ms 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-preview-in 720ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  will-change: transform, opacity;
 }
 
 .preview::after {
@@ -496,13 +518,13 @@
     clip-path: inset(0 0 0 0);
   }
 
-  72% {
+  46% {
     opacity: 1;
   }
 
   100% {
     opacity: 0;
-    clip-path: inset(0 0 100% 0);
+    clip-path: inset(0 0 0 100%);
   }
 }
 
@@ -596,6 +618,18 @@
   }
 }
 
+@keyframes welcome-preview-hold {
+  0%,
+  100% {
+    transform: perspective(75rem) translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: perspective(75rem) translate3d(0, -0.22rem, 0.8rem)
+      scale(1.006);
+  }
+}
+
 @keyframes welcome-handoff-progress {
   from {
     width: 0;
@@ -614,7 +648,7 @@
 
   to {
     opacity: 0;
-    transform: translateY(-1.25rem) scale(0.985);
+    transform: translateX(2.5rem) scale(0.988);
   }
 }
 
@@ -626,8 +660,8 @@
 
   to {
     opacity: 0;
-    transform: perspective(75rem) translate3d(0, 1.2rem, 4rem) rotateX(1.5deg)
-      scale(1.035);
+    transform: perspective(75rem) translate3d(3rem, 0, 4rem) rotateY(-1.5deg)
+      scale(1.04);
   }
 }
 

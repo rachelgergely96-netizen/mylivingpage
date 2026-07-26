@@ -54,14 +54,16 @@ test("returning users enter through their real Living Page signal", async ({
 
   const welcome = page.locator("[data-dashboard-welcome]");
   const continueButton = welcome.getByRole("button", {
-    name: "Enter dashboard now",
+    name: "Open dashboard now",
   });
 
   await expect(welcome).toBeVisible();
   await expect(
     welcome.getByRole("heading", { name: "Avery, your page kept living." }),
   ).toBeVisible();
-  await expect(welcome.getByText("Signal reconnected")).toBeVisible();
+  await expect(
+    welcome.getByText("Welcome back · page reconnected"),
+  ).toBeVisible();
   await expect(
     welcome.getByText("Someone viewed it after your last share."),
   ).toBeVisible();
@@ -77,7 +79,7 @@ test("returning users enter through their real Living Page signal", async ({
   await expect(welcome).toHaveAttribute("data-state", "holding", {
     timeout: 2_000,
   });
-  await expect(welcome).toContainText("Signal locked. Opening your dashboard");
+  await expect(welcome).toContainText("Page ready. Opening your dashboard");
   await expect(welcome).toHaveCount(0, { timeout: 5_000 });
   await expect(page.locator("#main-content")).toBeFocused();
   await expect(
@@ -93,7 +95,7 @@ test("welcome handoff can be paused, resumed, or skipped from the keyboard", asy
 
   const welcome = page.locator("[data-dashboard-welcome]");
   const continueButton = welcome.getByRole("button", {
-    name: "Enter dashboard now",
+    name: "Open dashboard now",
   });
   await expect(continueButton).toBeFocused();
   await page.keyboard.press("Tab");
@@ -113,7 +115,7 @@ test("welcome handoff can be paused, resumed, or skipped from the keyboard", asy
 
   await page.goto("/dev/dashboard-preview?welcome=1");
   await expect(
-    page.getByRole("button", { name: "Enter dashboard now" }),
+    page.getByRole("button", { name: "Open dashboard now" }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator("[data-dashboard-welcome]")).toHaveCount(0);
@@ -129,7 +131,7 @@ test("welcome-back reveal is static and contained on reduced-motion mobile", asy
   const welcome = page.locator("[data-dashboard-welcome]");
   await expect(welcome).toBeVisible();
   await expect(
-    welcome.getByRole("button", { name: "Enter dashboard now" }),
+    welcome.getByRole("button", { name: "Open dashboard now" }),
   ).toBeVisible();
   await expect(
     welcome.getByRole("button", { name: "Skip intro" }),

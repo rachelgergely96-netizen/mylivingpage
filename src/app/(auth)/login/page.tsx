@@ -8,12 +8,20 @@ import {
   getPasswordAuthErrorMessage,
 } from "@/lib/auth/auth-error";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
-import { withPostLoginWelcome } from "@/lib/auth/post-login";
+import {
+  resolvePostLoginDestination,
+  withPostLoginWelcome,
+} from "@/lib/auth/post-login";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const SESSION_CHECK_DELAYS_MS = [0, 150, 350, 700];
 
-async function waitForServerSession() {
+interface ServerSessionState {
+  hasLivingPage: boolean | null;
+  ready: boolean;
+}
+
+async function waitForServerSession(): Promise<ServerSessionState> {
   for (const delayMs of SESSION_CHECK_DELAYS_MS) {
     if (delayMs > 0) {
       await new Promise((resolve) => window.setTimeout(resolve, delayMs));
@@ -27,14 +35,30 @@ async function waitForServerSession() {
       });
 
       if (response.status !== 401) {
-        return true;
+        if (!response.ok) {
+          return { hasLivingPage: null, ready: true };
+        }
+
+        const profile = (await response.json()) as {
+          hasLivingPage?: boolean | null;
+          latestPage?: unknown;
+        };
+        return {
+          hasLivingPage:
+            typeof profile.hasLivingPage === "boolean"
+              ? profile.hasLivingPage
+              : profile.hasLivingPage === null
+                ? null
+                : Boolean(profile.latestPage),
+          ready: true,
+        };
       }
     } catch {
       // Retry until we exhaust the short session-finalization window.
     }
   }
 
-  return false;
+  return { hasLivingPage: null, ready: false };
 }
 
 export default function LoginPage() {
@@ -98,15 +122,17 @@ export default function LoginPage() {
       if (!data.session) {
         throw new Error("Sign-in succeeded but no session was created.");
       }
-      const serverSessionReady = await waitForServerSession();
-      if (!serverSessionReady) {
+      const serverSession = await waitForServerSession();
+      if (!serverSession.ready) {
         throw new Error(
           "Sign-in succeeded, but the session could not be finalized. Please try again.",
         );
       }
       // Track login (fire-and-forget)
       fetch("/api/auth/track-login", { method: "POST" }).catch(() => {});
-      window.location.replace(withPostLoginWelcome(nextPath));
+      window.location.replace(
+        resolvePostLoginDestination(nextPath, serverSession.hasLivingPage),
+      );
     } catch (error) {
       setStatus("error");
       setMessage(

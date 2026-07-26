@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase/cookies";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
+import { resolvePostLoginDestination } from "@/lib/auth/post-login";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
@@ -31,7 +32,8 @@ export async function GET(request: NextRequest) {
   const legalSourceParam = requestUrl.searchParams.get("legal_source");
   const legalSource: LegalAcceptanceSource =
     legalSourceParam === "checkout" ? "checkout" : "signup";
-  const redirectUrl = new URL(next, appOrigin);
+  let resolvedNext = next;
+  const redirectUrl = new URL(resolvedNext, appOrigin);
 
   if (!code) {
     const missingCodeResponse = NextResponse.redirect(redirectUrl);
@@ -66,21 +68,36 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    const admin = createServiceRoleSupabaseClient();
+    await ensureUserProfile(admin, user);
+
+    const { data: existingPage, error: existingPageError } = await admin
+      .from("pages")
+      .select("id")
+      .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
+      .limit(1)
+      .maybeSingle();
+    const hasLivingPage = existingPageError
+      ? null
+      : Boolean(existingPage);
+    resolvedNext = resolvePostLoginDestination(next, hasLivingPage);
+    redirectUrl.href = new URL(resolvedNext, appOrigin).href;
+    response.headers.set("location", redirectUrl.toString());
+
     await trackEvent(user.id, "auth.callback.succeeded", {
       auth_provider:
         typeof user.app_metadata?.provider === "string"
           ? user.app_metadata.provider
           : null,
-      next,
+      next: resolvedNext,
+      requested_next: next,
+      has_living_page: hasLivingPage,
       request_host: getRequestHostname(request.headers),
       auth_origin: appOrigin.origin,
       redirect_to: redirectUrl.toString(),
       legal_accept_requested: legalAcceptRequested,
       legal_source: legalSource,
     });
-
-    const admin = createServiceRoleSupabaseClient();
-    await ensureUserProfile(admin, user);
 
     // Increment sign-in count
     await admin.rpc("increment_sign_in_count", { uid: user.id });

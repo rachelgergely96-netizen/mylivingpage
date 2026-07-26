@@ -312,7 +312,7 @@ describe("dashboard page", () => {
     const markup = renderToStaticMarkup(element);
 
     expect(markup).toContain("data-dashboard-welcome");
-    expect(markup).toContain("Signal reconnected");
+    expect(markup).toContain("Welcome back · page reconnected");
     expect(markup).toContain("your page kept living.");
     expect(markup).toContain("Someone viewed it after your last share.");
     expect(markup).toContain("Bastion theme");

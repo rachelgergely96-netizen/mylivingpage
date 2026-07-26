@@ -11,6 +11,13 @@ const CATALOG_THEME_IDS = THEME_REGISTRY.filter(
 const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter(
   (theme) => theme.signature,
 ).map((theme) => theme.id);
+const MATERIAL_PILOT_THEME_IDS = [
+  "silk",
+  "halo",
+  "aurora",
+  "sakura",
+  "meridian",
+] as const;
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -68,6 +75,14 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
       "data-theme-renderer-status",
       "ready",
     );
+    if (THEME_MAP[themeId].materialProfile) {
+      await expect(livingPage).toHaveAttribute(
+        "data-theme-material",
+        THEME_MAP[themeId].materialProfile,
+      );
+    } else {
+      await expect(livingPage).not.toHaveAttribute("data-theme-material");
+    }
     await expect(shareCard).toHaveAttribute("data-theme-id", themeId);
     await expect(shareCard).toHaveAttribute(
       "data-theme-detail",
@@ -91,6 +106,87 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
     } else {
       expect(layerOrder).toEqual(canonicalLayerOrder);
     }
+  }
+});
+
+test("material pilots keep readable plates stationary across desktop and mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const themeId of MATERIAL_PILOT_THEME_IDS) {
+    await select.selectOption(themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-material",
+      THEME_MAP[themeId].materialProfile ?? "",
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const card = livingPage.locator(".resume-theme-card").first();
+    const restingStyle = await card.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        backdrop: style.backdropFilter,
+        borderRadius: style.borderRadius,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    expect(restingStyle.borderRadius).toBe("0px");
+    expect(restingStyle.outlineStyle).toBe("solid");
+    expect(restingStyle.outlineWidth).toBe("1px");
+    if (THEME_MAP[themeId].materialProfile === "refractive") {
+      expect(restingStyle.backdrop).toContain("blur(14px)");
+    } else if (THEME_MAP[themeId].materialProfile === "organic-glass") {
+      expect(restingStyle.backdrop).toContain("blur(12px)");
+    } else {
+      expect(restingStyle.backdrop).toBe("none");
+    }
+
+    await card.hover();
+    const hoverState = await card.evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      const boxShadow = window.getComputedStyle(element).boxShadow;
+      if (transform === "none") return { boxShadow, x: 0, y: 0 };
+      const matrix = new DOMMatrixReadOnly(transform);
+      return { boxShadow, x: matrix.m41, y: matrix.m42 };
+    });
+    expect(Math.abs(hoverState.x)).toBeLessThan(0.001);
+    expect(Math.abs(hoverState.y)).toBeLessThan(0.001);
+    expect(hoverState.boxShadow).toContain("inset");
+
+    const focusTranslation = await card.evaluate((element) => {
+      element.tabIndex = 0;
+      element.focus();
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return { x: 0, y: 0 };
+      const matrix = new DOMMatrixReadOnly(transform);
+      return { x: matrix.m41, y: matrix.m42 };
+    });
+    expect(Math.abs(focusTranslation.x)).toBeLessThan(0.001);
+    expect(Math.abs(focusTranslation.y)).toBeLessThan(0.001);
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const themeId of MATERIAL_PILOT_THEME_IDS) {
+    await select.selectOption(themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
+    await livingPage.scrollIntoViewIfNeeded();
+    expect(
+      await livingPage.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
+    ).toBe(0);
   }
 });
 

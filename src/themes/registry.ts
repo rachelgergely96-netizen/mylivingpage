@@ -2,6 +2,7 @@ import type {
   ThemeCollectionId,
   ThemeContentProfileId,
   ThemeId,
+  ThemeMaterialProfileId,
   ThemeMeta,
   ThemePresentation,
   ThemeReadingMode,
@@ -146,6 +147,23 @@ const THEME_READING_MODES = {
   ornamental: "glass",
   celestial: "glass",
 } as const satisfies Record<ThemeContentProfileId, ThemeReadingMode>;
+
+/**
+ * A deliberately small material pilot. The profile augments the established
+ * content profile and reading mode; it never forks resume markup or renderer
+ * ownership.
+ */
+const THEME_MATERIAL_PROFILES: Partial<
+  Record<ThemeId, ThemeMaterialProfileId>
+> = {
+  silk: "refractive",
+  halo: "refractive",
+  // Aurora keeps its authored signature-renderer depth. This profile refines
+  // only its semantic reading surfaces.
+  aurora: "refractive",
+  sakura: "organic-glass",
+  meridian: "engraved",
+};
 
 const THEME_PRESENTATION_DEFAULTS = {
   "executive-tech": {
@@ -886,6 +904,7 @@ export const THEME_REGISTRY: ThemeMeta[] = THEME_DEFINITIONS.map((theme) => ({
   ...theme,
   collection: THEME_COLLECTIONS[theme.id],
   contentProfile: THEME_CONTENT_PROFILES[theme.id],
+  materialProfile: THEME_MATERIAL_PROFILES[theme.id],
   readingMode: THEME_READING_MODES[THEME_CONTENT_PROFILES[theme.id]],
   presentation: {
     ...THEME_PRESENTATION_DEFAULTS[THEME_COLLECTIONS[theme.id]],

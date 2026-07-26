@@ -1276,6 +1276,110 @@ a {
   );
 }
 
+/* Material pilots apply the share-card lesson—thin optical edges, calmer
+   transmission, and restrained light—without making every Living Page glass.
+   The semantic resume stays fixed while the canvas owns spatial movement. */
+[data-theme-material="refractive"]
+  :is(
+    .resume-theme-masthead,
+    .resume-theme-summary,
+    .resume-theme-card,
+    .resume-theme-card-accent
+  ) {
+  outline: 1px solid
+    color-mix(in srgb, var(--theme-accent-bright) 12%, transparent);
+  outline-offset: -4px;
+}
+
+[data-theme-reading="glass"][data-theme-material="refractive"]
+  :is(
+    .resume-theme-masthead,
+    .resume-theme-summary,
+    .resume-theme-card,
+    .resume-theme-card-accent
+  ) {
+  -webkit-backdrop-filter: blur(14px) saturate(108%);
+  backdrop-filter: blur(14px) saturate(108%);
+}
+
+[data-theme-material="refractive"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  border-top-color: color-mix(
+    in srgb,
+    var(--theme-accent-bright) 30%,
+    var(--theme-border)
+  );
+  border-left-color: color-mix(
+    in srgb,
+    var(--theme-accent) 22%,
+    var(--theme-border)
+  );
+}
+
+[data-theme-material="organic-glass"]
+  :is(
+    .resume-theme-masthead,
+    .resume-theme-summary,
+    .resume-theme-card,
+    .resume-theme-card-accent
+  ) {
+  outline: 1px solid
+    color-mix(in srgb, var(--theme-accent-bright) 8%, transparent);
+  outline-offset: -5px;
+  -webkit-backdrop-filter: blur(12px) saturate(105%);
+  backdrop-filter: blur(12px) saturate(105%);
+}
+
+[data-theme-material="organic-glass"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--theme-accent) 26%,
+    var(--theme-border)
+  );
+  box-shadow:
+    inset 0 -1px 0
+      color-mix(in srgb, var(--theme-accent) 12%, transparent),
+    0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme-material="engraved"]
+  :is(
+    .resume-theme-masthead,
+    .resume-theme-summary,
+    .resume-theme-card,
+    .resume-theme-card-accent
+  ) {
+  outline: 1px solid
+    color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  outline-offset: -5px;
+}
+
+[data-theme-material="engraved"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  border-top-color: color-mix(
+    in srgb,
+    var(--theme-accent-bright) 22%,
+    var(--theme-border)
+  );
+  box-shadow:
+    inset 3px 0 0
+      color-mix(in srgb, var(--theme-accent) 42%, transparent),
+    inset 0 1px 0
+      color-mix(in srgb, var(--theme-accent-bright) 10%, transparent);
+}
+
+[data-theme-id="meridian"]
+  :is(.resume-theme-card, .resume-theme-card-accent)::after {
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-top: 1px solid var(--theme-accent-border);
+  border-right: 1px solid var(--theme-accent-border);
+}
+
 .editor-signal-frame {
   background-image:
     linear-gradient(90deg, rgb(120 173 255 / 5%) 1px, transparent 1px),
@@ -1511,6 +1615,12 @@ a {
   transform: translate3d(2px, -2px, 0);
 }
 
+[data-motion-aware="true"][data-theme-material]
+  .resume-theme
+  [data-motion-item]:focus-within {
+  transform: translate3d(0, 0, 0);
+}
+
 [data-motion-aware="true"]
   .resume-theme
   :is(
@@ -1521,6 +1631,49 @@ a {
   border-color: color-mix(
     in srgb,
     var(--theme-accent, #93c5fd) 34%,
+    transparent
+  );
+}
+
+[data-motion-aware="true"][data-theme-material="refractive"]
+  .resume-theme
+  .resume-theme-section[data-motion-active="true"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  outline-color: color-mix(
+    in srgb,
+    var(--theme-accent-bright) 24%,
+    transparent
+  );
+  border-top-color: color-mix(
+    in srgb,
+    var(--theme-accent-bright) 42%,
+    var(--theme-border)
+  );
+}
+
+[data-motion-aware="true"][data-theme-material="organic-glass"]
+  .resume-theme
+  .resume-theme-section[data-motion-active="true"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  outline-color: color-mix(
+    in srgb,
+    var(--theme-accent-bright) 16%,
+    transparent
+  );
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--theme-accent) 40%,
+    var(--theme-border)
+  );
+}
+
+[data-motion-aware="true"][data-theme-material="engraved"]
+  .resume-theme
+  .resume-theme-section[data-motion-active="true"]
+  :is(.resume-theme-card, .resume-theme-card-accent) {
+  outline-color: color-mix(
+    in srgb,
+    var(--theme-accent) 20%,
     transparent
   );
 }
@@ -1539,6 +1692,14 @@ a {
     .resume-theme
     [data-motion-item]:hover:not([data-motion-kind="profile"]) {
     transform: translate3d(0, -2px, 0);
+  }
+
+  /* Pilot material pages route pointer motion into their world lighting. The
+     resume plates stay optically stable instead of bobbing under the cursor. */
+  [data-motion-aware="true"][data-theme-material]
+    .resume-theme
+    [data-motion-item]:hover:not([data-motion-kind="profile"]) {
+    transform: translate3d(0, 0, 0);
   }
 
   /* Cards answer hover with an accent border and a soft lifted shadow instead
@@ -1573,6 +1734,76 @@ a {
     box-shadow:
       0 12px 32px rgba(0, 0, 0, 0.28),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  [data-motion-aware="true"][data-theme-material="refractive"]
+    .resume-theme
+    [data-motion-item]:hover:is(
+      .resume-theme-card,
+      .resume-theme-card-accent
+    ),
+  [data-motion-aware="true"][data-theme-material="refractive"]
+    .resume-theme
+    [data-motion-item]:hover
+    :is(.resume-theme-card, .resume-theme-card-accent) {
+    border-top-color: color-mix(
+      in srgb,
+      var(--theme-accent-bright) 42%,
+      var(--theme-border)
+    );
+    border-left-color: color-mix(
+      in srgb,
+      var(--theme-accent) 30%,
+      var(--theme-border)
+    );
+    box-shadow:
+      inset 0 1px 0
+        color-mix(in srgb, var(--theme-accent-bright) 14%, transparent),
+      inset 0 0 0 1px
+        color-mix(in srgb, var(--theme-accent) 6%, transparent);
+  }
+
+  [data-motion-aware="true"][data-theme-material="organic-glass"]
+    .resume-theme
+    [data-motion-item]:hover:is(
+      .resume-theme-card,
+      .resume-theme-card-accent
+    ),
+  [data-motion-aware="true"][data-theme-material="organic-glass"]
+    .resume-theme
+    [data-motion-item]:hover
+    :is(.resume-theme-card, .resume-theme-card-accent) {
+    border-bottom-color: color-mix(
+      in srgb,
+      var(--theme-accent) 40%,
+      var(--theme-border)
+    );
+    box-shadow:
+      inset 0 -1px 0
+        color-mix(in srgb, var(--theme-accent) 12%, transparent),
+      0 16px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  [data-motion-aware="true"][data-theme-material="engraved"]
+    .resume-theme
+    [data-motion-item]:hover:is(
+      .resume-theme-card,
+      .resume-theme-card-accent
+    ),
+  [data-motion-aware="true"][data-theme-material="engraved"]
+    .resume-theme
+    [data-motion-item]:hover
+    :is(.resume-theme-card, .resume-theme-card-accent) {
+    border-top-color: color-mix(
+      in srgb,
+      var(--theme-accent-bright) 28%,
+      var(--theme-border)
+    );
+    box-shadow:
+      inset 3px 0 0
+        color-mix(in srgb, var(--theme-accent) 42%, transparent),
+      inset 0 1px 0
+        color-mix(in srgb, var(--theme-accent-bright) 10%, transparent);
   }
 }
 

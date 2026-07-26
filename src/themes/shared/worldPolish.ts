@@ -67,6 +67,12 @@ const COLLECTION_PROFILES = {
   Omit<WorldPolishProfile, "seed">
 >;
 
+const MATERIAL_DEPTH_STRENGTH = {
+  refractive: 0.7,
+  "organic-glass": 0.74,
+  engraved: 0.72,
+} as const;
+
 /**
  * Light-ground detection mirroring the host bloom gate: additive screen-blend
  * light moves and bokeh would wash out a pale scene, so they are skipped.
@@ -98,7 +104,7 @@ function unitValue(value: number): number {
 }
 
 export function getWorldPolishProfile(
-  theme: Pick<ThemeMeta, "collection" | "id">,
+  theme: Pick<ThemeMeta, "collection" | "id" | "materialProfile">,
 ): WorldPolishProfile {
   const base = COLLECTION_PROFILES[theme.collection];
   const seed = hashThemeId(theme.id);
@@ -108,6 +114,9 @@ export function getWorldPolishProfile(
   return {
     ...base,
     seed,
+    depthStrength: theme.materialProfile
+      ? MATERIAL_DEPTH_STRENGTH[theme.materialProfile]
+      : base.depthStrength,
     anchorX: finiteClamp(base.anchorX + variationX, 0.66, 0.82),
     anchorY: finiteClamp(base.anchorY + variationY, 0.28, 0.48),
   };

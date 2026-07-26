@@ -39,6 +39,7 @@ function StaticThemePreview({ theme }: { theme: ThemeMeta }) {
       aria-hidden="true"
       data-theme-preview-static={theme.id}
       data-theme-detail={theme.contentProfile}
+      data-theme-material={theme.materialProfile}
       className="relative overflow-hidden rounded-none"
       style={{
         height: 120,

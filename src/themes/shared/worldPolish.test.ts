@@ -93,6 +93,13 @@ describe("world polish", () => {
     }
   });
 
+  it("gives material pilots calmer collection-aware depth", () => {
+    expect(getWorldPolishProfile(THEME_MAP.silk).depthStrength).toBe(0.7);
+    expect(getWorldPolishProfile(THEME_MAP.halo).depthStrength).toBe(0.7);
+    expect(getWorldPolishProfile(THEME_MAP.sakura).depthStrength).toBe(0.74);
+    expect(getWorldPolishProfile(THEME_MAP.meridian).depthStrength).toBe(0.72);
+  });
+
   it("covers every theme while preserving only authored signature and bespoke worlds", () => {
     const renderer = vi.fn() as unknown as ThemeRenderer;
     const preservedIds: string[] = [];

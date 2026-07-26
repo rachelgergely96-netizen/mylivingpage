@@ -110,6 +110,19 @@ export const THEME_READING_MODE_IDS = ["glass", "solid"] as const;
  */
 export type ThemeReadingMode = (typeof THEME_READING_MODE_IDS)[number];
 
+export const THEME_MATERIAL_PROFILE_IDS = [
+  "refractive",
+  "organic-glass",
+  "engraved",
+] as const;
+
+/**
+ * Optional material pilots refine surface and light behavior without changing
+ * the semantic resume or replacing a theme's authored content profile.
+ */
+export type ThemeMaterialProfileId =
+  (typeof THEME_MATERIAL_PROFILE_IDS)[number];
+
 /**
  * A small, renderer-agnostic model of what is happening on a Living Page.
  *
@@ -181,6 +194,7 @@ export interface ThemeMeta {
   id: ThemeId;
   collection: ThemeCollectionId;
   contentProfile: ThemeContentProfileId;
+  materialProfile?: ThemeMaterialProfileId;
   readingMode: ThemeReadingMode;
   name: string;
   description: string;

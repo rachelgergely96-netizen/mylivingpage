@@ -3,6 +3,7 @@ import { THEME_MAP, THEME_REGISTRY } from "@/themes/registry";
 import {
   THEME_CONTENT_PROFILE_IDS,
   THEME_IDS,
+  THEME_MATERIAL_PROFILE_IDS,
   THEME_READING_MODE_IDS,
   type ThemeId,
 } from "@/themes/types";
@@ -138,6 +139,35 @@ describe("theme registry", () => {
     expect(new Set(THEME_REGISTRY.map((theme) => theme.readingMode))).toEqual(
       validModes,
     );
+  });
+
+  it("keeps the material pilot explicit and profile-safe", () => {
+    const validProfiles = new Set(THEME_MATERIAL_PROFILE_IDS);
+    const pilots = THEME_REGISTRY.flatMap((theme) =>
+      theme.materialProfile
+        ? [[theme.id, theme.materialProfile] as const]
+        : [],
+    );
+
+    expect(pilots).toEqual([
+      ["aurora", "refractive"],
+      ["sakura", "organic-glass"],
+      ["silk", "refractive"],
+      ["halo", "refractive"],
+      ["meridian", "engraved"],
+    ]);
+    for (const [, profile] of pilots) {
+      expect(validProfiles.has(profile)).toBe(true);
+    }
+    expect(
+      pilots.map(([id]) => [id, THEME_MAP[id].readingMode]),
+    ).toEqual([
+      ["aurora", "glass"],
+      ["sakura", "glass"],
+      ["silk", "glass"],
+      ["halo", "glass"],
+      ["meridian", "solid"],
+    ]);
   });
 
   it("derives non-signature surfaces from each theme background", () => {

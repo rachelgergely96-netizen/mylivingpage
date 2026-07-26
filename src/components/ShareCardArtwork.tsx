@@ -54,6 +54,7 @@ export function ShareCardArtwork({
       data-share-card-artwork
       data-share-card-collection={visual.collection}
       data-share-card-finish={treatment.id}
+      data-share-card-outer
       data-share-card-theme-id={visual.themeId}
       style={{
         background: treatment.outerBackground,
@@ -98,6 +99,7 @@ export function ShareCardArtwork({
       ) : null}
 
       <div
+        data-share-card-panel
         style={{
           background: treatment.panelBackground,
           border: treatment.panelBorder,

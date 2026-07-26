@@ -170,6 +170,107 @@ test("all themes use one narrative font across Living Pages and share cards", as
   }
 });
 
+test("all themes apply their reading guard to identity, summaries, and cards", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+
+  const select = page.getByLabel("Catalog theme");
+  for (const theme of THEME_REGISTRY) {
+    await select.selectOption(theme.id);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
+    );
+    await expect(livingPage).toHaveAttribute("data-theme-reading", theme.readingMode);
+
+    const guard = await livingPage.evaluate((element) => {
+      const masthead = element.querySelector<HTMLElement>(".resume-theme-masthead");
+      const summary = element.querySelector<HTMLElement>(".resume-theme-summary");
+      const card = element.querySelector<HTMLElement>(
+        '[data-motion-kind="experience"]',
+      );
+      const stats = element.querySelector<HTMLElement>("[data-resume-stats]");
+      const statsCard = stats?.querySelector<HTMLElement>(".resume-theme-card");
+      const muted = element.querySelector<HTMLElement>(".resume-theme-muted");
+      const read = (node: HTMLElement | null | undefined) =>
+        node ? window.getComputedStyle(node) : null;
+      const mastheadStyle = read(masthead);
+      const summaryStyle = read(summary);
+      const cardStyle = read(card);
+      const statsStyle = read(stats);
+      const statsCardStyle = read(statsCard);
+      const mutedStyle = read(muted);
+      const colorAlpha = (value: string | undefined) => {
+        if (!value) return 0;
+        const matches = [
+          ...Array.from(value.matchAll(/rgba?\(([^)]*)\)/g), (match) => {
+            const slashAlpha = /\/\s*([0-9.]+)/.exec(match[1])?.[1];
+            const commaAlpha = match[1].split(",")[3]?.trim();
+            return {
+              alpha: Number(slashAlpha ?? commaAlpha ?? 1),
+              index: match.index,
+            };
+          }),
+          ...Array.from(
+            value.matchAll(/color\([^)]*?\/\s*([0-9.]+)\s*\)/g),
+            (match) => ({
+              alpha: Number(match[1]),
+              index: match.index,
+            }),
+          ),
+        ].sort((left, right) => left.index - right.index);
+        return matches.at(-1)?.alpha ?? 0;
+      };
+      const alpha = mutedStyle?.color.match(
+        /rgba?\([^,]+,[^,]+,[^,]+(?:,\s*([0-9.]+))?\)/,
+      )?.[1];
+
+      return {
+        cardBackdrop: cardStyle?.backdropFilter ?? "none",
+        cardBaseAlpha: colorAlpha(cardStyle?.backgroundColor),
+        cardGradientTailAlpha: colorAlpha(cardStyle?.backgroundImage),
+        mastheadBackground: mastheadStyle?.backgroundImage ?? "none",
+        mastheadRadius: mastheadStyle?.borderRadius ?? "",
+        mutedAlpha: alpha ? Number(alpha) : 1,
+        statsGuardAlpha: Math.max(
+          colorAlpha(statsStyle?.backgroundColor),
+          colorAlpha(statsStyle?.backgroundImage),
+          colorAlpha(statsCardStyle?.backgroundColor),
+          colorAlpha(statsCardStyle?.backgroundImage),
+        ),
+        summaryBackground: summaryStyle?.backgroundImage ?? "none",
+        summaryRadius: summaryStyle?.borderRadius ?? "",
+      };
+    });
+
+    expect(guard.mastheadBackground, `${theme.id} masthead guard`).not.toBe(
+      "none",
+    );
+    expect(guard.summaryBackground, `${theme.id} summary guard`).not.toBe(
+      "none",
+    );
+    expect(
+      Math.max(guard.cardBaseAlpha, guard.cardGradientTailAlpha),
+      `${theme.id} card guard`,
+    ).toBeGreaterThanOrEqual(0.76);
+    expect(guard.mutedAlpha, `${theme.id} muted text alpha`).toBeGreaterThanOrEqual(
+      0.82,
+    );
+    expect(guard.statsGuardAlpha, `${theme.id} stats guard`).toBeGreaterThanOrEqual(
+      0.76,
+    );
+    expect(guard.mastheadRadius, `${theme.id} masthead geometry`).toBe("0px");
+    expect(guard.summaryRadius, `${theme.id} summary geometry`).toBe("0px");
+    if (theme.readingMode === "glass") {
+      expect(guard.cardBackdrop, `${theme.id} glass separation`).not.toBe("none");
+    } else {
+      expect(guard.cardBackdrop, `${theme.id} solid separation`).toBe("none");
+    }
+  }
+});
+
 test("the real share-card modal exports one complete 1200 by 630 card on every viewport", async ({
   page,
 }) => {
@@ -185,6 +286,48 @@ test("the real share-card modal exports one complete 1200 by 630 card on every v
   const dialog = page.getByRole("dialog", { name: "Avery Morgan" });
   await expect(dialog).toBeVisible();
   await expect(page.getByRole("button", { name: "Close share card" })).toBeFocused();
+
+  const stage = dialog.locator("[data-share-card-preview-stage]");
+  const previewOuter = stage.locator("[data-share-card-outer]");
+  const previewPanel = stage.locator("[data-share-card-panel]");
+  const previewBounds = await stage.boundingBox();
+  expect(previewBounds).not.toBeNull();
+  if (previewBounds) {
+    await page.mouse.move(
+      previewBounds.x + previewBounds.width * 0.78,
+      previewBounds.y + previewBounds.height * 0.28,
+    );
+  }
+  await expect
+    .poll(() =>
+      previewPanel.evaluate((element) => window.getComputedStyle(element).transform),
+    )
+    .not.toBe("none");
+  expect(
+    await stage.evaluate((element) => window.getComputedStyle(element).transform),
+  ).toBe("none");
+  expect(
+    await previewOuter.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+
+  const exportOuter = dialog.locator(
+    "[data-share-card-export] [data-share-card-outer]",
+  );
+  const exportPanel = dialog.locator(
+    "[data-share-card-export] [data-share-card-panel]",
+  );
+  expect(
+    await exportOuter.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+  expect(
+    await exportPanel.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
 
   const downloadPromise = page.waitForEvent("download");
   await dialog.getByRole("button", { name: "Download share card" }).click();
@@ -223,6 +366,110 @@ test("the real share-card modal exports one complete 1200 by 630 card on every v
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+test("share-card panel motion is isolated and disabled for reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+
+  // Prove the client boundary has hydrated before sending pointer input. Under
+  // the full catalog run, canvas initialization can otherwise outlast the
+  // initial locator readiness while the server-rendered card is already visible.
+  const motionToggle = page.getByRole("button", { name: "Enable motion" });
+  await motionToggle.click();
+  const pauseMotion = page.getByRole("button", { name: "Pause motion" });
+  await expect(pauseMotion).toBeVisible();
+  await pauseMotion.click();
+  await expect(motionToggle).toBeVisible();
+
+  const story = page.getByTestId("story-share-card");
+  await story.scrollIntoViewIfNeeded();
+  const storyOuter = story.locator("[data-share-card-outer]");
+  const storyPanel = story.locator("[data-share-card-panel]");
+  const readTiltMagnitude = () =>
+    storyPanel.evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return 0;
+      const matrix = new DOMMatrixReadOnly(transform);
+      return Math.max(
+        Math.abs(matrix.m12),
+        Math.abs(matrix.m13),
+        Math.abs(matrix.m14),
+        Math.abs(matrix.m21),
+        Math.abs(matrix.m23),
+        Math.abs(matrix.m24),
+        Math.abs(matrix.m31),
+        Math.abs(matrix.m32),
+        Math.abs(matrix.m41),
+        Math.abs(matrix.m42),
+        Math.abs(matrix.m43),
+      );
+    });
+  const storyBounds = await story.boundingBox();
+  expect(storyBounds).not.toBeNull();
+  if (storyBounds) {
+    await page.mouse.move(
+      storyBounds.x + storyBounds.width * 0.8,
+      storyBounds.y + storyBounds.height * 0.22,
+    );
+  }
+  await expect.poll(readTiltMagnitude).toBeGreaterThan(0.001);
+  expect(
+    await storyOuter.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  const reducedMotionToggle = page.getByRole("button", {
+    name: "Enable motion",
+  });
+  await reducedMotionToggle.click();
+  const reducedPauseMotion = page.getByRole("button", {
+    name: "Pause motion",
+  });
+  await expect(reducedPauseMotion).toBeVisible();
+  await reducedPauseMotion.click();
+  await expect(reducedMotionToggle).toBeVisible();
+
+  const reducedStory = page.getByTestId("story-share-card");
+  await reducedStory.scrollIntoViewIfNeeded();
+  const reducedBounds = await reducedStory.boundingBox();
+  if (reducedBounds) {
+    await page.mouse.move(
+      reducedBounds.x + reducedBounds.width * 0.8,
+      reducedBounds.y + reducedBounds.height * 0.22,
+    );
+  }
+  expect(
+    await reducedStory
+      .locator("[data-share-card-outer]")
+      .evaluate((element) => window.getComputedStyle(element).transform),
+  ).toBe("none");
+  const reducedTiltMagnitude = await reducedStory
+    .locator("[data-share-card-panel]")
+    .evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return 0;
+      const matrix = new DOMMatrixReadOnly(transform);
+      return Math.max(
+        Math.abs(matrix.m12),
+        Math.abs(matrix.m13),
+        Math.abs(matrix.m14),
+        Math.abs(matrix.m21),
+        Math.abs(matrix.m23),
+        Math.abs(matrix.m24),
+        Math.abs(matrix.m31),
+        Math.abs(matrix.m32),
+        Math.abs(matrix.m41),
+        Math.abs(matrix.m42),
+        Math.abs(matrix.m43),
+      );
+    });
+  expect(reducedTiltMagnitude).toBeLessThan(0.001);
 });
 
 test("attention motion stays brief and fully respects reduced motion", async ({

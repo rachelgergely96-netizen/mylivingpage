@@ -101,6 +101,15 @@ export const THEME_CONTENT_PROFILE_IDS = [
  */
 export type ThemeContentProfileId = (typeof THEME_CONTENT_PROFILE_IDS)[number];
 
+export const THEME_READING_MODE_IDS = ["glass", "solid"] as const;
+
+/**
+ * Defines how semantic resume content is optically separated from a moving
+ * renderer. Glass profiles keep more of the world visible through a sharp
+ * blur; solid profiles use denser authored plates without blur.
+ */
+export type ThemeReadingMode = (typeof THEME_READING_MODE_IDS)[number];
+
 /**
  * A small, renderer-agnostic model of what is happening on a Living Page.
  *
@@ -172,6 +181,7 @@ export interface ThemeMeta {
   id: ThemeId;
   collection: ThemeCollectionId;
   contentProfile: ThemeContentProfileId;
+  readingMode: ThemeReadingMode;
   name: string;
   description: string;
   vibe: string;

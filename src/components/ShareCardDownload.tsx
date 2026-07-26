@@ -283,6 +283,7 @@ export default function ShareCardDownload({
             <div
               ref={exportCardRef}
               aria-hidden="true"
+              data-share-card-export
               style={{
                 height: SHARE_CARD_SIZE.height,
                 left: -20000,
@@ -299,12 +300,17 @@ export default function ShareCardDownload({
             <div className="grid gap-4 p-3 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div
                 data-living-output
+                data-share-card-preview-stage
                 data-theme-id={visual.themeId}
                 data-theme-detail={visual.contentProfile}
                 data-theme-collection={visual.collection}
                 className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-1 sm:p-2"
               >
-                <TiltCard>
+                <TiltCard
+                  lift={14}
+                  max={4}
+                  targetSelector="[data-share-card-panel]"
+                >
                   <ScaledShareCardArtwork
                     animatedShine
                     finish="holographic"

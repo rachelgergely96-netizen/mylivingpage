@@ -76,6 +76,8 @@ describe("ShareCardArtwork", () => {
     expect(markup).toContain(model.headline);
     expect(markup).toContain(`@${model.slug}`);
     expect(markup).toContain(model.displayUrl);
+    expect(markup).toContain("data-share-card-outer");
+    expect(markup).toContain("data-share-card-panel");
     expect(markup).not.toContain("Georgia");
     expect(markup).not.toContain("--font-playfair");
     expect(markup).toContain(

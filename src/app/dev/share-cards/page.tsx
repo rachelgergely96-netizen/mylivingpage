@@ -83,7 +83,11 @@ export default function ShareCardFinishesPage() {
                       <p className="mb-2 text-xs font-semibold text-site-secondary">
                         {SHARE_CARD_FINISH_LABELS[finish]}
                       </p>
-                      <TiltCard>
+                      <TiltCard
+                        lift={14}
+                        max={4}
+                        targetSelector="[data-share-card-panel]"
+                      >
                         <ScaledShareCardArtwork
                           animatedShine
                           finish={finish}

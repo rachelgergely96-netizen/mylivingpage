@@ -69,7 +69,9 @@ test("examples leads with a Living Page and keeps the switcher simple", async ({
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("examples stays compact on mobile and keeps modal controls fixed", async ({ page }) => {
+test("examples keeps the complete Living Page inside its compact mobile preview", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/examples");
@@ -91,23 +93,33 @@ test("examples stays compact on mobile and keeps modal controls fixed", async ({
   );
   expect(Number.parseFloat(animationDuration || "0")).toBeLessThanOrEqual(0.00001);
 
-  await stage
-    .getByRole("button", { name: /Open full sample for Morgan Sample/ })
-    .click();
-  const dialog = page.getByRole("dialog", { name: /Morgan Sample/ });
-  const closeButton = dialog.getByRole("button", { name: "Close large preview" });
-  await expect(closeButton).toBeInViewport();
-  const overlayZIndex = await page.locator("[data-example-preview-overlay]").evaluate(
-    (element) => Number.parseInt(window.getComputedStyle(element).zIndex, 10),
-  );
-  const stickyZIndex = await page.getByTestId("mobile-sticky-cta").evaluate(
-    (element) => Number.parseInt(window.getComputedStyle(element).zIndex, 10),
-  );
-  expect(overlayZIndex).toBeGreaterThan(stickyZIndex);
+  const preview = stage.locator("[data-example-living-page]");
+  const scrollRoot = preview.getByRole("region", {
+    name: "Morgan Sample sample Living Page",
+  });
+  await expect(preview.locator("[data-resume-density='full']")).toBeVisible();
+  expect((await preview.boundingBox())?.height).toBeLessThanOrEqual(353);
+  await expect(
+    stage.getByRole("button", { name: /Open full sample/ }),
+  ).toHaveCount(0);
+  await expect(page.locator("[data-example-preview-overlay]")).toHaveCount(0);
+  expect(
+    await scrollRoot.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
 
-  await dialog.getByRole("button", { name: "Next chapter: Impact" }).click();
-  await expect(closeButton).toBeInViewport();
-  await closeButton.click();
+  await preview.getByRole("button", { name: "Next chapter: Impact" }).click();
+  await expect
+    .poll(() => scrollRoot.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+
+  await page.getByRole("tab", { name: /Recruiter interested/ }).click();
+  const nextScrollRoot = page.getByRole("region", {
+    name: "Avery Sample sample Living Page",
+  });
+  await expect(nextScrollRoot).toBeVisible();
+  expect(await nextScrollRoot.evaluate((element) => element.scrollTop)).toBe(0);
 
   await page.locator("#choose-a-moment").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("mobile-sticky-cta")).toHaveAttribute(

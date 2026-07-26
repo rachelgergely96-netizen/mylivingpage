@@ -167,7 +167,7 @@ export default function ExamplesExperience({
             See a Living Page in action.
           </h1>
           <p className={styles.lead}>
-            Choose an example, then open the full page to explore it.
+            Choose an example and explore the full page right here.
           </p>
           <p className={styles.disclosure}>
             Made-up profiles for illustration — not customer stories.
@@ -197,9 +197,7 @@ export default function ExamplesExperience({
           <SamplePageCard
             sample={activeSample}
             anchorId={activeSample.id}
-            previewHeight="clamp(24rem, 43vw, 34rem)"
-            showcase
-            signupHref={`/signup?ref=examples_${activeSample.id}&next=/create`}
+            previewHeight="clamp(22rem, 38vw, 30rem)"
           />
         </div>
 

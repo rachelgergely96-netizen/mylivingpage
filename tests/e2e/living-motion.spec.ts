@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("large Living Page previews expose sharp keyboard-operable chapter navigation", async ({
+test("embedded Living Page previews expose sharp keyboard-operable chapter navigation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -8,14 +8,11 @@ test("large Living Page previews expose sharp keyboard-operable chapter navigati
 
   await page.getByRole("tab", { name: /Referral asks/ }).click();
   const sample = page.locator("#career-switching-designer");
-  await sample.getByRole("button", { name: /Open full sample for Morgan Sample/ }).click();
-
-  const dialog = page.getByRole("dialog", { name: /Morgan Sample/ });
-  const rail = dialog.getByRole("navigation", { name: "Living Page chapters" });
+  const rail = sample.getByRole("navigation", { name: "Living Page chapters" });
   const projectsButton = rail.getByRole("button", { name: /Projects$/ });
 
   await expect(rail).toBeVisible();
-  await expect(dialog.locator("canvas[aria-hidden='true']")).toBeVisible();
+  await expect(sample.locator("canvas[aria-hidden='true']")).toBeVisible();
 
   await projectsButton.focus();
   await page.keyboard.press("Enter");
@@ -23,13 +20,13 @@ test("large Living Page previews expose sharp keyboard-operable chapter navigati
   await expect(projectsButton).toHaveAttribute("aria-current", "step");
   await expect
     .poll(() =>
-      dialog
+      sample
         .locator("[data-analytics-scroll-root='true']")
         .evaluate((element) => element.scrollTop),
     )
     .toBeGreaterThan(0);
   await expect(
-    dialog.locator("[data-analytics-section='projects']"),
+    sample.locator("[data-analytics-section='projects']"),
   ).toHaveAttribute("data-motion-active", "true");
 });
 
@@ -42,10 +39,7 @@ test("mobile chapter navigation stays compact and honors reduced motion", async 
 
   await page.getByRole("tab", { name: /Referral asks/ }).click();
   const sample = page.locator("#career-switching-designer");
-  await sample.getByRole("button", { name: /Open full sample for Morgan Sample/ }).click();
-
-  const dialog = page.getByRole("dialog", { name: /Morgan Sample/ });
-  const rail = dialog.getByRole("navigation", { name: "Living Page chapters" });
+  const rail = sample.getByRole("navigation", { name: "Living Page chapters" });
   const nextButton = rail.getByRole("button", { name: "Next chapter: Impact" });
 
   await expect(rail).toBeVisible();
@@ -53,7 +47,7 @@ test("mobile chapter navigation stays compact and honors reduced motion", async 
   await expect(rail.locator("span[aria-current='step']")).toHaveText("Impact");
   await expect
     .poll(() =>
-      dialog
+      sample
         .locator("[data-analytics-scroll-root='true']")
         .evaluate((element) => element.scrollTop),
     )

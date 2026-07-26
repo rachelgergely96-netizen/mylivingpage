@@ -22,8 +22,9 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
     page.getByRole("heading", { name: "Software engineer re-entering the market" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Open full sample for Avery Sample/ }),
+    page.locator("[data-example-living-page] [data-resume-density='full']"),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Open full sample/ })).toHaveCount(0);
 
   await page.getByRole("tab", { name: /Referral asks/ }).click();
   await expect(

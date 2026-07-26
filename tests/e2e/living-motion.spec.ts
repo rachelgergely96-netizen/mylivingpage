@@ -6,7 +6,7 @@ test("large Living Page previews expose sharp keyboard-operable chapter navigati
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/examples");
 
-  await page.getByRole("tab", { name: /A referral asks/ }).click();
+  await page.getByRole("tab", { name: /Referral asks/ }).click();
   const sample = page.locator("#career-switching-designer");
   await sample.getByRole("button", { name: /Open full sample for Morgan Sample/ }).click();
 
@@ -40,7 +40,7 @@ test("mobile chapter navigation stays compact and honors reduced motion", async 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/examples");
 
-  await page.getByRole("tab", { name: /A referral asks/ }).click();
+  await page.getByRole("tab", { name: /Referral asks/ }).click();
   const sample = page.locator("#career-switching-designer");
   await sample.getByRole("button", { name: /Open full sample for Morgan Sample/ }).click();
 

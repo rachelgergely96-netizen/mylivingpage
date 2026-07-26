@@ -5,16 +5,16 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
 
   await expect(
     page.getByRole("heading", {
-      name: "See what someone sees when they open your link.",
+      name: "See a Living Page in action.",
     }),
   ).toBeVisible();
   await expect(
-    page.getByText("Use your résumé PDF when an application asks for a file.", {
+    page.getByText("Keep your résumé for file uploads.", {
       exact: false,
     }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: /After applying/ })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /A recruiter is interested/ })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: /Recruiter interested/ })).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -25,13 +25,13 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
     page.getByRole("button", { name: /Open full sample for Avery Sample/ }),
   ).toBeVisible();
 
-  await page.getByRole("tab", { name: /A referral asks/ }).click();
+  await page.getByRole("tab", { name: /Referral asks/ }).click();
   await expect(
     page.getByRole("heading", { name: "Designer moving into a new in-house role" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Turn your résumé into a page you can send as one link.",
+      name: "Turn your résumé into one link.",
     }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Create my free page" }).first()).toHaveAttribute(

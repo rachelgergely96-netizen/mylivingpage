@@ -16,6 +16,7 @@ interface SamplePageCardProps {
   anchorId?: string;
   interactivePreview?: boolean;
   previewHeight?: number | string;
+  showcase?: boolean;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -34,6 +35,7 @@ export default function SamplePageCard({
   anchorId,
   interactivePreview = false,
   previewHeight = 380,
+  showcase = false,
 }: SamplePageCardProps) {
   const theme = THEME_MAP[sample.demo.themeId];
   const sectionIds = getLivingPageSectionIds(sample.demo.data);
@@ -139,7 +141,7 @@ export default function SamplePageCard({
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 lg:p-7">
+        <div className={showcase ? "p-4 sm:p-5" : "p-5 sm:p-6 lg:p-7"}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="site-badge">{sample.audienceLabel}</span>
             <span className="text-xs text-site-muted">Made-up profile</span>
@@ -152,29 +154,37 @@ export default function SamplePageCard({
             </p>
           </div>
 
-          <p className="mt-5 text-base leading-7 text-site-secondary">
-            {sample.humanBenefit}
-          </p>
+          {showcase ? (
+            <p className="mt-4 border-l-2 border-site-action pl-3 text-sm leading-6 text-site-secondary">
+              Send the page when a person can click. Keep your résumé for file uploads.
+            </p>
+          ) : (
+            <>
+              <p className="mt-5 text-base leading-7 text-site-secondary">
+                {sample.humanBenefit}
+              </p>
 
-          <dl className="mt-5 grid gap-px bg-site-border text-sm leading-6 text-site-secondary sm:grid-cols-2">
-            <div className="bg-site-surface p-4">
-              <dt className="site-eyebrow">Send it when</dt>
-              <dd className="mt-2">{sample.bestUsedAfter}</dd>
-            </div>
-            <div className="bg-site-surface p-4">
-              <dt className="site-eyebrow">Keep your résumé PDF for</dt>
-              <dd className="mt-2">{sample.resumeBoundary}</dd>
-            </div>
-          </dl>
+              <dl className="mt-5 grid gap-px bg-site-border text-sm leading-6 text-site-secondary sm:grid-cols-2">
+                <div className="bg-site-surface p-4">
+                  <dt className="site-eyebrow">Send it when</dt>
+                  <dd className="mt-2">{sample.bestUsedAfter}</dd>
+                </div>
+                <div className="bg-site-surface p-4">
+                  <dt className="site-eyebrow">Keep your résumé PDF for</dt>
+                  <dd className="mt-2">{sample.resumeBoundary}</dd>
+                </div>
+              </dl>
 
-          {previewHref ? (
-            <Link
-              href={previewHref}
-              className="mt-5 inline-flex text-sm font-semibold text-site-action hover:text-site-action-hover"
-            >
-              See this sample in context
-            </Link>
-          ) : null}
+              {previewHref ? (
+                <Link
+                  href={previewHref}
+                  className="mt-5 inline-flex text-sm font-semibold text-site-action hover:text-site-action-hover"
+                >
+                  See this sample in context
+                </Link>
+              ) : null}
+            </>
+          )}
         </div>
       </article>
 

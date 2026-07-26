@@ -35,11 +35,24 @@ function getMomentLabel(groupId: string) {
     case "after-you-apply":
       return "After applying";
     case "when-a-recruiter-clicks":
-      return "A recruiter is interested";
+      return "Recruiter interested";
     case "when-a-referral-asks":
-      return "A referral asks";
+      return "Referral asks";
     default:
-      return "Choose this moment";
+      return "Another moment";
+  }
+}
+
+function getMomentHelper(groupId: string) {
+  switch (groupId) {
+    case "after-you-apply":
+      return "A clear follow-up after you apply.";
+    case "when-a-recruiter-clicks":
+      return "They have your résumé; give them one scannable link.";
+    case "when-a-referral-asks":
+      return "A warm introduction they can understand and forward.";
+    default:
+      return "One link that makes your work easier to understand.";
   }
 }
 
@@ -147,142 +160,118 @@ export default function ExamplesExperience({
       data-examples-experience
       data-site-ui
     >
-      <div className={styles.controlPanel}>
-        <div id="examples-hero-intro">
-          <p className="site-eyebrow">Realistic sample pages</p>
+      <header id="examples-hero-intro" className={styles.intro}>
+        <div>
+          <p className="site-eyebrow">Sample Living Pages</p>
           <h1 id="examples-title" className={styles.title}>
-            See what someone sees when they open your link.
+            See a Living Page in action.
           </h1>
           <p className={styles.lead}>
-            Choose a situation, then open the sample to see how a Living Page helps someone
-            understand your work without replacing your résumé.
+            Choose an example, then open the full page to explore it.
           </p>
           <p className={styles.disclosure}>
-            These use made-up names and sample information. They are examples, not customer
-            stories.
+            Made-up profiles for illustration — not customer stories.
           </p>
-
+        </div>
+        <div className={styles.introActions}>
           <div className={styles.heroActions}>
             <Link href={signupHref} className="site-button site-button-primary">
               Create my free page
             </Link>
-            <a href="#choose-a-moment" className="site-button site-button-secondary">
-              Choose a situation
-            </a>
           </div>
-
-          <div className={styles.trustStrip} aria-label="Product assurances">
-            <span>Completely free</span>
-            <span>Private until published</span>
-            <span>Keep using your résumé</span>
-          </div>
-        </div>
-
-        <div className={styles.signalBlock} aria-label="What happens after you share your link">
-          <p className="site-eyebrow">What the link changes</p>
-          <div key={activeSample.id} className={styles.signalFlow}>
-            <span className={styles.signalPulse} aria-hidden="true" />
-            <span>
-              <small>01</small>
-              You send one link
-            </span>
-            <span>
-              <small>02</small>
-              They open it
-            </span>
-            <span>
-              <small>03</small>
-              They understand faster
-            </span>
-          </div>
-          <p className={styles.resumeRule}>
-            Use your résumé PDF when an application asks for a file. Use your Living Page when
-            a person can click.
+          <p className={styles.trustLine}>
+            Free · Private until published · Keep your résumé
           </p>
         </div>
+      </header>
 
-        <div id="choose-a-moment" className={styles.momentPicker}>
-          <div className={styles.pickerHeading}>
-            <p className="site-eyebrow">Choose a situation</p>
-            <h2>When would you send your link?</h2>
-          </div>
+      <div className={styles.showcase}>
+        <div
+          id="example-stage"
+          key={`${activeGroup.id}-${activeSample.id}`}
+          className={styles.stage}
+          role="tabpanel"
+          aria-labelledby={`example-moment-${activeGroup.id}`}
+          data-example-stage
+        >
+          <SamplePageCard
+            sample={activeSample}
+            anchorId={activeSample.id}
+            previewHeight="clamp(24rem, 43vw, 34rem)"
+            showcase
+            signupHref={`/signup?ref=examples_${activeSample.id}&next=/create`}
+          />
+        </div>
 
-          <div
-            className={styles.momentTabs}
-            role="tablist"
-            aria-label="Choose when you would share a Living Page"
-          >
-            {sampleGroups.map((group, index) => {
-              const selected = group.id === activeGroup.id;
-              return (
-                <button
-                  key={group.id}
-                  ref={(node) => {
-                    groupTabRefs.current[index] = node;
-                  }}
-                  id={`example-moment-${group.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-controls="example-stage"
-                  tabIndex={selected ? 0 : -1}
-                  data-active={selected}
-                  onClick={() => selectGroup(group)}
-                  onKeyDown={(event) => handleGroupKeyDown(event, index)}
-                >
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{getMomentLabel(group.id)}</strong>
-                  <small>{group.title}</small>
-                </button>
-              );
-            })}
-          </div>
+        <aside className={styles.controlPanel} data-example-switcher>
+          <div id="choose-a-moment" className={styles.momentPicker}>
+            <div className={styles.pickerHeading}>
+              <p className="site-eyebrow">Choose an example</p>
+              <h2>When would you send it?</h2>
+            </div>
 
-          {activeGroup.samples.length > 1 ? (
             <div
-              className={styles.sampleChoices}
-              role="group"
-              aria-label="Choose a sample role"
+              className={styles.momentTabs}
+              role="tablist"
+              aria-label="Choose when you would share a Living Page"
             >
-              {activeGroup.samples.map((sample) => {
-                const selected = sample.id === activeSample.id;
+              {sampleGroups.map((group, index) => {
+                const selected = group.id === activeGroup.id;
                 return (
                   <button
-                    key={sample.id}
+                    key={group.id}
+                    ref={(node) => {
+                      groupTabRefs.current[index] = node;
+                    }}
+                    id={`example-moment-${group.id}`}
                     type="button"
-                    aria-pressed={selected}
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls="example-stage"
+                    tabIndex={selected ? 0 : -1}
                     data-active={selected}
-                    onClick={() => selectSample(sample)}
+                    onClick={() => selectGroup(group)}
+                    onKeyDown={(event) => handleGroupKeyDown(event, index)}
                   >
-                    <span>{sample.demo.data.headline}</span>
-                    <small>{sample.audienceLabel}</small>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{getMomentLabel(group.id)}</strong>
                   </button>
                 );
               })}
             </div>
-          ) : null}
 
-          <p className={styles.selectionStatus} role="status" aria-live="polite">
-            Now showing: <strong>{activeSample.roleLabel}</strong>
-          </p>
-          <p className={styles.groupDescription}>{activeGroup.description}</p>
-        </div>
-      </div>
+            {activeGroup.samples.length > 1 ? (
+              <div
+                className={styles.sampleChoices}
+                role="group"
+                aria-label="Choose a sample role"
+              >
+                {activeGroup.samples.map((sample) => {
+                  const selected = sample.id === activeSample.id;
+                  return (
+                    <button
+                      key={sample.id}
+                      type="button"
+                      aria-pressed={selected}
+                      data-active={selected}
+                      onClick={() => selectSample(sample)}
+                    >
+                      <span>{sample.demo.data.headline}</span>
+                      <small>{sample.audienceLabel}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
 
-      <div
-        id="example-stage"
-        key={`${activeGroup.id}-${activeSample.id}`}
-        className={styles.stage}
-        role="tabpanel"
-        aria-labelledby={`example-moment-${activeGroup.id}`}
-        data-example-stage
-      >
-        <SamplePageCard
-          sample={activeSample}
-          anchorId={activeSample.id}
-          previewHeight="clamp(22rem, 42vw, 32rem)"
-          signupHref={`/signup?ref=examples_${activeSample.id}&next=/create`}
-        />
+            <p className={styles.selectionStatus} role="status" aria-live="polite">
+              Showing: <strong>{activeSample.roleLabel}</strong>
+            </p>
+            <p className={styles.groupDescription}>
+              {getMomentHelper(activeGroup.id)}
+            </p>
+          </div>
+        </aside>
       </div>
     </section>
   );

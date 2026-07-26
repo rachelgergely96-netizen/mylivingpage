@@ -36,10 +36,7 @@ function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
   };
 }
 
-function buildArtwork(
-  themeId: ThemeId,
-  resume: ResumeData = buildResume(),
-) {
+function buildArtwork(themeId: ThemeId, resume: ResumeData = buildResume()) {
   const model = buildShareCardModel({
     appUrl: "https://www.mylivingpage.com",
     resume,
@@ -80,9 +77,7 @@ describe("ShareCardArtwork", () => {
     expect(markup).toContain("data-share-card-panel");
     expect(markup).not.toContain("Georgia");
     expect(markup).not.toContain("--font-playfair");
-    expect(markup).toContain(
-      `aria-label="QR code for ${model.displayUrl}"`,
-    );
+    expect(markup).toContain(`aria-label="QR code for ${model.displayUrl}"`);
   });
 
   it.each([
@@ -101,21 +96,19 @@ describe("ShareCardArtwork", () => {
     (themeId) => {
       const { markup, visual } = buildArtwork(themeId);
 
-      expect(markup).toContain(
-        `data-share-card-theme-id="${themeId}"`,
-      );
+      expect(markup).toContain(`data-share-card-theme-id="${themeId}"`);
       expect(markup).toContain(
         `data-share-card-collection="${visual.collection}"`,
       );
       expect(markup).toContain('data-share-card-skeleton="canonical"');
-      expect(markup).toContain('data-share-card-skeleton-layer="signal-frame"');
+      expect(markup).toContain(
+        'data-share-card-skeleton-layer="circuit-traces"',
+      );
       expect(markup).toContain("MyLivingPage / Living Resume");
       expect(markup).not.toContain("data-share-card-primitive");
       expect(markup).not.toContain("data-share-card-frame");
       expect(markup).not.toContain("data-share-card-profile");
-      expect(markup).toContain(
-        `share card in the ${visual.themeName} theme`,
-      );
+      expect(markup).toContain(`share card in the ${visual.themeName} theme`);
     },
   );
 
@@ -134,18 +127,20 @@ describe("ShareCardArtwork", () => {
     expect(markup).not.toContain("--font-playfair");
   });
 
-  it("keeps the holographic palette theme-led while protecting text contrast", () => {
+  it("keeps the glass shell theme-led while protecting text contrast", () => {
     const visual = getShareCardVisual("velvet");
     const treatment = getShareCardFinish("holographic", visual);
 
-    expect(treatment.panelBackground).toContain(visual.gradientFrom);
-    expect(treatment.panelBackground).toContain(visual.gradientMid);
-    expect(treatment.panelBackground).toContain(visual.gradientTo);
-    expect(treatment.textMuted).toBe("rgba(240,243,255,0.9)");
-    expect(treatment.bodyScrim).toMatchObject({ width: "78%" });
-    expect(treatment.bodyScrim?.background).toContain("rgba(3,6,12,0.88)");
-    expect(treatment.chromeSurface).toBe("rgba(4,7,14,0.78)");
-    expect(treatment.footerBackground).toBe("rgba(4,7,14,0.96)");
+    expect(treatment.outerBackground).toBe("#050507");
+    expect(treatment.panelBackground).toContain("rgba(20,24,31,0.96)");
+    expect(treatment.accent).toBe(visual.accent);
+    expect(treatment.accentBright).toBe(visual.accentBright);
+    expect(treatment.textMuted).toBe("rgba(232,237,248,0.9)");
+    expect(treatment.bodyScrim).toMatchObject({ width: "70%" });
+    expect(treatment.bodyScrim?.background).toContain("rgba(3,6,11,0.82)");
+    expect(treatment.chromeSurface).toBe("rgba(3,7,13,0.68)");
+    expect(treatment.footerBackground).toContain("rgba(3,7,13,0.96)");
+    expect(treatment.panelBoxShadow).toContain("inset 0 0 0 7px");
   });
 
   it.each(SHARE_CARD_FINISHES)(
@@ -165,7 +160,9 @@ describe("ShareCardArtwork", () => {
       );
 
       expect(markup).toContain('data-share-card-skeleton="canonical"');
-      expect(markup).toContain('data-share-card-skeleton-layer="signal-frame"');
+      expect(markup).toContain(
+        'data-share-card-skeleton-layer="circuit-traces"',
+      );
       expect(markup).not.toContain("data-share-card-primitive");
     },
   );
@@ -187,7 +184,12 @@ describe("ShareCardArtwork", () => {
         skills: [
           {
             category: "Focus",
-            items: [longTag, `${longTag} II`, `${longTag} III`, `${longTag} IV`],
+            items: [
+              longTag,
+              `${longTag} II`,
+              `${longTag} III`,
+              `${longTag} IV`,
+            ],
           },
         ],
       }),
@@ -221,43 +223,37 @@ describe("ShareCardArtwork", () => {
     expect(qrMarkup).not.toContain("border-radius");
   });
 
-  it(
-    "renders the complete canonical card through ImageResponse",
-    async () => {
-      const model = buildShareCardModel({
-        appUrl: "https://www.mylivingpage.com",
-        resume: buildResume({
-          skills: [
-            {
-              category: "Focus",
-              items: ["Product Architecture", "Behavioral Systems Design"],
-            },
-          ],
-        }),
-        slug: "rachel-gergely",
-      });
-      const visual = getShareCardVisual("atelier");
-      const response = new ImageResponse(
-        (
-          <ShareCardArtwork
-            bodyFontFamily="sans-serif"
-            model={model}
-            visual={visual}
-          />
-        ),
-        SHARE_CARD_SIZE,
-      );
-      const bytes = new Uint8Array(await response.arrayBuffer());
+  it("renders the complete canonical card through ImageResponse", async () => {
+    const model = buildShareCardModel({
+      appUrl: "https://www.mylivingpage.com",
+      resume: buildResume({
+        skills: [
+          {
+            category: "Focus",
+            items: ["Product Architecture", "Behavioral Systems Design"],
+          },
+        ],
+      }),
+      slug: "rachel-gergely",
+    });
+    const visual = getShareCardVisual("atelier");
+    const response = new ImageResponse(
+      <ShareCardArtwork
+        bodyFontFamily="sans-serif"
+        model={model}
+        visual={visual}
+      />,
+      SHARE_CARD_SIZE,
+    );
+    const bytes = new Uint8Array(await response.arrayBuffer());
 
-      expect(response.headers.get("content-type")).toBe("image/png");
-      expect(Array.from(bytes.slice(0, 8))).toEqual([
-        137, 80, 78, 71, 13, 10, 26, 10,
-      ]);
-      expect(readPngDimensions(bytes)).toEqual(SHARE_CARD_SIZE);
-      expect(bytes.byteLength).toBeGreaterThan(10_000);
-    },
-    45_000,
-  );
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(Array.from(bytes.slice(0, 8))).toEqual([
+      137, 80, 78, 71, 13, 10, 26, 10,
+    ]);
+    expect(readPngDimensions(bytes)).toEqual(SHARE_CARD_SIZE);
+    expect(bytes.byteLength).toBeGreaterThan(10_000);
+  }, 45_000);
 
   it("only emits the moving shine when explicitly animated (export paths stay static)", () => {
     const model = buildShareCardModel({
@@ -271,8 +267,9 @@ describe("ShareCardArtwork", () => {
     const staticMarkup = renderToStaticMarkup(
       <ShareCardArtwork finish="holographic" model={model} visual={visual} />,
     );
-    expect(staticMarkup).not.toContain("share-card-shine");
-    expect(staticMarkup).not.toContain("share-card-diffraction");
+    expect(staticMarkup).not.toContain("share-card-glass-ambient");
+    expect(staticMarkup).not.toContain("share-card-glass-specular");
+    expect(staticMarkup).not.toContain("share-card-glass-caustic");
     expect(staticMarkup).not.toContain("data-share-card-light-stage");
 
     // Live preview opts in.
@@ -284,23 +281,36 @@ describe("ShareCardArtwork", () => {
         visual={visual}
       />,
     );
-    expect(liveMarkup).toContain("share-card-shine");
-    expect(liveMarkup).toContain("share-card-diffraction");
+    expect(liveMarkup).toContain("share-card-glass-ambient");
+    expect(liveMarkup).toContain("share-card-glass-specular");
+    expect(liveMarkup).toContain("share-card-glass-caustic");
+    expect(liveMarkup).toContain('data-share-card-glass-shell="acrylic"');
     expect(liveMarkup).toContain("data-share-card-light-stage");
 
     // Classic has no shine even when animated.
     const classicMarkup = renderToStaticMarkup(
-      <ShareCardArtwork animatedShine finish="classic" model={model} visual={visual} />,
+      <ShareCardArtwork
+        animatedShine
+        finish="classic"
+        model={model}
+        visual={visual}
+      />,
     );
-    expect(classicMarkup).not.toContain("share-card-shine");
+    expect(classicMarkup).not.toContain("share-card-glass-specular");
     expect(classicMarkup).not.toContain("share-card-metal-shine");
-    expect(classicMarkup).not.toContain("share-card-diffraction");
+    expect(classicMarkup).not.toContain("share-card-glass-caustic");
 
     const metalMarkup = renderToStaticMarkup(
-      <ShareCardArtwork animatedShine finish="metal" model={model} visual={visual} />,
+      <ShareCardArtwork
+        animatedShine
+        finish="metal"
+        model={model}
+        visual={visual}
+      />,
     );
     expect(metalMarkup).toContain("share-card-metal-shine");
-    expect(metalMarkup).not.toContain("share-card-diffraction");
+    expect(metalMarkup).not.toContain("share-card-glass-ambient");
+    expect(metalMarkup).not.toContain("share-card-glass-caustic");
   });
 
   it.each(["metal", "holographic"] as const)(
@@ -312,14 +322,12 @@ describe("ShareCardArtwork", () => {
         slug: "rachel-gergely",
       });
       const response = new ImageResponse(
-        (
-          <ShareCardArtwork
-            bodyFontFamily="sans-serif"
-            finish={finish}
-            model={model}
-            visual={getShareCardVisual("obsidian")}
-          />
-        ),
+        <ShareCardArtwork
+          bodyFontFamily="sans-serif"
+          finish={finish}
+          model={model}
+          visual={getShareCardVisual("obsidian")}
+        />,
         SHARE_CARD_SIZE,
       );
       const bytes = new Uint8Array(await response.arrayBuffer());

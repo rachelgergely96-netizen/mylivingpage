@@ -63,8 +63,11 @@ export function ShareCardArtwork({
         display: "flex",
         fontFamily: bodyFontFamily,
         height: SHARE_CARD_SIZE.height,
-        overflow: "hidden",
-        padding: 32,
+        overflow:
+          animatedShine && treatment.id === "holographic"
+            ? "visible"
+            : "hidden",
+        padding: 40,
         position: "relative",
         width: SHARE_CARD_SIZE.width,
         ...style,
@@ -100,6 +103,9 @@ export function ShareCardArtwork({
 
       <div
         data-share-card-panel
+        data-share-card-glass-shell={
+          treatment.id === "holographic" ? "acrylic" : undefined
+        }
         style={{
           background: treatment.panelBackground,
           border: treatment.panelBorder,
@@ -130,6 +136,83 @@ export function ShareCardArtwork({
         ))}
         {treatment.specular ? <div style={treatment.specular} /> : null}
 
+        {animatedShine && treatment.shine ? (
+          <div
+            data-share-card-light-stage
+            style={{
+              bottom: 0,
+              left: 0,
+              overflow: "hidden",
+              pointerEvents: "none",
+              position: "absolute",
+              right: 0,
+              top: 0,
+            }}
+          >
+            {treatment.id === "holographic" ? (
+              <div
+                className="share-card-glass-ambient"
+                style={{
+                  background: `radial-gradient(circle at 54% 38%, rgba(255,255,255,0.2) 0%, ${visual.glow} 18%, rgba(0,0,0,0) 54%)`,
+                  height: "124%",
+                  left: "-12%",
+                  position: "absolute",
+                  top: "-12%",
+                  width: "124%",
+                }}
+              />
+            ) : null}
+            <div
+              className={
+                treatment.id === "metal"
+                  ? "share-card-metal-shine"
+                  : "share-card-glass-specular"
+              }
+              style={{
+                background: treatment.shine.background,
+                height: "180%",
+                left: "42%",
+                position: "absolute",
+                top: "-40%",
+                transform: `translate3d(var(--share-card-specular-x, 24px), 0, 0) rotate(${treatment.shine.rotateDeg}deg)`,
+                transformOrigin: "center",
+                width: treatment.shine.width,
+              }}
+            />
+            {treatment.shine.secondaryBackground ? (
+              <div
+                className="share-card-glass-caustic"
+                style={{
+                  background: treatment.shine.secondaryBackground,
+                  height: "190%",
+                  left: "61%",
+                  position: "absolute",
+                  top: "-45%",
+                  transform: `translate3d(var(--share-card-caustic-x, -18px), 0, 0) rotate(${treatment.shine.rotateDeg - 3}deg)`,
+                  transformOrigin: "center",
+                  width: treatment.shine.secondaryWidth ?? "16%",
+                }}
+              />
+            ) : null}
+            {treatment.id === "holographic" ? (
+              <div
+                className="share-card-glass-rim-light"
+                style={{
+                  border: "2px solid rgba(224,242,255,0.44)",
+                  borderRadius: treatment.panelRadius - 3,
+                  bottom: 3,
+                  boxShadow:
+                    "inset 0 1px 0 rgba(255,255,255,0.28), inset -1px 0 0 rgba(255,110,220,0.2)",
+                  left: 3,
+                  position: "absolute",
+                  right: 3,
+                  top: 3,
+                }}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
         {treatment.bodyScrim ? (
           <div style={treatment.bodyScrim} />
         ) : treatment.id === "classic" ? (
@@ -145,55 +228,6 @@ export function ShareCardArtwork({
               top: 0,
             }}
           />
-        ) : null}
-
-        {animatedShine && treatment.shine ? (
-          <div
-            data-share-card-light-stage
-            style={{
-              height: "190%",
-              isolation: "isolate",
-              left: "-18%",
-              overflow: "visible",
-              pointerEvents: "none",
-              position: "absolute",
-              top: "-45%",
-              transform: `rotate(${treatment.shine.rotateDeg}deg)`,
-              transformOrigin: "center",
-              width: "136%",
-            }}
-          >
-            <div
-              className={
-                treatment.id === "metal"
-                  ? "share-card-metal-shine"
-                  : "share-card-shine"
-              }
-              style={{
-                background: treatment.shine.background,
-                height: "100%",
-                left: 0,
-                opacity: 0,
-                position: "absolute",
-                top: 0,
-                width: treatment.shine.width,
-              }}
-            />
-            {treatment.shine.secondaryBackground ? (
-              <div
-                className="share-card-diffraction"
-                style={{
-                  background: treatment.shine.secondaryBackground,
-                  height: "100%",
-                  left: 0,
-                  opacity: 0,
-                  position: "absolute",
-                  top: 0,
-                  width: treatment.shine.secondaryWidth ?? "16%",
-                }}
-              />
-            ) : null}
-          </div>
         ) : null}
 
         <div
@@ -303,42 +337,58 @@ export function ShareCardArtwork({
             </div>
           </div>
 
-          {model.avatarUrl ? (
-            <img
-              alt=""
-              crossOrigin="anonymous"
-              height={126}
-              src={model.avatarUrl}
-              width={126}
-              style={{
-                border: `3px solid ${treatment.avatarBorder}`,
-                boxShadow: treatment.showGlowOrbs ? `0 0 36px ${visual.glow}` : "0 2px 12px rgba(0,0,0,0.5)",
-                flex: "none",
-                height: 126,
-                objectFit: "cover",
-                width: 126,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                alignItems: "center",
-                background: treatment.monogramBackground,
-                boxShadow: treatment.showGlowOrbs ? `0 0 36px ${visual.glow}` : "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 12px rgba(0,0,0,0.5)",
-                color: treatment.monogramColor,
-                display: "flex",
-                flex: "none",
-                fontFamily: bodyFontFamily,
-                fontSize: 49,
-                fontWeight: 700,
-                height: 126,
-                justifyContent: "center",
-                width: 126,
-              }}
-            >
-              {model.initial}
-            </div>
-          )}
+          <div
+            data-share-card-photo-well
+            style={{
+              alignItems: "center",
+              background: treatment.chromeSurface,
+              border: `1px solid ${treatment.avatarBorder}`,
+              boxShadow:
+                treatment.id === "holographic"
+                  ? `inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -2px 0 rgba(0,0,0,0.52), 0 12px 28px ${visual.glow}`
+                  : "inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 12px rgba(0,0,0,0.5)",
+              boxSizing: "border-box",
+              display: "flex",
+              flex: "none",
+              height: 126,
+              justifyContent: "center",
+              overflow: "hidden",
+              padding: 6,
+              width: 126,
+            }}
+          >
+            {model.avatarUrl ? (
+              <img
+                alt=""
+                crossOrigin="anonymous"
+                height={112}
+                src={model.avatarUrl}
+                width={112}
+                style={{
+                  height: 112,
+                  objectFit: "cover",
+                  width: 112,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  alignItems: "center",
+                  background: treatment.monogramBackground,
+                  color: treatment.monogramColor,
+                  display: "flex",
+                  fontFamily: bodyFontFamily,
+                  fontSize: 45,
+                  fontWeight: 700,
+                  height: 112,
+                  justifyContent: "center",
+                  width: 112,
+                }}
+              >
+                {model.initial}
+              </div>
+            )}
+          </div>
         </div>
 
         {model.tags.length ? (
@@ -381,6 +431,12 @@ export function ShareCardArtwork({
             alignItems: "center",
             background: treatment.footerBackground,
             border: `1px solid ${treatment.chromeBorder}`,
+            ...(treatment.id === "holographic"
+              ? {
+                  boxShadow:
+                    "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.48), 0 10px 28px rgba(0,0,0,0.26)",
+                }
+              : {}),
             display: "flex",
             gap: 22,
             justifyContent: "space-between",

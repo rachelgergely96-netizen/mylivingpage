@@ -6,8 +6,8 @@ import type { ShareCardVisual } from "@/lib/share-card";
  * theme-derived {@link ShareCardVisual}: the theme still supplies the signature
  * color, the finish supplies the material. "classic" reproduces the original
  * look exactly (so the OG/social image is unchanged until a finish is chosen);
- * "metal" is a brushed black-metal card; "holographic" is an iridescent foil
- * invitation.
+ * "metal" is a brushed black-metal card; "holographic" is the product's
+ * transparent acrylic-glass identity card.
  *
  * Every layer here is Satori-safe — absolutely-positioned gradient/box-shadow
  * divs only, no filters, blend modes, or conic gradients — because the same
@@ -25,7 +25,7 @@ export const SHARE_CARD_FINISHES: ShareCardFinishId[] = [
 export const SHARE_CARD_FINISH_LABELS: Record<ShareCardFinishId, string> = {
   classic: "Classic",
   metal: "Metal",
-  holographic: "Holographic",
+  holographic: "Glass",
 };
 
 export interface ShareCardFinishTreatment {
@@ -49,7 +49,7 @@ export interface ShareCardFinishTreatment {
   sheets: CSSProperties[];
   /** Optional rotated specular highlight band (metal). */
   specular: CSSProperties | null;
-  /** Optional left-side scrim that protects text legibility (holographic). */
+  /** Optional smoked inner laminate that protects text legibility. */
   bodyScrim: CSSProperties | null;
   emblem: "chip" | "seal" | null;
   /** Manufactured bottom edge: a debossed serial line. */
@@ -210,71 +210,90 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
   };
 }
 
-function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
+function holographicTreatment(
+  visual: ShareCardVisual,
+): ShareCardFinishTreatment {
   const accent = parseRgb(visual.accent);
   const accentBright = parseRgb(visual.accentBright);
   return {
     id: "holographic",
-    outerBackground: visual.background,
-    panelBackground: `linear-gradient(145deg, ${visual.gradientFrom} 0%, ${visual.gradientMid} 52%, ${visual.gradientTo} 100%)`,
-    panelBorder: `1px solid ${visual.border}`,
-    panelBoxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.45), inset 1px 0 0 rgba(255,255,255,0.12), inset -1px 0 0 rgba(180,120,255,0.18), 0 26px 74px ${rgba(accent, 0.32)}`,
-    panelRadius: 12,
-    skeletonOpacity: 0.42,
-    showGlowOrbs: true,
+    outerBackground: "#050507",
+    panelBackground:
+      "linear-gradient(145deg, rgba(20,24,31,0.96) 0%, rgba(7,10,16,0.98) 48%, rgba(11,14,20,0.97) 100%)",
+    panelBorder: "2px solid rgba(224,238,255,0.46)",
+    panelBoxShadow: `inset 0 2px 0 rgba(255,255,255,0.58), inset 2px 0 0 rgba(198,238,255,0.3), inset 0 -3px 0 rgba(0,0,0,0.62), inset -3px 0 0 rgba(255,108,224,0.2), inset 0 0 0 7px rgba(214,232,255,0.08), 0 10px 22px rgba(0,0,0,0.56), 0 34px 86px rgba(0,0,0,0.72), 0 42px 96px ${rgba(accent, 0.14)}`,
+    panelRadius: 18,
+    skeletonOpacity: 0.64,
+    showGlowOrbs: false,
     text: "#f6f7ff",
-    textMuted: "rgba(240,243,255,0.9)",
-    accent: visual.accentBright,
+    textMuted: "rgba(232,237,248,0.9)",
+    accent: visual.accent,
     accentBright: visual.accentBright,
-    chromeBorder: "rgba(255,255,255,0.34)",
-    chromeSurface: "rgba(4,7,14,0.78)",
+    chromeBorder: "rgba(220,235,255,0.3)",
+    chromeSurface: "rgba(3,7,13,0.68)",
     sheets: [
-      // A′ — full-bleed accent wash so the whole foil casts toward the theme
-      // color (ember warm, atlas cyan, velvet rose) before the spectrum bands.
+      // A nested clear rim is the manufactured bevel face. The geometry is
+      // identical across every theme; only the refracted color changes.
+      {
+        position: "absolute",
+        top: 7,
+        right: 7,
+        bottom: 7,
+        left: 7,
+        border: "1px solid rgba(218,235,255,0.24)",
+        borderRadius: 12,
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.46)",
+      },
+      // Theme color occupies the glass volume rather than the outer stage.
       {
         ...FULL_BLEED,
-        background: `linear-gradient(155deg, ${rgba(accent, 0.14)} 0%, ${rgba(accent, 0.06)} 45%, rgba(0,0,0,0) 78%)`,
-        opacity: 0.9,
+        background: `radial-gradient(ellipse 60% 74% at 82% 24%, ${rgba(accent, 0.18)} 0%, ${rgba(accentBright, 0.09)} 38%, rgba(0,0,0,0) 74%)`,
       },
-      // B — cool wash, accent-led (companion cyan/violet kept as side hues).
-      {
-        ...FULL_BLEED,
-        background: `linear-gradient(118deg, rgba(0,0,0,0) 18%, ${rgba(accent, 0.28)} 38%, rgba(120,220,255,0.14) 52%, rgba(180,120,255,0.10) 68%, rgba(0,0,0,0) 88%)`,
-        opacity: 0.62,
-      },
-      // C — warm cross, accent-led (gold/magenta demoted to flanks).
-      {
-        ...FULL_BLEED,
-        background: `linear-gradient(52deg, rgba(0,0,0,0) 8%, rgba(255,80,180,0.12) 28%, ${rgba(accent, 0.24)} 44%, rgba(255,200,80,0.14) 58%, rgba(0,0,0,0) 82%)`,
-        opacity: 0.5,
-      },
-      // D — fixed spectrum band, subordinate so the theme accent leads.
+      // A restrained inner smoke field gives the card real optical depth.
       {
         ...FULL_BLEED,
         background:
-          "linear-gradient(28deg, rgba(0,0,0,0) 24%, rgba(255,72,180,0.18) 37%, rgba(255,210,96,0.15) 43%, rgba(100,240,220,0.19) 50%, rgba(92,176,255,0.2) 57%, rgba(184,108,255,0.18) 64%, rgba(0,0,0,0) 78%)",
-        opacity: 0.42,
+          "linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 22%, rgba(0,0,0,0.18) 74%, rgba(0,0,0,0.42) 100%)",
       },
-      // D2 — fine diffraction grooves. At full export resolution these read
-      // as foil texture; scaled previews retain a quiet pearlescent grain.
+      // A fine laminated grain catches light without turning the card into
+      // printed foil.
       {
         ...FULL_BLEED,
         background:
-          "linear-gradient(112deg, rgba(0,0,0,0) 18%, rgba(255,255,255,0.07) 18.3%, rgba(0,0,0,0) 18.8%, rgba(0,0,0,0) 39%, rgba(120,220,255,0.06) 39.3%, rgba(0,0,0,0) 39.9%, rgba(0,0,0,0) 61%, rgba(255,255,255,0.06) 61.3%, rgba(0,0,0,0) 61.9%, rgba(0,0,0,0) 82%)",
-        opacity: 0.32,
+          "repeating-linear-gradient(92deg, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px, rgba(0,0,0,0.02) 1px, rgba(0,0,0,0.02) 3px)",
+        opacity: 0.54,
       },
-      // E — top-left light catch.
+      // Top bevel refraction: mostly clear, with sparse cyan/theme/magenta
+      // caustics restricted to the physical edge.
+      {
+        position: "absolute",
+        top: 1,
+        right: 18,
+        left: 18,
+        height: 8,
+        background:
+          "linear-gradient(90deg, rgba(116,238,255,0.08) 0%, rgba(255,255,255,0.56) 18%, rgba(255,255,255,0.08) 44%, rgba(255,116,220,0.3) 72%, rgba(116,224,255,0.22) 100%)",
+        borderRadius: 8,
+        opacity: 0.78,
+      },
+      // Right bevel carries the strongest prismatic split, safely outside the
+      // reading lane and QR quiet zone.
+      {
+        position: "absolute",
+        top: 18,
+        right: 1,
+        bottom: 18,
+        width: 9,
+        background: `linear-gradient(180deg, rgba(116,238,255,0.28) 0%, rgba(255,255,255,0.12) 24%, ${rgba(accentBright, 0.38)} 54%, rgba(255,104,220,0.28) 78%, rgba(255,255,255,0.18) 100%)`,
+        borderRadius: 8,
+      },
+      // Static export-safe specular at the glass rest pose. Live previews add
+      // a pointer-coupled light above it; PNG and OG stay deterministic.
       {
         ...FULL_BLEED,
-        background: `radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255,255,255,0.16) 0%, ${rgba(accentBright, 0.12)} 35%, rgba(0,0,0,0) 70%)`,
-        opacity: 0.45,
-      },
-      // F — a quiet opposing catch gives the foil dimensional continuity at
-      // the far corner without depending on the live animation.
-      {
-        ...FULL_BLEED,
-        background: `radial-gradient(ellipse 52% 64% at 92% 4%, rgba(255,255,255,0.13) 0%, ${rgba(accentBright, 0.1)} 34%, rgba(0,0,0,0) 72%)`,
-        opacity: 0.52,
+        background: `linear-gradient(112deg, rgba(0,0,0,0) 54%, rgba(112,238,255,0.05) 61%, rgba(255,255,255,0.15) 66%, ${rgba(accentBright, 0.09)} 69%, rgba(255,110,220,0.06) 72%, rgba(0,0,0,0) 80%)`,
+        opacity: 0.7,
       },
     ],
     specular: null,
@@ -283,25 +302,26 @@ function holographicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment
       top: 0,
       bottom: 0,
       left: 0,
-      width: "78%",
+      width: "70%",
       background:
-        "linear-gradient(90deg, rgba(3,6,12,0.88) 0%, rgba(3,6,12,0.76) 52%, rgba(3,6,12,0.34) 78%, rgba(3,6,12,0) 100%)",
+        "linear-gradient(90deg, rgba(3,6,11,0.82) 0%, rgba(3,6,11,0.76) 52%, rgba(3,6,11,0.42) 76%, rgba(3,6,11,0) 100%)",
     },
-    emblem: "seal",
-    signatureSerial: "MLP",
-    serialColor: "rgba(230,234,250,0.34)",
-    footerBackground: "rgba(4,7,14,0.96)",
-    monogramBackground: `linear-gradient(135deg, ${visual.accent}, ${visual.accentBright})`,
-    monogramColor: "#06080e",
-    avatarBorder: visual.accentBright,
+    emblem: null,
+    signatureSerial: "MLP GLASS",
+    serialColor: "rgba(214,226,244,0.4)",
+    footerBackground:
+      "linear-gradient(110deg, rgba(3,7,13,0.96) 0%, rgba(6,11,18,0.94) 68%, rgba(4,8,14,0.98) 100%)",
+    monogramBackground: `linear-gradient(145deg, rgba(255,255,255,0.18) 0%, ${rgba(accent, 0.74)} 48%, ${rgba(accentBright, 0.9)} 100%)`,
+    monogramColor: "#05070c",
+    avatarBorder: "rgba(225,239,255,0.52)",
     shine: {
-      rotateDeg: 26,
-      width: "34%",
-      background: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(255,76,184,0.06) 24%, ${rgba(accent, 0.2)} 39%, rgba(255,255,255,0.28) 49%, rgba(130,244,255,0.18) 56%, ${rgba(accentBright, 0.16)} 64%, rgba(190,118,255,0.08) 76%, rgba(0,0,0,0) 100%)`,
-      secondaryBackground: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(130,244,255,0.04) 28%, rgba(255,255,255,0.16) 48%, ${rgba(accentBright, 0.12)} 56%, rgba(255,76,184,0.05) 70%, rgba(0,0,0,0) 100%)`,
-      secondaryWidth: "16%",
+      rotateDeg: 24,
+      width: "28%",
+      background: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(112,238,255,0.04) 24%, rgba(255,255,255,0.24) 48%, ${rgba(accentBright, 0.16)} 58%, rgba(255,110,220,0.06) 72%, rgba(0,0,0,0) 100%)`,
+      secondaryBackground: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(112,238,255,0.1) 38%, rgba(255,255,255,0.3) 50%, ${rgba(accent, 0.14)} 60%, rgba(255,110,220,0.08) 70%, rgba(0,0,0,0) 100%)`,
+      secondaryWidth: "12%",
     },
-    nameTextShadow: "0 2px 22px rgba(0,0,0,0.72)",
+    nameTextShadow: "0 2px 18px rgba(0,0,0,0.58)",
   };
 }
 

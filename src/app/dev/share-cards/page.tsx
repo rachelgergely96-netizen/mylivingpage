@@ -19,7 +19,7 @@ import type { ThemeId } from "@/themes/types";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Share Card Finishes | MyLivingPage",
+  title: "Glass Share Cards | MyLivingPage",
   robots: { index: false, follow: false },
 };
 
@@ -62,10 +62,11 @@ export default function ShareCardFinishesPage() {
       <main className="site-container-wide py-8" id="main-content">
         <div className="mb-6 max-w-3xl">
           <p className="site-eyebrow">Premium finishes</p>
-          <h1 className="site-page-title mt-2">Metal &amp; holographic share cards</h1>
+          <h1 className="site-page-title mt-2">Glass share cards</h1>
           <p className="mt-3 text-sm leading-6 text-site-secondary">
-            Each row is one theme rendered in all three finishes. The theme still
-            supplies the signature color; the finish supplies the material.
+            Each row is one theme rendered in all three finishes. The theme
+            still supplies the signature color; the finish supplies the
+            material.
           </p>
         </div>
 
@@ -85,7 +86,7 @@ export default function ShareCardFinishesPage() {
                       </p>
                       <TiltCard
                         lift={14}
-                        max={4}
+                        max={5}
                         targetSelector="[data-share-card-panel]"
                       >
                         <ScaledShareCardArtwork

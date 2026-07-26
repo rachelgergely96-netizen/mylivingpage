@@ -5,12 +5,12 @@ import {
   type CatalogThemeId,
 } from "./theme-frame-baselines";
 
-const CATALOG_THEME_IDS = THEME_REGISTRY.filter((theme) => !theme.signature).map(
-  (theme) => theme.id,
-) as CatalogThemeId[];
-const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter((theme) => theme.signature).map(
-  (theme) => theme.id,
-);
+const CATALOG_THEME_IDS = THEME_REGISTRY.filter(
+  (theme) => !theme.signature,
+).map((theme) => theme.id) as CatalogThemeId[];
+const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter(
+  (theme) => theme.signature,
+).map((theme) => theme.id);
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -64,7 +64,10 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
     );
     const shareCard = page.getByTestId("story-share-card");
 
-    await expect(livingPage).toHaveAttribute("data-theme-renderer-status", "ready");
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
     await expect(shareCard).toHaveAttribute("data-theme-id", themeId);
     await expect(shareCard).toHaveAttribute(
       "data-theme-detail",
@@ -79,8 +82,8 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
     const layerOrder = await skeleton
       .locator("[data-share-card-skeleton-layer]")
       .evaluateAll((layers) =>
-        layers.map((layer) =>
-          layer.getAttribute("data-share-card-skeleton-layer") ?? "",
+        layers.map(
+          (layer) => layer.getAttribute("data-share-card-skeleton-layer") ?? "",
         ),
       );
     if (canonicalLayerOrder === null) {
@@ -183,11 +186,18 @@ test("all themes apply their reading guard to identity, summaries, and cards", a
     const livingPage = page.locator(
       `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
     );
-    await expect(livingPage).toHaveAttribute("data-theme-reading", theme.readingMode);
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-reading",
+      theme.readingMode,
+    );
 
     const guard = await livingPage.evaluate((element) => {
-      const masthead = element.querySelector<HTMLElement>(".resume-theme-masthead");
-      const summary = element.querySelector<HTMLElement>(".resume-theme-summary");
+      const masthead = element.querySelector<HTMLElement>(
+        ".resume-theme-masthead",
+      );
+      const summary = element.querySelector<HTMLElement>(
+        ".resume-theme-summary",
+      );
       const card = element.querySelector<HTMLElement>(
         '[data-motion-kind="experience"]',
       );
@@ -255,16 +265,20 @@ test("all themes apply their reading guard to identity, summaries, and cards", a
       Math.max(guard.cardBaseAlpha, guard.cardGradientTailAlpha),
       `${theme.id} card guard`,
     ).toBeGreaterThanOrEqual(0.76);
-    expect(guard.mutedAlpha, `${theme.id} muted text alpha`).toBeGreaterThanOrEqual(
-      0.82,
-    );
-    expect(guard.statsGuardAlpha, `${theme.id} stats guard`).toBeGreaterThanOrEqual(
-      0.76,
-    );
+    expect(
+      guard.mutedAlpha,
+      `${theme.id} muted text alpha`,
+    ).toBeGreaterThanOrEqual(0.82);
+    expect(
+      guard.statsGuardAlpha,
+      `${theme.id} stats guard`,
+    ).toBeGreaterThanOrEqual(0.76);
     expect(guard.mastheadRadius, `${theme.id} masthead geometry`).toBe("0px");
     expect(guard.summaryRadius, `${theme.id} summary geometry`).toBe("0px");
     if (theme.readingMode === "glass") {
-      expect(guard.cardBackdrop, `${theme.id} glass separation`).not.toBe("none");
+      expect(guard.cardBackdrop, `${theme.id} glass separation`).not.toBe(
+        "none",
+      );
     } else {
       expect(guard.cardBackdrop, `${theme.id} solid separation`).toBe("none");
     }
@@ -285,7 +299,9 @@ test("the real share-card modal exports one complete 1200 by 630 card on every v
 
   const dialog = page.getByRole("dialog", { name: "Avery Morgan" });
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close share card" })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Close share card" }),
+  ).toBeFocused();
 
   const stage = dialog.locator("[data-share-card-preview-stage]");
   const previewOuter = stage.locator("[data-share-card-outer]");
@@ -300,11 +316,15 @@ test("the real share-card modal exports one complete 1200 by 630 card on every v
   }
   await expect
     .poll(() =>
-      previewPanel.evaluate((element) => window.getComputedStyle(element).transform),
+      previewPanel.evaluate(
+        (element) => window.getComputedStyle(element).transform,
+      ),
     )
     .not.toBe("none");
   expect(
-    await stage.evaluate((element) => window.getComputedStyle(element).transform),
+    await stage.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
   ).toBe("none");
   expect(
     await previewOuter.evaluate(
@@ -416,6 +436,19 @@ test("share-card panel motion is isolated and disabled for reduced motion", asyn
     );
   }
   await expect.poll(readTiltMagnitude).toBeGreaterThan(0.001);
+  await expect
+    .poll(() =>
+      storyPanel.evaluate((element) =>
+        element.style.getPropertyValue("--share-card-specular-x"),
+      ),
+    )
+    .not.toBe("");
+  await expect(story.locator(".share-card-glass-specular")).toBeVisible();
+  expect(
+    await storyOuter.evaluate(
+      (element) => window.getComputedStyle(element).backgroundColor,
+    ),
+  ).toBe("rgb(5, 5, 7)");
   expect(
     await storyOuter.evaluate(
       (element) => window.getComputedStyle(element).transform,
@@ -470,6 +503,17 @@ test("share-card panel motion is isolated and disabled for reduced motion", asyn
       );
     });
   expect(reducedTiltMagnitude).toBeLessThan(0.001);
+  const reducedGlassLight = await reducedStory
+    .locator(".share-card-glass-ambient")
+    .evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        animationName: style.animationName,
+        opacity: Number.parseFloat(style.opacity),
+      };
+    });
+  expect(reducedGlassLight.animationName).toBe("none");
+  expect(reducedGlassLight.opacity).toBeGreaterThan(0.4);
 });
 
 test("attention motion stays brief and fully respects reduced motion", async ({
@@ -503,7 +547,9 @@ test("attention motion stays brief and fully respects reduced motion", async ({
   expect(reducedSignalMotion).toBe("none");
 });
 
-test("every catalog theme renders a detailed deterministic frame", async ({ page }) => {
+test("every catalog theme renders a detailed deterministic frame", async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/dev/theme-lab");
@@ -511,7 +557,8 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
   const select = page.getByLabel("Catalog theme");
   await expect(select.locator("option")).toHaveCount(THEME_REGISTRY.length);
 
-  const weakFrames: Array<{ themeId: string; colors: number; range: number }> = [];
+  const weakFrames: Array<{ themeId: string; colors: number; range: number }> =
+    [];
   const frameSignatures: Record<
     string,
     { hash: string; mean: [number, number, number] }
@@ -540,7 +587,12 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
         };
       }
 
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      ).data;
       const stepX = Math.max(1, Math.floor(canvas.width / 20));
       const stepY = Math.max(1, Math.floor(canvas.height / 16));
       const colors = new Set<string>();
@@ -625,7 +677,9 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
     frameSignatures[themeId] = { hash: detail.hash, mean: detail.mean };
   }
 
-  expect(weakFrames, "catalog themes with insufficient visible detail").toEqual([]);
+  expect(weakFrames, "catalog themes with insufficient visible detail").toEqual(
+    [],
+  );
 
   if (process.env.UPDATE_THEME_BASELINES === "1") {
     console.log(`THEME_FRAME_BASELINES=${JSON.stringify(frameSignatures)}`);
@@ -699,7 +753,9 @@ test("every theme stays renderer-ready through an animated pointer sweep", async
     await expect(world).toHaveAttribute("data-theme-renderer-status", "ready");
   }
 
-  expect(pageErrors, "renderer errors during catalog pointer sweep").toEqual([]);
+  expect(pageErrors, "renderer errors during catalog pointer sweep").toEqual(
+    [],
+  );
 });
 
 test("signature themes expose authored content profiles and deterministic detail", async ({
@@ -757,7 +813,9 @@ test("signature themes expose authored content profiles and deterministic detail
 
     expect(secondFrame, `${themeId} static frame`).toBe(firstFrame);
     expect(detail.colors, `${themeId} visible color detail`).toBeGreaterThan(3);
-    expect(detail.range, `${themeId} visible luminance detail`).toBeGreaterThan(6);
+    expect(detail.range, `${themeId} visible luminance detail`).toBeGreaterThan(
+      6,
+    );
   }
 });
 
@@ -798,31 +856,35 @@ test("signature themes fit mobile and keep Living Resume surfaces sharp", async 
       };
     });
 
-    expect(geometry.overflow, `${themeId} mobile overflow`).toBeLessThanOrEqual(0);
-    expect(geometry.surfaceCount, `${themeId} themed surfaces`).toBeGreaterThan(0);
+    expect(geometry.overflow, `${themeId} mobile overflow`).toBeLessThanOrEqual(
+      0,
+    );
+    expect(geometry.surfaceCount, `${themeId} themed surfaces`).toBeGreaterThan(
+      0,
+    );
     expect(geometry.sharp, `${themeId} sharp corners`).toBe(true);
   }
 });
 
-test("theme lab remains static with reduced motion and fits mobile", async ({ page }) => {
+test("theme lab remains static with reduced motion and fits mobile", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/dev/theme-lab");
 
   await page.getByLabel("Catalog theme").selectOption("topo");
-  const theme = page.locator(
-    '[data-theme-lab-canvas] [data-theme-id="topo"]',
-  );
+  const theme = page.locator('[data-theme-lab-canvas] [data-theme-id="topo"]');
   await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
   await page.getByRole("button", { name: "Enable motion" }).click();
 
-  const firstFrame = await theme.locator("canvas").evaluate((element) =>
-    (element as HTMLCanvasElement).toDataURL(),
-  );
+  const firstFrame = await theme
+    .locator("canvas")
+    .evaluate((element) => (element as HTMLCanvasElement).toDataURL());
   await page.waitForTimeout(250);
-  const secondFrame = await theme.locator("canvas").evaluate((element) =>
-    (element as HTMLCanvasElement).toDataURL(),
-  );
+  const secondFrame = await theme
+    .locator("canvas")
+    .evaluate((element) => (element as HTMLCanvasElement).toDataURL());
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
@@ -855,5 +917,8 @@ test("catalog motion advances and keeps keyboard focus connected to the world", 
   expect(animatedFrame).not.toBe(firstFrame);
 
   await page.getByRole("button", { name: /Focus/ }).focus();
-  await expect(theme).toHaveAttribute("data-motion-focus-kind", "quality-signal");
+  await expect(theme).toHaveAttribute(
+    "data-motion-focus-kind",
+    "quality-signal",
+  );
 });

@@ -141,33 +141,43 @@ describe("theme registry", () => {
     );
   });
 
-  it("keeps the material pilot explicit and profile-safe", () => {
+  it("assigns every content language a complete material system", () => {
     const validProfiles = new Set(THEME_MATERIAL_PROFILE_IDS);
-    const pilots = THEME_REGISTRY.flatMap((theme) =>
-      theme.materialProfile
-        ? [[theme.id, theme.materialProfile] as const]
-        : [],
-    );
+    const expectedByContentProfile = {
+      precision: "engraved",
+      cartography: "engraved",
+      cinema: "refractive",
+      "night-editorial": "refractive",
+      material: "organic-glass",
+      botanical: "organic-glass",
+      couture: "refractive",
+      "print-studio": "engraved",
+      ornamental: "organic-glass",
+      celestial: "refractive",
+    } as const;
 
-    expect(pilots).toEqual([
-      ["aurora", "refractive"],
-      ["sakura", "organic-glass"],
-      ["silk", "refractive"],
-      ["halo", "refractive"],
-      ["meridian", "engraved"],
-    ]);
-    for (const [, profile] of pilots) {
-      expect(validProfiles.has(profile)).toBe(true);
+    for (const theme of THEME_REGISTRY) {
+      expect(theme.materialProfile).toBe(
+        expectedByContentProfile[theme.contentProfile],
+      );
+      expect(validProfiles.has(theme.materialProfile)).toBe(true);
+      if (theme.materialProfile === "refractive") {
+        expect(theme.readingMode).toBe("glass");
+      }
+      if (theme.materialProfile === "engraved") {
+        expect(theme.readingMode).toBe("solid");
+      }
+      if (
+        theme.materialProfile === "organic-glass" &&
+        theme.readingMode === "solid"
+      ) {
+        expect(theme.contentProfile).toBe("material");
+      }
     }
-    expect(
-      pilots.map(([id]) => [id, THEME_MAP[id].readingMode]),
-    ).toEqual([
-      ["aurora", "glass"],
-      ["sakura", "glass"],
-      ["silk", "glass"],
-      ["halo", "glass"],
-      ["meridian", "solid"],
-    ]);
+
+    expect(new Set(THEME_REGISTRY.map((theme) => theme.materialProfile))).toEqual(
+      validProfiles,
+    );
   });
 
   it("derives non-signature surfaces from each theme background", () => {

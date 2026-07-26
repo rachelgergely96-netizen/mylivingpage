@@ -1276,7 +1276,7 @@ a {
   );
 }
 
-/* Material pilots apply the share-card lesson—thin optical edges, calmer
+/* Theme materials apply the share-card lesson—thin optical edges, calmer
    transmission, and restrained light—without making every Living Page glass.
    The semantic resume stays fixed while the canvas owns spatial movement. */
 [data-theme-material="refractive"]
@@ -1326,6 +1326,15 @@ a {
   outline: 1px solid
     color-mix(in srgb, var(--theme-accent-bright) 8%, transparent);
   outline-offset: -5px;
+}
+
+[data-theme-reading="glass"][data-theme-material="organic-glass"]
+  :is(
+    .resume-theme-masthead,
+    .resume-theme-summary,
+    .resume-theme-card,
+    .resume-theme-card-accent
+  ) {
   -webkit-backdrop-filter: blur(12px) saturate(105%);
   backdrop-filter: blur(12px) saturate(105%);
 }
@@ -1694,7 +1703,7 @@ a {
     transform: translate3d(0, -2px, 0);
   }
 
-  /* Pilot material pages route pointer motion into their world lighting. The
+  /* Material pages route pointer motion into their world lighting. The
      resume plates stay optically stable instead of bobbing under the cursor. */
   [data-motion-aware="true"][data-theme-material]
     .resume-theme

@@ -149,21 +149,26 @@ const THEME_READING_MODES = {
 } as const satisfies Record<ThemeContentProfileId, ThemeReadingMode>;
 
 /**
- * A deliberately small material pilot. The profile augments the established
- * content profile and reading mode; it never forks resume markup or renderer
- * ownership.
+ * Material behavior follows the authored content language so all themes gain
+ * dimensional surfaces without a 59-entry visual override table. Reading mode
+ * remains authoritative: solid profiles never become translucent just because
+ * they share the organic material language.
  */
-const THEME_MATERIAL_PROFILES: Partial<
-  Record<ThemeId, ThemeMaterialProfileId>
-> = {
-  silk: "refractive",
-  halo: "refractive",
-  // Aurora keeps its authored signature-renderer depth. This profile refines
-  // only its semantic reading surfaces.
-  aurora: "refractive",
-  sakura: "organic-glass",
-  meridian: "engraved",
-};
+const THEME_MATERIAL_PROFILES = {
+  precision: "engraved",
+  cartography: "engraved",
+  cinema: "refractive",
+  "night-editorial": "refractive",
+  material: "organic-glass",
+  botanical: "organic-glass",
+  couture: "refractive",
+  "print-studio": "engraved",
+  ornamental: "organic-glass",
+  celestial: "refractive",
+} as const satisfies Record<
+  ThemeContentProfileId,
+  ThemeMaterialProfileId
+>;
 
 const THEME_PRESENTATION_DEFAULTS = {
   "executive-tech": {
@@ -413,7 +418,11 @@ const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresent
 const THEME_DEFINITIONS: Array<
   Omit<
     ThemeMeta,
-    "collection" | "contentProfile" | "presentation" | "readingMode"
+    | "collection"
+    | "contentProfile"
+    | "materialProfile"
+    | "presentation"
+    | "readingMode"
   >
 > = [
   {
@@ -904,7 +913,8 @@ export const THEME_REGISTRY: ThemeMeta[] = THEME_DEFINITIONS.map((theme) => ({
   ...theme,
   collection: THEME_COLLECTIONS[theme.id],
   contentProfile: THEME_CONTENT_PROFILES[theme.id],
-  materialProfile: THEME_MATERIAL_PROFILES[theme.id],
+  materialProfile:
+    THEME_MATERIAL_PROFILES[THEME_CONTENT_PROFILES[theme.id]],
   readingMode: THEME_READING_MODES[THEME_CONTENT_PROFILES[theme.id]],
   presentation: {
     ...THEME_PRESENTATION_DEFAULTS[THEME_COLLECTIONS[theme.id]],

@@ -11,13 +11,7 @@ const CATALOG_THEME_IDS = THEME_REGISTRY.filter(
 const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter(
   (theme) => theme.signature,
 ).map((theme) => theme.id);
-const MATERIAL_PILOT_THEME_IDS = [
-  "silk",
-  "halo",
-  "aurora",
-  "sakura",
-  "meridian",
-] as const;
+const MATERIAL_THEME_IDS = THEME_REGISTRY.map((theme) => theme.id);
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -75,14 +69,10 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
       "data-theme-renderer-status",
       "ready",
     );
-    if (THEME_MAP[themeId].materialProfile) {
-      await expect(livingPage).toHaveAttribute(
-        "data-theme-material",
-        THEME_MAP[themeId].materialProfile,
-      );
-    } else {
-      await expect(livingPage).not.toHaveAttribute("data-theme-material");
-    }
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-material",
+      THEME_MAP[themeId].materialProfile,
+    );
     await expect(shareCard).toHaveAttribute("data-theme-id", themeId);
     await expect(shareCard).toHaveAttribute(
       "data-theme-detail",
@@ -109,21 +99,23 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
   }
 });
 
-test("material pilots keep readable plates stationary across desktop and mobile", async ({
+test("all theme materials keep readable plates stationary across desktop and mobile", async ({
   page,
 }) => {
+  test.setTimeout(300_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/dev/theme-lab");
   const select = page.getByLabel("Catalog theme");
 
-  for (const themeId of MATERIAL_PILOT_THEME_IDS) {
+  for (const themeId of MATERIAL_THEME_IDS) {
     await select.selectOption(themeId);
+    const theme = THEME_MAP[themeId];
     const livingPage = page.locator(
       `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
     );
     await expect(livingPage).toHaveAttribute(
       "data-theme-material",
-      THEME_MAP[themeId].materialProfile ?? "",
+      theme.materialProfile,
     );
     await expect(livingPage).toHaveAttribute(
       "data-theme-renderer-status",
@@ -143,9 +135,15 @@ test("material pilots keep readable plates stationary across desktop and mobile"
     expect(restingStyle.borderRadius).toBe("0px");
     expect(restingStyle.outlineStyle).toBe("solid");
     expect(restingStyle.outlineWidth).toBe("1px");
-    if (THEME_MAP[themeId].materialProfile === "refractive") {
+    if (
+      theme.readingMode === "glass" &&
+      theme.materialProfile === "refractive"
+    ) {
       expect(restingStyle.backdrop).toContain("blur(14px)");
-    } else if (THEME_MAP[themeId].materialProfile === "organic-glass") {
+    } else if (
+      theme.readingMode === "glass" &&
+      theme.materialProfile === "organic-glass"
+    ) {
       expect(restingStyle.backdrop).toContain("blur(12px)");
     } else {
       expect(restingStyle.backdrop).toBe("none");
@@ -176,7 +174,7 @@ test("material pilots keep readable plates stationary across desktop and mobile"
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const themeId of MATERIAL_PILOT_THEME_IDS) {
+  for (const themeId of MATERIAL_THEME_IDS) {
     await select.selectOption(themeId);
     const livingPage = page.locator(
       `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,

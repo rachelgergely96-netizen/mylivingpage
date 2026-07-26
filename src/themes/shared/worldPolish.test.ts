@@ -93,11 +93,18 @@ describe("world polish", () => {
     }
   });
 
-  it("gives material pilots calmer collection-aware depth", () => {
-    expect(getWorldPolishProfile(THEME_MAP.silk).depthStrength).toBe(0.7);
-    expect(getWorldPolishProfile(THEME_MAP.halo).depthStrength).toBe(0.7);
-    expect(getWorldPolishProfile(THEME_MAP.sakura).depthStrength).toBe(0.74);
-    expect(getWorldPolishProfile(THEME_MAP.meridian).depthStrength).toBe(0.72);
+  it("gives every material language calm, deterministic depth", () => {
+    const expectedDepth = {
+      refractive: 0.7,
+      "organic-glass": 0.74,
+      engraved: 0.72,
+    } as const;
+
+    for (const theme of THEME_REGISTRY) {
+      expect(getWorldPolishProfile(theme).depthStrength).toBe(
+        expectedDepth[theme.materialProfile],
+      );
+    }
   });
 
   it("covers every theme while preserving only authored signature and bespoke worlds", () => {

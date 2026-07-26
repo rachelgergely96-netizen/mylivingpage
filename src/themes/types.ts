@@ -117,8 +117,8 @@ export const THEME_MATERIAL_PROFILE_IDS = [
 ] as const;
 
 /**
- * Optional material pilots refine surface and light behavior without changing
- * the semantic resume or replacing a theme's authored content profile.
+ * Material profiles refine surface and light behavior without changing the
+ * semantic resume or replacing a theme's authored content profile.
  */
 export type ThemeMaterialProfileId =
   (typeof THEME_MATERIAL_PROFILE_IDS)[number];
@@ -194,7 +194,7 @@ export interface ThemeMeta {
   id: ThemeId;
   collection: ThemeCollectionId;
   contentProfile: ThemeContentProfileId;
-  materialProfile?: ThemeMaterialProfileId;
+  materialProfile: ThemeMaterialProfileId;
   readingMode: ThemeReadingMode;
   name: string;
   description: string;

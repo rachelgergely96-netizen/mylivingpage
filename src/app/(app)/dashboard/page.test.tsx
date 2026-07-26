@@ -1,7 +1,15 @@
 import React from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const createServerSupabaseClientMock = vi.fn();
 const createServiceRoleSupabaseClientMock = vi.fn();
@@ -32,22 +40,27 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabaseClient: (...args: unknown[]) => createServerSupabaseClientMock(...args),
+  createServerSupabaseClient: (...args: unknown[]) =>
+    createServerSupabaseClientMock(...args),
   createServiceRoleSupabaseClient: (...args: unknown[]) =>
     createServiceRoleSupabaseClientMock(...args),
 }));
 
 vi.mock("@/lib/profile-access", () => ({
-  fetchProfileWithHostingAccess: (...args: unknown[]) => fetchProfileWithHostingAccessMock(...args),
+  fetchProfileWithHostingAccess: (...args: unknown[]) =>
+    fetchProfileWithHostingAccessMock(...args),
 }));
 
 vi.mock("@/lib/account-access", () => ({
-  getAccountAccessState: (...args: unknown[]) => getAccountAccessStateMock(...args),
+  getAccountAccessState: (...args: unknown[]) =>
+    getAccountAccessStateMock(...args),
 }));
 
 vi.mock("@/lib/hosting-state", () => ({
-  syncPageHostingState: (...args: unknown[]) => syncPageHostingStateMock(...args),
-  isPubliclyAvailablePage: (...args: unknown[]) => isPubliclyAvailablePageMock(...args),
+  syncPageHostingState: (...args: unknown[]) =>
+    syncPageHostingStateMock(...args),
+  isPubliclyAvailablePage: (...args: unknown[]) =>
+    isPubliclyAvailablePageMock(...args),
 }));
 
 vi.mock("@/lib/plans", () => ({
@@ -67,7 +80,9 @@ vi.mock("@/lib/billing", () => ({
 }));
 
 vi.mock("@/components/DeletePageButton", () => ({
-  default: ({ pageId }: { pageId: string }) => <button type="button">Delete {pageId}</button>,
+  default: ({ pageId }: { pageId: string }) => (
+    <button type="button">Delete {pageId}</button>
+  ),
 }));
 
 vi.mock("@/components/PublishPageButton", () => ({
@@ -77,7 +92,11 @@ vi.mock("@/components/PublishPageButton", () => ({
   }: {
     label?: string;
     pageId: string;
-  }) => <button type="button">{label} {pageId}</button>,
+  }) => (
+    <button type="button">
+      {label} {pageId}
+    </button>
+  ),
 }));
 
 import DashboardPage from "./page";
@@ -220,7 +239,9 @@ describe("dashboard page", () => {
         }),
       },
     });
-    createServiceRoleSupabaseClientMock.mockReturnValue(makeServiceRoleClient());
+    createServiceRoleSupabaseClientMock.mockReturnValue(
+      makeServiceRoleClient(),
+    );
     fetchProfileWithHostingAccessMock.mockResolvedValue({
       data: {
         full_name: null,
@@ -241,9 +262,11 @@ describe("dashboard page", () => {
       requiresCheckoutToPublish: false,
       isTrialingSubscription: false,
     });
-    syncPageHostingStateMock.mockImplementation(async (_supabase: unknown, page: unknown) => ({
-      page,
-    }));
+    syncPageHostingStateMock.mockImplementation(
+      async (_supabase: unknown, page: unknown) => ({
+        page,
+      }),
+    );
     isPubliclyAvailablePageMock.mockReturnValue(true);
   });
 
@@ -252,28 +275,47 @@ describe("dashboard page", () => {
   });
 
   it("turns page activity into one clear primary action without losing page tools", async () => {
-    const element = await DashboardPage();
+    const element = await DashboardPage({});
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Check if your page is live, then edit, share, or review recent views.");
+    expect(markup).toContain(
+      "Check if your page is live, then edit, share, or review recent views.",
+    );
     expect(markup).toContain('href="/dashboard/analytics/page-1"');
     expect(markup).toContain('href="/dashboard/analytics/page-2"');
-    expect(markup).toContain('href="/dashboard/edit/page-1/living-page#ats-readiness"');
-    expect(markup).toContain('href="/dashboard/edit/page-2/living-page#ats-readiness"');
+    expect(markup).toContain(
+      'href="/dashboard/edit/page-1/living-page#ats-readiness"',
+    );
+    expect(markup).toContain(
+      'href="/dashboard/edit/page-2/living-page#ats-readiness"',
+    );
     expect((markup.match(/>ATS check<\/a>/g) ?? []).length).toBe(2);
     expect((markup.match(/>View activity<\/a>/g) ?? []).length).toBe(2);
     expect((markup.match(/>Copy link<\/button>/g) ?? []).length).toBe(2);
-    expect((markup.match(/data-dashboard-primary-action/g) ?? []).length).toBe(2);
+    expect((markup.match(/data-dashboard-primary-action/g) ?? []).length).toBe(
+      2,
+    );
     expect((markup.match(/>Live<\/span>/g) ?? []).length).toBe(2);
     expect(markup).toContain(
       "Open activity for device, referrer, and reading time.",
     );
-    expect(markup).toContain(
-      "Open activity for the full picture.",
-    );
+    expect(markup).toContain("Open activity for the full picture.");
     expect(markup).not.toContain("Signal Studio");
     expect(markup).not.toContain("Proof landed");
     expect(markup).not.toContain("Visual world");
+  });
+
+  it("renders the themed returning-user reveal only when login requests it", async () => {
+    const element = await DashboardPage({
+      searchParams: Promise.resolve({ welcome: "1" }),
+    });
+    const markup = renderToStaticMarkup(element);
+
+    expect(markup).toContain("data-dashboard-welcome");
+    expect(markup).toContain("Signal reconnected");
+    expect(markup).toContain("your page kept living.");
+    expect(markup).toContain("Someone viewed it after your last share.");
+    expect(markup).toContain("Bastion theme");
   });
 
   it("surfaces an offline-page reactivation banner when a public link gets opened while hosting is inactive", async () => {
@@ -292,10 +334,12 @@ describe("dashboard page", () => {
     );
     isPubliclyAvailablePageMock.mockReturnValue(false);
 
-    const element = await DashboardPage();
+    const element = await DashboardPage({});
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Someone opened this link while the page was offline");
+    expect(markup).toContain(
+      "Someone opened this link while the page was offline",
+    );
     expect(markup).toContain('href="/dashboard/settings"');
     expect(markup).toContain("Publish below to put it back online");
     expect(markup).toContain("Publish page page-1");
@@ -308,15 +352,13 @@ describe("dashboard page", () => {
   it("describes an unpublished page as a private draft", async () => {
     isPubliclyAvailablePageMock.mockReturnValue(false);
 
-    const element = await DashboardPage();
+    const element = await DashboardPage({});
     const markup = renderToStaticMarkup(element);
 
     expect(markup).toContain(">Draft</span>");
     expect(markup).toContain("Private draft");
     expect(markup).toContain("Your page is ready when you are.");
-    expect(markup).toContain(
-      "Until then, only you can open it.",
-    );
+    expect(markup).toContain("Until then, only you can open it.");
     expect(markup).toContain("Publish page page-1");
   });
 });

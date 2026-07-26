@@ -62,8 +62,22 @@ describe("GET /callback", () => {
       }),
     );
 
-    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard",
+    );
     expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("preserves a returning-user welcome intent through the OAuth callback", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fdashboard%3Fwelcome%3D1",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard?welcome=1",
+    );
   });
 
   it.each([
@@ -75,7 +89,9 @@ describe("GET /callback", () => {
       new NextRequest(`https://www.mylivingpage.com/callback?next=${next}`),
     );
 
-    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard",
+    );
   });
 
   it("tracks callback failures with both request host and canonical auth origin", async () => {
@@ -84,11 +100,14 @@ describe("GET /callback", () => {
     });
 
     const response = await GET(
-      new NextRequest("https://mylivingpage.com/callback?code=test-code&next=%2Fdashboard", {
-        headers: {
-          host: "mylivingpage.com",
+      new NextRequest(
+        "https://mylivingpage.com/callback?code=test-code&next=%2Fdashboard",
+        {
+          headers: {
+            host: "mylivingpage.com",
+          },
         },
-      }),
+      ),
     );
 
     expect(response.headers.get("location")).toBe(
@@ -131,7 +150,9 @@ describe("GET /callback", () => {
       ),
     );
 
-    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/create");
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/create",
+    );
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-123",
       "auth.callback.succeeded",

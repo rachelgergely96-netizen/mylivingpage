@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
-import { getAuthErrorMessage, getPasswordAuthErrorMessage } from "@/lib/auth/auth-error";
+import {
+  getAuthErrorMessage,
+  getPasswordAuthErrorMessage,
+} from "@/lib/auth/auth-error";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
+import { withPostLoginWelcome } from "@/lib/auth/post-login";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const SESSION_CHECK_DELAYS_MS = [0, 150, 350, 700];
@@ -48,10 +52,15 @@ export default function LoginPage() {
     const url = new URL(window.location.href);
     const params = url.searchParams;
     const requestedNext = params.get("next");
-    const resolvedNext = sanitizeInternalRedirectPath(requestedNext, "/dashboard");
+    const resolvedNext = sanitizeInternalRedirectPath(
+      requestedNext,
+      "/dashboard",
+    );
     setNextPath(resolvedNext);
     setCreateAccountHref(
-      requestedNext ? `/signup?next=${encodeURIComponent(resolvedNext)}` : "/signup",
+      requestedNext
+        ? `/signup?next=${encodeURIComponent(resolvedNext)}`
+        : "/signup",
     );
 
     const error = params.get("error");
@@ -79,7 +88,10 @@ export default function LoginPage() {
     setMessage("");
     try {
       const supabase = createBrowserSupabaseClient();
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) {
         throw error;
       }
@@ -88,11 +100,13 @@ export default function LoginPage() {
       }
       const serverSessionReady = await waitForServerSession();
       if (!serverSessionReady) {
-        throw new Error("Sign-in succeeded, but the session could not be finalized. Please try again.");
+        throw new Error(
+          "Sign-in succeeded, but the session could not be finalized. Please try again.",
+        );
       }
       // Track login (fire-and-forget)
       fetch("/api/auth/track-login", { method: "POST" }).catch(() => {});
-      window.location.replace(nextPath);
+      window.location.replace(withPostLoginWelcome(nextPath));
     } catch (error) {
       setStatus("error");
       setMessage(
@@ -108,23 +122,32 @@ export default function LoginPage() {
     setMessage("");
     try {
       const googleAuthUrl = buildGoogleAuthStartUrl({
-        next: nextPath,
+        next: withPostLoginWelcome(nextPath),
         screen: "login",
       });
       window.location.assign(googleAuthUrl);
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? getAuthErrorMessage(error.message) : "Google login failed.");
+      setMessage(
+        error instanceof Error
+          ? getAuthErrorMessage(error.message)
+          : "Google login failed.",
+      );
     }
   };
 
   return (
-    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-10 sm:px-6 sm:py-14">
+    <main
+      id="main-content"
+      data-site-ui
+      className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-10 sm:px-6 sm:py-14"
+    >
       <div className="site-panel-raised w-full p-6 sm:p-8">
         <p className="site-eyebrow">Welcome back</p>
         <h1 className="site-page-title mt-3">Sign in to MyLivingPage</h1>
         <p className="mt-3 text-sm leading-6 text-site-secondary">
-          Keep your professional page, résumé PDF, and sharing tools current from one place.
+          Keep your professional page, résumé PDF, and sharing tools current
+          from one place.
         </p>
 
         <button
@@ -133,7 +156,9 @@ export default function LoginPage() {
           disabled={status === "loading"}
           className="site-button site-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {status === "loading" ? "Redirecting to Google..." : "Continue with Google"}
+          {status === "loading"
+            ? "Redirecting to Google..."
+            : "Continue with Google"}
         </button>
 
         <div className="my-5 flex items-center gap-3 text-xs text-site-muted">
@@ -144,7 +169,10 @@ export default function LoginPage() {
 
         <form className="space-y-4" onSubmit={onLogin}>
           <div>
-            <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-site-text">
+            <label
+              htmlFor="login-email"
+              className="mb-2 block text-sm font-semibold text-site-text"
+            >
               Email address
             </label>
             <input
@@ -164,7 +192,10 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-site-text">
+            <label
+              htmlFor="login-password"
+              className="mb-2 block text-sm font-semibold text-site-text"
+            >
               Password
             </label>
             <input
@@ -193,20 +224,30 @@ export default function LoginPage() {
         </form>
 
         {message ? (
-          <p id="login-message" role="alert" className="mt-4 border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+          <p
+            id="login-message"
+            role="alert"
+            className="mt-4 border-l-2 border-site-danger pl-3 text-sm text-site-danger"
+          >
             {message}
           </p>
         ) : null}
 
         <div className="mt-3 text-right">
-          <Link href="/forgot-password" className="text-sm font-medium text-site-action hover:text-site-action-hover">
+          <Link
+            href="/forgot-password"
+            className="text-sm font-medium text-site-action hover:text-site-action-hover"
+          >
             Forgot password?
           </Link>
         </div>
 
         <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
           New here?{" "}
-          <Link href={createAccountHref} className="font-semibold text-site-action hover:text-site-action-hover">
+          <Link
+            href={createAccountHref}
+            className="font-semibold text-site-action hover:text-site-action-hover"
+          >
             Create an account
           </Link>
         </p>

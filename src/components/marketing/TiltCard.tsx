@@ -42,7 +42,7 @@ function setGlassLight(
   );
   element.style.setProperty(
     "--share-card-rim-strength",
-    `${(0.58 + Math.abs(pointerX) * 0.28).toFixed(3)}`,
+    `${(0.34 + Math.abs(pointerX) * 0.16).toFixed(3)}`,
   );
 }
 

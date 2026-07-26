@@ -153,7 +153,7 @@ export function ShareCardArtwork({
               <div
                 className="share-card-glass-ambient"
                 style={{
-                  background: `radial-gradient(circle at 54% 38%, rgba(255,255,255,0.2) 0%, ${visual.glow} 18%, rgba(0,0,0,0) 54%)`,
+                  background: `radial-gradient(circle at 54% 38%, rgba(255,255,255,0.1) 0%, ${visual.glow} 18%, rgba(0,0,0,0) 54%)`,
                   height: "124%",
                   left: "-12%",
                   position: "absolute",
@@ -198,11 +198,11 @@ export function ShareCardArtwork({
               <div
                 className="share-card-glass-rim-light"
                 style={{
-                  border: "2px solid rgba(224,242,255,0.44)",
+                  border: "1px solid rgba(224,242,255,0.26)",
                   borderRadius: treatment.panelRadius - 3,
                   bottom: 3,
                   boxShadow:
-                    "inset 0 1px 0 rgba(255,255,255,0.28), inset -1px 0 0 rgba(255,110,220,0.2)",
+                    "inset 0 1px 0 rgba(255,255,255,0.14), inset -1px 0 0 rgba(255,110,220,0.1)",
                   left: 3,
                   position: "absolute",
                   right: 3,
@@ -345,7 +345,7 @@ export function ShareCardArtwork({
               border: `1px solid ${treatment.avatarBorder}`,
               boxShadow:
                 treatment.id === "holographic"
-                  ? `inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -2px 0 rgba(0,0,0,0.52), 0 12px 28px ${visual.glow}`
+                  ? `inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.22), 0 8px 24px ${visual.glow}`
                   : "inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 12px rgba(0,0,0,0.5)",
               boxSizing: "border-box",
               display: "flex",
@@ -434,7 +434,7 @@ export function ShareCardArtwork({
             ...(treatment.id === "holographic"
               ? {
                   boxShadow:
-                    "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.48), 0 10px 28px rgba(0,0,0,0.26)",
+                    "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.25), 0 10px 28px rgba(0,0,0,0.16)",
                 }
               : {}),
             display: "flex",

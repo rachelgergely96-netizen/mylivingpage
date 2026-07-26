@@ -513,7 +513,7 @@ test("share-card panel motion is isolated and disabled for reduced motion", asyn
       };
     });
   expect(reducedGlassLight.animationName).toBe("none");
-  expect(reducedGlassLight.opacity).toBeGreaterThan(0.4);
+  expect(reducedGlassLight.opacity).toBeGreaterThan(0.25);
 });
 
 test("attention motion stays brief and fully respects reduced motion", async ({

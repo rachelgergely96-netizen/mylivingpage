@@ -41,5 +41,19 @@ describe("public free-product copy", () => {
       ["career-switching-designer", "atelier"],
       ["early-career-attorney", "atlas"],
     ]);
+
+    const axiomSample = samples.find((sample) => sample.demo.themeId === "axiom");
+    const atelierSample = samples.find(
+      (sample) => sample.demo.themeId === "atelier",
+    );
+    const atlasSample = samples.find((sample) => sample.demo.themeId === "atlas");
+
+    expect(axiomSample?.demo.data.proofs?.length).toBeGreaterThanOrEqual(2);
+    expect(
+      atelierSample?.demo.data.testimonials?.some(
+        (testimonial) => testimonial.status === "approved",
+      ),
+    ).toBe(true);
+    expect(atlasSample?.demo.data.proofs?.length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -257,47 +257,125 @@ test("the three signature experiences keep one narrative order while presenting 
 test("the three signature experiences use compact laptop scale", async ({
   page,
 }) => {
+  const laptopViewports = [
+    { width: 1280, height: 720 },
+    { width: 1366, height: 768 },
+    { width: 1512, height: 982 },
+  ];
+
+  await page.setViewportSize(laptopViewports[0]);
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const viewport of laptopViewports) {
+    await page.setViewportSize(viewport);
+
+    for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+      await select.selectOption(signature.themeId);
+      const livingPage = page.locator(
+        `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+      );
+      await expect(livingPage).toHaveAttribute(
+        "data-theme-renderer-status",
+        "ready",
+      );
+
+      const scale = await livingPage.evaluate((element) => {
+        const header = element.querySelector<HTMLElement>(
+          "[data-resume-header]",
+        );
+        const name = element.querySelector<HTMLElement>("[data-resume-name]");
+        const scrollRoot = element.querySelector<HTMLElement>(
+          "[data-analytics-scroll-root='true']",
+        );
+
+        return {
+          headerHeight: header?.getBoundingClientRect().height ?? 0,
+          nameFontSize: Number.parseFloat(
+            name ? window.getComputedStyle(name).fontSize : "0",
+          ),
+          viewportHeight: scrollRoot?.clientHeight ?? 0,
+        };
+      });
+
+      expect(scale.viewportHeight).toBeGreaterThan(0);
+      expect(
+        scale.headerHeight / scale.viewportHeight,
+        `${signature.themeId} masthead share at ${viewport.width}x${viewport.height}`,
+      ).toBeLessThan(0.8);
+      expect(
+        scale.nameFontSize,
+        `${signature.themeId} name scale at ${viewport.width}x${viewport.height}`,
+      ).toBeLessThanOrEqual(112);
+    }
+  }
+});
+
+test("the three signature experiences express different hierarchy without moving content plates", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/dev/theme-lab");
   const select = page.getByLabel("Catalog theme");
 
+  await select.selectOption("atlas");
+  const atlas = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="achievement-atlas"]',
+  );
+  const atlasExperience = atlas.locator("[data-experience-list]");
+  const atlasProof = atlas.locator("[data-proof-grid]");
+  expect((await atlasExperience.boundingBox())?.height ?? 0).toBeGreaterThan(
+    (await atlasProof.boundingBox())?.height ?? 0,
+  );
+
+  await select.selectOption("axiom");
+  const axiom = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="proof-museum"]',
+  );
+  const axiomProofs = axiom.locator('[data-motion-kind="proof"]');
+  expect((await axiomProofs.nth(0).boundingBox())?.width ?? 0).toBeGreaterThan(
+    (await axiomProofs.nth(1).boundingBox())?.width ?? 0,
+  );
+
+  await select.selectOption("atelier");
+  const atelier = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="editorial-feature"]',
+  );
+  const atelierType = await atelier.evaluate((element) => {
+    const summary = element.querySelector<HTMLElement>(
+      "[data-resume-summary] > p",
+    );
+    const experienceBody = element.querySelector<HTMLElement>(
+      '[data-motion-kind="experience"] li',
+    );
+    return {
+      experience: Number.parseFloat(
+        experienceBody ? window.getComputedStyle(experienceBody).fontSize : "0",
+      ),
+      summary: Number.parseFloat(
+        summary ? window.getComputedStyle(summary).fontSize : "0",
+      ),
+    };
+  });
+  expect(atelierType.summary).toBeGreaterThan(atelierType.experience);
+
   for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
     await select.selectOption(signature.themeId);
-    const livingPage = page.locator(
-      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
-    );
-    await expect(livingPage).toHaveAttribute(
-      "data-theme-renderer-status",
-      "ready",
-    );
-
-    const scale = await livingPage.evaluate((element) => {
-      const header = element.querySelector<HTMLElement>(
-        "[data-resume-header]",
-      );
-      const name = element.querySelector<HTMLElement>("[data-resume-name]");
-      const scrollRoot = element.querySelector<HTMLElement>(
-        "[data-analytics-scroll-root='true']",
-      );
-
-      return {
-        headerHeight: header?.getBoundingClientRect().height ?? 0,
-        nameFontSize: Number.parseFloat(
-          name ? window.getComputedStyle(name).fontSize : "0",
-        ),
-        viewportHeight: scrollRoot?.clientHeight ?? 0,
-      };
+    const plate = page
+      .locator(
+        `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+      )
+      .locator(signature.markerSelector)
+      .first();
+    await plate.hover();
+    const translation = await plate.evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return { x: 0, y: 0 };
+      const matrix = new DOMMatrixReadOnly(transform);
+      return { x: matrix.m41, y: matrix.m42 };
     });
-
-    expect(scale.viewportHeight).toBeGreaterThan(0);
-    expect(
-      scale.headerHeight / scale.viewportHeight,
-      `${signature.themeId} masthead viewport share`,
-    ).toBeLessThan(0.8);
-    expect(
-      scale.nameFontSize,
-      `${signature.themeId} laptop name scale`,
-    ).toBeLessThanOrEqual(112);
+    expect(Math.abs(translation.x)).toBeLessThan(0.001);
+    expect(Math.abs(translation.y)).toBeLessThan(0.001);
   }
 });
 

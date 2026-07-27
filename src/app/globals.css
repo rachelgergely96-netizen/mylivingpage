@@ -2355,6 +2355,88 @@ a {
   }
 }
 
+@container (min-width: 768px) and (max-width: 1535px) {
+  [data-theme-experience="achievement-atlas"]
+    [data-motion-kind="experience"] {
+    min-height: 6rem;
+    padding: 2.1rem 1rem 0.9rem 4rem;
+  }
+
+  [data-theme-experience="proof-museum"]
+    [data-motion-kind="proof"] {
+    min-height: clamp(12rem, 18cqi, 15rem);
+  }
+
+  [data-theme-experience="proof-museum"]
+    [data-proof-grid]
+    > [data-motion-kind="proof"]:first-child {
+    min-height: clamp(13rem, 20cqi, 16rem);
+  }
+
+  [data-theme-experience="proof-museum"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-stats]
+    .resume-theme-card:first-child
+    [data-attention-signal="metric"] {
+    font-size: clamp(1.7rem, 3.2cqi, 2.7rem);
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-content {
+    box-shadow:
+      5px 5px 0 rgba(230, 111, 85, 0.68),
+      -3px -3px 0 rgba(49, 87, 200, 0.4),
+      0 1.5rem 3.5rem rgba(24, 22, 27, 0.18);
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-summary]
+    > p {
+    font-size: clamp(1.05rem, 1.8cqi, 1.4rem);
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-stats] {
+    box-shadow:
+      3px 3px 0 rgba(230, 111, 85, 0.72),
+      -2px -2px 0 rgba(49, 87, 200, 0.42);
+  }
+}
+
+@container (min-width: 768px) and (max-width: 899px) {
+  [data-theme-experience="achievement-atlas"]
+    [data-motion-kind="experience"]:nth-child(even) {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  [data-theme-experience="proof-museum"] [data-project-list] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-section {
+    display: block;
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-section
+    > [data-section-heading] {
+    margin-bottom: 1rem;
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    :is([data-proof-grid], [data-testimonial-grid], [data-project-list]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 767px) {
   [data-theme-experience="achievement-atlas"]
     .resume-theme[data-resume-density="full"]

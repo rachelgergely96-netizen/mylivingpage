@@ -13,6 +13,8 @@ export type CatalogThemeId = Exclude<
   | "quarry"
   | "atelier"
   | "axiom"
+  | "sakura"
+  | "solstice"
   | "nocturne"
 >;
 
@@ -30,7 +32,6 @@ export const THEME_FRAME_BASELINES = {
   prism: { hash: "232367050d491b93", mean: [18, 17, 27] },
   biolume: { hash: "53130b0b0b631b1b", mean: [7, 25, 24] },
   circuit: { hash: "21050f0f01014b43", mean: [5, 15, 14] },
-  sakura: { hash: "210507070f030313", mean: [41, 25, 27] },
   glacier: { hash: "0713159311511313", mean: [11, 20, 32] },
   verdant: { hash: "0101000105010309", mean: [12, 31, 15] },
   neon: { hash: "0301050b8f0d0f49", mean: [27, 11, 37] },
@@ -62,7 +63,6 @@ export const THEME_FRAME_BASELINES = {
   porcelain: { hash: "0301030303030105", mean: [44, 54, 64] },
   filigree: { hash: "0000010001010101", mean: [9, 8, 11] },
   cameo: { hash: "0307050505040f0f", mean: [31, 23, 28] },
-  solstice: { hash: "0101010303010303", mean: [74, 35, 27] },
   tulle: { hash: "0101000001010309", mean: [36, 36, 46] },
   parasol: { hash: "0302010306070001", mean: [34, 19, 27] },
   gossamer: { hash: "0101010101030311", mean: [11, 16, 23] },

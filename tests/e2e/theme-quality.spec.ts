@@ -31,6 +31,24 @@ const SIGNATURE_EXPERIENCE_THEMES = [
     markerSelector: '[data-motion-kind="experience"]',
     markerText: "PLATE",
   },
+  {
+    themeId: "sakura",
+    experienceId: "bloom-composition",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "STEM",
+  },
+  {
+    themeId: "solstice",
+    experienceId: "solar-briefing",
+    markerSelector: '[data-motion-kind="proof"]',
+    markerText: "FLARE",
+  },
+  {
+    themeId: "nocturne",
+    experienceId: "midnight-edition",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "ENTRY",
+  },
 ] as const;
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
@@ -208,7 +226,7 @@ test("all theme materials keep readable plates stationary across desktop and mob
   }
 });
 
-test("the three signature experiences keep one narrative order while presenting distinct authored formats", async ({
+test("the six signature experiences keep one narrative order while presenting distinct authored formats", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -254,7 +272,7 @@ test("the three signature experiences keep one narrative order while presenting 
   }
 });
 
-test("the three signature experiences use compact laptop scale", async ({
+test("the six signature experiences use compact laptop scale and mobile flow", async ({
   page,
 }) => {
   const laptopViewports = [
@@ -309,9 +327,29 @@ test("the three signature experiences use compact laptop scale", async ({
       ).toBeLessThanOrEqual(112);
     }
   }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+    await select.selectOption(signature.themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow, `${signature.themeId} mobile overflow`).toBe(0);
+  }
 });
 
-test("the three signature experiences express different hierarchy without moving content plates", async ({
+test("the six signature experiences express different hierarchy without moving content plates", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -358,6 +396,61 @@ test("the three signature experiences express different hierarchy without moving
     };
   });
   expect(atelierType.summary).toBeGreaterThan(atelierType.experience);
+
+  await select.selectOption("sakura");
+  const sakura = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="bloom-composition"]',
+  );
+  const sakuraProofs = sakura.locator('[data-motion-kind="proof"]');
+  expect((await sakuraProofs.nth(0).boundingBox())?.width ?? 0).toBeGreaterThan(
+    (await sakuraProofs.nth(1).boundingBox())?.width ?? 0,
+  );
+
+  await select.selectOption("solstice");
+  const solstice = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="solar-briefing"]',
+  );
+  const solsticeMetricType = await solstice.evaluate((element) => {
+    const primary = element.querySelector<HTMLElement>(
+      '[data-stat-index="0"] [data-attention-signal="metric"]',
+    );
+    const secondary = element.querySelector<HTMLElement>(
+      '[data-stat-index="1"] > div:first-child',
+    );
+    return {
+      primary: Number.parseFloat(
+        primary ? window.getComputedStyle(primary).fontSize : "0",
+      ),
+      secondary: Number.parseFloat(
+        secondary ? window.getComputedStyle(secondary).fontSize : "0",
+      ),
+    };
+  });
+  expect(solsticeMetricType.primary).toBeGreaterThan(
+    solsticeMetricType.secondary,
+  );
+
+  await select.selectOption("nocturne");
+  const nocturne = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="midnight-edition"]',
+  );
+  const nocturneType = await nocturne.evaluate((element) => {
+    const testimonial = element.querySelector<HTMLElement>(
+      '[data-motion-kind="testimonial"] > p:first-child',
+    );
+    const experience = element.querySelector<HTMLElement>(
+      '[data-motion-kind="experience"] li',
+    );
+    return {
+      testimonial: Number.parseFloat(
+        testimonial ? window.getComputedStyle(testimonial).fontSize : "0",
+      ),
+      experience: Number.parseFloat(
+        experience ? window.getComputedStyle(experience).fontSize : "0",
+      ),
+    };
+  });
+  expect(nocturneType.testimonial).toBeGreaterThan(nocturneType.experience);
 
   for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
     await select.selectOption(signature.themeId);

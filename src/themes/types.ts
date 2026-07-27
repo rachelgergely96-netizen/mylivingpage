@@ -127,6 +127,9 @@ export const THEME_SIGNATURE_EXPERIENCE_IDS = [
   "achievement-atlas",
   "proof-museum",
   "editorial-feature",
+  "bloom-composition",
+  "solar-briefing",
+  "midnight-edition",
 ] as const;
 
 export type ThemeSignatureExperienceId =

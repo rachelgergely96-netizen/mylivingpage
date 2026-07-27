@@ -399,6 +399,18 @@ const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresent
     scrim:
       "linear-gradient(90deg, rgba(3, 5, 14, 0.86) 0%, rgba(3, 5, 14, 0.66) 52%, rgba(3, 5, 14, 0.34) 100%)",
   },
+  sakura: {
+    surface: "rgba(24, 10, 17, 0.8)",
+    surfaceStrong: "rgba(24, 10, 17, 0.94)",
+    scrim:
+      "linear-gradient(90deg, rgba(15, 6, 11, 0.9) 0%, rgba(15, 6, 11, 0.72) 54%, rgba(15, 6, 11, 0.4) 100%)",
+  },
+  solstice: {
+    surface: "rgba(22, 10, 5, 0.8)",
+    surfaceStrong: "rgba(22, 10, 5, 0.94)",
+    scrim:
+      "linear-gradient(90deg, rgba(12, 5, 2, 0.9) 0%, rgba(12, 5, 2, 0.72) 52%, rgba(12, 5, 2, 0.4) 100%)",
+  },
   atelier: {
     accent: "#A83D2B",
     accentBright: "#3157C8",
@@ -506,10 +518,17 @@ const THEME_DEFINITIONS: Array<
   },
   {
     id: "sakura",
+    signature: true,
+    signatureExperience: {
+      id: "bloom-composition",
+      name: "Bloom Composition",
+      description:
+        "A composed career arrangement where proof, roles, and growth branch from one deliberate stem.",
+    },
     name: "Sakura",
     description:
-      "Soft petals drift and tumble through gentle air currents as watercolor washes bloom and dissolve.",
-    vibe: "Elegant & Refined",
+      "A composed career arrangement of translucent botanical plates, branching chapters, and drifting petals.",
+    vibe: "Composed & Growing",
     background: "#0F0A0D",
   },
   {
@@ -810,10 +829,17 @@ const THEME_DEFINITIONS: Array<
   },
   {
     id: "solstice",
+    signature: true,
+    signatureExperience: {
+      id: "solar-briefing",
+      name: "Solar Briefing",
+      description:
+        "A metric-led career briefing where peak outcomes become flares along a continuous daylight arc.",
+    },
     name: "Solstice",
     description:
-      "Radiant sun discs, flare halos, and warm atmospheric dust bathe the frame in golden light.",
-    vibe: "Warm & Radiant",
+      "A metric-led daylight briefing with peak signals, horizon chapters, and a radiant career arc.",
+    vibe: "Radiant & Outcome-Led",
     background: "#0A0605",
   },
   {
@@ -898,10 +924,16 @@ const THEME_DEFINITIONS: Array<
   {
     id: "nocturne",
     signature: true,
+    signatureExperience: {
+      id: "midnight-edition",
+      name: "Midnight Edition",
+      description:
+        "A quiet lunar editorial where proof, perspective, and experience read like a collected night edition.",
+    },
     name: "Nocturne",
     description:
-      "An engraved lunar study, quiet atmosphere bands, and silver editorial rules shape a midnight edition.",
-    vibe: "Dreamlike & Poised",
+      "A collected night edition with engraved lunar studies, silver rules, and precisely indexed chapters.",
+    vibe: "Poised & Editorial",
     background: "#050713",
   },
   {

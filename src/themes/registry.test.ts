@@ -71,6 +71,18 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     scrim:
       "linear-gradient(90deg, rgba(3, 5, 14, 0.86) 0%, rgba(3, 5, 14, 0.66) 52%, rgba(3, 5, 14, 0.34) 100%)",
   },
+  sakura: {
+    surface: "rgba(24, 10, 17, 0.8)",
+    surfaceStrong: "rgba(24, 10, 17, 0.94)",
+    scrim:
+      "linear-gradient(90deg, rgba(15, 6, 11, 0.9) 0%, rgba(15, 6, 11, 0.72) 54%, rgba(15, 6, 11, 0.4) 100%)",
+  },
+  solstice: {
+    surface: "rgba(22, 10, 5, 0.8)",
+    surfaceStrong: "rgba(22, 10, 5, 0.94)",
+    scrim:
+      "linear-gradient(90deg, rgba(12, 5, 2, 0.9) 0%, rgba(12, 5, 2, 0.72) 52%, rgba(12, 5, 2, 0.4) 100%)",
+  },
 } as const;
 
 function backgroundChannels(background: string): string {
@@ -110,16 +122,18 @@ describe("theme registry", () => {
       THEME_REGISTRY.filter((theme) => theme.signature).map((theme) => theme.id),
     ).toEqual([
       "aurora",
+      "sakura",
       "atlas",
       "velvet",
       "quarry",
       "atelier",
+      "solstice",
       "axiom",
       "nocturne",
     ]);
   });
 
-  it("assigns the three signature experiences to their authored themes", () => {
+  it("assigns the six signature experiences to their authored themes", () => {
     const experienceThemes = THEME_REGISTRY.filter(
       (theme) => theme.signatureExperience,
     );
@@ -130,9 +144,12 @@ describe("theme registry", () => {
         theme.signatureExperience?.id,
       ]),
     ).toEqual([
+      ["sakura", "bloom-composition"],
       ["atlas", "achievement-atlas"],
       ["atelier", "editorial-feature"],
+      ["solstice", "solar-briefing"],
       ["axiom", "proof-museum"],
+      ["nocturne", "midnight-edition"],
     ]);
     expect(
       new Set(
@@ -266,5 +283,7 @@ describe("theme registry", () => {
     expect(THEME_MAP.atelier.presentation.surface).toBe("rgba(246, 240, 224, 0.9)");
     expect(THEME_MAP.axiom.presentation.surface).toBe("rgba(4, 7, 19, 0.76)");
     expect(THEME_MAP.nocturne.presentation.surface).toBe("rgba(7, 9, 20, 0.76)");
+    expect(THEME_MAP.sakura.presentation.surface).toBe("rgba(24, 10, 17, 0.8)");
+    expect(THEME_MAP.solstice.presentation.surface).toBe("rgba(22, 10, 5, 0.8)");
   });
 });

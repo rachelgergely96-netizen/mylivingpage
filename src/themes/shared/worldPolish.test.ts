@@ -120,12 +120,14 @@ describe("world polish", () => {
 
     expect(preservedIds).toEqual([
       "aurora",
+      "sakura",
       "luxe",
       "atlas",
       "velvet",
       "quarry",
       "atelier",
       "filigree",
+      "solstice",
       "axiom",
       "nocturne",
     ]);

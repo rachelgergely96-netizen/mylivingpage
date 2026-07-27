@@ -79,7 +79,11 @@ test("returning users enter through their real Living Page signal", async ({
   await expect(welcome).toHaveAttribute("data-state", "holding", {
     timeout: 2_000,
   });
-  await expect(welcome).toContainText("Page ready. Opening your dashboard");
+  await expect(welcome).toContainText(
+    "Page ready. Dashboard opens automatically",
+  );
+  await page.waitForTimeout(2_500);
+  await expect(welcome).toBeVisible();
   await expect(welcome).toHaveCount(0, { timeout: 5_000 });
   await expect(page.locator("#main-content")).toBeFocused();
   await expect(
@@ -111,7 +115,7 @@ test("welcome handoff can be paused, resumed, or skipped from the keyboard", asy
   await expect(welcome).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(welcome).toHaveAttribute("data-paused", "false");
-  await expect(welcome).toHaveCount(0, { timeout: 4_000 });
+  await expect(welcome).toHaveCount(0, { timeout: 7_000 });
 
   await page.goto("/dev/dashboard-preview?welcome=1");
   await expect(
@@ -146,7 +150,9 @@ test("welcome-back reveal is static and contained on reduced-motion mobile", asy
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  await expect(welcome).toHaveCount(0, { timeout: 2_500 });
+  await page.waitForTimeout(2_500);
+  await expect(welcome).toBeVisible();
+  await expect(welcome).toHaveCount(0, { timeout: 3_500 });
   await expect(page.locator("#main-content")).toBeFocused();
 });
 

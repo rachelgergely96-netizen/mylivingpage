@@ -2,6 +2,7 @@
   --welcome-accent: var(--site-action);
   --welcome-accent-bright: var(--site-action-hover);
   --welcome-accent-soft: var(--site-action-soft);
+  --welcome-reveal-duration: 760ms;
   position: fixed;
   z-index: 80;
   inset: 0;
@@ -61,17 +62,18 @@
 .root[data-state="revealing"] {
   overflow: hidden;
   pointer-events: none;
-  animation: welcome-dashboard-reveal 560ms cubic-bezier(0.76, 0, 0.24, 1)
-    both;
+  animation: welcome-dashboard-reveal var(--welcome-reveal-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
 }
 
 .root[data-state="revealing"] .stage {
-  animation: welcome-stage-reveal 560ms cubic-bezier(0.76, 0, 0.24, 1) both;
+  animation: welcome-stage-reveal var(--welcome-reveal-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
 }
 
 .root[data-state="revealing"] .preview {
-  animation: welcome-preview-reveal 560ms cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: welcome-preview-reveal var(--welcome-reveal-duration)
+    cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .root[data-state="holding"] .preview {

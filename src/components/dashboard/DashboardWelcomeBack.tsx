@@ -37,14 +37,15 @@ type WelcomeStyle = CSSProperties & {
   "--welcome-accent-bright": string;
   "--welcome-accent-soft": string;
   "--welcome-hold-duration": string;
+  "--welcome-reveal-duration": string;
 };
 
 type WelcomePhase = "entering" | "holding" | "revealing";
 
-const ENTRY_DURATION_MS = 900;
-const HOLD_DURATION_MS = 1900;
-const REDUCED_HOLD_DURATION_MS = 1100;
-const REVEAL_DURATION_MS = 560;
+const ENTRY_DURATION_MS = 1100;
+const HOLD_DURATION_MS = 4200;
+const REDUCED_HOLD_DURATION_MS = 4200;
+const REVEAL_DURATION_MS = 760;
 
 function firstName(displayName: string | null): string | null {
   return displayName?.trim().split(/\s+/)[0] || null;
@@ -278,6 +279,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     "--welcome-hold-duration": `${
       reducedMotion ? REDUCED_HOLD_DURATION_MS : HOLD_DURATION_MS
     }ms`,
+    "--welcome-reveal-duration": `${REVEAL_DURATION_MS}ms`,
   };
   const handoffStatus =
     phase === "entering"
@@ -286,7 +288,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
         ? "Opening your dashboard"
         : paused
           ? "Automatic opening paused"
-          : "Page ready. Opening your dashboard…";
+          : "Page ready. Dashboard opens automatically…";
 
   return (
     <div

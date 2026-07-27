@@ -254,6 +254,53 @@ test("the three signature experiences keep one narrative order while presenting 
   }
 });
 
+test("the three signature experiences use compact laptop scale", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+    await select.selectOption(signature.themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const scale = await livingPage.evaluate((element) => {
+      const header = element.querySelector<HTMLElement>(
+        "[data-resume-header]",
+      );
+      const name = element.querySelector<HTMLElement>("[data-resume-name]");
+      const scrollRoot = element.querySelector<HTMLElement>(
+        "[data-analytics-scroll-root='true']",
+      );
+
+      return {
+        headerHeight: header?.getBoundingClientRect().height ?? 0,
+        nameFontSize: Number.parseFloat(
+          name ? window.getComputedStyle(name).fontSize : "0",
+        ),
+        viewportHeight: scrollRoot?.clientHeight ?? 0,
+      };
+    });
+
+    expect(scale.viewportHeight).toBeGreaterThan(0);
+    expect(
+      scale.headerHeight / scale.viewportHeight,
+      `${signature.themeId} masthead viewport share`,
+    ).toBeLessThan(0.8);
+    expect(
+      scale.nameFontSize,
+      `${signature.themeId} laptop name scale`,
+    ).toBeLessThanOrEqual(112);
+  }
+});
+
 test("all themes use one narrative font across Living Pages and share cards", async ({
   page,
 }) => {

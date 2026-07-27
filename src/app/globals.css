@@ -2259,6 +2259,83 @@ a {
     -3px -3px 0 #e66f55;
 }
 
+:is(
+  [data-theme-experience="achievement-atlas"],
+  [data-theme-experience="proof-museum"],
+  [data-theme-experience="editorial-feature"]
+) {
+  container-type: inline-size;
+}
+
+/* Laptop and embedded canvases keep the authored composition without using
+   the display-scale typography reserved for genuinely large screens. */
+@container (min-width: 768px) and (max-width: 1535px) {
+  [data-theme-experience="achievement-atlas"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-header],
+  [data-theme-experience="proof-museum"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-header] {
+    min-height: clamp(17rem, 25cqi, 21rem);
+    padding: clamp(1.5rem, 3cqi, 2.75rem);
+  }
+
+  [data-theme-experience="achievement-atlas"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-name,
+  [data-theme-experience="proof-museum"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-name {
+    font-size: clamp(3.2rem, 6.2cqi, 6.25rem);
+    line-height: 0.88;
+  }
+
+  [data-theme-experience="achievement-atlas"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-headline],
+  [data-theme-experience="proof-museum"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-headline] {
+    margin-top: 0.9rem;
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-content {
+    padding: clamp(1.5rem, 3cqi, 2.75rem);
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-header] {
+    min-height: clamp(19rem, 29cqi, 24rem);
+    padding: 3.25rem 0 1.75rem;
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-name {
+    font-size: clamp(3.5rem, 7cqi, 7rem);
+    line-height: 0.82;
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    [data-resume-headline] {
+    margin-top: 1rem;
+  }
+
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-avatar,
+  [data-theme-experience="editorial-feature"]
+    .resume-theme[data-resume-density="full"]
+    .resume-theme-monogram {
+    width: clamp(4.5rem, 7cqi, 6.5rem);
+    height: clamp(4.5rem, 7cqi, 6.5rem);
+  }
+}
+
 @media (min-width: 768px) {
   [data-theme-experience="proof-museum"] [data-proof-grid] {
     grid-template-columns: repeat(12, minmax(0, 1fr));

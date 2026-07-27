@@ -5,6 +5,7 @@ import {
   THEME_IDS,
   THEME_MATERIAL_PROFILE_IDS,
   THEME_READING_MODE_IDS,
+  THEME_SIGNATURE_EXPERIENCE_IDS,
   type ThemeId,
 } from "@/themes/types";
 
@@ -56,6 +57,12 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     scrim:
       "linear-gradient(90deg, rgba(232, 223, 207, 0.92) 0%, rgba(232, 223, 207, 0.74) 50%, rgba(232, 223, 207, 0.34) 100%)",
   },
+  axiom: {
+    surface: "rgba(4, 7, 19, 0.76)",
+    surfaceStrong: "rgba(4, 7, 19, 0.92)",
+    scrim:
+      "linear-gradient(90deg, rgba(4, 7, 19, 0.86) 0%, rgba(4, 7, 19, 0.66) 50%, rgba(4, 7, 19, 0.34) 100%)",
+  },
   nocturne: {
     accent: "#C8D4FF",
     accentBright: "#F1F4FF",
@@ -101,7 +108,37 @@ describe("theme registry", () => {
   it("identifies the redesigned signature set", () => {
     expect(
       THEME_REGISTRY.filter((theme) => theme.signature).map((theme) => theme.id),
-    ).toEqual(["aurora", "atlas", "velvet", "quarry", "atelier", "nocturne"]);
+    ).toEqual([
+      "aurora",
+      "atlas",
+      "velvet",
+      "quarry",
+      "atelier",
+      "axiom",
+      "nocturne",
+    ]);
+  });
+
+  it("assigns the three signature experiences to their authored themes", () => {
+    const experienceThemes = THEME_REGISTRY.filter(
+      (theme) => theme.signatureExperience,
+    );
+
+    expect(
+      experienceThemes.map((theme) => [
+        theme.id,
+        theme.signatureExperience?.id,
+      ]),
+    ).toEqual([
+      ["atlas", "achievement-atlas"],
+      ["atelier", "editorial-feature"],
+      ["axiom", "proof-museum"],
+    ]);
+    expect(
+      new Set(
+        experienceThemes.map((theme) => theme.signatureExperience?.id),
+      ),
+    ).toEqual(new Set(THEME_SIGNATURE_EXPERIENCE_IDS));
   });
 
   it("assigns every theme its own authored accent family", () => {
@@ -227,6 +264,7 @@ describe("theme registry", () => {
     expect(THEME_MAP.velvet.presentation.surface).toBe("rgba(30, 7, 18, 0.76)");
     expect(THEME_MAP.quarry.presentation.surface).toBe("rgba(19, 13, 9, 0.76)");
     expect(THEME_MAP.atelier.presentation.surface).toBe("rgba(246, 240, 224, 0.9)");
+    expect(THEME_MAP.axiom.presentation.surface).toBe("rgba(4, 7, 19, 0.76)");
     expect(THEME_MAP.nocturne.presentation.surface).toBe("rgba(7, 9, 20, 0.76)");
   });
 });

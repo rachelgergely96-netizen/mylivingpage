@@ -39,6 +39,7 @@ function StaticThemePreview({ theme }: { theme: ThemeMeta }) {
       aria-hidden="true"
       data-theme-preview-static={theme.id}
       data-theme-detail={theme.contentProfile}
+      data-theme-experience={theme.signatureExperience?.id}
       data-theme-material={theme.materialProfile}
       className="relative overflow-hidden rounded-none"
       style={{
@@ -233,7 +234,11 @@ export default function ThemePicker({
                         selected={selectedThemeId === theme.id}
                         requested={requestedThemeIds.has(theme.id)}
                       />
-                      {theme.signature ? (
+                      {theme.signatureExperience ? (
+                        <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2.5 py-1 text-[9px] font-semibold text-site-warning">
+                          {theme.signatureExperience.name}
+                        </span>
+                      ) : theme.signature ? (
                         <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2.5 py-1 text-[9px] font-semibold text-site-warning">
                           Signature
                         </span>
@@ -248,6 +253,11 @@ export default function ThemePicker({
                     </div>
                     <p className="mt-3 font-site text-xl font-semibold">{theme.name}</p>
                     <p className="text-xs font-medium text-site-action">{theme.vibe}</p>
+                    {theme.signatureExperience ? (
+                      <p className="mt-2 text-xs leading-5 text-site-secondary">
+                        {theme.signatureExperience.description}
+                      </p>
+                    ) : null}
                     {showDescription ? (
                       <p className="mt-2 text-xs leading-6 text-site-muted">{theme.description}</p>
                     ) : null}

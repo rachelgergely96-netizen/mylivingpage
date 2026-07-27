@@ -126,6 +126,7 @@ describe("world polish", () => {
       "quarry",
       "atelier",
       "filigree",
+      "axiom",
       "nocturne",
     ]);
     expect(polishedIds).toHaveLength(THEME_REGISTRY.length - preservedIds.length);

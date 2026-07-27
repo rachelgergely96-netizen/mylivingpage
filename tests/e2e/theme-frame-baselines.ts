@@ -7,7 +7,13 @@ export interface ThemeFrameBaseline {
 
 export type CatalogThemeId = Exclude<
   ThemeId,
-  "aurora" | "atlas" | "velvet" | "quarry" | "atelier" | "nocturne"
+  | "aurora"
+  | "atlas"
+  | "velvet"
+  | "quarry"
+  | "atelier"
+  | "axiom"
+  | "nocturne"
 >;
 
 /**
@@ -61,7 +67,6 @@ export const THEME_FRAME_BASELINES = {
   parasol: { hash: "0302010306070001", mean: [34, 19, 27] },
   gossamer: { hash: "0101010101030311", mean: [11, 16, 23] },
   citadel: { hash: "0341494d4d494949", mean: [14, 18, 26] },
-  axiom: { hash: "a7074707070923a1", mean: [6, 10, 22] },
   helix: { hash: "03030101010b0313", mean: [6, 12, 20] },
   jetstream: { hash: "01090201010b0501", mean: [14, 25, 36] },
   echelon: { hash: "0101050101018100", mean: [15, 24, 37] },

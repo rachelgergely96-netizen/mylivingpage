@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ATS_READINESS_DISCLOSURE,
   FREE_PRODUCT_FEATURE_GROUPS,
+  getMarketingSamples,
   LANDING_FAQS,
 } from "@/lib/marketing-samples";
 
@@ -24,5 +25,21 @@ describe("public free-product copy", () => {
     const copy = JSON.stringify({ FREE_PRODUCT_FEATURE_GROUPS, LANDING_FAQS });
 
     expect(copy).not.toMatch(/Starter|\bPro\b|30-day free trial|payment method/);
+  });
+
+  it("showcases all three authored Living Page experiences", () => {
+    const samples = getMarketingSamples();
+
+    expect(
+      samples
+        .filter((sample) =>
+          ["axiom", "atelier", "atlas"].includes(sample.demo.themeId),
+        )
+        .map((sample) => [sample.id, sample.demo.themeId]),
+    ).toEqual([
+      ["laid-off-tech", "axiom"],
+      ["career-switching-designer", "atelier"],
+      ["early-career-attorney", "atlas"],
+    ]);
   });
 });

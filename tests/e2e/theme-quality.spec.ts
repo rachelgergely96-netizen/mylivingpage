@@ -12,6 +12,26 @@ const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter(
   (theme) => theme.signature,
 ).map((theme) => theme.id);
 const MATERIAL_THEME_IDS = THEME_REGISTRY.map((theme) => theme.id);
+const SIGNATURE_EXPERIENCE_THEMES = [
+  {
+    themeId: "atlas",
+    experienceId: "achievement-atlas",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "Waypoint",
+  },
+  {
+    themeId: "axiom",
+    experienceId: "proof-museum",
+    markerSelector: '[data-motion-kind="project"]',
+    markerText: "Exhibit",
+  },
+  {
+    themeId: "atelier",
+    experienceId: "editorial-feature",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "PLATE",
+  },
+] as const;
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -185,6 +205,52 @@ test("all theme materials keep readable plates stationary across desktop and mob
         (element) => element.scrollWidth - element.clientWidth,
       ),
     ).toBe(0);
+  }
+});
+
+test("the three signature experiences keep one narrative order while presenting distinct authored formats", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+  let canonicalSectionOrder: string[] | null = null;
+
+  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+    await select.selectOption(signature.themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+    );
+
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-experience",
+      signature.experienceId,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const sectionOrder = await livingPage
+      .locator("[data-motion-section]")
+      .evaluateAll((sections) =>
+        sections.map(
+          (section) => section.getAttribute("data-motion-section") ?? "",
+        ),
+      );
+    if (canonicalSectionOrder === null) {
+      canonicalSectionOrder = sectionOrder;
+    } else {
+      expect(sectionOrder).toEqual(canonicalSectionOrder);
+    }
+
+    const markerContent = await livingPage
+      .locator(signature.markerSelector)
+      .first()
+      .evaluate((element) =>
+        window.getComputedStyle(element, "::before").content.replaceAll('"', ""),
+      );
+    expect(markerContent).toContain(signature.markerText);
   }
 });
 

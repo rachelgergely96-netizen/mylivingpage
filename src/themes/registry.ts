@@ -413,6 +413,12 @@ const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresent
     scrim:
       "linear-gradient(90deg, rgba(232, 223, 207, 0.92) 0%, rgba(232, 223, 207, 0.74) 50%, rgba(232, 223, 207, 0.34) 100%)",
   },
+  axiom: {
+    surface: "rgba(4, 7, 19, 0.76)",
+    surfaceStrong: "rgba(4, 7, 19, 0.92)",
+    scrim:
+      "linear-gradient(90deg, rgba(4, 7, 19, 0.86) 0%, rgba(4, 7, 19, 0.66) 50%, rgba(4, 7, 19, 0.34) 100%)",
+  },
 };
 
 const THEME_DEFINITIONS: Array<
@@ -629,10 +635,16 @@ const THEME_DEFINITIONS: Array<
   {
     id: "atlas",
     signature: true,
+    signatureExperience: {
+      id: "achievement-atlas",
+      name: "Achievement Atlas",
+      description:
+        "A career journey where roles, results, and proof become connected waypoints.",
+    },
     name: "Atlas",
     description:
-      "Luminous globe meridians, latitude bands, and route signals pulse through a dark cartographic field.",
-    vibe: "Strategic & Worldly",
+      "A navigable career route with milestone stations, mission coordinates, and connected proof.",
+    vibe: "Journey-led & Strategic",
     background: "#03070B",
   },
   {
@@ -760,10 +772,16 @@ const THEME_DEFINITIONS: Array<
   {
     id: "atelier",
     signature: true,
+    signatureExperience: {
+      id: "editorial-feature",
+      name: "Editorial Feature",
+      description:
+        "A magazine-like profile with a feature opener, fact box, plates, and pull quotes.",
+    },
     name: "Atelier",
     description:
-      "An archival print proof with crop marks, layered inks, and numbered project plates.",
-    vibe: "Curated & Creative",
+      "A magazine-like career feature with a bold opener, measured story columns, and numbered plates.",
+    vibe: "Editorial & Curated",
     background: "#E8DFCF",
   },
   {
@@ -832,10 +850,17 @@ const THEME_DEFINITIONS: Array<
   },
   {
     id: "axiom",
+    signature: true,
+    signatureExperience: {
+      id: "proof-museum",
+      name: "Proof Museum",
+      description:
+        "An evidence-first gallery where outcomes, work samples, and roles become exhibits.",
+    },
     name: "Axiom",
     description:
-      "Theorem lines, proof arcs, and luminous node pulses map across a disciplined analytical field.",
-    vibe: "Intellectual & Precise",
+      "An evidence-first gallery of outcomes, work samples, and precisely catalogued experience.",
+    vibe: "Evidence-led & Precise",
     background: "#040713",
   },
   {

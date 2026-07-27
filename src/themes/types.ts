@@ -123,6 +123,21 @@ export const THEME_MATERIAL_PROFILE_IDS = [
 export type ThemeMaterialProfileId =
   (typeof THEME_MATERIAL_PROFILE_IDS)[number];
 
+export const THEME_SIGNATURE_EXPERIENCE_IDS = [
+  "achievement-atlas",
+  "proof-museum",
+  "editorial-feature",
+] as const;
+
+export type ThemeSignatureExperienceId =
+  (typeof THEME_SIGNATURE_EXPERIENCE_IDS)[number];
+
+export interface ThemeSignatureExperience {
+  id: ThemeSignatureExperienceId;
+  name: string;
+  description: string;
+}
+
 /**
  * A small, renderer-agnostic model of what is happening on a Living Page.
  *
@@ -196,6 +211,7 @@ export interface ThemeMeta {
   contentProfile: ThemeContentProfileId;
   materialProfile: ThemeMaterialProfileId;
   readingMode: ThemeReadingMode;
+  signatureExperience?: ThemeSignatureExperience;
   name: string;
   description: string;
   vibe: string;

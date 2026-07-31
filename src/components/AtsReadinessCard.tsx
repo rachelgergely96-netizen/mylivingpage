@@ -34,7 +34,7 @@ const STATUS_CONTENT: Record<
 > = {
   ready: {
     badge: "Ready",
-    heading: "Your resume passes the current checks",
+    heading: "Your résumé passes the current checks",
     styles: "site-status-success",
   },
   needs_attention: {
@@ -51,12 +51,9 @@ const STATUS_CONTENT: Record<
 
 function CheckList({ checks }: { checks: AtsReadinessCheck[] }) {
   return (
-    <ul className="mt-3 space-y-3">
+    <ul className="mt-3 divide-y divide-site-border border-t border-site-border">
       {checks.map((check) => (
-        <li
-          key={check.id}
-          className="border border-site-border bg-site-canvas-alt p-3.5"
-        >
+        <li key={check.id} className="py-3">
           <p className="font-medium text-site-text">{check.title}</p>
           <p className="mt-1.5 text-sm leading-6 text-site-secondary">
             {check.detail}
@@ -87,7 +84,7 @@ function describePdf(readiness: AtsReadinessResult) {
 
   return readiness.pdf.fitsOnOnePage
     ? `${pageLabel} and fits on one page.`
-    : `${pageLabel}. A multi-page resume is not automatically an ATS problem.`;
+    : `${pageLabel}. A multi-page résumé is not automatically an ATS problem.`;
 }
 
 const JOB_COMPARISON_CHECK_IDS = new Set([
@@ -134,7 +131,7 @@ function JobComparisonResult({
               {keywordCoverage
                 ? keywordCoverage.keywords.length === 0
                   ? "No specific job terms were found"
-                  : `${keywordCoverage.matchedKeywords.length} of ${keywordCoverage.keywords.length} important terms appear in your resume`
+                  : `${keywordCoverage.matchedKeywords.length} of ${keywordCoverage.keywords.length} important terms appear in your résumé`
                 : "Target-title wording checked"}
             </h5>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-site-secondary">
@@ -144,11 +141,11 @@ function JobComparisonResult({
 
           {keywordCoverage && keywordCoverage.keywords.length > 0 ? (
             <div className="border-l border-site-border pl-4 sm:min-w-32 sm:text-right">
-              <p className="site-eyebrow text-[9px] text-site-muted">Exact words found</p>
-              <p className="editor-signal-count mt-1 font-mono text-3xl font-semibold text-site-action-hover">
+              <p className="site-eyebrow text-site-muted">Exact words found</p>
+              <p className="editor-signal-count mt-1 font-site text-3xl font-semibold tabular-nums text-site-action-hover">
                 {keywordCoverage.coveragePercent}%
               </p>
-              <p className="site-eyebrow mt-1 text-[9px] text-site-muted">
+              <p className="site-eyebrow mt-1 text-site-muted">
                 Not an ATS score
               </p>
             </div>
@@ -183,7 +180,7 @@ function JobComparisonResult({
               <div>
                 <div
                   role="progressbar"
-                  aria-label={`${keywordCoverage.coveragePercent}% of selected job-description terms appear in the resume`}
+                  aria-label={`${keywordCoverage.coveragePercent}% of selected job-description terms appear in the résumé`}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={keywordCoverage.coveragePercent}
@@ -196,18 +193,18 @@ function JobComparisonResult({
                   />
                 </div>
                 <p className="mt-2 text-xs leading-5 text-site-secondary">
-                  Only add a missing term when it truthfully describes work you have done. Do not paste job-ad wording into your resume just to raise this number.
+                  Only add a missing term when it truthfully describes work you have done. Do not paste job-ad wording into your résumé just to raise this number.
                 </p>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="border border-site-border bg-site-canvas-alt p-3.5">
+              <div className="grid items-start gap-4 lg:grid-cols-2">
+                <div className="border border-site-border bg-site-canvas-alt p-4">
                   <p className="text-xs font-semibold text-site-success">
-                    Found in your resume · {keywordCoverage.matchedKeywords.length}
+                    Found in your résumé · {keywordCoverage.matchedKeywords.length}
                   </p>
                   {keywordCoverage.matchedKeywords.length > 0 ? (
                     <ul
-                      aria-label="Job terms found in your resume"
+                      aria-label="Job terms found in your résumé"
                       className="mt-3 flex flex-wrap gap-2"
                     >
                       {keywordCoverage.matchedKeywords.map((keyword) => (
@@ -223,13 +220,13 @@ function JobComparisonResult({
                   )}
                 </div>
 
-                <div className="border border-site-border bg-site-canvas-alt p-3.5">
+                <div className="border border-site-border bg-site-canvas-alt p-4">
                   <p className="text-xs font-semibold text-site-warning">
-                    Not found in your resume · {keywordCoverage.missingKeywords.length}
+                    Not found in your résumé · {keywordCoverage.missingKeywords.length}
                   </p>
                   {keywordCoverage.missingKeywords.length > 0 ? (
                     <ul
-                      aria-label="Job terms not found in your resume"
+                      aria-label="Job terms not found in your résumé"
                       className="mt-3 flex flex-wrap gap-2"
                     >
                       {keywordCoverage.missingKeywords.map((keyword) => (
@@ -240,7 +237,7 @@ function JobComparisonResult({
                     </ul>
                   ) : (
                     <p className="mt-3 text-xs leading-5 text-site-success">
-                      Every selected job term appears in the resume.
+                      Every selected job term appears in the résumé.
                     </p>
                   )}
                 </div>
@@ -253,7 +250,7 @@ function JobComparisonResult({
           )
         ) : (
           <p className="site-callout mt-5 px-4 py-3 text-sm leading-6">
-            Add the job description as well if you want to see the important words found and not found in your resume.
+            Add the job description as well if you want to see the important words found and not found in your résumé.
           </p>
         )}
       </div>
@@ -280,7 +277,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
   const resultIsCurrent =
     completedCheck?.fingerprint === fingerprint &&
     completedCheck.comparisonKey === comparisonKey;
-  const readiness = resultIsCurrent ? completedCheck.readiness : null;
+  const readiness = completedCheck?.readiness ?? null;
   const hasStaleResult = Boolean(completedCheck && !resultIsCurrent);
   const normalizedTargetTitle = targetTitle.trim();
   const normalizedJobDescription = jobDescription.trim();
@@ -298,6 +295,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
 
     setChecking(true);
     setError("");
+    setCompletedCheck(null);
 
     try {
       const response = await fetch("/api/resume/readiness", {
@@ -315,7 +313,17 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
       } | null;
 
       if (!response.ok || !body?.readiness) {
-        throw new Error(body?.error ?? "The readiness check could not be completed.");
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(
+            "Your session has expired. Sign in again to run the check.",
+          );
+        }
+        const serverError = body?.error;
+        throw new Error(
+          serverError && (serverError.includes(" ") || serverError.length > 20)
+            ? serverError
+            : "The readiness check could not be completed.",
+        );
       }
 
       setCompletedCheck({
@@ -364,7 +372,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
     <section
       id="ats-readiness"
       aria-labelledby="ats-readiness-title"
-      className="site-panel scroll-mt-24 p-5 sm:p-6"
+      className="site-panel scroll-mt-24 p-4 sm:p-6 xl:scroll-mt-72"
     >
       <div className="max-w-3xl">
         <p className="site-eyebrow">ATS &amp; job check</p>
@@ -372,17 +380,17 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
           id="ats-readiness-title"
           className="site-panel-title mt-2 text-2xl"
         >
-          Check your resume—and compare one specific job
+          Check your résumé—and compare one specific job
         </h3>
         <p className="site-muted mt-3 text-sm leading-7">
           Run a rules-based check for readable contact details, complete work history,
           searchable content, and a text-based PDF. Add a job description to see which
-          important words already appear in your resume.
+          important words already appear in your résumé.
         </p>
       </div>
 
       <fieldset
-        className="editor-signal-frame relative mt-5 overflow-hidden border border-site-border-strong bg-site-canvas-alt p-4 sm:p-5"
+        className="editor-signal-frame relative mt-5 overflow-hidden border border-site-border-strong bg-site-canvas-alt p-4 sm:p-6"
         data-ats-job-setup
       >
         <legend className="sr-only">Job comparison details</legend>
@@ -392,10 +400,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
         <div className="relative">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="site-eyebrow">
-                <span className="mr-2 font-mono text-site-muted">01</span>
-                Job context · Optional
-              </p>
+              <p className="site-eyebrow">Job context · Optional</p>
               <h4 className="mt-2 font-site text-lg font-semibold text-site-text">
                 Paste the role you are applying for
               </h4>
@@ -406,7 +411,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             <span
               role="status"
               aria-live="polite"
-              className={`site-eyebrow w-fit border px-2.5 py-1 font-mono text-[9px] ${
+              className={`site-eyebrow w-fit border px-2 py-0.5 ${
                 hasJobComparison
                   ? "border-site-action text-site-action-hover"
                   : "border-site-border text-site-muted"
@@ -450,11 +455,11 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             <div className="flex flex-col gap-2 border-l-2 border-site-action px-3 sm:flex-row sm:items-start sm:justify-between">
               <p id="ats-job-description-help" className="text-xs leading-5 text-site-secondary">
                 Used only for this check and not stored. The comparison looks for exact terms;
-                it does not send your resume or the posting to an AI service.
+                it does not send your résumé or the posting to an AI service.
               </p>
               <p
                 id="ats-job-description-count"
-                className="shrink-0 font-mono text-[10px] text-site-muted"
+                className="shrink-0 font-mono text-xs text-site-muted"
               >
                 {jobDescription.length.toLocaleString()}/20,000
               </p>
@@ -465,7 +470,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             <p className="text-xs leading-5 text-site-muted">
               {hasJobComparison
                 ? "The result will separate your overall ATS readiness from the job-word comparison."
-                : "You are running the general resume structure and PDF check."}
+                : "You are running the general résumé structure and PDF check."}
             </p>
             <button
               type="button"
@@ -474,7 +479,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
               className="site-button site-button-primary w-full shrink-0 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:min-w-56"
             >
               {checking
-                ? "Checking resume..."
+                ? "Checking résumé…"
                 : hasJobComparison
                   ? "Check against this job"
                   : "Run general ATS check"}
@@ -493,22 +498,37 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
               aria-hidden="true"
               className="h-4 w-4 animate-spin rounded-full border-2 border-site-border border-t-site-action"
             />
-            Checking the resume structure, PDF, and selected job context...
+            Checking the résumé structure, PDF, and selected job context…
           </div>
         ) : null}
 
         {error ? (
           <p
             role="alert"
-            className="site-alert-danger px-4 py-3 text-sm"
+            className="site-alert-danger flex items-start gap-2 px-4 py-3 text-sm"
           >
-            {error}
+            <svg
+              aria-hidden="true"
+              className="mt-0.5 h-4 w-4 shrink-0"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <circle cx="8" cy="8" r="6.5" />
+              <path d="M8 4.75v3.75" strokeLinecap="square" />
+              <path d="M8 11.25h.01" strokeLinecap="round" />
+            </svg>
+            <span>{error}</span>
           </p>
         ) : null}
 
         {hasStaleResult && !checking ? (
-          <p className="site-callout site-callout-warning px-4 py-3 text-sm text-site-warning">
-            Your resume or comparison changed since the last check. Run the check again for an
+          <p
+            id="ats-stale-notice"
+            className="site-callout site-callout-warning px-4 py-3 text-sm text-site-warning"
+          >
+            Your résumé or comparison changed since the last check. Run the check again for an
             up-to-date result.
           </p>
         ) : null}
@@ -519,8 +539,12 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
           ref={resultsRef}
           role="region"
           aria-label="ATS check results"
+          aria-describedby={hasStaleResult ? "ats-stale-notice" : undefined}
+          data-stale={hasStaleResult ? "true" : undefined}
           tabIndex={-1}
-          className="mt-5 scroll-mt-24 space-y-5 outline-none"
+          className={`mt-5 scroll-mt-24 space-y-5 outline-none xl:scroll-mt-72 ${
+            hasStaleResult ? "opacity-60" : ""
+          }`}
           data-ats-readiness-results
         >
           <div
@@ -531,10 +555,10 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="site-eyebrow text-[10px] text-current">
+                  <p className="site-eyebrow text-current">
                     {statusContent.badge}
                   </p>
-                  <span className="site-eyebrow border border-current px-2 py-1 font-mono text-[9px] text-current opacity-80">
+                  <span className="site-eyebrow border border-current px-2 py-0.5 text-current opacity-80">
                     {hasJobComparison ? "Includes job comparison" : "General ATS check"}
                   </span>
                 </div>
@@ -566,7 +590,7 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             {CATEGORY_LABELS.map((category) => (
               <div
                 key={category.id}
-                className="border border-site-border bg-site-canvas-alt p-3.5"
+                className="border border-site-border bg-site-canvas-alt p-4"
               >
                 <p className="text-xs text-site-muted">{category.label}</p>
                 <p className="mt-1.5 font-site text-xl font-semibold tabular-nums text-site-text">
@@ -577,14 +601,14 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
             ))}
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid items-start gap-4 xl:grid-cols-2">
             <div className="border border-site-border bg-site-canvas-alt p-4">
               <p className="site-eyebrow text-site-danger">Fix first</p>
               {readiness.criticalFixes.length > 0 ? (
                 <CheckList checks={readiness.criticalFixes} />
               ) : (
                 <p className="mt-3 text-sm leading-6 text-site-secondary">
-                  No critical structural problems were found.
+                  No critical fixes were found.
                 </p>
               )}
             </div>
@@ -626,15 +650,14 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
 
           <p className="text-xs leading-5 text-site-muted">
             {readiness.disclaimer ||
-              "This rule-based check cannot predict how every ATS, recruiter, or hiring team will evaluate a resume."}
+              "This rule-based check cannot predict how every ATS, recruiter, or hiring team will evaluate a résumé."}
           </p>
         </div>
       ) : (
-        !checking &&
-        !hasStaleResult && (
+        !checking && (
           <p className="mt-5 text-xs leading-5 text-site-muted">
             This rule-based check cannot predict how every ATS, recruiter, or hiring team will
-            evaluate a resume.
+            evaluate a résumé.
           </p>
         )
       )}

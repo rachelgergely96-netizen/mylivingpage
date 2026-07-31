@@ -26,7 +26,8 @@ describe("ThemePicker", () => {
     expect(markup.match(/data-theme-canvas=/g)).toHaveLength(1);
     expect(markup).toContain(`data-theme-canvas="${selectedThemeId}"`);
     expect(markup.match(/data-theme-preview-static=/g)).toHaveLength(2);
-    expect(markup).toContain("aria-pressed=\"true\"");
+    expect(markup).toContain("role=\"radiogroup\"");
+    expect(markup.match(/aria-checked="true"/g)).toHaveLength(1);
   });
 
   it("can open on the selected theme collection instead of the full catalog", () => {

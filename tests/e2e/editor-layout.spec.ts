@@ -226,7 +226,7 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   await expect(preview.getByText("Principal Platform Engineer", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Save Changes" }).click();
-  await expect(page.getByText("Saved successfully!", { exact: true })).toBeVisible();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
   await expect(page.getByText("All changes saved", { exact: true })).toBeVisible();
   await expect(page.locator("[data-editor-preview-status]")).toHaveText("Live signal");
 
@@ -332,22 +332,36 @@ test("job-specific ATS check makes found and missing words easy to scan", async 
   await expect(results).toBeVisible();
   await expect(results).toBeFocused();
   await expect(jobMatch.getByRole("heading", {
-    name: "2 of 4 important terms appear in your resume",
+    name: "2 of 4 important terms appear in your résumé",
   })).toBeVisible();
   await expect(jobMatch.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
   await expect(jobMatch.getByRole("list", {
-    name: "Job terms found in your resume",
+    name: "Job terms found in your résumé",
   })).toContainText("analytics");
   await expect(jobMatch.getByRole("list", {
-    name: "Job terms found in your resume",
+    name: "Job terms found in your résumé",
   })).toContainText("roadmaps");
   await expect(jobMatch.getByRole("list", {
-    name: "Job terms not found in your resume",
+    name: "Job terms not found in your résumé",
   })).toContainText("python");
   await expect(jobMatch.getByRole("list", {
-    name: "Job terms not found in your resume",
+    name: "Job terms not found in your résumé",
   })).toContainText("sql");
   await expect(jobMatch).toContainText("Only add a missing term when it truthfully describes work you have done.");
+
+  // Editing the job context after a check keeps the results visible in a stale
+  // state instead of unmounting them, and re-running clears the stale marker.
+  await descriptionInput.fill(
+    "Lead product roadmaps using analytics, Python, and SQL across a B2B platform. Now with Go.",
+  );
+  await expect(results).toHaveAttribute("data-stale", "true");
+  await expect(page.locator("#ats-stale-notice")).toBeVisible();
+  await expect(jobMatch.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+
+  await page.getByRole("button", { name: "Check against this job" }).click();
+  await expect(results).toBeVisible();
+  await expect(results).not.toHaveAttribute("data-stale", "true");
+  await expect(page.locator("#ats-stale-notice")).toHaveCount(0);
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,

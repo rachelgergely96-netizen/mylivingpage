@@ -57,6 +57,8 @@ const SIGNUP_REFS = {
   },
 } as const;
 
+const THEME_COUNT = Object.keys(THEME_MAP).length;
+
 const WORLD_DIRECTIONS: readonly WorldDirection[] = [
   {
     id: "atlas",
@@ -509,10 +511,14 @@ export default function LivingHomepagePrototype({
             <a href="#how-it-works">How it works</a>
             <a href="#search-ready">For applications</a>
             <Link href="/examples">Examples</Link>
+            <Link href="/guides">Guides</Link>
+            <Link href="/pricing">Free</Link>
             <Link href="/login">Sign in</Link>
           </div>
           <div className={styles.mobileNavLinks}>
             <Link href="/examples">Examples</Link>
+            <Link href="/guides">Guides</Link>
+            <Link href="/pricing">Free</Link>
             <Link href="/login">Sign in</Link>
           </div>
           <Link
@@ -633,7 +639,7 @@ export default function LivingHomepagePrototype({
               <div className={styles.storyStyleChooser} data-living-gallery data-story-style-chooser>
                 <div className={styles.storyStyleHeader} id="story-style-choice-help">
                   <div>
-                    <span>{storyMomentId === "referral" ? "59 page styles" : "Page styles"}</span>
+                    <span>{storyMomentId === "referral" ? `${THEME_COUNT} page styles` : "Page styles"}</span>
                     <h3>
                       {storyMomentId === "referral"
                         ? "Try five styles. Your information stays the same."
@@ -738,7 +744,7 @@ export default function LivingHomepagePrototype({
             <p className={styles.eyebrow}><span>Easy to read</span>For people and hiring software</p>
             <h2>The design can change. Your details stay easy to read.</h2>
             <p>
-              The design can change, but your job titles, dates, skills, and results stay as
+              Whatever style you pick, your job titles, dates, skills, and results stay as
               normal text. That makes them easier for recruiters, hiring software (often called
               an ATS), search, and AI tools to read.
             </p>
@@ -810,7 +816,7 @@ export default function LivingHomepagePrototype({
         <MobileStickyCta
           href={`/signup?ref=landing_mobile_sticky&next=/create`}
           label="Create my free page"
-          supportingText="Free · private until you publish"
+          supportingText="Free · no card"
           targetId="prototype-hero"
           hideNearId="closing-cta"
         />
@@ -823,7 +829,10 @@ export default function LivingHomepagePrototype({
             ? "Interactive demo uses sample data"
             : "Homepage conversion prototype · Sample profiles only"}
         </span>
-        <nav aria-label={isProduction ? "Legal and policy links" : "Prototype footer"}>
+        <nav aria-label={isProduction ? "Site and policy links" : "Prototype footer"}>
+          <Link href="/examples">Examples</Link>
+          <Link href="/guides">Guides</Link>
+          <Link href="/pricing">Pricing</Link>
           {isProduction ? <Link href="/legal">Legal</Link> : null}
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>

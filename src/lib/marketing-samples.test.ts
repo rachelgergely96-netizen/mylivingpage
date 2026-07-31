@@ -13,8 +13,8 @@ describe("public free-product copy", () => {
     )?.answer;
 
     expect(featureCopy).toContain("Living Page");
-    expect(featureCopy).toContain("ATS-Ready PDF");
-    expect(featureCopy).toContain("Deterministic ATS readiness check");
+    expect(featureCopy).toContain("ATS-ready PDF");
+    expect(featureCopy).toContain("A clear, repeatable ATS readiness check");
     expect(featureCopy).toContain("Share Card + QR");
     expect(freeAnswer).toContain("without a card, trial, or subscription");
     expect(ATS_READINESS_DISCLOSURE).toContain("no checker can guarantee");

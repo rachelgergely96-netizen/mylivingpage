@@ -184,9 +184,10 @@ const FULL_VIEW_SELECT =
   "id, viewed_at, referrer, user_agent, viewer_ip, country, engaged_seconds, max_scroll_depth_pct, primary_section, had_outbound_click";
 const BASIC_VIEW_SELECT = "id, viewed_at, referrer, user_agent, viewer_ip, country";
 const BASIC_ANALYTICS_NOTICE =
-  "Detailed engagement analytics are temporarily unavailable. Basic traffic analytics are still showing below, and richer insights will return automatically once the engagement backend is available.";
+  "Detailed reading and click insights are temporarily unavailable. Basic activity is still showing below, and the richer detail will come back automatically.";
 const UNAVAILABLE_ANALYTICS_NOTICE =
   "Analytics are temporarily unavailable right now. Please try again soon.";
+const MIN_SAMPLE_FOR_PERCENT_INSIGHTS = 3;
 
 function startOfUtcDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -574,10 +575,13 @@ function buildInsights({
 
   const insights: string[] = [];
   const topReferrer = topReferrers[0] ?? null;
+  const engagedSectionViews = currentRows.filter((row) => Boolean(row.primary_section)).length;
 
   if (topReferrer && topReferrer.label !== "Direct" && topReferrer.count >= 2) {
     insights.push(
-      `Most people are finding this page through ${topReferrer.label} (${Math.round(topReferrer.sharePct)}% of reviews).`,
+      currentRows.length >= MIN_SAMPLE_FOR_PERCENT_INSIGHTS
+        ? `Most people are finding this page through ${topReferrer.label} (${Math.round(topReferrer.sharePct)}% of reviews).`
+        : `Most people are finding this page through ${topReferrer.label}.`,
     );
   } else if (directSharePct >= 50) {
     insights.push(
@@ -588,7 +592,9 @@ function buildInsights({
   if (includeEngagementInsights) {
     if (topActions[0] && outboundCtr > 0) {
       insights.push(
-        `${Math.round(outboundCtr)}% of people who reviewed the page clicked a next step, with ${topActions[0].label} getting the most action.`,
+        currentRows.length >= MIN_SAMPLE_FOR_PERCENT_INSIGHTS
+          ? `${Math.round(outboundCtr)}% of people who reviewed the page clicked a next step, with ${topActions[0].label} getting the most action.`
+          : `People are already clicking a next step, with ${topActions[0].label} getting the first action.`,
       );
     } else if (currentRows.length >= 3) {
       insights.push(
@@ -598,7 +604,9 @@ function buildInsights({
 
     if (topSection) {
       insights.push(
-        `${topSection.label} is holding attention best so far (${Math.round(topSection.sharePct)}% of engaged views).`,
+        engagedSectionViews >= MIN_SAMPLE_FOR_PERCENT_INSIGHTS
+          ? `${topSection.label} is holding attention best so far (${Math.round(topSection.sharePct)}% of engaged views).`
+          : `${topSection.label} is holding attention best in the first few engaged views. Early signal, small sample.`,
       );
     } else if (avgEngagedTime > 0) {
       insights.push(
@@ -677,7 +685,9 @@ function buildFollowUpSignals({
     repeatVisitors > 0
       ? `There ${repeatVisitors === 1 ? "is" : "are"} ${repeatVisitors} repeat ${repeatVisitors === 1 ? "viewer" : "viewers"} in this range. That usually means real interest, not a stray click.`
       : topReferrer && topReferrer.label !== "Direct"
-        ? `${Math.round(topReferrer.sharePct)}% of current traffic is coming from ${topReferrer.label}, so that channel is earning the next follow-up.`
+        ? currentRows.length >= MIN_SAMPLE_FOR_PERCENT_INSIGHTS
+          ? `${Math.round(topReferrer.sharePct)}% of current traffic is coming from ${topReferrer.label}, so that channel is earning the next follow-up.`
+          : `Current traffic is coming from ${topReferrer.label}, so that channel is earning the next follow-up.`
         : topSection
           ? `${topSection.label} is holding attention best so far, which is a good clue for what to lead with in the next message.`
           : "Recent traffic is light, so keep the next follow-up simple and give the page a clearer reason to be opened.";
@@ -784,10 +794,9 @@ export function buildPageAnalyticsDashboard({
     currentRows.length > 0
       ? roundPct(((referrerCounts.get("Direct") ?? 0) / currentRows.length) * 100)
       : 0;
-  const devices = toShareRows(deviceCounts, currentRows.length).map((row) => ({
-    ...row,
-    label: row.label,
-  }));
+  const devices = toShareRows(deviceCounts, currentRows.length).filter(
+    (row) => row.count > 0,
+  );
   const countries = toShareRows(countryCounts, currentRows.length, 6);
   const totalSectionViews = Array.from(sectionCounts.values()).reduce(
     (sum, value) => sum + value,

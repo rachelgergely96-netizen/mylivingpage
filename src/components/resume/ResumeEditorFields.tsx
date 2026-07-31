@@ -14,17 +14,17 @@ interface ResumeEditorFieldsProps {
 }
 
 const fieldsetClass =
-  "site-panel scroll-mt-72 space-y-3 rounded-none p-4 sm:p-5 xl:scroll-mt-40";
+  "site-panel scroll-mt-24 space-y-3 rounded-none p-4 sm:p-6 xl:scroll-mt-72";
 const legendClass = "site-eyebrow px-1";
 const fieldLabelClass =
-  "mb-1.5 block text-[11px] font-semibold text-site-secondary";
+  "mb-1.5 block text-xs font-semibold text-site-secondary";
 const sectionNoteClass = "text-xs leading-5 text-site-muted";
 const inputClass =
-  "site-field w-full rounded-none px-3 py-2 text-sm";
+  "site-field w-full rounded-none px-3 py-2 text-base sm:text-sm";
 const textAreaClass =
-  "site-field w-full rounded-none px-3 py-2 text-sm leading-6";
-const subtleTextAreaClass =
-  "site-field w-full rounded-none px-3 py-2 text-xs leading-5 text-site-secondary";
+  "site-field w-full rounded-none px-3 py-2 text-base leading-6 sm:text-sm";
+const recordCardClass =
+  "space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4";
 const textRemoveButtonClass = "site-button site-button-danger px-3 text-xs";
 const addButtonClass =
   "site-button site-button-secondary rounded-none border-dashed px-4 py-2 text-xs";
@@ -100,7 +100,7 @@ export default function ResumeEditorFields({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <fieldset
         id="editor-section-profile"
         data-editor-section="profile"
@@ -223,7 +223,7 @@ export default function ResumeEditorFields({
               key={index}
               role="group"
               aria-labelledby={`editor-stat-${index + 1}-title`}
-              className="space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4"
+              className={recordCardClass}
             >
               <RecordHeader
                 id={`editor-stat-${index + 1}-title`}
@@ -245,9 +245,9 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], value: event.target.value };
                     updateField("stats", next);
                   }}
-                  aria-label="Value"
+                  aria-label="Stat value"
                   placeholder="Value"
-                  className="site-field min-w-0 rounded-none px-3 py-2 text-sm text-site-action"
+                  className="site-field min-w-0 rounded-none px-3 py-2 text-base text-site-action sm:text-sm"
                 />
                 <input
                   type="text"
@@ -257,9 +257,9 @@ export default function ResumeEditorFields({
                     next[index] = { ...next[index], label: event.target.value };
                     updateField("stats", next);
                   }}
-                  aria-label="Label"
+                  aria-label="Stat label"
                   placeholder="Label"
-                  className="site-field min-w-0 rounded-none px-3 py-2 text-sm"
+                  className="site-field min-w-0 rounded-none px-3 py-2 text-base sm:text-sm"
                 />
               </div>
             </div>
@@ -270,7 +270,7 @@ export default function ResumeEditorFields({
               onClick={() => updateField("stats", [...data.stats, { value: "", label: "" }])}
               className={addButtonClass}
             >
-              + Add Stat
+              + Add stat
             </button>
           ) : null}
         </fieldset>
@@ -290,7 +290,7 @@ export default function ResumeEditorFields({
             key={index}
             role="group"
             aria-labelledby={`editor-experience-${index + 1}-title`}
-            className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
+            className={recordCardClass}
           >
             <RecordHeader
               id={`editor-experience-${index + 1}-title`}
@@ -342,7 +342,7 @@ export default function ResumeEditorFields({
                 }}
                 aria-label="Dates"
                 placeholder="Dates"
-                className="rounded-none border border-site-border-strong bg-site-canvas-alt px-3 py-2 text-sm text-site-text focus:border-site-focus"
+                className={inputClass}
               />
             </div>
             <input
@@ -381,7 +381,7 @@ export default function ResumeEditorFields({
               rows={3}
               aria-label="Highlights (one per line)"
               placeholder="Highlights (one per line)"
-              className={subtleTextAreaClass}
+              className={textAreaClass}
             />
           </div>
         ))}
@@ -395,7 +395,7 @@ export default function ResumeEditorFields({
           }
           className={addButtonClass}
         >
-          + Add Experience
+          + Add experience
         </button>
       </fieldset>
 
@@ -413,7 +413,7 @@ export default function ResumeEditorFields({
             key={index}
             role="group"
             aria-labelledby={`editor-education-${index + 1}-title`}
-            className="space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4"
+            className={recordCardClass}
           >
             <RecordHeader
               id={`editor-education-${index + 1}-title`}
@@ -471,7 +471,7 @@ export default function ResumeEditorFields({
           onClick={() => updateField("education", [...data.education, { degree: "", school: "", year: "" }])}
           className={addButtonClass}
         >
-          + Add Education
+          + Add education
         </button>
       </fieldset>
 
@@ -489,7 +489,7 @@ export default function ResumeEditorFields({
             key={index}
             role="group"
             aria-labelledby={`editor-skill-category-${index + 1}-title`}
-            className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
+            className={recordCardClass}
           >
             <RecordHeader
               id={`editor-skill-category-${index + 1}-title`}
@@ -510,7 +510,7 @@ export default function ResumeEditorFields({
                 next[index] = { ...next[index], category: event.target.value };
                 updateField("skills", next);
               }}
-              aria-label="Category (e.g. Languages, Tools)"
+              aria-label="Skill category name"
               placeholder="Category (e.g. Languages, Tools)"
               className={inputClass}
             />
@@ -538,7 +538,7 @@ export default function ResumeEditorFields({
                 };
                 updateField("skills", next);
               }}
-              aria-label="TypeScript, React, Node.js"
+              aria-label="Skills in this category (comma separated)"
               placeholder="TypeScript, React, Node.js"
               className={inputClass}
             />
@@ -549,7 +549,7 @@ export default function ResumeEditorFields({
           onClick={() => updateField("skills", [...data.skills, { category: "", items: [] }])}
           className={addButtonClass}
         >
-          + Add Skill Category
+          + Add skill category
         </button>
       </fieldset>
 
@@ -567,7 +567,7 @@ export default function ResumeEditorFields({
             key={index}
             role="group"
             aria-labelledby={`editor-project-${index + 1}-title`}
-            className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
+            className={recordCardClass}
           >
             <RecordHeader
               id={`editor-project-${index + 1}-title`}
@@ -602,7 +602,7 @@ export default function ResumeEditorFields({
               rows={2}
               aria-label="Brief description"
               placeholder="Brief description"
-              className={subtleTextAreaClass}
+              className={textAreaClass}
             />
             <input
               type="text"
@@ -656,7 +656,7 @@ export default function ResumeEditorFields({
           }
           className={addButtonClass}
         >
-          + Add Project
+          + Add project
         </button>
       </fieldset>
 
@@ -678,7 +678,7 @@ export default function ResumeEditorFields({
               key={proof.id || index}
               role="group"
               aria-labelledby={`editor-proof-${index + 1}-title`}
-              className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
+              className={recordCardClass}
             >
               <RecordHeader
                 id={`editor-proof-${index + 1}-title`}
@@ -743,7 +743,7 @@ export default function ResumeEditorFields({
                 rows={3}
                 aria-label="What was the work?"
                 placeholder="What was the work?"
-                className={subtleTextAreaClass}
+                className={textAreaClass}
               />
               <textarea
                 value={proof.outcome}
@@ -755,7 +755,7 @@ export default function ResumeEditorFields({
                 rows={2}
                 aria-label="What changed, improved, or shipped?"
                 placeholder="What changed, improved, or shipped?"
-                className={subtleTextAreaClass}
+                className={textAreaClass}
               />
               <input
                 type="text"
@@ -776,7 +776,7 @@ export default function ResumeEditorFields({
             onClick={() => updateField("proofs", [...proofs, createEmptyProofItem()])}
             className={addButtonClass}
           >
-            + Add Proof Block
+            + Add proof block
           </button>
         </fieldset>
       ) : null}
@@ -799,7 +799,7 @@ export default function ResumeEditorFields({
               key={testimonial.id || index}
               role="group"
               aria-labelledby={`editor-testimonial-${index + 1}-title`}
-              className="space-y-2 rounded-none border border-site-border bg-site-canvas-alt p-4"
+              className={recordCardClass}
             >
               <RecordHeader
                 id={`editor-testimonial-${index + 1}-title`}
@@ -861,13 +861,13 @@ export default function ResumeEditorFields({
                   rows={3}
                   aria-label="What should appear on the page once approved?"
                   placeholder="A specific observation about the value of working with you."
-                  className={subtleTextAreaClass}
+                  className={textAreaClass}
                 />
               </LabeledControl>
               <details className="border border-site-border bg-site-surface px-3 py-2.5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] font-semibold text-site-secondary">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-site-secondary">
                   Visibility &amp; request tracking
-                  <span className="font-mono text-[9px] text-site-action-hover">
+                  <span className="font-mono text-xs text-site-action-hover">
                     {testimonial.status}
                   </span>
                 </summary>
@@ -945,7 +945,7 @@ export default function ResumeEditorFields({
             }
             className={addButtonClass}
           >
-            + Add Testimonial
+            + Add testimonial
           </button>
         </fieldset>
       ) : null}
@@ -964,7 +964,7 @@ export default function ResumeEditorFields({
             key={index}
             role="group"
             aria-labelledby={`editor-certification-${index + 1}-title`}
-            className="space-y-3 rounded-none border border-site-border bg-site-canvas-alt p-3 sm:p-4"
+            className={recordCardClass}
           >
             <RecordHeader
               id={`editor-certification-${index + 1}-title`}
@@ -1027,7 +1027,7 @@ export default function ResumeEditorFields({
           }
           className={addButtonClass}
         >
-          + Add Certification
+          + Add certification
         </button>
       </fieldset>
     </div>

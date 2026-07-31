@@ -9,9 +9,9 @@ describe("ResumeImport", () => {
       <ResumeImport hasExistingData={false} onImported={vi.fn()} />,
     );
 
-    expect(markup).toContain("Start with your resume");
-    expect(markup).toContain("Choose a resume");
-    expect(markup).toContain("Paste resume text");
+    expect(markup).toContain("Start with your résumé");
+    expect(markup).toContain("Choose a résumé");
+    expect(markup).toContain("Paste résumé text");
     expect(markup).toContain("PDF, DOCX, TXT, or MD");
     expect(markup).toContain("up to 3.5 MB");
     expect(markup).toContain("not sent to an AI provider");
@@ -24,7 +24,7 @@ describe("ResumeImport", () => {
     );
 
     expect(markup).toContain(
-      "Importing another resume will replace the fields currently in this draft.",
+      "Importing another résumé will replace the fields currently in this draft.",
     );
   });
 });

@@ -23,16 +23,18 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="site-shell" data-site-ui>
-      <a href="#site-content" className="site-skip-link">Skip to main content</a>
+      <a href="#main-content" className="site-skip-link">Skip to main content</a>
       <header className="site-header">
         <div className="site-container-wide flex h-16 items-center justify-between gap-4">
           <Link href="/" className="site-wordmark shrink-0">
             my<span>living</span>page
           </Link>
-          <AppNavigation variant="product" showAdmin={isAdminEmail(user.email)} />
+          <AppNavigation showAdmin={isAdminEmail(user.email)} />
         </div>
       </header>
-      <div id="site-content" tabIndex={-1}>{children}</div>
+      {/* Bottom padding keeps the floating feedback trigger clear of the last
+          row of page controls on small screens. */}
+      <div className="pb-24 sm:pb-0">{children}</div>
       <FeedbackWidget />
     </div>
   );

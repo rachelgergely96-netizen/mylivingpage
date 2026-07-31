@@ -70,7 +70,7 @@ export const CREDIBILITY_POINTS = [
 ];
 
 export const ATS_READINESS_DISCLOSURE =
-  "Built for ATS readability with real text, standard sections, and a clear reading order. The free readiness check flags common issues, but no checker can guarantee how an employer's system will score a resume or whether it will lead to an interview.";
+  "Built for ATS readability with real text, standard sections, and a clear reading order. The free readiness check flags common issues, but no checker can guarantee how an employer's system will score a résumé or whether it will lead to an interview.";
 
 export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
   {
@@ -89,7 +89,7 @@ export const CLICK_MOMENT_DEMO_HIGHLIGHTS: DemoHighlight[] = [
 
 export const HIRING_WORKFLOW_STEPS: HiringWorkflowStep[] = [
   {
-    stage: "Resume PDF",
+    stage: "Résumé PDF",
     title: "Your PDF still has to copy clean text.",
     body: "If the text layer breaks, the file becomes harder to review, reuse, and forward.",
     href: "/guides/resume-pdf-check?ref=landing_workflow_readability",
@@ -98,14 +98,14 @@ export const HIRING_WORKFLOW_STEPS: HiringWorkflowStep[] = [
   {
     stage: "Recruiter search",
     title: "Recruiters usually search exact titles and explicit skills.",
-    body: "If your resume implies the skill but never names it, the search can miss you before a person reviews anything else.",
+    body: "If your résumé implies the skill but never names it, the search can miss you before a person reviews anything else.",
     href: "/guides/recruiter-search-keywords?ref=landing_workflow_keywords",
     ctaLabel: "See keyword guide",
   },
   {
     stage: "Human click",
     title: "MyLivingPage takes over after someone opens your link.",
-    body: "Keep one Living Page and one Resume PDF aligned to the same saved content so the next human decision happens faster.",
+    body: "Keep one Living Page and one Résumé PDF aligned to the same saved content so the next human decision happens faster.",
     href: "/examples?ref=landing_workflow_examples",
     ctaLabel: "See example pages",
   },
@@ -134,8 +134,8 @@ export const PROOF_SIGNALS: ProofSignal[] = [
 
 export const TRUST_SIGNALS: TrustSignal[] = [
   {
-    title: "Works alongside your resume",
-    body: "Keep your page and Resume PDF aligned to the same saved information instead of juggling separate versions by hand.",
+    title: "Works alongside your résumé",
+    body: "Keep your page and Résumé PDF aligned to the same saved information instead of juggling separate versions by hand.",
     href: "/guides/living-page-vs-pdf-resume",
     linkLabel: "See how both work together",
   },
@@ -161,14 +161,14 @@ export const TRUST_SIGNALS: TrustSignal[] = [
 
 export const LANDING_FAQS: LandingFaq[] = [
   {
-    question: "Will this replace my resume?",
+    question: "Will this replace my résumé?",
     answer:
-      "No. MyLivingPage gives you a Living Page and a fresh Resume PDF from the same source so you are not juggling separate stories.",
+      "No. MyLivingPage gives you a Living Page and a fresh Résumé PDF from the same source so you are not juggling separate stories.",
   },
   {
     question: "Will my page look professional enough?",
     answer:
-      "Yes. The product is designed to feel polished without asking you to redesign your career story from scratch. You start from the resume you already use and shape it into a cleaner reading experience.",
+      "Yes. The product is designed to feel polished without asking you to redesign your career story from scratch. You start from the résumé you already use and shape it into a cleaner reading experience.",
   },
   {
     question: "What happens to my data?",
@@ -237,13 +237,13 @@ export const FREE_PRODUCT_FEATURE_GROUPS = [
     ],
   },
   {
-    name: "ATS-Ready PDF",
+    name: "ATS-ready PDF",
     eyebrow: "A clean file when you need one",
-    body: "Download a straightforward resume with real text, standard sections, and a clear reading order.",
+    body: "Download a straightforward résumé with real text, standard sections, and a clear reading order.",
     features: [
       "Selectable, machine-readable text",
-      "Standard resume sections",
-      "Deterministic ATS readiness check",
+      "Standard résumé sections",
+      "A clear, repeatable ATS readiness check",
       "A fresh PDF from your saved information",
     ],
   },
@@ -260,9 +260,9 @@ export const FREE_PRODUCT_FEATURE_GROUPS = [
 ] as const;
 
 export const READABILITY_TEST_STEPS = [
-  "Open your resume PDF and highlight a few lines with your mouse.",
+  "Open your résumé PDF and highlight a few lines with your mouse.",
   "Copy that text and paste it into Notepad or TextEdit.",
-  "If the pasted text breaks, fix the resume before you send it anywhere.",
+  "If the pasted text breaks, fix the résumé before you send it anywhere.",
 ];
 
 export const READABILITY_FAILURE_SIGNALS = [
@@ -324,7 +324,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     groupId: "when-a-recruiter-clicks",
     audienceLabel: "Recruiter follow-up",
     roleLabel: "Software engineer re-entering the market",
-    bestUsedAfter: "You have already applied or a recruiter asked for more context than the resume gave them.",
+    bestUsedAfter: "You have already applied or a recruiter asked for more context than the résumé gave them.",
     humanBenefit: "It turns scattered links, proof points, and recent momentum into one surface that feels current right away.",
     resumeBoundary: "Use the PDF when a file is requested. Use the page once a person wants faster context.",
     sampleBadge: "Sample page",
@@ -349,7 +349,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     audienceLabel: "Application follow-up",
     roleLabel: "Early-career litigation attorney",
     bestUsedAfter: "You submitted the application and need a cleaner follow-up asset for emails, bios, or recruiter outreach.",
-    humanBenefit: "It keeps a formal tone while giving your credentials, writing, and case work more context than a one-page resume.",
+    humanBenefit: "It keeps a formal tone while giving your credentials, writing, and case work more context than a one-page résumé.",
     resumeBoundary: "Use the PDF for formal submissions. Use the page once credibility and clarity matter more than attachment friction.",
     sampleBadge: "Sample page",
     ctaRef: "landing_after_apply_attorney",
@@ -360,7 +360,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     groupId: "when-a-recruiter-clicks",
     audienceLabel: "Executive click",
     roleLabel: "Finance leader exploring new roles",
-    bestUsedAfter: "A recruiter or senior contact has your resume and now wants a faster way to scan the headline, metrics, and positioning.",
+    bestUsedAfter: "A recruiter or senior contact has your résumé and now wants a faster way to scan the headline, metrics, and positioning.",
     humanBenefit: "It lets high-stakes experience and proof points land faster than a document someone may never open closely.",
     resumeBoundary: "Use the PDF for submissions and record-keeping. Use the page when the next step depends on speed of comprehension.",
     sampleBadge: "Sample page",

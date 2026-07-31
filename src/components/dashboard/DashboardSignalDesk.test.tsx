@@ -28,4 +28,17 @@ describe("getDashboardPrimaryAction", () => {
       });
     }
   });
+
+  it("falls back to sharing when the analytics route is unavailable for the account tier", () => {
+    for (const status of ["proof_landed", "active"] as const) {
+      expect(getDashboardPrimaryAction(status, true, false)).toEqual({
+        kind: "copy",
+        label: "Copy live link",
+      });
+    }
+    expect(getDashboardPrimaryAction("active", false, false)).toEqual({
+      kind: "publish",
+      label: "Publish page",
+    });
+  });
 });

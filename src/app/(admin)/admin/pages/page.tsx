@@ -63,7 +63,7 @@ export default async function AdminPagesPage() {
         <div className={styles.pageIntro}>
           <p className="site-eyebrow">Manage / Product</p>
           <h1 className="site-page-title mt-2">Living Pages</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary sm:text-base">
             Search published and draft pages, see who owns each one, and open live
             pages for review.
           </p>

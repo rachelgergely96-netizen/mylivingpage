@@ -90,8 +90,8 @@ describe("ResumeEditorFields", () => {
       expect(sectionIndex).toBeGreaterThan(previousSectionIndex);
       previousSectionIndex = sectionIndex;
     });
-    expect(markup.match(/scroll-mt-72/g)).toHaveLength(SECTION_IDS.length);
-    expect(markup.match(/xl:scroll-mt-40/g)).toHaveLength(SECTION_IDS.length);
+    expect(markup.match(/scroll-mt-24/g)).toHaveLength(SECTION_IDS.length);
+    expect(markup.match(/xl:scroll-mt-72/g)).toHaveLength(SECTION_IDS.length);
   });
 
   it("labels repeated records and keeps compact rows mobile-first", () => {

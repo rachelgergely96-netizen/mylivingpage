@@ -88,7 +88,7 @@ export default function JobSeekerStarterKit({
           Page purpose
         </p>
         <h2 className="site-panel-title mt-2">
-          Set the page up for how you want to use it.
+          Set the page up for how you want to use it
         </h2>
         <p className="mt-3 text-sm leading-7 text-site-secondary">
           Choose the closest fit. We will use it to suggest clearer proof, a useful targeted

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface PageOwnerBarProps {
   pageId: string;
@@ -17,11 +18,13 @@ const ownerBarSafeAreaStyle = {
 
 export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBarProps) {
   const router = useRouter();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this page? This action cannot be undone.")) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
       if (!res.ok) {
@@ -30,7 +33,7 @@ export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBar
       }
       router.push("/dashboard");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Unable to delete page.");
+      setDeleteError(e instanceof Error ? e.message : "Unable to delete page.");
       setDeleting(false);
     }
   };
@@ -40,10 +43,10 @@ export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBar
       {isOwner ? (
         <>
           <div aria-hidden="true" className="shrink-0" style={ownerBarSafeAreaStyle}>
-            <div className="h-16 sm:h-[4.5rem]" />
+            <div className="h-16" />
           </div>
           <div className="fixed left-0 right-0 top-0 z-50 border-b border-site-border bg-site-canvas" style={ownerBarSafeAreaStyle} data-site-ui>
-            <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:min-h-[4.5rem] sm:gap-3 sm:px-4 md:px-8">
+            <div className="site-container flex min-h-16 items-center justify-between gap-2 sm:gap-3">
               <Link
                 href="/dashboard"
                 className="site-nav-link shrink-0 gap-1.5 whitespace-nowrap"
@@ -51,26 +54,44 @@ export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBar
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                Your Page
+                Dashboard
               </Link>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-                <Link
-                  href={`/dashboard/edit/${pageId}/living-page`}
-                  className="site-button site-button-secondary whitespace-nowrap px-3 py-2 text-xs sm:px-4"
-                >
-                  Edit
-                </Link>
                 <button
                   type="button"
                   disabled={deleting}
-                  onClick={handleDelete}
-                  className="site-button site-button-danger whitespace-nowrap px-3 py-2 text-xs disabled:opacity-50 sm:px-4"
+                  onClick={() => setConfirmOpen(true)}
+                  className="site-nav-link whitespace-nowrap text-site-danger hover:text-site-danger disabled:opacity-50"
                 >
-                  {deleting ? "Deleting..." : "Delete"}
+                  {deleting ? "Deleting…" : "Delete"}
                 </button>
+                <Link
+                  href={`/dashboard/edit/${pageId}/living-page`}
+                  className="site-button site-button-secondary whitespace-nowrap px-3 text-xs sm:px-4"
+                >
+                  Edit
+                </Link>
               </div>
             </div>
           </div>
+          {confirmOpen ? (
+            <div data-site-ui>
+              <ConfirmDialog
+                open={confirmOpen}
+                title="Delete this page?"
+                body="This permanently removes the page and its link. This cannot be undone."
+                confirmLabel="Delete page"
+                destructive
+                loading={deleting}
+                error={deleteError}
+                onConfirm={handleDelete}
+                onClose={() => {
+                  setConfirmOpen(false);
+                  setDeleteError(null);
+                }}
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
       <div className="min-h-0 flex-1">

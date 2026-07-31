@@ -52,7 +52,7 @@ export default async function AdminUsersPage() {
         <div className={styles.pageIntro}>
           <p className="site-eyebrow">Manage / People</p>
           <h1 className="site-page-title mt-2">Users and account signals</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary sm:text-base">
             Find an account, review confirmation and risk signals, or carefully remove
             an account when necessary.
           </p>
@@ -63,13 +63,13 @@ export default async function AdminUsersPage() {
         <div className="site-panel p-5">
           <p className="text-2xl font-semibold tabular-nums text-site-danger">{riskSummary.suspiciousTotal}</p>
           <p className="mt-1 text-xs font-medium text-site-muted">
-            Suspicious Users
+            Suspicious users
           </p>
         </div>
         <div className="site-panel p-5">
           <p className="text-2xl font-semibold tabular-nums text-site-warning">{riskSummary.watchTotal}</p>
           <p className="mt-1 text-xs font-medium text-site-muted">
-            Watch List
+            Watch list
           </p>
         </div>
         <div className="site-panel p-5">
@@ -86,7 +86,7 @@ export default async function AdminUsersPage() {
         </div>
       </section>
       <section className="site-panel mb-6 p-5">
-        <h2 className="site-panel-title">Signup Sources</h2>
+        <h2 className="site-panel-title">Signup sources</h2>
         <p className="mt-2 text-sm text-site-secondary">
           CTA refs are captured at signup so you can see which landing-page entries are turning into accounts.
         </p>

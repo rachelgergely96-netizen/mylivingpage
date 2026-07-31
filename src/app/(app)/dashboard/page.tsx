@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import { getAccountAccessState } from "@/lib/account-access";
 import {
   buildPageProofSummary,
@@ -11,6 +12,10 @@ import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 import DashboardSignalDesk from "@/components/dashboard/DashboardSignalDesk";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 
 interface DashboardPageViewRow {
   page_id: string;

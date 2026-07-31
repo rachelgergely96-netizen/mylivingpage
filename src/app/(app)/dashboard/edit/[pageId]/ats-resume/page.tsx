@@ -6,5 +6,5 @@ interface AtsResumeEditorRouteProps {
 
 export default async function AtsResumeEditorRoute({ params }: AtsResumeEditorRouteProps) {
   const { pageId } = await params;
-  redirect(`/dashboard/edit/${pageId}/living-page`);
+  redirect(`/dashboard/edit/${pageId}/living-page#editor-section-ats`);
 }

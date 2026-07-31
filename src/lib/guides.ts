@@ -32,9 +32,9 @@ export interface GuideEntry {
 export const GUIDES: GuideEntry[] = [
   {
     slug: "resume-pdf-check",
-    title: "Resume PDF Check: How to Make Sure Your PDF Reads Cleanly",
+    title: "Résumé PDF check: how to make sure your PDF reads cleanly",
     description:
-      "Run a quick Resume PDF check to confirm your file copies clean text and is ready to share.",
+      "Run a quick Résumé PDF check to confirm your file copies clean text and is ready to share.",
     decisionStage: "Before you send it",
     answer:
       "Open the PDF, highlight a few lines, copy them into plain text, and compare the result. If sections disappear, bullets break, or spacing collapses, fix the file before you send it.",
@@ -48,7 +48,7 @@ export const GUIDES: GuideEntry[] = [
     updatedAt: GUIDE_UPDATED_AT,
     sections: [
       {
-        title: "What does a quick Resume PDF check catch?",
+        title: "What does a quick Résumé PDF check catch?",
         paragraphs: [
           "The fastest way to spot extraction problems is to copy text out of the PDF and paste it into Notepad or TextEdit. What matters is whether the machine-readable layer matches what you thought you sent.",
           "This catches hidden failures before you spend another week assuming the issue is your experience instead of the file itself.",
@@ -68,10 +68,10 @@ export const GUIDES: GuideEntry[] = [
         ],
       },
       {
-        title: "What should you do after the Resume PDF check passes?",
+        title: "What should you do after the Résumé PDF check passes?",
         paragraphs: [
           "Start with the information you already use, publish a Living Page that is easier to scan, and keep one link everywhere a recruiter or hiring manager can click.",
-          "From the same saved content, you can also create a fresh Resume PDF and a PNG share card with a QR code that opens your page directly.",
+          "From the same saved content, you can also create a fresh Résumé PDF and a PNG share card with a QR code that opens your page directly.",
         ],
       },
     ],
@@ -79,14 +79,14 @@ export const GUIDES: GuideEntry[] = [
   },
   {
     slug: "recruiter-search-keywords",
-    title: "Recruiter Search Keywords: How Exact Titles and Skills Affect Visibility",
+    title: "Recruiter search keywords: how exact titles and skills affect visibility",
     description:
       "Learn how exact job titles, explicit skill names, and title variations affect whether a recruiter ever sees your profile in search.",
     decisionStage: "Get found in search",
     answer:
-      "Recruiters often search with exact titles and exact skill strings. If your resume implies a concept but never names it, you can be invisible to the search before a person reviews the rest.",
+      "Recruiters often search with exact titles and exact skill strings. If your résumé implies a concept but never names it, you can be invisible to the search before a person reviews the rest.",
     summary:
-      "Use this guide when you need your resume to match recruiter search behavior more directly without stuffing it with random keywords.",
+      "Use this guide when you need your résumé to match recruiter search behavior more directly without stuffing it with random keywords.",
     hubSummary:
       "Exact titles, explicit skills, and honest title variations matter more than vague concepts when recruiters search for people.",
     readTime: "5 min read",
@@ -102,7 +102,7 @@ export const GUIDES: GuideEntry[] = [
         ],
       },
       {
-        title: "Which keyword variations should your resume include?",
+        title: "Which keyword variations should your résumé include?",
         paragraphs: [
           "Recruiters search for presence first. They need to see the exact term, not just a nearby idea.",
           "That is why it helps to use natural sentences that include the full phrase and the shorthand when relevant.",
@@ -116,8 +116,8 @@ export const GUIDES: GuideEntry[] = [
       {
         title: "What should happen after the recruiter finds you?",
         paragraphs: [
-          "Once the recruiter finds your resume, the Living Page gives them a faster surface to scan than another dense attachment.",
-          "You can keep the same link everywhere, then use Resume PDF download and a QR-ready share card when you need something portable for follow-up or in-person conversations.",
+          "Once the recruiter finds your résumé, the Living Page gives them a faster surface to scan than another dense attachment.",
+          "You can keep the same link everywhere, then use Résumé PDF download and a QR-ready share card when you need something portable for follow-up or in-person conversations.",
         ],
       },
     ],
@@ -125,9 +125,9 @@ export const GUIDES: GuideEntry[] = [
   },
   {
     slug: "living-page-vs-pdf-resume",
-    title: "Living Page vs PDF Resume: When Job Seekers Should Use Each One",
+    title: "Living Page vs PDF résumé: when job seekers should use each one",
     description:
-      "Use a Resume PDF when you need a file, use a Living Page when you want something easier to scan, and keep both generated from the same source.",
+      "Use a Résumé PDF when you need a file, use a Living Page when you want something easier to scan, and keep both generated from the same source.",
     decisionStage: "After the click",
     answer:
       "Use both. Keep the PDF for moments that require a document, then use a Living Page when you need something faster to scan, easier to share, and easier to keep current.",
@@ -157,7 +157,7 @@ export const GUIDES: GuideEntry[] = [
       {
         title: "Can one source create your sendable assets?",
         paragraphs: [
-          "From the information you upload, you can create a new Resume PDF ready to send in a cleaner one-column format.",
+          "From the information you upload, you can create a new Résumé PDF ready to send in a cleaner one-column format.",
           "You can also generate a PNG share card with a QR code that leads straight to your page, which is useful for follow-up emails, events, and quick mobile sharing.",
         ],
       },
@@ -165,7 +165,7 @@ export const GUIDES: GuideEntry[] = [
         title: "Why keep the same page link everywhere someone can click?",
         paragraphs: [
           "A stable link reduces version drift across outreach, referrals, and profile links. Instead of scattering stale attachments, you keep one page current and update it in place.",
-          "That way the page, Resume PDF, and share card all stay aligned to the same saved story.",
+          "That way the page, Résumé PDF, and share card all stay aligned to the same saved story.",
         ],
       },
     ],

@@ -22,7 +22,7 @@ function sanitizeDownloadErrorMessage(message: string) {
     normalized.includes("resume pdf could not") ||
     normalized.includes("current content")
   ) {
-    return "Unable to export the Resume PDF right now. Please try again.";
+    return "Unable to export the Résumé PDF right now. Please try again.";
   }
 
   return message;
@@ -37,10 +37,19 @@ export default function DownloadResumeButton({
   appearance = "theme",
 }: DownloadResumeButtonProps) {
   const [generating, setGenerating] = useState(false);
+  const [fallbackError, setFallbackError] = useState<string | null>(null);
+
+  const reportError = (message: string | null) => {
+    if (onErrorChange) {
+      onErrorChange(message);
+      return;
+    }
+    setFallbackError(message);
+  };
 
   const handleDownload = async () => {
     setGenerating(true);
-    onErrorChange?.(null);
+    reportError(null);
     try {
       const response = await fetch("/api/resume/export", {
         method: "POST",
@@ -63,7 +72,7 @@ export default function DownloadResumeButton({
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (downloadError) {
-      onErrorChange?.(
+      reportError(
         downloadError instanceof Error
           ? sanitizeDownloadErrorMessage(downloadError.message)
           : "PDF generation failed. Try again.",
@@ -74,51 +83,93 @@ export default function DownloadResumeButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleDownload}
-      disabled={generating}
-      className={`${appearance === "site"
-        ? "site-button site-button-secondary"
-        : "flex items-center gap-2 rounded-none border border-[rgba(255,255,255,0.1)] bg-[rgba(10,22,40,0.85)] px-4 py-2.5 text-[13px] text-[rgba(240,244,255,0.7)] shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 ease-soft hover:-translate-y-0.5 hover:text-[#93C5FD] hover:shadow-[0_8px_24px_rgba(59,130,246,0.2)] disabled:hover:translate-y-0 sm:text-sm"
-      } disabled:opacity-60 ${className ?? ""}`}
-    >
-      {generating ? (
-        <svg
-          className="h-4 w-4 animate-spin"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
+    <>
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={generating}
+        aria-busy={generating || undefined}
+        className={`${appearance === "site"
+          ? "site-button site-button-secondary"
+          : "theme-surface-strong theme-link flex items-center gap-2 rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 disabled:hover:translate-y-0 sm:text-sm"
+        } disabled:opacity-60 ${className ?? ""}`}
+      >
+        {generating ? (
+          <svg
+            className="h-4 w-4 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+        ) : (
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
             stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
-      ) : (
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
+            strokeWidth={1.5}
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+            />
+          </svg>
+        )}
+        <span className="grid">
+          <span
+            aria-hidden={generating || undefined}
+            className={`col-start-1 row-start-1 ${generating ? "invisible" : ""}`}
+          >
+            Download Résumé PDF
+          </span>
+          <span
+            aria-hidden={!generating || undefined}
+            className={`col-start-1 row-start-1 ${generating ? "" : "invisible"}`}
+          >
+            Preparing PDF…
+          </span>
+        </span>
+      </button>
+      {fallbackError ? (
+        <p
+          role="alert"
+          className={`mt-2 flex w-full items-start gap-2 px-3 py-2 text-xs leading-5 ${
+            appearance === "site"
+              ? "site-alert-danger"
+              : "rounded-none border border-current"
+          }`}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-          />
-        </svg>
-      )}
-      <span>{generating ? "Preparing..." : "Download Resume PDF"}</span>
-    </button>
+          <svg
+            aria-hidden="true"
+            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M8 4.75v3.75" strokeLinecap="square" />
+            <path d="M8 11.25h.01" strokeLinecap="round" />
+          </svg>
+          <span>{fallbackError}</span>
+        </p>
+      ) : null}
+    </>
   );
 }

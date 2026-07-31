@@ -1,24 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 interface PublishPageButtonProps {
   pageId: string;
-  emphasis?: "primary" | "success";
+  emphasis?: "primary";
   label?: string;
+  onPublished?: () => void;
 }
 
 export default function PublishPageButton({
   pageId,
-  emphasis = "success",
   label = "Publish",
+  onPublished,
 }: PublishPageButtonProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const busy = publishing || isPending;
 
   const publishPage = async () => {
+    if (busy) {
+      return;
+    }
+
     setPublishing(true);
     setError(null);
 
@@ -39,7 +46,10 @@ export default function PublishPageButton({
         throw new Error(payload?.error ?? "Unable to publish this page.");
       }
 
-      router.refresh();
+      onPublished?.();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch (publishError) {
       setError(
         publishError instanceof Error
@@ -55,17 +65,46 @@ export default function PublishPageButton({
     <div>
       <button
         type="button"
-        disabled={publishing}
+        disabled={busy}
+        aria-busy={busy || undefined}
         onClick={() => void publishPage()}
-        className={`site-button disabled:opacity-50 ${
-          emphasis === "primary"
-            ? "site-button-primary w-full sm:w-auto"
-            : "site-button-success px-3 py-2 text-xs sm:px-4"
-        }`}
+        className="site-button site-button-primary w-full disabled:opacity-50 sm:w-auto"
       >
-        {publishing ? "Publishing..." : label}
+        <span className="grid">
+          <span
+            aria-hidden={busy || undefined}
+            className={`col-start-1 row-start-1 ${busy ? "invisible" : ""}`}
+          >
+            {label}
+          </span>
+          <span
+            aria-hidden={!busy || undefined}
+            className={`col-start-1 row-start-1 ${busy ? "" : "invisible"}`}
+          >
+            Publishing…
+          </span>
+        </span>
       </button>
-      {error ? <p className="mt-2 text-xs text-site-danger" role="alert">{error}</p> : null}
+      {error ? (
+        <p
+          role="alert"
+          className="site-alert-danger mt-2 flex items-start gap-2 px-3 py-2 text-xs leading-5"
+        >
+          <svg
+            aria-hidden="true"
+            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M8 4.75v3.75" strokeLinecap="square" />
+            <path d="M8 11.25h.01" strokeLinecap="round" />
+          </svg>
+          <span>{error}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

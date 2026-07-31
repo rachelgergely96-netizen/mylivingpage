@@ -71,10 +71,27 @@ export default function AdminNavigation({
         window.requestAnimationFrame(() => toggleRef.current?.focus());
       }
     };
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        !panelRef.current?.contains(target) &&
+        !toggleRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
+    };
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     firstLink?.focus();
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+    };
   }, [mode, open]);
 
   const navigation = (

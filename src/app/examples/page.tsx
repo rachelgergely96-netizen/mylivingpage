@@ -17,7 +17,7 @@ function getSignupHref(ref: string) {
 }
 
 export const metadata: Metadata = {
-  title: `Examples | ${SITE_NAME}`,
+  title: "Examples",
   description:
     "Browse sample Living Pages that help recruiters understand you faster after they click.",
   alternates: { canonical: canonicalUrl },
@@ -66,19 +66,19 @@ export default async function ExamplesPage() {
         }}
       />
 
-      <main id="main-content" className="site-container-wide py-8 sm:py-10">
+      <main id="main-content" className="site-container-wide py-12 sm:py-16">
         <ExamplesExperience
           sampleGroups={sampleGroups}
           signupHref={getSignupHref("examples_after_apply")}
         />
 
         <section
-          className="mt-8 grid gap-5 border-y border-site-border bg-site-surface px-5 py-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-7"
+          className="mx-auto mt-12 grid max-w-[76rem] gap-5 border-y border-site-border bg-site-surface px-5 py-6 sm:mt-20 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-7"
           aria-labelledby="examples-guides-title"
         >
           <div>
             <p className="site-eyebrow">Need the basics first?</p>
-            <h2 id="examples-guides-title" className="site-panel-title mt-2">
+            <h2 id="examples-guides-title" className="site-section-title mt-2 text-[1.75rem]">
               See how a Living Page works with your résumé.
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-site-secondary">
@@ -93,7 +93,10 @@ export default async function ExamplesPage() {
             >
               Read the short guide
             </Link>
-            <Link href="/guides" className="site-nav-link px-3 py-3 text-sm text-site-action">
+            <Link
+              href="/guides"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-site-action transition-colors hover:text-site-action-hover"
+            >
               Browse all guides
             </Link>
           </div>
@@ -101,7 +104,7 @@ export default async function ExamplesPage() {
 
         <section
           id="examples-final-cta"
-          className="site-panel-raised mt-8 px-5 py-10 text-center sm:px-10 sm:py-12"
+          className="site-panel-raised mx-auto mt-12 max-w-[76rem] px-5 py-10 text-center sm:mt-20 sm:px-10 sm:py-12"
         >
           <p className="site-eyebrow">Start with what you already have</p>
           <h2 className="site-section-title mx-auto mt-3 max-w-3xl">

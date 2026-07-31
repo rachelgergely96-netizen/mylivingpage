@@ -227,8 +227,8 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
         type="text"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search by name, email, or username..."
-        className="site-field mb-5 px-4 py-2.5 text-sm"
+        placeholder="Search by name, email, or username…"
+        className="site-field mb-5 px-4 py-2.5"
       />
 
       <div className="mb-5 flex flex-wrap gap-2">
@@ -242,7 +242,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
             type="button"
             onClick={() => setActiveFilter(filter.id)}
             aria-pressed={activeFilter === filter.id}
-            className={`site-button px-3 py-1.5 text-[11px] ${
+            className={`site-button px-3 py-1.5 text-xs ${
               activeFilter === filter.id
                 ? "border-site-action bg-site-selected text-site-action"
                 : "site-button-secondary"
@@ -276,7 +276,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                   <h2 className="text-sm font-semibold text-site-text">
                     {user.full_name || user.username}
                   </h2>
-                  <p className="text-[11px] text-site-muted">{user.email}</p>
+                  <p className="text-xs text-site-muted">{user.email}</p>
                 </div>
               </div>
 
@@ -284,7 +284,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="font-mono text-site-secondary">@{user.username}</span>
                   <span
-                    className={`site-badge py-0.5 text-[10px] ${
+                    className={`site-badge py-0.5 text-xs ${
                       user.auth_provider === "google"
                         ? "border-site-action text-site-action"
                         : ""
@@ -292,16 +292,16 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                   >
                     {user.auth_provider ?? "email"}
                   </span>
-                  <span className="site-badge py-0.5 text-[10px]">
+                  <span className="site-badge py-0.5 text-xs">
                     {user.plan}
                   </span>
                   <span
-                    className={`site-badge py-0.5 text-[10px] ${getDispositionBadgeClasses(user.botDisposition)}`}
+                    className={`site-badge py-0.5 text-xs ${getDispositionBadgeClasses(user.botDisposition)}`}
                   >
                     {user.botDisposition} risk {user.botRiskScore}
                   </span>
                   <span
-                    className={`site-badge py-0.5 text-[10px] ${getConfirmationBadgeClasses(
+                    className={`site-badge py-0.5 text-xs ${getConfirmationBadgeClasses(
                       user.emailConfirmedAt,
                       user.isUnconfirmedPastGrace,
                     )}`}
@@ -327,19 +327,19 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                     {user.sign_in_count} login{user.sign_in_count !== 1 ? "s" : ""}
                   </span>
                   {user.signup_referrer ? (
-                    <span className="site-badge py-0.5 text-[10px] text-site-action">
+                    <span className="site-badge py-0.5 text-xs text-site-action">
                       <span className="font-mono">{user.signup_referrer}</span>
                     </span>
                   ) : null}
                   {user.last_sign_in_at ? (
                     <span
-                      className="font-mono text-[10px] text-site-muted"
+                      className="font-mono text-xs text-site-muted"
                       title={new Date(user.last_sign_in_at).toLocaleString()}
                     >
                       seen {timeAgo(user.last_sign_in_at)}
                     </span>
                   ) : null}
-                  <time dateTime={user.created_at} className="font-mono text-[10px] text-site-muted">
+                  <time dateTime={user.created_at} className="font-mono text-xs text-site-muted">
                     {new Date(user.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -353,7 +353,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                     {user.botSignals.map((signal) => (
                       <span
                         key={`${user.id}-${signal.id}`}
-                        className="site-badge site-badge-warning px-2.5 py-1 text-[10px]"
+                        className="site-badge site-badge-warning px-2.5 py-1 text-xs"
                       >
                         {signal.label} (+{signal.score})
                       </span>
@@ -364,12 +364,12 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
 
               <div className="flex items-center gap-2 xl:shrink-0">
                 {user.isAdmin ? (
-                  <span className="site-badge site-badge-danger px-3 py-1 text-[10px]">
+                  <span className="site-badge site-badge-danger px-3 py-1 text-xs">
                     Protected
                   </span>
                 ) : !user.email ? (
-                  <span className="site-badge px-3 py-1 text-[10px]">
-                    No Email
+                  <span className="site-badge px-3 py-1 text-xs">
+                    No email
                   </span>
                 ) : (
                   <button
@@ -380,9 +380,9 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                       setDeleteConfirmText("");
                       setDeletingUserId(null);
                     }}
-                    className="site-button site-button-danger px-3 py-1.5 text-[10px]"
+                    className="site-button site-button-danger px-3 py-1.5 text-xs"
                   >
-                    Delete User
+                    Delete user
                   </button>
                 )}
               </div>
@@ -410,7 +410,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
             className="site-panel-raised w-full max-w-md border-site-danger p-6 sm:p-7"
           >
             <h3 id={deleteDialogTitleId} className="site-panel-title mb-3 text-site-danger">
-              Delete User Account
+              Delete user account
             </h3>
             <p id={deleteDialogDescriptionId} className="mb-2 text-sm text-site-secondary">
               This permanently deletes the user account, associated pages, auth access, and avatar storage.
@@ -430,7 +430,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
               value={deleteConfirmText}
               onChange={(event) => setDeleteConfirmText(event.target.value)}
               placeholder={selectedUser.email ?? ""}
-              className="site-field mb-4 h-11 border-site-danger px-4 text-sm"
+              className="site-field mb-4 border-site-danger px-4"
             />
             <div className="flex gap-3">
               <button
@@ -447,7 +447,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                 disabled={deleteConfirmText !== selectedUser.email || deletingUserId === selectedUser.id}
                 className="site-button site-button-danger flex-1 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {deletingUserId === selectedUser.id ? "Deleting..." : "Delete Forever"}
+                {deletingUserId === selectedUser.id ? "Deleting…" : "Delete forever"}
               </button>
             </div>
           </div>

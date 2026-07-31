@@ -30,21 +30,22 @@ export async function generateStaticParams() {
   return GUIDES.map((guide) => ({ slug: guide.slug }));
 }
 
+// Every guide comes from the static GUIDES list above, so unknown slugs can
+// return a real 404 status instead of streaming a soft-404 shell.
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: GuidePageProps): Promise<Metadata> {
   const { slug } = await params;
   const guide = getGuide(slug);
 
   if (!guide) {
-    return {
-      title: `Guides | ${SITE_NAME}`,
-      description: "Practical guides for cleaner Resume PDFs and recruiter-friendly pages.",
-    };
+    notFound();
   }
 
   const canonicalUrl = getAbsoluteUrl(`/guides/${guide.slug}`);
 
   return {
-    title: `${guide.title} | ${SITE_NAME}`,
+    title: guide.title,
     description: guide.description,
     alternates: { canonical: canonicalUrl },
     openGraph: {
@@ -95,7 +96,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
       />
 
       <main id="main-content" className="site-container py-12 sm:py-16">
-        <article className="site-panel mx-auto max-w-[44rem] px-5 py-9 sm:px-8 sm:py-12">
+        <article className="site-panel site-reading-width mx-auto px-5 py-9 sm:px-8 sm:py-12">
           <p className="site-eyebrow">Guide</p>
           <h1 className="site-page-title mt-4">{guide.title}</h1>
           <p className="mt-5 text-base leading-8 text-site-secondary sm:text-lg">
@@ -145,7 +146,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
             className="site-panel block p-6 transition-colors hover:border-site-action"
           >
             <p className="site-eyebrow">Build</p>
-            <h2 className="site-panel-title mt-3">Start from the resume you already use</h2>
+            <h2 className="site-panel-title mt-3">Start from the résumé you already use</h2>
             <p className="mt-3 text-sm leading-7 text-site-secondary">
               Start from the information you already use, then publish one page that is easier to
               scan once a person wants more context.
@@ -155,8 +156,8 @@ export default async function GuidePage({ params }: GuidePageProps) {
             href={`/pricing?ref=guide_${guide.slug}_pricing`}
             className="site-panel block p-6 transition-colors hover:border-site-action"
           >
-            <p className="site-eyebrow">Export</p>
-            <h2 className="site-panel-title mt-3">See PDF export and QR-ready share card options</h2>
+            <p className="site-eyebrow">Included free</p>
+            <h2 className="site-panel-title mt-3">See everything included: PDF export and share card</h2>
             <p className="mt-3 text-sm leading-7 text-site-secondary">
               Use the same uploaded information to create a fresh PDF, a PNG share card, and a
               page link you can keep reusing.
@@ -178,9 +179,9 @@ export default async function GuidePage({ params }: GuidePageProps) {
         {relatedGuides.length ? (
           <section className="site-panel mx-auto mt-10 max-w-5xl px-5 py-8 sm:px-8">
             <p className="site-eyebrow">Related guides</p>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 grid gap-px bg-site-border md:grid-cols-2">
               {relatedGuides.map((relatedGuide) => (
-                <article key={relatedGuide.slug} className="border border-site-border bg-site-canvas-alt p-5">
+                <article key={relatedGuide.slug} className="bg-site-surface p-5">
                   <Link
                     href={`/guides/${relatedGuide.slug}`}
                     className="site-panel-title transition-colors hover:text-site-action-hover"
@@ -191,9 +192,10 @@ export default async function GuidePage({ params }: GuidePageProps) {
                   <p className="mt-3 text-sm leading-7 text-site-secondary">{relatedGuide.summary}</p>
                   <Link
                     href={`/guides/${relatedGuide.slug}`}
+                    aria-label={`Read ${relatedGuide.title}`}
                     className="mt-5 inline-flex text-sm font-semibold text-site-action transition-colors hover:text-site-action-hover"
                   >
-                    Read {relatedGuide.title}
+                    Read guide
                   </Link>
                 </article>
               ))}

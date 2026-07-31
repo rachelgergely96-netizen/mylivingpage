@@ -16,6 +16,7 @@ import EditorReadinessBriefing, {
 import EditorSectionNav, {
   type EditorSectionAnchorId,
 } from "@/components/edit/EditorSectionNav";
+import PublishPageButton from "@/components/PublishPageButton";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ThemePicker from "@/components/ThemePicker";
@@ -70,6 +71,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [publicSlug, setPublicSlug] = useState("");
   const [savedSnapshot, setSavedSnapshot] = useState("");
   const [mobileWorkspaceView, setMobileWorkspaceView] = useState<"edit" | "preview">("edit");
+  const [commandBarInView, setCommandBarInView] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -180,6 +182,44 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   useEffect(() => {
     if (hasChanges) setCopyStatus("idle");
   }, [hasChanges]);
+
+  // The mobile dock's save button appears only once the command bar (and its
+  // primary save) has scrolled out of view, so two dominant save actions are
+  // never on screen together. Without IntersectionObserver, always show it.
+  const editorReady = !loading && Boolean(data);
+  useEffect(() => {
+    if (!editorReady) {
+      return;
+    }
+
+    const commandBar = document.querySelector("[data-editor-command-bar]");
+    if (!commandBar || typeof IntersectionObserver === "undefined") {
+      setCommandBarInView(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setCommandBarInView(entry?.isIntersecting ?? false);
+    });
+    observer.observe(commandBar);
+    return () => observer.disconnect();
+  }, [editorReady]);
+
+  // Deep links (e.g. the legacy ATS route redirect) target section anchors that
+  // only mount after the initial fetch, so re-apply the hash once the editor is ready.
+  useEffect(() => {
+    if (!editorReady || !window.location.hash) {
+      return;
+    }
+
+    const target = document.getElementById(window.location.hash.slice(1));
+    if (!target) {
+      return;
+    }
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+  }, [editorReady]);
 
   useEffect(() => {
     if (!hasChanges || !data) {
@@ -303,9 +343,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           clearDraft();
         }
         setSuccess(
-          hasNewerEdits
-            ? "Saved. Newer edits are still unsaved."
-            : "Saved successfully!",
+          hasNewerEdits ? "Saved. Newer edits are still unsaved." : "Saved.",
         );
         if (successTimerRef.current !== null) {
           window.clearTimeout(successTimerRef.current);
@@ -333,8 +371,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     await persistPage(data, themeId);
   }, [data, hasChanges, page, persistPage, saving, themeId]);
 
+  const handlePublished = useCallback(() => {
+    setPage((prev) =>
+      prev ? { ...prev, status: "live" as const, visibility: "public" as const } : prev,
+    );
+  }, []);
+
   const handleCopyLiveLink = useCallback(async () => {
-    if (hasChanges || !page) return;
+    if (hasChanges || !page || copyStatus === "copied") return;
 
     const livePath = `/${publicSlug || page.slug || "your-username"}`;
     const liveUrl = `${window.location.origin.replace(/\/$/, "")}${livePath}`;
@@ -366,7 +410,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     } catch {
       setCopyStatus("error");
     }
-  }, [hasChanges, page, publicSlug]);
+  }, [copyStatus, hasChanges, page, publicSlug]);
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
@@ -402,6 +446,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     ? getReadinessSection(nextReadinessCheck.id)
     : null;
   const livePath = `/${publicSlug || page?.slug || "your-username"}`;
+  // Records without a status column keep the live-page actions they always had.
+  const isDraft = Boolean(page?.status && page.status !== "live");
   const themePickerCollection =
     accountAccess.allowedThemeIds && !accountAccess.allowedThemeIds.includes(themeId)
       ? THEME_REGISTRY.find((theme) => theme.id === accountAccess.allowedThemeIds?.[0])
@@ -424,8 +470,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     return (
       <main className="site-container-wide max-w-6xl py-8" id="main-content">
         <div className="site-panel p-6 text-center sm:p-8">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-none border-2 border-site-border border-t-site-action" />
-          <p className="mt-4 text-sm text-site-muted" role="status">Loading page...</p>
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-site-border border-t-site-action" />
+          <p className="mt-4 text-sm text-site-muted" role="status">Loading page…</p>
         </div>
       </main>
     );
@@ -436,6 +482,12 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       <main className="site-container-wide max-w-6xl py-8" id="main-content">
         <div className="site-panel p-6 text-center sm:p-8">
           <p className="text-sm text-site-danger" role="alert">{error || "Page not found."}</p>
+          <Link
+            href="/dashboard"
+            className="site-button site-button-secondary mt-5 inline-flex px-4"
+          >
+            Back to dashboard
+          </Link>
         </div>
       </main>
     );
@@ -453,7 +505,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             <button
               type="button"
               onClick={() => router.push("/dashboard")}
-              className="mb-1 inline-flex min-h-7 items-center gap-1.5 text-[10px] font-semibold text-site-muted transition-colors hover:text-site-text"
+              className="-ml-1 inline-flex min-h-11 items-center gap-1.5 px-1 text-xs font-semibold text-site-muted transition-colors hover:text-site-text"
             >
               <span aria-hidden="true">←</span>
               Dashboard
@@ -461,12 +513,12 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             <p className="site-eyebrow">Signal studio · Edit your page</p>
             <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2.5">
               <h1 className="truncate font-site text-xl font-semibold tracking-[-0.03em] text-site-text sm:text-2xl">
-                {data.name || "Living Resume"}
+                {data.name || "Untitled page"}
               </h1>
               <span
                 role="status"
                 aria-live="polite"
-                className={`inline-flex items-center gap-2 border px-2.5 py-1 font-mono text-[9px] tracking-[0.08em] transition-colors ${
+                className={`inline-flex items-center gap-2 border px-2.5 py-1 text-xs font-medium transition-colors ${
                   saving
                     ? "border-site-warning text-site-warning"
                     : hasChanges
@@ -486,6 +538,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 />
                 {saving ? "Saving changes" : hasChanges ? "Unsaved changes" : "All changes saved"}
               </span>
+              {isDraft ? (
+                <span className="inline-flex items-center border border-site-border px-2.5 py-1 text-xs font-medium text-site-secondary">
+                  Draft — only you can see it
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -493,14 +550,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             // Persistent status readout. The per-check segmented bars live only
             // in the readiness briefing (their accessible home); here we name the
             // next gap in text, which stays useful once the briefing scrolls off.
-            <div className="border-l border-site-border pl-3 sm:pl-4">
-              <p className="site-eyebrow text-[9px] text-site-muted">
+            <div className="border-t border-site-border pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+              <p className="site-eyebrow text-site-muted">
                 Page signal
               </p>
-              <p className="mt-1 text-xs font-semibold text-site-text">
+              <p className="mt-1 text-xs font-semibold tabular-nums text-site-text">
                 {readiness.readyCount}/{readiness.totalChecks} checks strong
               </p>
-              <p className="mt-1.5 truncate text-[10px] text-site-muted">
+              <p className="mt-1.5 truncate text-xs text-site-muted">
                 {nextReadinessTarget
                   ? `Next: ${nextReadinessTarget.label}`
                   : "Ready to save and share"}
@@ -508,30 +565,60 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-3 gap-2 lg:flex lg:flex-wrap lg:justify-end">
+          <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:items-start lg:justify-end">
             <button
               type="button"
               disabled={saving || !hasChanges}
               onClick={() => void handleSave()}
-              className="site-button site-button-primary min-w-0 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
+              className="site-button site-button-primary col-span-2 min-w-0 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? "Saving…" : "Save changes"}
             </button>
-            <button
-              type="button"
-              disabled={hasChanges || copyStatus === "copied"}
-              aria-describedby="editor-copy-guidance"
-              onClick={() => void handleCopyLiveLink()}
-              className="site-button site-button-secondary min-w-0 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
-            >
-              {copyStatus === "copied" ? "Link copied" : "Copy link"}
-            </button>
-            <Link
-              href={livePath}
-              className="site-button site-button-secondary min-w-0 px-3 py-2 text-center text-xs sm:px-4"
-            >
-              View live
-            </Link>
+            {isDraft && page ? (
+              <div className="col-span-2 min-w-0 lg:max-w-xs">
+                <PublishPageButton
+                  pageId={page.id}
+                  emphasis="primary"
+                  label="Publish page"
+                  onPublished={handlePublished}
+                />
+                <p className="mt-1.5 text-xs leading-5 text-site-muted">
+                  Publishing makes mylivingpage.com/{publicSlug || page.slug} public.
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  aria-disabled={hasChanges || undefined}
+                  aria-describedby="editor-copy-guidance"
+                  onClick={() => void handleCopyLiveLink()}
+                  className="site-button site-button-secondary min-w-0 px-3 py-2 text-xs aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:px-4"
+                >
+                  {copyStatus === "copied" ? "Link copied" : "Copy link"}
+                </button>
+                <Link
+                  href={livePath}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="site-button site-button-secondary min-w-0 px-3 py-2 text-center text-xs sm:px-4"
+                >
+                  View live
+                </Link>
+                {hasChanges ? (
+                  <p
+                    id="editor-copy-guidance"
+                    className="col-span-2 text-xs leading-5 text-site-muted lg:basis-full lg:text-right"
+                  >
+                    Save your changes to copy the live link.
+                  </p>
+                ) : (
+                  <p id="editor-copy-guidance" className="sr-only">
+                    Copy the saved live page link.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -548,7 +635,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => showMobileWorkspaceView(view)}
-                className={`min-h-10 px-3 py-2 text-xs font-semibold tracking-[0.06em] transition-colors ${
+                className={`min-h-11 px-3 py-2 text-xs font-semibold tracking-[0.06em] transition-colors ${
                   view === "preview" ? "border-l border-site-border" : ""
                 } ${
                   active
@@ -565,9 +652,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         {mobileWorkspaceView === "edit" ? (
           <div
             data-editor-mobile-peek
-            className="mt-2 flex min-w-0 items-center gap-2 border-l-2 border-site-action px-2 py-1 text-[10px] xl:hidden"
+            className="mt-2 flex min-w-0 items-center gap-2 border-l-2 border-site-action px-2 py-1 text-xs xl:hidden"
           >
-            <span className="site-eyebrow shrink-0 text-[9px] text-site-action-hover">
+            <span className="site-eyebrow shrink-0 text-site-action-hover">
               Preview signal
             </span>
             <span className="truncate text-site-muted">
@@ -576,12 +663,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           </div>
         ) : null}
 
-        <EditorSectionNav signalSectionIds={signalSectionIds} />
-        <p id="editor-copy-guidance" className="sr-only">
-          {hasChanges
-            ? "Save your latest changes before copying the live page link."
-            : "Copy the saved live page link."}
-        </p>
+        {/* While the mobile preview is active every editor section is hidden,
+            so the scroll-tracking page map would pin to a meaningless stop. */}
+        <div className={mobileWorkspaceView === "preview" ? "hidden xl:block" : undefined}>
+          <EditorSectionNav signalSectionIds={signalSectionIds} />
+        </div>
         {copyStatus === "copied" ? (
           <p role="status" className="sr-only">Live page link copied.</p>
         ) : null}
@@ -594,9 +680,21 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
       <div className="mt-4" aria-live="polite">
         {error ? (
-          <p className="site-alert-danger mb-4 px-4 py-3 text-sm" role="alert">
-            {error}
-          </p>
+          <div className="site-alert-danger mb-4 flex items-start gap-2 px-4 py-3 text-sm" role="alert">
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.5" />
+              <path d="M8 4.75v3.75" strokeLinecap="square" />
+              <path d="M8 11.25h.01" strokeLinecap="round" />
+            </svg>
+            <span>{error}</span>
+          </div>
         ) : null}
         {success ? (
           <p className="site-alert-success mb-4 px-4 py-3 text-sm" role="status">
@@ -626,8 +724,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             </p>
           </div>
 
-          <div className="space-y-5">
-            {pendingDraft ? (
+          <div className="space-y-6">
+            {/* Once the user edits, autosave tracks the newer state and the
+                stored draft is stale — the restore decision moment has passed. */}
+            {pendingDraft && !hasChanges ? (
               <DraftBanner
                 savedAt={pendingDraft.savedAt}
                 onRestore={restoreDraft}
@@ -641,7 +741,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               id="editor-section-setup"
               data-editor-section="setup"
               aria-labelledby="editor-setup-title"
-              className="scroll-mt-72 xl:scroll-mt-40"
+              className="scroll-mt-24 xl:scroll-mt-72"
             >
               <div className="mb-3 px-1">
                 <p className="site-eyebrow">
@@ -656,7 +756,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)]">
-                <fieldset className="site-panel min-w-0 space-y-3 p-4 sm:p-5">
+                <fieldset className="site-panel min-w-0 space-y-3 p-4 sm:p-6">
                   <legend className="site-eyebrow px-1">Public URL</legend>
                   <div className="min-w-0 break-all border border-site-border bg-site-canvas-alt px-3 py-2 font-mono text-sm leading-6 text-site-action">
                     mylivingpage.com/{publicSlug || page?.slug || "your-username"}
@@ -666,7 +766,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   </p>
                 </fieldset>
 
-                <fieldset className="site-panel space-y-3 p-4 sm:p-5">
+                <fieldset className="site-panel space-y-3 p-4 sm:p-6">
                   <legend className="site-eyebrow px-1">Profile photo</legend>
                   <div className="flex items-center gap-3 sm:gap-4">
                     {data.avatar_url ? (
@@ -704,10 +804,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                         className="site-button site-button-secondary w-full px-3 py-2 text-xs disabled:opacity-50"
                       >
                         {uploadingAvatar
-                          ? "Uploading..."
+                          ? "Uploading…"
                           : data.avatar_url
-                            ? "Change Photo"
-                            : "Upload Photo"}
+                            ? "Change photo"
+                            : "Upload photo"}
                       </button>
                       {data.avatar_url ? (
                         <button
@@ -732,7 +832,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               id="editor-section-design"
               data-editor-section="design"
               aria-labelledby="editor-design-title"
-              className="site-panel scroll-mt-72 p-4 sm:p-5 xl:scroll-mt-40"
+              className="site-panel scroll-mt-24 p-4 sm:p-6 xl:scroll-mt-72"
             >
               <div className="mb-5 border-b border-site-border pb-4">
                 <p className="site-eyebrow">
@@ -743,7 +843,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   <h2 id="editor-design-title" className="site-panel-title">
                     Choose the world around your story
                   </h2>
-                  <span className="border border-site-action bg-site-selected px-2.5 py-1 font-mono text-[10px] tracking-[0.08em] text-site-action-hover">
+                  <span className="border border-site-action bg-site-selected px-2.5 py-1 text-xs font-medium text-site-action-hover">
                     {selectedTheme?.name ?? themeId}
                   </span>
                 </div>
@@ -757,7 +857,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 onSelectTheme={setThemeId}
                 allowedThemeIds={accountAccess.allowedThemeIds}
                 initialCollection={themePickerCollection}
-                lockedLabel="Not available"
+                lockedLabel="Paid plan"
                 showDescription
               />
             </section>
@@ -766,7 +866,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               id="editor-section-ats"
               data-editor-section="ats"
               aria-labelledby="editor-tools-title"
-              className="scroll-mt-72 space-y-4 xl:scroll-mt-40"
+              className="scroll-mt-24 space-y-4 xl:scroll-mt-72"
             >
               <div className="px-1">
                 <p className="site-eyebrow">
@@ -803,7 +903,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 </h2>
                 <p className="mt-1 text-xs text-site-muted">Scroll the real page without leaving the studio.</p>
               </div>
-              <span className="shrink-0 border border-site-border bg-site-canvas-alt px-2.5 py-1 font-mono text-[9px] tracking-[0.08em] text-site-action-hover">
+              <span className="shrink-0 border border-site-border bg-site-canvas-alt px-2.5 py-1 text-xs font-medium text-site-action-hover">
                 {selectedTheme?.name ?? themeId}
               </span>
             </div>
@@ -815,20 +915,20 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               />
               <span
                 data-editor-preview-status
-                className={`site-eyebrow shrink-0 text-[9px] ${
+                className={`site-eyebrow shrink-0 ${
                   hasChanges ? "text-site-warning" : "text-site-success"
                 }`}
               >
                 {hasChanges ? "Unsaved view" : "Live signal"}
               </span>
-              <div className="ml-1 min-w-0 flex-1 truncate rounded-none border border-site-border bg-site-surface px-2.5 py-1 font-mono text-[10px] text-site-muted">
+              <div className="ml-1 min-w-0 flex-1 truncate rounded-none border border-site-border bg-site-surface px-2.5 py-1 font-mono text-xs text-site-muted">
                 mylivingpage.com/<span className="text-site-action">{publicSlug || page?.slug}</span>
               </div>
             </div>
 
             <ThemeCanvas
               themeId={themeId}
-              height="clamp(480px, calc(100dvh - 20rem), 680px)"
+              height="clamp(420px, calc(100dvh - 26.5rem), 680px)"
               className="rounded-none"
               motionAware
             >
@@ -843,8 +943,32 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       <nav
         aria-label="Mobile editor actions"
         data-editor-mobile-dock
-        className="site-panel-raised fixed inset-x-5 bottom-3 z-40 grid grid-cols-[minmax(0,1fr)_auto] gap-2 p-2 shadow-[var(--site-shadow-overlay)] xl:hidden"
+        className={`site-panel-raised fixed inset-x-5 bottom-3 z-40 grid gap-2 p-2 shadow-[var(--site-shadow-overlay)] xl:hidden ${
+          commandBarInView ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_auto]"
+        }`}
       >
+        {error ? (
+          // Announced by the alert at the top of the page; this strip keeps the
+          // failure visible when saving from deep inside the form.
+          <p
+            aria-hidden="true"
+            className="site-alert-danger col-span-full flex items-start gap-2 px-3 py-2 text-xs leading-5"
+          >
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.5" />
+              <path d="M8 4.75v3.75" strokeLinecap="square" />
+              <path d="M8 11.25h.01" strokeLinecap="round" />
+            </svg>
+            <span className="min-w-0">{error}</span>
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() =>
@@ -856,14 +980,18 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         >
           {mobileWorkspaceView === "edit" ? "Preview your page" : "Return to editing"}
         </button>
-        <button
-          type="button"
-          disabled={saving || !hasChanges}
-          onClick={() => void handleSave()}
-          className="site-button site-button-primary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Save now"}
-        </button>
+        {/* The command bar already shows the primary save; surface the dock
+            save only after that bar scrolls out of view (no double primary). */}
+        {!commandBarInView ? (
+          <button
+            type="button"
+            disabled={saving || !hasChanges}
+            onClick={() => void handleSave()}
+            className="site-button site-button-primary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save now"}
+          </button>
+        ) : null}
       </nav>
     </main>
   );

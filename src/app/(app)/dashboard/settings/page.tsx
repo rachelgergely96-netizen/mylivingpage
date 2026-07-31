@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -97,26 +98,35 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordMsg, setPasswordMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [passwordMsg, setPasswordMsg] = useState<{
+    ok: boolean;
+    text: string;
+    field?: "current" | "new" | "confirm";
+  } | null>(null);
 
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteCurrentPassword, setDeleteCurrentPassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Feedback
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; variant: "status" | "danger" } | null>(null);
 
-  const showToast = useCallback((msg: string) => {
+  const showToast = useCallback((msg: string, variant: "status" | "danger" = "status") => {
     if (toastTimerRef.current !== null) {
       window.clearTimeout(toastTimerRef.current);
-    }
-    setToast(msg);
-    toastTimerRef.current = window.setTimeout(() => {
       toastTimerRef.current = null;
-      setToast(null);
-    }, 3000);
+    }
+    setToast({ text: msg, variant });
+    // Errors stay until dismissed or replaced; successes clear on their own.
+    if (variant === "status") {
+      toastTimerRef.current = window.setTimeout(() => {
+        toastTimerRef.current = null;
+        setToast(null);
+      }, 3000);
+    }
   }, []);
 
   const billingLoading = billingAction !== null;
@@ -262,6 +272,8 @@ export default function SettingsPage() {
       if (event.key === "Escape" && !deletingRef.current) {
         setShowDeleteModal(false);
         setDeleteConfirmText("");
+        setDeleteCurrentPassword("");
+        setDeleteError(null);
         return;
       }
 
@@ -323,7 +335,7 @@ export default function SettingsPage() {
       setProfile((current) => current ? { ...current, full_name: fullName } : current);
       showToast("Name updated");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not update your name.");
+      showToast(error instanceof Error ? error.message : "Could not update your name.", "danger");
     } finally {
       setSavingName(false);
     }
@@ -333,7 +345,7 @@ export default function SettingsPage() {
   const onSaveUsername = async () => {
     const validation = validateUsernameSlug(username);
     if (validation.error) {
-      showToast(validation.error);
+      showToast(validation.error, "danger");
       return;
     }
     const slug = validation.slug;
@@ -354,7 +366,7 @@ export default function SettingsPage() {
       setUsernameAvail(null);
       showToast("Username updated");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not update your username.");
+      showToast(error instanceof Error ? error.message : "Could not update your username.", "danger");
     } finally {
       setSavingUsername(false);
     }
@@ -377,7 +389,7 @@ export default function SettingsPage() {
       setAvatarUrl(url);
       showToast("Avatar updated");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not upload your avatar.");
+      showToast(error instanceof Error ? error.message : "Could not upload your avatar.", "danger");
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -395,7 +407,7 @@ export default function SettingsPage() {
       setAvatarUrl(null);
       showToast("Avatar removed");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not remove your avatar.");
+      showToast(error instanceof Error ? error.message : "Could not remove your avatar.", "danger");
     } finally {
       setUploadingAvatar(false);
     }
@@ -405,8 +417,8 @@ export default function SettingsPage() {
   const onChangePassword = async (e: FormEvent) => {
     e.preventDefault();
     setPasswordMsg(null);
-    if (newPassword.length < 8) { setPasswordMsg({ ok: false, text: "Password must be at least 8 characters." }); return; }
-    if (newPassword !== confirmPassword) { setPasswordMsg({ ok: false, text: "Passwords do not match." }); return; }
+    if (newPassword.length < 8) { setPasswordMsg({ ok: false, text: "Password must be at least 8 characters.", field: "new" }); return; }
+    if (newPassword !== confirmPassword) { setPasswordMsg({ ok: false, text: "Passwords do not match.", field: "confirm" }); return; }
 
     setSavingPassword(true);
     try {
@@ -427,6 +439,7 @@ export default function SettingsPage() {
       setPasswordMsg({
         ok: false,
         text: error instanceof Error ? error.message : "Failed to update password.",
+        field: "current",
       });
     } finally {
       setSavingPassword(false);
@@ -438,6 +451,7 @@ export default function SettingsPage() {
     if (deletingRef.current) return;
     deletingRef.current = true;
     setDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch("/api/account/delete", {
         method: "POST",
@@ -453,7 +467,7 @@ export default function SettingsPage() {
       await supabase.auth.signOut();
       router.replace("/");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to delete account.");
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete account.");
     } finally {
       deletingRef.current = false;
       setDeleting(false);
@@ -462,8 +476,16 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="site-container py-10" id="main-content">
-        <p className="site-muted text-sm" role="status">Loading settings...</p>
+      <main className="site-container max-w-3xl py-8 sm:py-12" id="main-content">
+        <div className="mb-8">
+          <p className="site-eyebrow">Settings</p>
+          <h1 className="site-page-title mt-2">Account settings</h1>
+        </div>
+        <p className="sr-only" role="status">Loading settings…</p>
+        <div aria-hidden="true" className="space-y-5">
+          <div className="site-panel h-72 animate-pulse p-5 sm:p-7" />
+          <div className="site-panel h-44 animate-pulse p-5 sm:p-7" />
+        </div>
       </main>
     );
   }
@@ -509,9 +531,9 @@ export default function SettingsPage() {
         return;
       }
 
-      showToast(data?.error ?? "Could not open billing portal.");
+      showToast(data?.error ?? "Could not open billing portal.", "danger");
     } catch {
-      showToast("Could not open billing portal.");
+      showToast("Could not open billing portal.", "danger");
     } finally {
       setBillingAction(null);
     }
@@ -519,10 +541,44 @@ export default function SettingsPage() {
 
   return (
     <main className="site-container max-w-3xl py-8 sm:py-12" id="main-content">
-      {/* Toast */}
+      {/* Toast: sits below the 64px sticky header; errors persist until dismissed. */}
       {toast && (
-        <div className="site-panel-raised fixed right-4 top-4 z-50 px-5 py-3 text-sm text-site-action" role="status">
-          {toast}
+        <div
+          className={`site-panel-raised fixed left-4 right-4 top-20 z-50 flex items-start gap-2 px-4 py-3 text-sm sm:left-auto sm:max-w-[375px] ${
+            toast.variant === "danger" ? "text-site-danger" : "text-site-text"
+          }`}
+          style={
+            toast.variant === "danger"
+              ? { borderLeftColor: "var(--site-danger)", borderLeftWidth: 2 }
+              : undefined
+          }
+          role={toast.variant === "danger" ? "alert" : "status"}
+        >
+          {toast.variant === "danger" ? (
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.5" />
+              <path d="M8 4.75v3.75" strokeLinecap="square" />
+              <path d="M8 11.25h.01" strokeLinecap="round" />
+            </svg>
+          ) : null}
+          <span className="min-w-0 flex-1">{toast.text}</span>
+          {toast.variant === "danger" ? (
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              aria-label="Dismiss message"
+              className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-site-secondary transition-colors hover:text-site-text"
+            >
+              <span aria-hidden="true" className="text-base leading-none">×</span>
+            </button>
+          ) : null}
         </div>
       )}
 
@@ -557,16 +613,16 @@ export default function SettingsPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="site-button site-button-secondary px-4 py-2 text-xs disabled:opacity-50"
+              className="site-button site-button-secondary min-w-[7.5rem] px-4 py-2 disabled:opacity-50"
             >
-              {uploadingAvatar ? "Uploading..." : "Upload"}
+              {uploadingAvatar ? "Uploading…" : "Upload"}
             </button>
             {avatarUrl && (
               <button
                 type="button"
                 onClick={onAvatarRemove}
                 disabled={uploadingAvatar}
-                className="site-button site-button-danger px-4 py-2 text-xs disabled:opacity-50"
+                className="site-button site-button-secondary px-4 py-2 disabled:opacity-50"
               >
                 Remove
               </button>
@@ -578,7 +634,7 @@ export default function SettingsPage() {
         {/* Full Name */}
         <div className="mb-5">
           <label htmlFor="settings-full-name" className="mb-1.5 block text-sm font-semibold text-site-secondary">Full name</label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               id="settings-full-name"
               type="text"
@@ -591,9 +647,9 @@ export default function SettingsPage() {
               type="button"
               onClick={onSaveName}
               disabled={savingName || fullName === (profile.full_name ?? "")}
-              className="site-button site-button-primary min-h-12 px-5 text-xs disabled:opacity-40"
+              className="site-button site-button-primary min-w-[6rem] px-5 disabled:opacity-40"
             >
-              {savingName ? "Saving..." : "Save"}
+              {savingName ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
@@ -602,7 +658,7 @@ export default function SettingsPage() {
         <div className="mb-5">
           <label htmlFor="settings-username" className="mb-1.5 block text-sm font-semibold text-site-secondary">Username</label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="flex min-h-12 min-w-0 flex-1 items-center gap-0 rounded-none border border-site-border-strong bg-site-canvas-alt focus-within:border-site-focus">
+            <div className="flex min-h-12 min-w-0 flex-1 items-center gap-0 rounded-none border border-site-border-strong bg-site-canvas-alt focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-site-focus">
               <span className="pl-4 text-sm text-site-muted">mylivingpage.com/</span>
               <input
                 id="settings-username"
@@ -620,12 +676,12 @@ export default function SettingsPage() {
               type="button"
               onClick={onSaveUsername}
               disabled={savingUsername || usernameChecking || !usernameChanged || !usernameAvail?.available || usernameAvail.slug !== normalizeUsernameSlug(username)}
-              className="site-button site-button-primary min-h-12 px-5 text-xs disabled:opacity-40"
+              className="site-button site-button-primary min-w-[6rem] px-5 disabled:opacity-40"
             >
-              {savingUsername ? "Saving..." : "Save"}
+              {savingUsername ? "Saving…" : "Save"}
             </button>
           </div>
-          {usernameChecking && <p className="mt-1.5 text-xs text-site-muted" role="status">Checking...</p>}
+          {usernameChecking && <p className="mt-1.5 text-xs text-site-muted" role="status">Checking…</p>}
           {usernameAvail && !usernameChecking && (
             <p className={`mt-1.5 text-xs ${usernameAvail.available ? "text-site-success" : "text-site-danger"}`} role="status">
               {usernameAvail.available ? "Available" : usernameAvail.reason}
@@ -656,19 +712,6 @@ export default function SettingsPage() {
           <h2 className="site-panel-title mb-5">Change password</h2>
           <form className="space-y-3 max-w-sm" onSubmit={onChangePassword}>
             <div>
-              <label htmlFor="settings-new-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">New password</label>
-              <input
-                id="settings-new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                placeholder="Min 8 characters"
-                className="site-field h-12 w-full px-4 text-sm"
-              />
-            </div>
-            <div>
               <label htmlFor="settings-current-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">Current password</label>
               <input
                 id="settings-current-password"
@@ -677,6 +720,24 @@ export default function SettingsPage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
+                aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "current" ? true : undefined}
+                aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "current" ? "password-form-error" : undefined}
+                className="site-field h-12 w-full px-4 text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-new-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">New password</label>
+              <input
+                id="settings-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={8}
+                placeholder="Min 8 characters"
+                aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "new" ? true : undefined}
+                aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "new" ? "password-form-error" : undefined}
                 className="site-field h-12 w-full px-4 text-sm"
               />
             </div>
@@ -685,23 +746,44 @@ export default function SettingsPage() {
               <input
                 id="settings-confirm-password"
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={8}
                 placeholder="Repeat password"
+                aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "confirm" ? true : undefined}
+                aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "confirm" ? "password-form-error" : undefined}
                 className="site-field h-12 w-full px-4 text-sm"
               />
             </div>
             <button
               type="submit"
               disabled={savingPassword}
-              className="site-button site-button-primary text-xs disabled:opacity-50"
+              className="site-button site-button-primary min-w-[10.5rem] disabled:opacity-50"
             >
-              {savingPassword ? "Updating..." : "Update Password"}
+              {savingPassword ? "Updating…" : "Update password"}
             </button>
             {passwordMsg && (
-              <p className={`text-xs ${passwordMsg.ok ? "text-site-success" : "text-site-danger"}`} role="status">{passwordMsg.text}</p>
+              passwordMsg.ok ? (
+                <p className="text-xs text-site-success" role="status">{passwordMsg.text}</p>
+              ) : (
+                <p id="password-form-error" className="flex items-start gap-1.5 text-xs text-site-danger" role="alert">
+                  <svg
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                  >
+                    <circle cx="8" cy="8" r="6.5" />
+                    <path d="M8 4.75v3.75" strokeLinecap="square" />
+                    <path d="M8 11.25h.01" strokeLinecap="round" />
+                  </svg>
+                  <span>{passwordMsg.text}</span>
+                </p>
+              )
             )}
           </form>
         </section>
@@ -721,7 +803,7 @@ export default function SettingsPage() {
           </span>
         </div>
         <p className="site-muted mt-3 text-sm leading-6">
-          Your living resume, public link, ATS-ready PDF, share card, themes, and page
+          Your living résumé, public link, ATS-ready PDF, share card, themes, and page
           analytics are available free.
         </p>
         <div className="site-callout mt-4 px-4 py-3 text-sm">
@@ -743,9 +825,9 @@ export default function SettingsPage() {
               type="button"
               disabled={billingLoading}
               onClick={() => void openBillingPortal()}
-              className="site-button site-button-secondary mt-3 px-4 py-2 text-xs disabled:opacity-50"
+              className="site-button site-button-secondary mt-3 min-w-[12rem] px-4 py-2 disabled:opacity-50"
             >
-              {billingAction === "portal" ? "Loading..." : "Manage Subscription"}
+              {billingAction === "portal" ? "Opening portal…" : "Manage subscription"}
             </button>
           </div>
         ) : null}
@@ -753,17 +835,23 @@ export default function SettingsPage() {
 
       {/* ── Danger Zone ── */}
       <section className="site-danger-panel p-5 sm:p-7">
-        <h2 className="mb-3 font-site text-lg font-semibold text-site-danger">Danger zone</h2>
+        <h2 className="site-panel-title mb-3 text-site-danger">Danger zone</h2>
         <p className="mb-4 text-sm text-site-secondary">
-          Permanently delete your account and all associated data. This action cannot be undone.
+          Permanently delete your account and all associated data. This action cannot be undone.{" "}
+          <Link
+            href="/delete-account"
+            className="font-semibold text-site-action underline underline-offset-4 transition-colors hover:text-site-action-hover"
+          >
+            What gets deleted
+          </Link>
         </p>
         <button
           ref={deleteTriggerRef}
           type="button"
           onClick={() => setShowDeleteModal(true)}
-          className="site-button site-button-danger text-xs"
+          className="site-button site-button-danger"
         >
-          Delete Account
+          Delete account
         </button>
       </section>
 
@@ -780,9 +868,12 @@ export default function SettingsPage() {
               aria-label={`Type ${profile.username} to confirm account deletion`}
               type="text"
               value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              onChange={(e) => {
+                setDeleteConfirmText(e.target.value);
+                setDeleteError(null);
+              }}
               placeholder={profile.username}
-              className="site-field mb-4 h-12 w-full border-site-danger px-4 text-sm"
+              className="site-field mb-4 h-12 w-full px-4 text-sm"
             />
             {profile.hasPassword ? (
               <input
@@ -790,15 +881,39 @@ export default function SettingsPage() {
                 type="password"
                 autoComplete="current-password"
                 value={deleteCurrentPassword}
-                onChange={(e) => setDeleteCurrentPassword(e.target.value)}
+                onChange={(e) => {
+                  setDeleteCurrentPassword(e.target.value);
+                  setDeleteError(null);
+                }}
                 placeholder="Current password"
-                className="site-field mb-4 h-12 w-full border-site-danger px-4 text-sm"
+                aria-invalid={deleteError ? true : undefined}
+                aria-describedby={deleteError ? "delete-account-error" : undefined}
+                className="site-field mb-4 h-12 w-full px-4 text-sm"
               />
             ) : (
               <p className="mb-4 text-xs text-site-muted">
-                Provider accounts must have signed in within the last 10 minutes.
+                You signed in with Google. To confirm it is you, your last sign-in must be
+                within the past 10 minutes. If it has been longer, sign out, sign back in,
+                then delete your account.
               </p>
             )}
+            {deleteError ? (
+              <div id="delete-account-error" role="alert" className="site-alert-danger mb-4 flex items-start gap-2 p-3 text-sm">
+                <svg
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 4.75v3.75" strokeLinecap="square" />
+                  <path d="M8 11.25h.01" strokeLinecap="round" />
+                </svg>
+                <span>{deleteError}</span>
+              </div>
+            ) : null}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -807,10 +922,11 @@ export default function SettingsPage() {
                     setShowDeleteModal(false);
                     setDeleteConfirmText("");
                     setDeleteCurrentPassword("");
+                    setDeleteError(null);
                   }
                 }}
                 disabled={deleting}
-                className="site-button site-button-secondary flex-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                className="site-button site-button-secondary flex-1 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -818,9 +934,9 @@ export default function SettingsPage() {
                 type="button"
                 onClick={onDeleteAccount}
                 disabled={deleteConfirmText !== profile.username || (profile.hasPassword && !deleteCurrentPassword) || deleting}
-                className="site-button site-button-danger flex-1 text-xs disabled:opacity-40"
+                className="site-button site-button-danger flex-1 disabled:opacity-40"
               >
-                {deleting ? "Deleting..." : "Delete Forever"}
+                {deleting ? "Deleting…" : "Delete forever"}
               </button>
             </div>
           </div>

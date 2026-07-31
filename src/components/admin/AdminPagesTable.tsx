@@ -47,8 +47,8 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, slug, or owner..."
-          className="site-field flex-1 px-4 py-2.5 text-sm"
+          placeholder="Search by name, slug, or owner…"
+          className="site-field flex-1 px-4 py-2.5"
         />
         <label htmlFor="admin-page-status" className="sr-only">
           Filter pages by status
@@ -57,9 +57,9 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
           id="admin-page-status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="site-field w-full px-4 py-2.5 text-sm sm:w-auto"
+          className="site-field w-full px-4 py-2.5 sm:w-auto"
         >
-          <option value="all">All Statuses</option>
+          <option value="all">All statuses</option>
           <option value="live">Live</option>
           <option value="draft">Draft</option>
         </select>
@@ -77,30 +77,30 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold text-site-text">{p.pageName}</p>
                   <span
-                    className={`site-badge shrink-0 py-0.5 text-[10px] ${
+                    className={`site-badge shrink-0 py-0.5 text-xs ${
                       isLive ? "site-badge-success" : ""
                     }`}
                   >
                     {isLive ? "live" : (p.status ?? "draft")}
                   </span>
                 </div>
-                <p className="mt-0.5 font-mono text-[11px] text-site-muted">
+                <p className="mt-0.5 font-mono text-xs text-site-muted">
                   /{p.slug} &middot; by @{p.ownerUsername}
                 </p>
                 {p.ownerEmail ? (
-                  <p className="mt-1 truncate text-[11px] text-site-muted">
+                  <p className="mt-1 truncate text-xs text-site-muted">
                     {p.ownerEmail}
                   </p>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-4 text-xs">
-                <span className="site-badge py-0.5 font-mono text-[10px]">
+                <span className="site-badge py-0.5 font-mono text-xs">
                   {p.theme_id}
                 </span>
                 <span className="tabular-nums text-site-action">{p.views.toLocaleString()} views</span>
                 <time
                   dateTime={p.created_at}
-                  className="font-mono text-[10px] text-site-muted"
+                  className="font-mono text-xs text-site-muted"
                 >
                   {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </time>
@@ -109,7 +109,7 @@ export default function AdminPagesTable({ pages }: { pages: AdminPage[] }) {
                     href={`/${p.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="site-button site-button-secondary px-3 py-1.5 text-[11px]"
+                    className="site-button site-button-secondary px-3 py-1.5 text-xs"
                   >
                     View
                   </Link>

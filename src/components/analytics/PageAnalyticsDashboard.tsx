@@ -1,5 +1,7 @@
 import React from "react";
 import Link from "next/link";
+import AnalyticsCopyLinkButton from "@/components/analytics/AnalyticsCopyLinkButton";
+import AnalyticsRetryButton from "@/components/analytics/AnalyticsRetryButton";
 import {
   ANALYTICS_RANGE_DAYS,
   type AnalyticsRangeKey,
@@ -66,6 +68,13 @@ function formatPeopleLooked(count: number) {
   return `${count.toLocaleString()} ${count === 1 ? "person looked" : "people looked"}`;
 }
 
+const STATUS_LABELS: Record<AnalyticsMetric["status"], string> = {
+  up: "Trending up",
+  down: "Trending down",
+  flat: "Steady",
+  new: "New",
+};
+
 function metricAccentClass(status: AnalyticsMetric["status"]) {
   switch (status) {
     case "up":
@@ -85,7 +94,7 @@ function renderComparison(metric: AnalyticsMetric, formatter: (value: number) =>
   }
 
   if (metric.status === "new") {
-    return `New vs ${formatter(metric.previousValue)}`;
+    return "First data for this period";
   }
 
   if (metric.deltaPercent === null) {
@@ -102,7 +111,6 @@ function StatCard({
   formatter,
   metric,
   helpText,
-  secondary,
   testId,
 }: {
   label: string;
@@ -110,14 +118,13 @@ function StatCard({
   formatter: (value: number) => string;
   metric: AnalyticsMetric;
   helpText: string;
-  secondary?: string;
   testId: string;
 }) {
   return (
-    <div data-testid={testId} className="site-panel p-4 sm:p-5">
+    <div data-testid={testId} className="site-panel p-4 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold text-site-muted">
+          <p className="text-xs font-semibold text-site-muted">
             {label}
           </p>
           <p className="mt-2 tabular-nums text-2xl font-bold text-site-text sm:text-3xl">
@@ -125,32 +132,31 @@ function StatCard({
           </p>
         </div>
         <span
-          className={`site-badge px-3 py-1 text-[10px] ${metricAccentClass(metric.status)}`}
+          className={`site-badge px-3 py-1 ${metricAccentClass(metric.status)}`}
         >
-          {metric.lowData ? "Low data" : metric.status}
+          {metric.lowData ? "Low data" : STATUS_LABELS[metric.status]}
         </span>
       </div>
       <p className="mt-3 text-sm tabular-nums text-site-secondary">
         {renderComparison(metric, formatter)}
       </p>
       <p className="mt-2 text-xs text-site-muted">{helpText}</p>
-      {secondary ? (
-        <p className="mt-3 text-[11px] font-semibold tabular-nums text-site-action">
-          {secondary}
-        </p>
-      ) : null}
     </div>
   );
 }
 
 function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
   const maxCount = Math.max(...analytics.trend.dailyViews.map((day) => day.count), 1);
+  const peakDay = analytics.trend.dailyViews.reduce(
+    (best, day) => (day.count > best.count ? day : best),
+    { date: "", label: "", count: 0 },
+  );
 
   return (
-    <section className="site-panel p-5 sm:p-6">
+    <section className="site-panel p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="site-eyebrow text-[11px]">
+          <p className="site-eyebrow">
             Recent activity
           </p>
           <h2 className="site-panel-title mt-2 sm:text-2xl">
@@ -162,9 +168,14 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
           >
             {formatPeopleLooked(analytics.trend.totalViews)} in this range.
           </p>
+          {peakDay.count > 0 ? (
+            <p className="mt-1 text-sm tabular-nums text-site-secondary">
+              Busiest day: {peakDay.label} ({formatPeopleLooked(peakDay.count)}).
+            </p>
+          ) : null}
         </div>
         <div
-          className={`site-badge self-start px-3 py-1.5 text-[10px] tabular-nums ${metricAccentClass(analytics.trend.comparison.status)}`}
+          className={`site-badge self-start px-3 py-1.5 tabular-nums ${metricAccentClass(analytics.trend.comparison.status)}`}
         >
           {renderComparison(analytics.trend.comparison, formatInteger)}
         </div>
@@ -173,20 +184,29 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
       <div className="mt-6">
         <div
           role="img"
-          className="flex items-end gap-1 border-b border-site-border"
+          className="flex items-end gap-px border-b border-site-border sm:gap-1"
           style={{ height: 180 }}
-          aria-label={`Daily page views over ${analytics.rangeLabel.toLowerCase()}`}
+          aria-label={`Daily page views over ${analytics.rangeLabel.toLowerCase()}: ${formatPeopleLooked(analytics.trend.totalViews)} in total${
+            peakDay.count > 0
+              ? `; busiest day ${peakDay.label} with ${formatPeopleLooked(peakDay.count)}`
+              : ""
+          }.`}
         >
           {analytics.trend.dailyViews.map((day) => {
             const height = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
 
             return (
-              <div key={day.date} className="group relative flex-1" style={{ height: "100%" }}>
+              <div
+                key={day.date}
+                className="group relative flex-1"
+                style={{ height: "100%" }}
+                title={`${day.label}: ${formatPeopleLooked(day.count)}`}
+              >
                 <div
                   className="absolute bottom-0 w-full bg-site-action opacity-75 transition-opacity group-hover:opacity-100"
-                  style={{ height: `${Math.max(height, 3)}%` }}
+                  style={{ height: day.count > 0 ? `${Math.max(height, 3)}%` : "0%" }}
                 />
-                <div className="pointer-events-none absolute -top-10 left-1/2 hidden -translate-x-1/2 whitespace-nowrap border border-site-border bg-site-surface-raised px-2 py-1 text-[10px] tabular-nums text-site-text shadow-[var(--site-shadow-raised)] group-hover:block">
+                <div className="pointer-events-none absolute -top-10 left-1/2 hidden -translate-x-1/2 whitespace-nowrap border border-site-border bg-site-surface-raised px-2 py-1 text-xs tabular-nums text-site-text shadow-[var(--site-shadow-raised)] group-hover:block">
                   {formatPeopleLooked(day.count)}
                   <br />
                   {day.label}
@@ -195,7 +215,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
             );
           })}
         </div>
-        <div className="mt-3 flex justify-between text-[10px] tabular-nums text-site-muted">
+        <div className="mt-3 flex justify-between text-xs tabular-nums text-site-muted">
           <span>{analytics.trend.dailyViews[0]?.label ?? ""}</span>
           <span>
             {analytics.trend.dailyViews[analytics.trend.dailyViews.length - 1]?.label ?? ""}
@@ -217,7 +237,7 @@ function ShareBars({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold text-site-muted">
+      <p className="text-xs font-semibold text-site-muted">
         {title}
       </p>
       {rows.length === 0 ? (
@@ -253,11 +273,11 @@ function TopBar({
   publicPath,
 }: PageAnalyticsDashboardProps) {
   return (
-    <section className="site-panel-raised p-5 sm:p-6">
+    <section className="site-panel-raised p-4 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="site-eyebrow">Page Analytics</p>
-          <h1 className="site-page-title mt-2 text-2xl sm:text-3xl md:text-4xl">
+          <p className="site-eyebrow">Page activity</p>
+          <h1 className="site-page-title mt-2 break-words">
             {pageName}
           </h1>
           <p className="site-muted mt-3 max-w-2xl text-sm leading-6">
@@ -268,9 +288,24 @@ function TopBar({
               href={publicPath}
               target="_blank"
               rel="noopener noreferrer"
-              className="site-button site-button-secondary px-3 py-1.5 text-site-action"
+              aria-label={`Open your public page ${publicPath} in a new tab`}
+              className="site-button site-button-secondary px-3 py-1.5"
             >
               {publicPath}
+              <svg
+                aria-hidden="true"
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.5 19.5L19.5 4.5M19.5 4.5H8.25M19.5 4.5v11.25"
+                />
+              </svg>
             </a>
             <span className="tabular-nums text-site-muted">
               All-time looks: {analytics.allTimeViews.toLocaleString()}
@@ -308,19 +343,19 @@ function InsightsStrip({ insights }: { insights: string[] }) {
   }
 
   return (
-    <section className="site-panel p-5 sm:p-6">
+    <section className="site-panel p-4 sm:p-6">
       <div className="mb-4">
-        <p className="site-eyebrow text-[11px]">
+        <p className="site-eyebrow">
           Proof summary
         </p>
         <h2 className="site-panel-title mt-2 sm:text-2xl">
           What the click is telling you
         </h2>
       </div>
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
         {insights.map((insight) => (
           <div key={insight} className="border border-site-border bg-site-canvas-alt p-4 sm:p-5">
-            <p className="site-eyebrow text-[11px]">Signal</p>
+            <p className="site-eyebrow">Signal</p>
             <p className="mt-3 text-sm leading-6 text-site-secondary">{insight}</p>
           </div>
         ))}
@@ -332,12 +367,28 @@ function InsightsStrip({ insights }: { insights: string[] }) {
 function GuidanceCard({
   title,
   description,
+  action,
+  variant = "panel",
   testId,
 }: {
   title: string;
   description: string;
+  action?: React.ReactNode;
+  variant?: "panel" | "plain";
   testId?: string;
 }) {
+  if (variant === "plain") {
+    return (
+      <div data-testid={testId} className="p-4 text-center sm:p-6">
+        <p className="font-semibold text-site-text">{title}</p>
+        <p className="site-muted mx-auto mt-3 max-w-2xl text-sm leading-6">
+          {description}
+        </p>
+        {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
+      </div>
+    );
+  }
+
   return (
     <section
       data-testid={testId}
@@ -347,6 +398,7 @@ function GuidanceCard({
       <p className="site-muted mx-auto mt-3 max-w-2xl text-sm leading-6">
         {description}
       </p>
+      {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
     </section>
   );
 }
@@ -363,9 +415,9 @@ function NoticeBanner({
   return (
     <section
       data-testid={testId}
-      className="site-callout p-5 sm:p-6"
+      className="site-callout p-4 sm:p-6"
     >
-      <p className="site-eyebrow text-[11px]">
+      <p className="site-eyebrow">
         Limited detail mode
       </p>
       <h2 className="site-panel-title mt-2 text-xl">{title}</h2>
@@ -373,16 +425,6 @@ function NoticeBanner({
         {description}
       </p>
     </section>
-  );
-}
-
-function DetailedAnalyticsPendingCard({ description }: { description: string }) {
-  return (
-    <GuidanceCard
-      title="Deeper detail will return automatically"
-      description={description}
-      testId="analytics-availability-notice"
-    />
   );
 }
 
@@ -412,6 +454,7 @@ export default function PageAnalyticsDashboard({
             analytics.state.notice ??
             "Traffic data could not be loaded right now. Please try again soon."
           }
+          action={<AnalyticsRetryButton />}
         />
       </div>
     );
@@ -435,9 +478,9 @@ export default function PageAnalyticsDashboard({
             "Basic activity detail is still showing below. Richer reading and click insights will return automatically once the detailed data is available."
           }
         />
-      ) : (
+      ) : analytics.state.hasTraffic ? (
         <InsightsStrip insights={analytics.insights} />
-      )}
+      ) : null}
 
       <section
         className={`grid gap-4 ${
@@ -445,16 +488,15 @@ export default function PageAnalyticsDashboard({
         }`}
       >
         <StatCard
-          label="People Who Looked"
+          label="People who looked"
           value={analytics.overview.views.value}
           formatter={formatInteger}
           metric={analytics.overview.views}
           helpText={`People who opened your page in the selected ${analytics.rangeLabel.toLowerCase()}.`}
-          secondary={`All-time looked: ${analytics.allTimeViews.toLocaleString()}`}
           testId="analytics-stat-views"
         />
         <StatCard
-          label="New People"
+          label="New people"
           value={analytics.overview.uniqueVisitors.value}
           formatter={formatInteger}
           metric={analytics.overview.uniqueVisitors}
@@ -463,7 +505,7 @@ export default function PageAnalyticsDashboard({
         />
         {!isBasic ? (
           <StatCard
-            label="Clicked Through"
+            label="Clicked through"
             value={analytics.overview.outboundCtr.value}
             formatter={formatPercent}
             metric={analytics.overview.outboundCtr}
@@ -473,7 +515,7 @@ export default function PageAnalyticsDashboard({
         ) : null}
         {!isBasic ? (
           <StatCard
-            label="Average Reading Time"
+            label="Average reading time"
             value={analytics.overview.avgEngagedTime.value}
             formatter={formatDuration}
             metric={analytics.overview.avgEngagedTime}
@@ -489,13 +531,14 @@ export default function PageAnalyticsDashboard({
         <GuidanceCard
           title="No one has looked yet"
           description="Share your tracked page URL in follow-up emails, LinkedIn messages, or your email signature. Once people start opening it, this page will show that they looked, where they came from, and what they did next."
+          action={<AnalyticsCopyLinkButton publicPath={publicPath} pageId={pageId} />}
         />
       )}
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="site-panel p-5 sm:p-6">
-          <p className="site-eyebrow text-[11px]">
-            Follow-Up Signals
+        <div className="site-panel p-4 sm:p-6">
+          <p className="site-eyebrow">
+            Follow-up signals
           </p>
           <h2 className="site-panel-title mt-2 text-xl">
             What to do after the click
@@ -505,7 +548,7 @@ export default function PageAnalyticsDashboard({
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="border border-site-border bg-site-canvas-alt p-4">
-              <p className="text-[10px] font-semibold text-site-action">Repeat views</p>
+              <p className="text-xs font-semibold text-site-secondary">Repeat views</p>
               <p className="mt-2 tabular-nums text-2xl text-site-text">
                 {analytics.followUp.repeatVisitors}
               </p>
@@ -516,7 +559,7 @@ export default function PageAnalyticsDashboard({
               </p>
             </div>
             <div className="border border-site-border bg-site-canvas-alt p-4">
-              <p className="text-[10px] font-semibold text-site-action">Latest look</p>
+              <p className="text-xs font-semibold text-site-secondary">Latest look</p>
               <p className="mt-2 tabular-nums text-2xl text-site-text">
                 {formatRelativeTime(analytics.followUp.latestViewAt) ?? "None"}
               </p>
@@ -526,8 +569,8 @@ export default function PageAnalyticsDashboard({
                   : "Most recent source was a direct share."}
               </p>
             </div>
-            <div className="border-l-4 border-site-action bg-site-selected p-4">
-              <p className="text-[10px] font-semibold text-site-action">Suggested timing</p>
+            <div className="site-callout p-4">
+              <p className="text-xs font-semibold text-site-secondary">Suggested timing</p>
               <p className="mt-2 text-lg font-semibold text-site-text">
                 {analytics.followUp.suggestedTimingLabel}
               </p>
@@ -538,8 +581,8 @@ export default function PageAnalyticsDashboard({
           </div>
         </div>
 
-        <div className="site-panel p-5 sm:p-6">
-          <p className="site-eyebrow text-[11px]">
+        <div className="site-panel p-4 sm:p-6">
+          <p className="site-eyebrow">
             Variants
           </p>
           <h2 className="site-panel-title mt-2 text-xl">
@@ -568,7 +611,7 @@ export default function PageAnalyticsDashboard({
           )}
           <Link
             href={`/dashboard/edit/${pageId}/living-page`}
-            className="site-button site-button-secondary mt-5 px-4 py-2 text-xs text-site-action"
+            className="site-button site-button-secondary mt-5 px-4 py-2 text-xs"
           >
             Edit living page
           </Link>
@@ -578,17 +621,17 @@ export default function PageAnalyticsDashboard({
       {analytics.state.hasTraffic ? (
         <>
           <section className="grid gap-4 xl:grid-cols-2">
-            <div className="site-panel p-5 sm:p-6">
+            <div className="site-panel p-4 sm:p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="site-eyebrow text-[11px]">
+                  <p className="site-eyebrow">
                     Acquisition
                   </p>
                   <h2 className="site-panel-title mt-2 text-xl">
                     How people found the page
                   </h2>
                 </div>
-                <div className="site-badge px-3 py-1 text-[10px] tabular-nums">
+                <div className="site-badge px-3 py-1 tabular-nums">
                   Direct share {formatPercent(analytics.acquisition.directSharePct)}
                 </div>
               </div>
@@ -601,8 +644,8 @@ export default function PageAnalyticsDashboard({
               </div>
             </div>
 
-            <div className="site-panel p-5 sm:p-6">
-              <p className="site-eyebrow text-[11px]">
+            <div className="site-panel p-4 sm:p-6">
+              <p className="site-eyebrow">
                 Audience
               </p>
               <h2 className="site-panel-title mt-2 text-xl">
@@ -623,38 +666,35 @@ export default function PageAnalyticsDashboard({
             </div>
           </section>
 
-          {isBasic ? (
-            <DetailedAnalyticsPendingCard
-              description="We can still show people who looked, activity trends, referrers, devices, and countries right now. Click, reading, and content insights will reappear automatically once the deeper detail is available."
-            />
-          ) : (
+          {isBasic ? null : (
             <section className="grid gap-4 xl:grid-cols-2">
-              <div className="site-panel p-5 sm:p-6">
+              <div className="site-panel p-4 sm:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="site-eyebrow text-[11px]">
+                    <p className="site-eyebrow">
                       Conversion
                     </p>
                     <h2 className="site-panel-title mt-2 text-xl">
                       What they did next
                     </h2>
                   </div>
-                  <div className="site-badge border-site-action px-3 py-1 text-[10px] tabular-nums text-site-action">
+                  <div className="site-badge px-3 py-1 tabular-nums">
                     {analytics.conversion.totalClicks.toLocaleString()} total clicks
                   </div>
                 </div>
                 {analytics.conversion.topActions.length === 0 ? (
                   <div className="mt-5">
                     <GuidanceCard
+                      variant="plain"
                       title="Traffic is showing up. Engagement is next."
-                      description="People are landing on the page, but richer detail needs clicks or scrolling to build next-step and content insights. As more people explore the page, this view will fill in automatically."
+                      description="People are landing on the page, but next-step insights need clicks to build. As more people explore the page, this view will fill in automatically."
                     />
                   </div>
                 ) : (
                   <>
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <div className="border border-site-border bg-site-canvas-alt p-4">
-                        <p className="text-[10px] font-semibold text-site-muted">
+                        <p className="text-xs font-semibold text-site-secondary">
                           People who clicked next
                         </p>
                         <p className="mt-2 tabular-nums text-xl text-site-text">
@@ -662,7 +702,7 @@ export default function PageAnalyticsDashboard({
                         </p>
                       </div>
                       <div className="border border-site-border bg-site-canvas-alt p-4">
-                        <p className="text-[10px] font-semibold text-site-muted">
+                        <p className="text-xs font-semibold text-site-secondary">
                           Took next step
                         </p>
                         <p className="mt-2 tabular-nums text-xl text-site-text">
@@ -688,9 +728,9 @@ export default function PageAnalyticsDashboard({
                 )}
               </div>
 
-              <div className="site-panel p-5 sm:p-6">
-                <p className="site-eyebrow text-[11px]">
-                  Content Performance
+              <div className="site-panel p-4 sm:p-6">
+                <p className="site-eyebrow">
+                  Content performance
                 </p>
                 <h2 className="site-panel-title mt-2 text-xl">
                   What kept attention
@@ -698,7 +738,7 @@ export default function PageAnalyticsDashboard({
                 {analytics.state.hasEngagement ? (
                   <div className="mt-5 grid gap-5 md:grid-cols-2">
                     <div>
-                      <p className="text-[11px] font-semibold text-site-muted">
+                      <p className="text-xs font-semibold text-site-muted">
                         Top section
                       </p>
                       {analytics.contentPerformance.topSection ? (
@@ -707,8 +747,13 @@ export default function PageAnalyticsDashboard({
                             {analytics.contentPerformance.topSection.label}
                           </p>
                           <p className="mt-2 text-sm tabular-nums text-site-secondary">
-                            {Math.round(analytics.contentPerformance.topSection.sharePct)}% of
-                            engaged readers spent the most visible time here.
+                            {analytics.state.lowData
+                              ? `${analytics.contentPerformance.topSection.count.toLocaleString()} engaged ${
+                                  analytics.contentPerformance.topSection.count === 1
+                                    ? "reader"
+                                    : "readers"
+                                } spent the most visible time here.`
+                              : `${Math.round(analytics.contentPerformance.topSection.sharePct)}% of engaged readers spent the most visible time here.`}
                           </p>
                         </div>
                       ) : (
@@ -730,7 +775,7 @@ export default function PageAnalyticsDashboard({
                     </div>
                     <div>
                       <div className="border border-site-border bg-site-canvas-alt p-4">
-                        <p className="text-[10px] font-semibold text-site-muted">
+                        <p className="text-xs font-semibold text-site-secondary">
                           Avg scroll depth
                         </p>
                         <p className="mt-2 tabular-nums text-xl text-site-text">
@@ -751,8 +796,9 @@ export default function PageAnalyticsDashboard({
                 ) : (
                   <div className="mt-5">
                     <GuidanceCard
-                      title="Traffic is showing up. Engagement is next."
-                      description="People are landing on the page, but richer detail needs clicks or scrolling to build content insights. As more people explore the page, this view will fill in automatically."
+                      variant="plain"
+                      title="Reading insights need a bit more scrolling data"
+                      description="People are landing on the page, but reading insights need scrolling activity to measure. As more people explore the page, this view will fill in automatically."
                     />
                   </div>
                 )}

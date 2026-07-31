@@ -536,7 +536,7 @@ describe("POST /api/resume/export", () => {
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({
-      error: "Unable to export the Resume PDF right now. Please try again.",
+      error: "Unable to export the Résumé PDF right now. Please try again.",
     });
     expect(mocks.fallbackRenderPdf).toHaveBeenCalled();
     expect(mocks.trackEvent).toHaveBeenCalledWith(

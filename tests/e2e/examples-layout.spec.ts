@@ -14,8 +14,8 @@ test("examples puts a live sample and clear sharing moments in the first screen"
       name: "See what someone sees when they open your link.",
     }),
   ).toBeVisible();
-  await expect(page.getByRole("tab", { name: /After applying/ })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /A recruiter is interested/ })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: /A recruiter is interested/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /After applying/ })).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -23,11 +23,11 @@ test("examples puts a live sample and clear sharing moments in the first screen"
   await expect(stage).toBeInViewport({ ratio: 0.35 });
   await expect(stage).toHaveCSS("transform", "none");
 
-  await page.getByRole("tab", { name: /After applying/ }).click();
+  await page.getByRole("tab", { name: /A recruiter is interested/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Early-career litigation attorney" }),
+    page.getByRole("heading", { name: "Software engineer re-entering the market" }),
   ).toBeVisible();
-  await expect(page.locator("#early-career-attorney")).toBeVisible();
+  await expect(page.locator("#laid-off-tech")).toBeVisible();
 
   const momentButtons = experience.getByRole("tab");
   for (const button of await momentButtons.all()) {

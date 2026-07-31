@@ -114,8 +114,11 @@ export default function GuidedFlow({
   const set = (patch: Partial<ResumeData>) => onUpdate({ ...guidedData, ...patch });
 
   /* ── Navigation ─────────────────────────────────────── */
+  const missingBasics = !name.trim() || !headline.trim();
+  const basicsHintId = `${entryIdPrefix}-basics-hint`;
+
   const canContinue = () => {
-    if (step === 0) return name.trim().length > 0 && headline.trim().length > 0;
+    if (step === 0) return !missingBasics;
     return true; // all other steps are skippable
   };
 
@@ -160,7 +163,7 @@ export default function GuidedFlow({
 
   /* ── Progress dots ──────────────────────────────────── */
   const progressDots = (
-    <div className="mb-6 flex items-center justify-center gap-2">
+    <div className="mb-6 flex items-center gap-2">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <span
           key={i}
@@ -178,7 +181,7 @@ export default function GuidedFlow({
   const renderBasics = () => (
     <div className="space-y-4">
       <div>
-        <label htmlFor="guided-full-name" className={labelClass}>Full Name *</label>
+        <label htmlFor="guided-full-name" className={labelClass}>Full name *</label>
         <input
           id="guided-full-name"
           type="text"
@@ -189,7 +192,7 @@ export default function GuidedFlow({
         />
       </div>
       <div>
-        <label htmlFor="guided-headline" className={labelClass}>Professional Headline *</label>
+        <label htmlFor="guided-headline" className={labelClass}>Professional headline *</label>
         <input
           id="guided-headline"
           type="text"
@@ -289,40 +292,56 @@ export default function GuidedFlow({
             <p className="site-eyebrow text-site-muted">Role {i + 1}</p>
             <button type="button" onClick={() => removeExp(i)} className={removeBtnClass} aria-label={`Remove role ${i + 1}`}>Remove</button>
           </div>
-          <input
-            aria-label={`Role ${i + 1} job title`}
-            type="text"
-            value={exp.title}
-            onChange={(e) => updateExp(i, { title: e.target.value })}
-            placeholder="Job Title"
-            className={inputClass}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor={`${experienceIds[i]}-title`} className={labelClass}>Job title</label>
             <input
-              aria-label={`Role ${i + 1} company`}
+              id={`${experienceIds[i]}-title`}
+              aria-label={`Role ${i + 1} job title`}
               type="text"
-              value={exp.company}
-              onChange={(e) => updateExp(i, { company: e.target.value })}
-              placeholder="Company"
-              className={inputClass}
-            />
-            <input
-              aria-label={`Role ${i + 1} dates`}
-              type="text"
-              value={exp.dates}
-              onChange={(e) => updateExp(i, { dates: e.target.value })}
-              placeholder="2022 – Present"
+              value={exp.title}
+              onChange={(e) => updateExp(i, { title: e.target.value })}
+              placeholder="Job Title"
               className={inputClass}
             />
           </div>
-          <input
-            aria-label={`Role ${i + 1} company website URL`}
-            type="text"
-            value={exp.url ?? ""}
-            onChange={(e) => updateExp(i, { url: e.target.value || null })}
-            placeholder="Company website URL (optional)"
-            className={inputClass}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor={`${experienceIds[i]}-company`} className={labelClass}>Company</label>
+              <input
+                id={`${experienceIds[i]}-company`}
+                aria-label={`Role ${i + 1} company`}
+                type="text"
+                value={exp.company}
+                onChange={(e) => updateExp(i, { company: e.target.value })}
+                placeholder="Company"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor={`${experienceIds[i]}-dates`} className={labelClass}>Dates</label>
+              <input
+                id={`${experienceIds[i]}-dates`}
+                aria-label={`Role ${i + 1} dates`}
+                type="text"
+                value={exp.dates}
+                onChange={(e) => updateExp(i, { dates: e.target.value })}
+                placeholder="2022 – Present"
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor={`${experienceIds[i]}-url`} className={labelClass}>Company URL (optional)</label>
+            <input
+              id={`${experienceIds[i]}-url`}
+              aria-label={`Role ${i + 1} company website URL`}
+              type="text"
+              value={exp.url ?? ""}
+              onChange={(e) => updateExp(i, { url: e.target.value || null })}
+              placeholder="Company website URL (optional)"
+              className={inputClass}
+            />
+          </div>
           <div>
             <label htmlFor={`${experienceIds[i]}-highlights`} className={labelClass}>Key highlights (one per line)</label>
             <textarea
@@ -384,31 +403,43 @@ export default function GuidedFlow({
               <p className="site-eyebrow text-site-muted">Degree {i + 1}</p>
               <button type="button" onClick={() => removeEdu(i)} className={removeBtnClass} aria-label={`Remove degree ${i + 1}`}>Remove</button>
             </div>
-            <input
-              aria-label={`Degree ${i + 1} name`}
-              type="text"
-              value={edu.degree}
-              onChange={(e) => updateEdu(i, { degree: e.target.value })}
-              placeholder="B.S. Computer Science"
-              className={inputClass}
-            />
+            <div>
+              <label htmlFor={`${educationIds[i]}-degree`} className={labelClass}>Degree</label>
+              <input
+                id={`${educationIds[i]}-degree`}
+                aria-label={`Degree ${i + 1} name`}
+                type="text"
+                value={edu.degree}
+                onChange={(e) => updateEdu(i, { degree: e.target.value })}
+                placeholder="B.S. Computer Science"
+                className={inputClass}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                aria-label={`Degree ${i + 1} school`}
-                type="text"
-                value={edu.school}
-                onChange={(e) => updateEdu(i, { school: e.target.value })}
-                placeholder="University Name"
-                className={inputClass}
-              />
-              <input
-                aria-label={`Degree ${i + 1} year`}
-                type="text"
-                value={edu.year}
-                onChange={(e) => updateEdu(i, { year: e.target.value })}
-                placeholder="2020"
-                className={inputClass}
-              />
+              <div>
+                <label htmlFor={`${educationIds[i]}-school`} className={labelClass}>School</label>
+                <input
+                  id={`${educationIds[i]}-school`}
+                  aria-label={`Degree ${i + 1} school`}
+                  type="text"
+                  value={edu.school}
+                  onChange={(e) => updateEdu(i, { school: e.target.value })}
+                  placeholder="University Name"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor={`${educationIds[i]}-year`} className={labelClass}>Year</label>
+                <input
+                  id={`${educationIds[i]}-year`}
+                  aria-label={`Degree ${i + 1} year`}
+                  type="text"
+                  value={edu.year}
+                  onChange={(e) => updateEdu(i, { year: e.target.value })}
+                  placeholder="2020"
+                  className={inputClass}
+                />
+              </div>
             </div>
           </div>
         ))}
@@ -423,31 +454,43 @@ export default function GuidedFlow({
               <p className="site-eyebrow text-site-muted">Certification {i + 1}</p>
               <button type="button" onClick={() => removeCert(i)} className={removeBtnClass} aria-label={`Remove certification ${i + 1}`}>Remove</button>
             </div>
-            <input
-              aria-label={`Certification ${i + 1} name`}
-              type="text"
-              value={cert.name}
-              onChange={(e) => updateCert(i, { name: e.target.value })}
-              placeholder="AWS Solutions Architect"
-              className={inputClass}
-            />
+            <div>
+              <label htmlFor={`${certificationIds[i]}-name`} className={labelClass}>Certification name</label>
+              <input
+                id={`${certificationIds[i]}-name`}
+                aria-label={`Certification ${i + 1} name`}
+                type="text"
+                value={cert.name}
+                onChange={(e) => updateCert(i, { name: e.target.value })}
+                placeholder="AWS Solutions Architect"
+                className={inputClass}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                aria-label={`Certification ${i + 1} issuer`}
-                type="text"
-                value={cert.issuer ?? ""}
-                onChange={(e) => updateCert(i, { issuer: e.target.value || null })}
-                placeholder="Issuing organization"
-                className={inputClass}
-              />
-              <input
-                aria-label={`Certification ${i + 1} date`}
-                type="text"
-                value={cert.date ?? ""}
-                onChange={(e) => updateCert(i, { date: e.target.value || null })}
-                placeholder="2023"
-                className={inputClass}
-              />
+              <div>
+                <label htmlFor={`${certificationIds[i]}-issuer`} className={labelClass}>Issuer</label>
+                <input
+                  id={`${certificationIds[i]}-issuer`}
+                  aria-label={`Certification ${i + 1} issuer`}
+                  type="text"
+                  value={cert.issuer ?? ""}
+                  onChange={(e) => updateCert(i, { issuer: e.target.value || null })}
+                  placeholder="Issuing organization"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor={`${certificationIds[i]}-date`} className={labelClass}>Date</label>
+                <input
+                  id={`${certificationIds[i]}-date`}
+                  aria-label={`Certification ${i + 1} date`}
+                  type="text"
+                  value={cert.date ?? ""}
+                  onChange={(e) => updateCert(i, { date: e.target.value || null })}
+                  placeholder="2023"
+                  className={inputClass}
+                />
+              </div>
             </div>
           </div>
         ))}
@@ -493,27 +536,34 @@ export default function GuidedFlow({
         <p className="text-sm font-semibold text-site-text">Skills</p>
         {skills.map((group, i) => (
           <div key={skillIds[i]} className="space-y-3 border border-site-border bg-site-canvas-alt p-4">
-            <div className="flex items-center justify-between">
-              <input
-                aria-label={`Skill category ${i + 1} name`}
-                type="text"
-                value={group.category}
-                onChange={(e) => updateSkill(i, { category: e.target.value })}
-                placeholder="Category (e.g. Languages, Tools)"
-                className="site-field min-w-0 px-3 py-2 text-sm font-semibold"
-              />
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <label htmlFor={`${skillIds[i]}-category`} className={labelClass}>Category</label>
+                <input
+                  id={`${skillIds[i]}-category`}
+                  aria-label={`Skill category ${i + 1} name`}
+                  type="text"
+                  value={group.category}
+                  onChange={(e) => updateSkill(i, { category: e.target.value })}
+                  placeholder="Category (e.g. Languages, Tools)"
+                  className="site-field min-w-0 px-3 py-2 text-sm font-semibold"
+                />
+              </div>
               {skills.length > 1 && (
                 <button type="button" onClick={() => removeSkillGroup(i)} className={removeBtnClass} aria-label={`Remove skill category ${i + 1}`}>Remove</button>
               )}
             </div>
-            <DelimitedListInput
-              id={`${skillIds[i]}-items`}
-              label={`Skills in category ${i + 1}`}
-              value={group.items}
-              onChange={(items) => updateSkill(i, { items })}
-              placeholder="TypeScript, React, Node.js"
-              className={inputClass}
-            />
+            <div>
+              <label htmlFor={`${skillIds[i]}-items`} className={labelClass}>Skills</label>
+              <DelimitedListInput
+                id={`${skillIds[i]}-items`}
+                label={`Skills in category ${i + 1}`}
+                value={group.items}
+                onChange={(items) => updateSkill(i, { items })}
+                placeholder="TypeScript, React, Node.js"
+                className={inputClass}
+              />
+            </div>
             <p className="text-xs text-site-muted">Separate skills with commas</p>
           </div>
         ))}
@@ -528,39 +578,54 @@ export default function GuidedFlow({
               <p className="site-eyebrow text-site-muted">Project {i + 1}</p>
               <button type="button" onClick={() => removeProject(i)} className={removeBtnClass} aria-label={`Remove project ${i + 1}`}>Remove</button>
             </div>
-            <input
-              aria-label={`Project ${i + 1} name`}
-              type="text"
-              value={proj.name}
-              onChange={(e) => updateProject(i, { name: e.target.value })}
-              placeholder="Project Name"
-              className={inputClass}
-            />
-            <textarea
-              aria-label={`Project ${i + 1} description`}
-              value={proj.description}
-              onChange={(e) => updateProject(i, { description: e.target.value })}
-              placeholder="A brief description of the project"
-              rows={2}
-              className={`${inputClass} min-h-[60px] resize-y`}
-            />
-            <DelimitedListInput
-              id={`${projectIds[i]}-technologies`}
-              label={`Project ${i + 1} technologies`}
-              value={proj.tech}
-              onChange={(tech) => updateProject(i, { tech })}
-              placeholder="Next.js, Supabase, Stripe"
-              className={inputClass}
-            />
+            <div>
+              <label htmlFor={`${projectIds[i]}-name`} className={labelClass}>Project name</label>
+              <input
+                id={`${projectIds[i]}-name`}
+                aria-label={`Project ${i + 1} name`}
+                type="text"
+                value={proj.name}
+                onChange={(e) => updateProject(i, { name: e.target.value })}
+                placeholder="Project Name"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor={`${projectIds[i]}-description`} className={labelClass}>Description</label>
+              <textarea
+                id={`${projectIds[i]}-description`}
+                aria-label={`Project ${i + 1} description`}
+                value={proj.description}
+                onChange={(e) => updateProject(i, { description: e.target.value })}
+                placeholder="A brief description of the project"
+                rows={2}
+                className={`${inputClass} min-h-[60px] resize-y`}
+              />
+            </div>
+            <div>
+              <label htmlFor={`${projectIds[i]}-technologies`} className={labelClass}>Technologies</label>
+              <DelimitedListInput
+                id={`${projectIds[i]}-technologies`}
+                label={`Project ${i + 1} technologies`}
+                value={proj.tech}
+                onChange={(tech) => updateProject(i, { tech })}
+                placeholder="Next.js, Supabase, Stripe"
+                className={inputClass}
+              />
+            </div>
             <p className="text-xs text-site-muted">Separate technologies with commas</p>
-            <input
-              aria-label={`Project ${i + 1} URL`}
-              type="text"
-              value={proj.url ?? ""}
-              onChange={(e) => updateProject(i, { url: e.target.value || null })}
-              placeholder="Project URL (optional)"
-              className={inputClass}
-            />
+            <div>
+              <label htmlFor={`${projectIds[i]}-url`} className={labelClass}>Project URL (optional)</label>
+              <input
+                id={`${projectIds[i]}-url`}
+                aria-label={`Project ${i + 1} URL`}
+                type="text"
+                value={proj.url ?? ""}
+                onChange={(e) => updateProject(i, { url: e.target.value || null })}
+                placeholder="Project URL (optional)"
+                className={inputClass}
+              />
+            </div>
           </div>
         ))}
         <button type="button" onClick={addProject} className={addBtnClass}>+ Add project</button>
@@ -590,13 +655,13 @@ export default function GuidedFlow({
   const renderSummaryStats = () => (
     <div className="space-y-6">
       <div>
-        <label htmlFor="guided-summary" className={labelClass}>Professional Summary</label>
+        <label htmlFor="guided-summary" className={labelClass}>Professional summary</label>
         <p className="mb-2 text-xs text-site-muted">In 2-3 sentences, what makes you great at what you do?</p>
         <textarea
           id="guided-summary"
           value={summary}
           onChange={(e) => set({ summary: e.target.value })}
-          placeholder="Full-stack engineer with 8 years of experience building scalable web applications..."
+          placeholder="Full-stack engineer with 8 years of experience building scalable web applications…"
           rows={4}
           className={`${inputClass} min-h-[100px] resize-y`}
         />
@@ -608,23 +673,31 @@ export default function GuidedFlow({
           <p className="mt-1 text-xs text-site-muted">Up to 4 standout numbers (e.g. {'"'}8+{'"'} / {'"'}Years Experience{'"'})</p>
         </div>
         {stats.map((stat, i) => (
-          <div key={statIds[i]} className="flex items-center gap-3">
-            <input
-              aria-label={`Highlight stat ${i + 1} value`}
-              type="text"
-              value={stat.value}
-              onChange={(e) => updateStat(i, { value: e.target.value })}
-              placeholder="8+"
-              className={`${inputClass} w-24 shrink-0 text-center`}
-            />
-            <input
-              aria-label={`Highlight stat ${i + 1} label`}
-              type="text"
-              value={stat.label}
-              onChange={(e) => updateStat(i, { label: e.target.value })}
-              placeholder="Years Experience"
-              className={`${inputClass} flex-1`}
-            />
+          <div key={statIds[i]} className="flex flex-wrap items-end gap-3">
+            <div className="w-24 shrink-0">
+              <label htmlFor={`${statIds[i]}-value`} className={labelClass}>Value</label>
+              <input
+                id={`${statIds[i]}-value`}
+                aria-label={`Highlight stat ${i + 1} value`}
+                type="text"
+                value={stat.value}
+                onChange={(e) => updateStat(i, { value: e.target.value })}
+                placeholder="8+"
+                className={`${inputClass} text-center`}
+              />
+            </div>
+            <div className="min-w-40 flex-1">
+              <label htmlFor={`${statIds[i]}-label`} className={labelClass}>Label</label>
+              <input
+                id={`${statIds[i]}-label`}
+                aria-label={`Highlight stat ${i + 1} label`}
+                type="text"
+                value={stat.label}
+                onChange={(e) => updateStat(i, { label: e.target.value })}
+                placeholder="Years Experience"
+                className={inputClass}
+              />
+            </div>
             <button type="button" onClick={() => removeStat(i)} className={removeBtnClass} aria-label={`Remove highlight stat ${i + 1}`}>Remove</button>
           </div>
         ))}
@@ -662,18 +735,24 @@ export default function GuidedFlow({
           ))}
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3 border-t border-site-border pt-6">
+        <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-site-border pt-6">
           <button type="button" onClick={onBack} className="site-button site-button-secondary">
             Back to dashboard
           </button>
           <button
             type="button"
-            disabled={!name.trim() || !headline.trim()}
+            disabled={missingBasics}
+            aria-describedby={missingBasics ? basicsHintId : undefined}
             onClick={completeFlow}
             className="site-button site-button-primary disabled:cursor-not-allowed disabled:opacity-40"
           >
             Continue to theme and preview
           </button>
+          {missingBasics ? (
+            <p id={basicsHintId} className="w-full text-sm text-site-secondary">
+              Add your name and headline at the top to continue.
+            </p>
+          ) : null}
         </div>
       </section>
     );
@@ -682,28 +761,34 @@ export default function GuidedFlow({
   return (
     <section className="site-panel p-4 sm:p-6 md:p-8">
       {progressDots}
-      <p className="site-eyebrow">Step 1 · {step + 1} of {TOTAL_STEPS}</p>
+      <p className="site-eyebrow">Details · part {step + 1} of {TOTAL_STEPS}</p>
       <h2 className="site-section-title mt-2">{STEP_PROMPTS[step].heading}</h2>
       <p className="mb-6 mt-2 text-sm text-site-secondary">{STEP_PROMPTS[step].sub}</p>
 
       {stepRenderers[step]()}
 
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={goBack}
           className="site-button site-button-secondary"
         >
-          Back
+          {step === 0 ? "Back to dashboard" : "Back"}
         </button>
         <button
           type="button"
           disabled={!canContinue()}
+          aria-describedby={step === 0 && missingBasics ? basicsHintId : undefined}
           onClick={goNext}
           className="site-button site-button-primary disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {step < TOTAL_STEPS - 1 ? "Continue" : "Continue to Theme Selection"}
+          {step < TOTAL_STEPS - 1 ? "Continue" : "Continue to theme selection"}
         </button>
+        {step === 0 && missingBasics ? (
+          <p id={basicsHintId} className="w-full text-sm text-site-secondary">
+            Add your name and headline to continue.
+          </p>
+        ) : null}
       </div>
     </section>
   );

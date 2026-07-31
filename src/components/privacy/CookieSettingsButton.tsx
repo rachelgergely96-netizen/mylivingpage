@@ -2,11 +2,13 @@
 
 import { OPEN_COOKIE_SETTINGS_EVENT } from "@/lib/privacy/analytics-consent";
 
-export default function CookieSettingsButton() {
+export default function CookieSettingsButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      className="transition-colors hover:text-site-action-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-focus"
+      className={`transition-colors hover:text-site-action-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-focus${
+        className ? ` ${className}` : ""
+      }`}
       onClick={() => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT))}
     >
       Cookie settings

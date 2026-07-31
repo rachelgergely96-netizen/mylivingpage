@@ -59,7 +59,7 @@ export interface EvaluateAtsReadinessInput {
 }
 
 export const ATS_READINESS_DISCLAIMER =
-  "This check reviews common ATS readability and resume-writing practices. It cannot predict how a specific employer will rank your resume or guarantee an interview.";
+  "This check reviews common ATS readability and résumé-writing practices. It cannot predict how a specific employer will rank your résumé or guarantee an interview.";
 
 const CATEGORY_WEIGHTS: Record<AtsReadinessCategory, number> = {
   essentials: 0.35,
@@ -161,13 +161,18 @@ const JOB_DESCRIPTION_STOPWORDS = new Set([
   "after",
   "also",
   "among",
+  "an",
   "and",
   "any",
   "are",
+  "as",
+  "at",
+  "be",
   "because",
   "been",
   "being",
   "but",
+  "by",
   "can",
   "candidate",
   "candidates",
@@ -181,23 +186,35 @@ const JOB_DESCRIPTION_STOPWORDS = new Set([
   "experience",
   "for",
   "from",
+  "had",
+  "has",
   "have",
+  "hiring",
   "ideal",
+  "in",
   "including",
   "into",
+  "is",
+  "it",
+  "its",
   "job",
   "looking",
   "must",
   "need",
   "needs",
+  "of",
+  "on",
   "opportunity",
+  "or",
   "our",
+  "plus",
   "preferred",
   "qualifications",
   "required",
   "requirements",
   "responsibilities",
   "role",
+  "seeking",
   "should",
   "skills",
   "strong",
@@ -209,8 +226,11 @@ const JOB_DESCRIPTION_STOPWORDS = new Set([
   "they",
   "this",
   "through",
+  "to",
   "using",
   "want",
+  "we",
+  "well",
   "who",
   "will",
   "with",
@@ -337,6 +357,8 @@ function buildSearchCorpus(data: ResumeData) {
   );
 }
 
+const SHORT_TECH_TERMS = new Set(["go", "ai", "ml", "ui", "ux", "qa", "ci", "cd", "bi", "ar", "vr"]);
+
 export function extractAtsJobKeywords(jobDescription: string, limit = 12) {
   const matches = normalizeSearchText(jobDescription).match(/c\+\+|c#|\.net|[a-z][a-z0-9+#.-]{1,}/g) ?? [];
   const firstSeen = new Map<string, number>();
@@ -344,7 +366,11 @@ export function extractAtsJobKeywords(jobDescription: string, limit = 12) {
 
   matches.forEach((rawToken, index) => {
     const token = rawToken.replace(/^[./-]+|[./-]+$/g, "");
-    if (token.length < 2 || JOB_DESCRIPTION_STOPWORDS.has(token) || /^\d+$/.test(token)) {
+    if (
+      (token.length < 3 && token !== "c#" && !SHORT_TECH_TERMS.has(token)) ||
+      JOB_DESCRIPTION_STOPWORDS.has(token) ||
+      /^\d+$/.test(token)
+    ) {
       return;
     }
 
@@ -445,11 +471,11 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         id: "name-present",
         category: "essentials",
         title: "Your name is present",
-        detail: data.name ? "Your resume includes a clear candidate name." : "Your resume does not include a candidate name.",
+        detail: data.name ? "Your résumé includes a clear candidate name." : "Your résumé does not include a candidate name.",
         passed: Boolean(data.name),
         failureSeverity: "critical",
         deduction: 25,
-        suggestedFix: "Add your full professional name at the top of the resume.",
+        suggestedFix: "Add your full professional name at the top of the résumé.",
       }),
       makeCheck({
         id: "usable-contact",
@@ -481,8 +507,8 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         category: "essentials",
         title: "Experience is included",
         detail: data.experience.length > 0
-          ? `Your resume includes ${data.experience.length} experience ${data.experience.length === 1 ? "entry" : "entries"}.`
-          : "Your resume does not include any experience entries.",
+          ? `Your résumé includes ${data.experience.length} experience ${data.experience.length === 1 ? "entry" : "entries"}.`
+          : "Your résumé does not include any experience entries.",
         passed: data.experience.length > 0,
         failureSeverity: "critical",
         deduction: 25,
@@ -520,7 +546,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         title: "The summary is focused",
         detail:
           summaryLength === 0
-            ? "Your resume does not include a professional summary."
+            ? "Your résumé does not include a professional summary."
             : summaryLength < 30
               ? "Your summary is too brief to establish your focus and value."
               : summaryLength > 650
@@ -611,7 +637,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         title: "A professional headline is present",
         detail: data.headline
           ? "Your headline gives search systems and recruiters a clear professional signal."
-          : "Your resume does not include a professional headline.",
+          : "Your résumé does not include a professional headline.",
         passed: Boolean(data.headline),
         failureSeverity: "warning",
         deduction: 25,
@@ -636,12 +662,12 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         category: "pdf",
         title: "The ATS PDF can be generated",
         detail: exportCheck.renderable
-          ? "The PDF renderer produced a readable resume file."
-          : exportCheck.renderFailureReason ?? "The PDF renderer could not produce a readable resume file.",
+          ? "The PDF renderer produced a readable résumé file."
+          : exportCheck.renderFailureReason ?? "The PDF renderer could not produce a readable résumé file.",
         passed: exportCheck.renderable === true,
         failureSeverity: "critical",
         deduction: 100,
-        suggestedFix: "Review the resume content for unsupported or unusually long text, save your changes, and try the PDF again.",
+        suggestedFix: "Review the résumé content for unsupported or unusually long text, save your changes, and try the PDF again.",
       }),
       {
         id: "pdf-page-count",
@@ -652,7 +678,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
             ? "The PDF page count is not available. This does not prevent the readiness check."
             : exportCheck.pageCount === 1
               ? "The generated PDF fits on one page."
-              : `The generated PDF is ${exportCheck.pageCount} pages. Multiple pages do not make a resume ATS-unreadable.`,
+              : `The generated PDF is ${exportCheck.pageCount} pages. Multiple pages do not make a résumé ATS-unreadable.`,
         severity: exportCheck.pageCount === 1 ? "pass" : "info",
         passed: true,
         pointsDeducted: 0,
@@ -668,10 +694,10 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
       makeCheck({
         id: "target-title-present",
         category: "searchability",
-        title: "The target title appears in the resume",
+        title: "The target title appears in the résumé",
         detail: targetTitleIsPresent
-          ? `"${normalizedTargetTitle}" appears in the resume.`
-          : `"${normalizedTargetTitle}" does not appear as an exact phrase in the resume.`,
+          ? `"${normalizedTargetTitle}" appears in the résumé.`
+          : `"${normalizedTargetTitle}" does not appear as an exact phrase in the résumé.`,
         passed: targetTitleIsPresent,
         failureSeverity: "warning",
         deduction: 20,
@@ -693,7 +719,7 @@ export function evaluateAtsReadiness(input: EvaluateAtsReadinessInput): AtsReadi
         detail:
           keywordCoverage.keywords.length === 0
             ? "The job description did not contain enough specific terms to compare."
-            : `${keywordCoverage.coveragePercent}% of the selected job-description terms appear in the resume.`,
+            : `${keywordCoverage.coveragePercent}% of the selected job-description terms appear in the résumé.`,
         passed: keywordCoverageIsUseful,
         failureSeverity: "warning",
         deduction: 25,

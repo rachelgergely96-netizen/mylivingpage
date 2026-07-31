@@ -114,7 +114,7 @@ function buildProofPanelCopy(
             ? proof.firstViewAfterLatestShareAt
               ? `First view after your share: ${formatRelativeTime(proof.firstViewAfterLatestShareAt)}. Open activity for device, referrer, and reading time.`
               : "Your page got a view after a recent share. Open activity to see what happened next."
-            : "Your page got a view after a recent share. Open activity for more detail.",
+            : "Your page got a view after a recent share. Copy the link again to keep the momentum.",
       };
     case "active":
       return {
@@ -126,8 +126,8 @@ function buildProofPanelCopy(
               ? `Latest view ${formatRelativeTime(proof.latestViewAt)}. Open activity for the full picture.`
               : "Your page is getting views. Open activity for the full picture."
             : proof.latestViewAt
-              ? `Latest view ${formatRelativeTime(proof.latestViewAt)}. Open activity for more detail.`
-              : "Your page is getting views. Open activity for the full picture.",
+              ? `Latest view ${formatRelativeTime(proof.latestViewAt)}. Copy the link again to keep the momentum.`
+              : "Your page is getting views this week. Copy the link again to keep the momentum.",
       };
     default:
       return {
@@ -142,6 +142,7 @@ function buildProofPanelCopy(
 export function getDashboardPrimaryAction(
   status: PageProofStatus,
   publicViewAvailable: boolean,
+  analyticsAvailable = true,
 ): PrimaryAction {
   if (!publicViewAvailable) {
     return { kind: "publish", label: "Publish page" };
@@ -153,6 +154,10 @@ export function getDashboardPrimaryAction(
 
   if (status === "awaiting_views") {
     return { kind: "copy", label: "Copy link again" };
+  }
+
+  if (!analyticsAvailable) {
+    return { kind: "copy", label: "Copy live link" };
   }
 
   return { kind: "analytics", label: "View activity" };
@@ -210,11 +215,11 @@ function SignalMetric({
       className="min-w-0 border border-site-border bg-site-canvas-alt p-3"
       style={{ borderLeftColor: "var(--site-action)", borderLeftWidth: 2 }}
     >
-      <p className="site-eyebrow text-[9px] text-site-muted">{label}</p>
-      <p className="dashboard-signal-metric mt-1.5 font-mono text-2xl font-semibold text-site-action-hover">
+      <p className="site-eyebrow text-site-muted">{label}</p>
+      <p className="dashboard-signal-metric mt-1.5 whitespace-nowrap font-site text-2xl font-semibold tabular-nums text-site-text">
         {value}
       </p>
-      <p className="mt-1 text-[10px] leading-4 text-site-muted">{detail}</p>
+      <p className="mt-1 text-xs leading-5 text-site-muted">{detail}</p>
     </div>
   );
 }
@@ -252,6 +257,10 @@ export default function DashboardSignalDesk({
   pages,
   publicSlug,
 }: DashboardSignalDeskProps) {
+  // The analytics route redirects unless the account's tier is "full", so
+  // activity links only render when that destination actually exists.
+  const analyticsAvailable = accountAccess.analyticsTier === "full";
+
   return (
     <main
       className="site-container-wide max-w-[84rem] overflow-x-clip py-8 sm:py-12"
@@ -270,9 +279,11 @@ export default function DashboardSignalDesk({
               "Your Living Page"
             )}
           </h1>
-          <p className="site-muted mt-3 max-w-2xl text-sm leading-6 sm:text-base">
-            Check if your page is live, then edit, share, or review recent views.
-          </p>
+          {pages.length ? (
+            <p className="site-muted mt-3 max-w-2xl text-sm leading-6 sm:text-base">
+              Check if your page is live, then edit, share, or review recent views.
+            </p>
+          ) : null}
         </div>
       </header>
 
@@ -300,6 +311,7 @@ export default function DashboardSignalDesk({
               const primaryAction = getDashboardPrimaryAction(
                 proof.status,
                 publicViewAvailable,
+                analyticsAvailable,
               );
               const avgReading = formatDurationShort(proof.avgEngagedSecondsLast7d);
               const themeName = getTheme(page.theme_id)?.name ?? page.theme_id;
@@ -330,11 +342,11 @@ export default function DashboardSignalDesk({
                   <span aria-hidden="true" className="editor-signal-corner editor-signal-corner-se" />
 
                   <div className="dashboard-signal-content relative">
-                    <header className="grid gap-4 border-b border-site-border bg-[color-mix(in_srgb,var(--site-canvas-alt)_88%,transparent)] px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                    <header className="grid gap-4 border-b border-site-border bg-[color-mix(in_srgb,var(--site-canvas-alt)_88%,transparent)] px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className={`inline-flex items-center gap-2 border px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${
+                            className={`inline-flex items-center gap-2 border px-2.5 py-1.5 font-site text-xs font-semibold uppercase tracking-[0.1em] ${
                               publicViewAvailable
                                 ? "site-status-success"
                                 : "site-status-warning text-site-warning"
@@ -359,17 +371,32 @@ export default function DashboardSignalDesk({
 
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs lg:text-right">
                         <div>
-                          <p className="site-eyebrow text-[9px] text-site-muted">Link</p>
-                          <p className="mt-1 font-mono text-site-action-hover">{livePath}</p>
-                          <Link
-                            href="/dashboard/settings"
-                            className="mt-2 inline-flex min-h-7 items-center border-b border-site-border text-[10px] font-semibold text-site-muted transition-colors hover:border-site-action hover:text-site-text"
-                          >
-                            Manage public URL
-                          </Link>
+                          <p className="site-eyebrow text-site-muted">Link</p>
+                          <p className="mt-1">
+                            {publicViewAvailable ? (
+                              <Link
+                                href={livePath}
+                                className="inline-flex min-h-11 items-center font-mono text-site-action transition-colors hover:text-site-action-hover"
+                              >
+                                {livePath}
+                              </Link>
+                            ) : (
+                              <span className="inline-flex min-h-11 items-center font-mono text-site-secondary">
+                                {livePath}
+                              </span>
+                            )}
+                          </p>
+                          <p>
+                            <Link
+                              href="/dashboard/settings"
+                              className="inline-flex min-h-11 items-center border-b border-site-border text-xs font-semibold text-site-muted transition-colors hover:border-site-action hover:text-site-text"
+                            >
+                              Manage public URL
+                            </Link>
+                          </p>
                         </div>
                         <div>
-                          <p className="site-eyebrow text-[9px] text-site-muted">Theme</p>
+                          <p className="site-eyebrow text-site-muted">Theme</p>
                           <p className="mt-1 text-site-secondary">{themeName}</p>
                         </div>
                       </div>
@@ -377,10 +404,10 @@ export default function DashboardSignalDesk({
 
                     <div className="grid gap-0 lg:grid-cols-[minmax(15rem,0.82fr)_minmax(0,1.18fr)_minmax(15rem,0.6fr)]">
                       <div
-                        className="border-b border-site-border px-4 py-6 sm:px-5 sm:py-7 lg:border-b-0 lg:border-r"
+                        className="border-b border-site-border px-4 py-6 sm:px-6 sm:py-7 lg:border-b-0 lg:border-r"
                         data-dashboard-preview-column
                       >
-                        <p className="site-eyebrow text-[9px] text-site-muted">
+                        <p className="site-eyebrow text-site-muted">
                           {publicViewAvailable ? "Your live page" : "Draft preview"}
                         </p>
                         <div className="mt-3">
@@ -392,7 +419,7 @@ export default function DashboardSignalDesk({
                       </div>
                       <section
                         aria-labelledby={`dashboard-next-signal-${page.id}`}
-                        className="px-4 py-6 sm:px-5 sm:py-7 lg:border-r lg:border-site-border"
+                        className="px-4 py-6 sm:px-6 sm:py-7 lg:border-r lg:border-site-border"
                       >
                         <p className="site-eyebrow">{proofCopy.eyebrow}</p>
                         <h3
@@ -415,16 +442,16 @@ export default function DashboardSignalDesk({
                       </section>
 
                       <aside
-                        className="border-t border-site-border bg-[color-mix(in_srgb,var(--site-canvas-alt)_72%,transparent)] px-4 py-5 sm:px-5 lg:border-t-0"
+                        className="border-t border-site-border bg-[color-mix(in_srgb,var(--site-canvas-alt)_72%,transparent)] px-4 py-5 sm:px-6 lg:border-t-0"
                         data-dashboard-signal-readout
                       >
                         <div className="flex items-end justify-between gap-4">
                           <div>
-                            <p className="site-eyebrow text-[9px] text-site-muted">Last 7 days</p>
+                            <p className="site-eyebrow text-site-muted">Last 7 days</p>
                             <p className="mt-1 text-xs text-site-secondary">Page activity</p>
                           </div>
                         </div>
-                        <div className="mt-5 grid grid-cols-3 gap-2 lg:grid-cols-1">
+                        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1">
                           <SignalMetric
                             label="Views"
                             value={String(proof.viewsLast7d)}
@@ -452,20 +479,20 @@ export default function DashboardSignalDesk({
                     </div>
 
                     <footer
-                      className="grid gap-4 border-t border-site-border bg-site-canvas-alt px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                      className="grid gap-4 border-t border-site-border bg-site-canvas-alt px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
                       data-dashboard-action-rail
                     >
-                      <nav aria-label={`Actions for ${page.resume_data?.name ?? "this page"}`} className="flex flex-wrap gap-2">
+                      <div role="group" aria-label={`Actions for ${page.resume_data?.name ?? "this page"}`} className="flex flex-wrap gap-2">
                         <Link
                           href={`/dashboard/edit/${page.id}/living-page`}
-                          className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                          className="site-button site-button-secondary px-3 py-2 sm:px-4"
                         >
                           Edit page
                         </Link>
                         {publicViewAvailable ? (
                           <Link
                             href={livePath}
-                            className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                            className="site-button site-button-secondary px-3 py-2 sm:px-4"
                           >
                             View live
                           </Link>
@@ -480,19 +507,19 @@ export default function DashboardSignalDesk({
                         ) : null}
                         <Link
                           href={`/dashboard/edit/${page.id}/living-page#ats-readiness`}
-                          className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                          className="site-button site-button-secondary px-3 py-2 sm:px-4"
                         >
                           ATS check
                         </Link>
-                        {primaryAction.kind !== "analytics" ? (
+                        {analyticsAvailable && primaryAction.kind !== "analytics" ? (
                           <Link
                             href={analyticsHref}
-                            className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                            className="site-button site-button-secondary px-3 py-2 sm:px-4"
                           >
                             Activity
                           </Link>
                         ) : null}
-                      </nav>
+                      </div>
                       <div className="flex items-center border-t border-site-border pt-3 lg:border-l lg:border-t-0 lg:pl-3 lg:pt-0">
                         <DeletePageButton pageId={page.id} />
                       </div>

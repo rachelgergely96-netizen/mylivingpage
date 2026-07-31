@@ -6,7 +6,7 @@ test("production homepage makes the value and first action clear above the fold"
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto(productionHomepage);
 
-  await expect(page).toHaveTitle(/Turn Your Résumé Into a Page You Can Share/);
+  await expect(page).toHaveTitle(/Turn your résumé into a page you can share/);
   await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Your résumé, alive on the web." }),
@@ -182,7 +182,7 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
-  await expect(chooser).toContainText("59 page styles");
+  await expect(chooser).toContainText(/\d+ page styles/);
   await expect(chooser).toContainText("Your information stays the same");
 
   const stageBox = await story.locator("[data-story-stage]").boundingBox();

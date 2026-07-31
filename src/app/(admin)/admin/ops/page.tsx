@@ -64,7 +64,7 @@ function StatCard({
       <p className={`font-site tabular-nums text-2xl font-bold sm:text-3xl ${valueClassName}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
-      <p className="mt-1 text-[11px] font-semibold text-site-muted">
+      <p className="site-eyebrow mt-1">
         {label}
       </p>
     </div>
@@ -82,7 +82,7 @@ function EventFeed({
 }) {
   return (
     <section className="site-panel p-4 sm:p-5">
-      <h2 className="mb-4 text-[11px] font-semibold text-site-muted">
+      <h2 className="site-eyebrow mb-4">
         {title}
       </h2>
       <div className="space-y-2.5">
@@ -96,7 +96,7 @@ function EventFeed({
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm text-site-text">{event.event_name}</p>
-                <time dateTime={event.created_at} className="shrink-0 font-mono text-[10px] text-site-muted">
+                <time dateTime={event.created_at} className="shrink-0 font-mono text-xs text-site-muted">
                   {new Date(event.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -108,7 +108,7 @@ function EventFeed({
                 </time>
               </div>
               {event.metadata && Object.keys(event.metadata).length > 0 ? (
-                <p className="mt-1 truncate font-mono text-[10px] text-site-muted">
+                <p className="mt-1 truncate font-mono text-xs text-site-muted">
                   {JSON.stringify(event.metadata)}
                 </p>
               ) : null}
@@ -401,9 +401,9 @@ export default async function AdminOpsPage() {
     <main className={styles.page}>
       <header className={styles.pageHeader}>
         <div className={styles.pageIntro}>
-          <p className="site-eyebrow">System / Health</p>
+          <p className="site-eyebrow">Manage / System health</p>
           <h1 className="site-page-title mt-2">System health</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary sm:text-base">
             Check billing, publishing, sign-in callbacks, bot pressure, and launch
             configuration without digging through raw event names first.
           </p>
@@ -412,33 +412,33 @@ export default async function AdminOpsPage() {
 
       {turnstileMissingInProduction ? (
         <div className="site-callout site-callout-warning mb-6 px-5 py-4 text-sm">
-          Production is missing `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Email signup hardening is not active until Turnstile is configured in both the app env and Supabase Auth CAPTCHA settings.
+          Production is missing <code className="font-mono">NEXT_PUBLIC_TURNSTILE_SITE_KEY</code>. Email signup hardening is not active until Turnstile is configured in both the app env and Supabase Auth CAPTCHA settings.
         </div>
       ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8 sm:gap-4">
         <StatCard
-          label="Webhook Failures (7d)"
+          label="Webhook failures (7d)"
           value={webhookFailureCount ?? 0}
           tone={(webhookFailureCount ?? 0) > 0 ? "danger" : "success"}
         />
         <StatCard
-          label="Publish Failures (7d)"
+          label="Publish failures (7d)"
           value={publishFailureCount ?? 0}
           tone={(publishFailureCount ?? 0) > 0 ? "danger" : "success"}
         />
         <StatCard
-          label="Publish DB Fallback (30d)"
+          label="Publish DB fallback (30d)"
           value={publishFallbackCount ?? 0}
           tone={(publishFallbackCount ?? 0) > 0 ? "warning" : "success"}
         />
         <StatCard
-          label="Auth Callback Failures (7d)"
+          label="Auth callback failures (7d)"
           value={authCallbackFailureCount ?? 0}
           tone={(authCallbackFailureCount ?? 0) > 0 ? "warning" : "success"}
         />
         <StatCard
-          label="Suspicious Signups (7d)"
+          label="Suspicious signups (7d)"
           value={riskSummary.suspiciousSignupsLast7Days}
           tone={riskSummary.suspiciousSignupsLast7Days > 0 ? "warning" : "success"}
         />
@@ -448,12 +448,12 @@ export default async function AdminOpsPage() {
           tone={riskSummary.unconfirmedPastGrace > 0 ? "warning" : "success"}
         />
         <StatCard
-          label="Rate Limit Blocks (7d)"
+          label="Rate limit blocks (7d)"
           value={rateLimitBlockedCount ?? 0}
           tone={(rateLimitBlockedCount ?? 0) > 0 ? "warning" : "success"}
         />
         <StatCard
-          label="Abuse Hotspot"
+          label="Abuse hotspot"
           value={topBlockedPolicyLabel}
           tone={topBlockedPolicy ? "warning" : "success"}
         />
@@ -463,8 +463,8 @@ export default async function AdminOpsPage() {
         <section className="site-panel p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="site-eyebrow text-[11px]">
-                Stripe Price Health
+              <p className="site-eyebrow">
+                Stripe price health
               </p>
               <h2 className="site-panel-title mt-2">
                 {HOSTING_PLAN_PRICE.productName}
@@ -474,22 +474,22 @@ export default async function AdminOpsPage() {
               </p>
             </div>
             <span
-              className={`site-badge px-3 py-1 text-[10px] ${
+              className={`site-badge px-3 py-1 text-xs ${
                 stripePriceStatus.errorMessage || stripePriceStatus.driftMessages.length
                   ? "site-badge-warning"
                   : "site-badge-success"
               }`}
             >
               {stripePriceStatus.errorMessage || stripePriceStatus.driftMessages.length
-                ? "Needs Attention"
+                ? "Needs attention"
                 : "Aligned"}
             </span>
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="border border-site-border bg-site-canvas-alt p-4">
-              <p className="text-[11px] font-semibold text-site-muted">
-                Latest Webhook Latency
+              <p className="text-xs font-semibold text-site-muted">
+                Latest webhook latency
               </p>
               <p className="mt-2 tabular-nums text-2xl text-site-action">
                 {latestWebhookLatencyMs ?? 0} ms
@@ -499,8 +499,8 @@ export default async function AdminOpsPage() {
               </p>
             </div>
             <div className="border border-site-border bg-site-canvas-alt p-4">
-              <p className="text-[11px] font-semibold text-site-muted">
-                Stripe Snapshot
+              <p className="text-xs font-semibold text-site-muted">
+                Stripe snapshot
               </p>
               {stripePriceStatus.actual ? (
                 <div className="mt-2 space-y-1 text-sm text-site-secondary">
@@ -530,7 +530,7 @@ export default async function AdminOpsPage() {
               </ul>
             </div>
           ) : (
-            <p className="mt-4 border-l-4 border-site-success bg-site-canvas-alt px-4 py-3 text-sm text-site-success">
+            <p className="site-alert-success mt-4 px-4 py-3 text-sm">
               Stripe matches the app&apos;s current hosting pricing contract.
             </p>
           )}
@@ -540,8 +540,8 @@ export default async function AdminOpsPage() {
           <section className="site-panel p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="site-eyebrow text-[11px]">
-                  Google Auth Health
+                <p className="site-eyebrow">
+                  Google auth health
                 </p>
                 <h2 className="site-panel-title mt-2">
                   OAuth callback completion
@@ -551,20 +551,20 @@ export default async function AdminOpsPage() {
                 </p>
               </div>
               <span
-                className={`site-badge px-3 py-1 text-[10px] ${
+                className={`site-badge px-3 py-1 text-xs ${
                   (authCallbackFailureCount ?? 0) > 0
                     ? "site-badge-warning"
                     : "site-badge-success"
                 }`}
               >
-                {(authCallbackFailureCount ?? 0) > 0 ? "Needs Attention" : "Healthy"}
+                {(authCallbackFailureCount ?? 0) > 0 ? "Needs attention" : "Healthy"}
               </span>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="border border-site-border bg-site-canvas-alt p-4">
-                <p className="text-[11px] font-semibold text-site-muted">
-                  OAuth Starts (7d)
+                <p className="text-xs font-semibold text-site-muted">
+                  OAuth starts (7d)
                 </p>
                 <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {authGoogleStartSuccessCount ?? 0}
@@ -574,8 +574,8 @@ export default async function AdminOpsPage() {
                 </p>
               </div>
               <div className="border border-site-border bg-site-canvas-alt p-4">
-                <p className="text-[11px] font-semibold text-site-muted">
-                  Callback Success Rate (7d)
+                <p className="text-xs font-semibold text-site-muted">
+                  Callback success rate (7d)
                 </p>
                 <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {formatPercent(authCallbackSuccessRate)}
@@ -585,8 +585,8 @@ export default async function AdminOpsPage() {
                 </p>
               </div>
               <div className="border border-site-border bg-site-canvas-alt p-4">
-                <p className="text-[11px] font-semibold text-site-muted">
-                  Callback Outcomes (7d)
+                <p className="text-xs font-semibold text-site-muted">
+                  Callback outcomes (7d)
                 </p>
                 <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {authCallbackSuccessCount ?? 0}/{authCallbackCompletionCount}
@@ -596,8 +596,8 @@ export default async function AdminOpsPage() {
                 </p>
               </div>
               <div className="border border-site-border bg-site-canvas-alt p-4">
-                <p className="text-[11px] font-semibold text-site-muted">
-                  Start Completion Rate
+                <p className="text-xs font-semibold text-site-muted">
+                  Start completion rate
                 </p>
                 <p className="mt-2 tabular-nums text-2xl text-site-action">
                   {formatPercent(authStartCompletionRate)}
@@ -620,15 +620,15 @@ export default async function AdminOpsPage() {
                 </p>
               </div>
             ) : (
-              <p className="mt-4 border-l-4 border-site-success bg-site-canvas-alt px-4 py-3 text-sm text-site-success">
+              <p className="site-alert-success mt-4 px-4 py-3 text-sm">
                 Google OAuth callbacks have completed without tracked failures in the sampled window.
               </p>
             )}
           </section>
 
           <section className="site-panel p-5 sm:p-6">
-            <p className="site-eyebrow text-[11px]">
-              Legal Configuration
+            <p className="site-eyebrow">
+              Legal configuration
             </p>
             <h2 className="site-panel-title mt-2">
               Public policy values
@@ -638,7 +638,7 @@ export default async function AdminOpsPage() {
             </p>
 
             {legalIssues.length === 0 ? (
-              <p className="mt-4 border-l-4 border-site-success bg-site-canvas-alt px-4 py-3 text-sm text-site-success">
+              <p className="site-alert-success mt-4 px-4 py-3 text-sm">
                 Legal contact fields are fully configured.
               </p>
             ) : (
@@ -656,11 +656,11 @@ export default async function AdminOpsPage() {
 
             <div className="mt-4 border border-site-border bg-site-canvas-alt p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold text-site-muted">
+                <p className="text-xs font-semibold text-site-muted">
                   Signup CAPTCHA
                 </p>
                 <span
-                  className={`site-badge px-3 py-1 text-[10px] ${
+                  className={`site-badge px-3 py-1 text-xs ${
                     turnstileConfigured
                       ? "site-badge-success"
                       : "site-badge-warning"
@@ -670,7 +670,7 @@ export default async function AdminOpsPage() {
                 </span>
               </div>
               <p className="mt-2 text-sm text-site-secondary">
-                Email signup uses Cloudflare Turnstile only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is present.
+                Email signup uses Cloudflare Turnstile only when <code className="font-mono">NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> is present.
               </p>
               {!turnstileConfigured ? (
                 <p className="mt-2 text-sm text-site-warning">
@@ -680,8 +680,8 @@ export default async function AdminOpsPage() {
             </div>
 
             <div className="mt-4 border border-site-border bg-site-canvas-alt p-4">
-              <p className="text-[11px] font-semibold text-site-muted">
-                Production Auth Checklist
+              <p className="text-xs font-semibold text-site-muted">
+                Production auth checklist
               </p>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-site-secondary">
                 <li>Email confirmation remains enabled in Supabase Auth.</li>
@@ -696,22 +696,22 @@ export default async function AdminOpsPage() {
 
       <div className="grid gap-4 lg:grid-cols-4">
         <EventFeed
-          title="Recent Auth Events"
+          title="Recent auth events"
           emptyLabel="No recent Google auth events recorded."
           events={recentAuthEvents}
         />
         <EventFeed
-          title="Recent Billing Events"
+          title="Recent billing events"
           emptyLabel="No billing events recorded yet."
           events={recentBillingEvents}
         />
         <EventFeed
-          title="Recent Failures"
+          title="Recent failures"
           emptyLabel="No tracked failures in the sampled window."
           events={recentFailureEvents}
         />
         <EventFeed
-          title="Recent Abuse Controls"
+          title="Recent abuse controls"
           emptyLabel="No recent rate-limit blocks."
           events={recentRateLimitEvents}
         />

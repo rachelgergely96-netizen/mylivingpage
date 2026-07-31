@@ -105,7 +105,7 @@ async function completeGuidedResumeEntry(page: Page) {
 
   await expect(
     page.getByRole("heading", {
-      name: "This is what someone will see when you send it.",
+      name: "This is what someone will see when you send it",
     }),
   ).toBeVisible({ timeout: 45_000 });
 }
@@ -124,8 +124,8 @@ test("email signup shows a pending-confirmation message", async ({ page }) => {
 
   await page.goto("/signup");
   await page.getByRole("checkbox").check();
-  await page.getByPlaceholder("Email address").fill(uniqueEmail);
-  await page.getByPlaceholder("Create password").fill("PlaywrightPass123!");
+  await page.getByLabel("Email address").fill(uniqueEmail);
+  await page.getByLabel("Create password").fill("PlaywrightPass123!");
   await page.getByRole("button", { name: "Create my free page" }).click();
 
   await expect(page.getByText("Check your email to confirm your account")).toBeVisible();
@@ -147,18 +147,18 @@ test.describe.serial("authenticated user journeys", () => {
     await page.goto("/dashboard");
     await page.getByRole("link", { name: "Create Your Page" }).click();
     await completeGuidedResumeEntry(page);
-    await expect(page.getByText("Resume PDF")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Publish Page" })).toBeVisible({ timeout: 45_000 });
-    await page.getByRole("button", { name: "Publish Page" }).click();
-    await expect(page.getByRole("heading", { name: "Your page is live." })).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("Résumé PDF", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Publish page" })).toBeVisible({ timeout: 45_000 });
+    await page.getByRole("button", { name: "Publish page" }).click();
+    await expect(page.getByRole("heading", { name: "Your page is live" })).toBeVisible({ timeout: 45_000 });
     expect(parseRequests).toEqual([]);
 
     await page.goto("/dashboard");
-    await page.getByRole("link", { name: "Edit Page" }).click();
+    await page.getByRole("link", { name: "Edit page" }).click();
     const headlineInput = page.getByLabel("Headline");
     await headlineInput.fill(`Updated headline ${Date.now()}`);
     await page.getByRole("button", { name: "Save Changes" }).click();
-    await expect(page.getByText("Saved successfully!")).toBeVisible();
+    await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
 
     await page.goto("/dashboard/settings");
     const publicUrlInput = page.locator('input[type="text"]').nth(1);
@@ -198,12 +198,12 @@ test.describe.serial("authenticated user journeys", () => {
     await page.goto("/create");
     await completeGuidedResumeEntry(page);
 
-    const publishButton = page.getByRole("button", { name: "Publish Page" });
+    const publishButton = page.getByRole("button", { name: "Publish page" });
     await expect(publishButton).toBeVisible({ timeout: 45_000 });
     await expect(page.getByRole("button", { name: "Choose Plan to Publish" })).toHaveCount(0);
     await publishButton.click();
     await expect(
-      page.getByRole("heading", { name: "Your page is live." }),
+      page.getByRole("heading", { name: "Your page is live" }),
     ).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/dashboard/settings");
@@ -221,8 +221,8 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/login\?next=%2Fcreate%3Fref%3Dlanding_self_test/);
 
-    await page.getByPlaceholder("Email address").fill(process.env.PLAYWRIGHT_TEST_EMAIL ?? "");
-    await page.getByPlaceholder("Password").fill(process.env.PLAYWRIGHT_TEST_PASSWORD ?? "");
+    await page.getByLabel("Email address").fill(process.env.PLAYWRIGHT_TEST_EMAIL ?? "");
+    await page.getByLabel("Password").fill(process.env.PLAYWRIGHT_TEST_PASSWORD ?? "");
     await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page).toHaveURL(/\/create\?ref=landing_self_test/);
@@ -328,18 +328,18 @@ test.describe.serial("authenticated user journeys", () => {
     await ensureLivePageForProfile(profile);
 
     await page.goto(`/${profile.username}`);
-    await expect(page.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Download Résumé PDF" })).toBeVisible();
     const ownerDownloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Download Resume PDF" }).click();
+    await page.getByRole("button", { name: "Download Résumé PDF" }).click();
     const ownerDownload = await ownerDownloadPromise;
     expect(ownerDownload.suggestedFilename()).toContain("resume.pdf");
 
     const viewerContext = await browser.newContext();
     const viewerPage = await viewerContext.newPage();
     await viewerPage.goto(`/${profile.username}`);
-    await expect(viewerPage.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+    await expect(viewerPage.getByRole("button", { name: "Download Résumé PDF" })).toBeVisible();
     const viewerDownloadPromise = viewerPage.waitForEvent("download");
-    await viewerPage.getByRole("button", { name: "Download Resume PDF" }).click();
+    await viewerPage.getByRole("button", { name: "Download Résumé PDF" }).click();
     const viewerDownload = await viewerDownloadPromise;
     expect(viewerDownload.suggestedFilename()).toContain("resume.pdf");
     await viewerContext.close();
@@ -401,7 +401,7 @@ test.describe.serial("authenticated user journeys", () => {
       await expect(expandButton).toBeVisible();
       await expect(expandButton).toHaveAttribute("aria-expanded", "false");
       await expect(panel.getByTestId("recruiter-skim-content")).toHaveCount(0);
-      await expect(panel.getByRole("button", { name: "Download Resume PDF" })).toHaveCount(0);
+      await expect(panel.getByRole("button", { name: "Download Résumé PDF" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Email" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Open current page" })).toHaveCount(0);
 
@@ -413,7 +413,7 @@ test.describe.serial("authenticated user journeys", () => {
         "true",
       );
       await expect(panel.getByTestId("recruiter-skim-content")).toBeVisible();
-      await expect(panel.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Download Résumé PDF" })).toBeVisible();
       await expect(panel.getByRole("link", { name: "Email" })).toBeVisible();
       await expect(panel.getByRole("link", { name: "LinkedIn" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Open current page" })).toBeVisible();
@@ -448,7 +448,7 @@ test.describe.serial("authenticated user journeys", () => {
     await ensureLivePageForProfile(profile);
 
     const assertStackedDock = async () => {
-      const downloadButton = page.getByRole("button", { name: "Download Resume PDF" });
+      const downloadButton = page.getByRole("button", { name: "Download Résumé PDF" });
       const shareButton = page.getByRole("button", { name: /Share / });
 
       await expect(downloadButton).toBeVisible();
@@ -522,7 +522,7 @@ test.describe.serial("authenticated user journeys", () => {
         status: 422,
         contentType: "application/json",
         body: JSON.stringify({
-          error: "Unable to export the Resume PDF right now. Please try again.",
+          error: "Unable to export the Résumé PDF right now. Please try again.",
         }),
       });
     });
@@ -530,7 +530,7 @@ test.describe.serial("authenticated user journeys", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/${profile.username}`);
 
-    const downloadButton = page.getByRole("button", { name: "Download Resume PDF" });
+    const downloadButton = page.getByRole("button", { name: "Download Résumé PDF" });
     const shareButton = page.getByRole("button", { name: /Share / });
 
     await expect(downloadButton).toBeVisible();
@@ -596,7 +596,7 @@ test.describe.serial("authenticated user journeys", () => {
     const viewerPage = await viewerContext.newPage();
     await viewerPage.goto(`/${profile.username}`);
     await expect(viewerPage.getByText("Page unavailable")).toHaveCount(0);
-    await expect(viewerPage.getByRole("button", { name: "Download Resume PDF" })).toBeVisible();
+    await expect(viewerPage.getByRole("button", { name: "Download Résumé PDF" })).toBeVisible();
     await viewerContext.close();
 
     await page.goto("/dashboard/settings");

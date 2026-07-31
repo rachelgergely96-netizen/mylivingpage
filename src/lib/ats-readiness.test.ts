@@ -446,4 +446,25 @@ describe("deterministic ATS readiness", () => {
     expect(extractAtsJobKeywords(description)).toEqual(["sql", "analytics", "python"]);
     expect(extractAtsJobKeywords(description)).toEqual(extractAtsJobKeywords(description));
   });
+
+  it("drops short function words while keeping the c++, c#, and .net special cases", () => {
+    const description =
+      "We are hiring: to be strong in C# and C++ on .NET, as well as SQL.";
+
+    expect(extractAtsJobKeywords(description)).toEqual(["c#", "c++", "net", "sql"]);
+  });
+
+  it("keeps known two-letter tech terms while still dropping two-letter function words", () => {
+    const description = "We want UX and UI polish, QA discipline, and Go or ML experience to do it.";
+
+    expect(extractAtsJobKeywords(description)).toEqual([
+      "ux",
+      "ui",
+      "polish",
+      "qa",
+      "discipline",
+      "go",
+      "ml",
+    ]);
+  });
 });

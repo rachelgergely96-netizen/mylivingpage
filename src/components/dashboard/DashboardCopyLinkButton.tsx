@@ -67,8 +67,8 @@ export default function DashboardCopyLinkButton({
         onClick={() => void copyLiveLink()}
         className={`site-button ${
           emphasis === "primary"
-            ? "site-button-primary w-full sm:w-auto"
-            : "site-button-secondary px-3 py-2 text-xs sm:px-4"
+            ? "site-button-primary w-full sm:w-auto sm:min-w-[10.5rem]"
+            : "site-button-secondary px-3 py-2 sm:min-w-[8rem] sm:px-4"
         }`}
       >
         {copyState === "copied" ? "Link copied" : label}

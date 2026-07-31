@@ -6,49 +6,38 @@ import { useEffect, useRef, useState } from "react";
 import SignOutButton from "@/components/ui/SignOutButton";
 
 interface AppNavigationProps {
-  variant: "product" | "admin";
+  variant?: "product";
   showAdmin?: boolean;
 }
 
 interface NavigationItem {
   href: string;
   label: string;
-  emphasis?: "primary" | "danger";
+  emphasis?: "danger";
   exact?: boolean;
 }
 
 const PRODUCT_LINKS: NavigationItem[] = [
   { href: "/dashboard", label: "Your page" },
-  { href: "/create", label: "Create", emphasis: "primary" },
+  { href: "/create", label: "Create" },
   { href: "/dashboard/settings", label: "Settings" },
-];
-
-const ADMIN_LINKS: NavigationItem[] = [
-  { href: "/admin", label: "Overview", exact: true },
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/pages", label: "Pages" },
-  { href: "/admin/feedback", label: "Feedback" },
-  { href: "/admin/ops", label: "Ops" },
-  { href: "/dashboard", label: "Back to app" },
 ];
 
 function linkIsCurrent(pathname: string, item: NavigationItem) {
   return pathname === item.href || (!item.exact && pathname.startsWith(`${item.href}/`));
 }
 
-export default function AppNavigation({ variant, showAdmin = false }: AppNavigationProps) {
+export default function AppNavigation({ showAdmin = false }: AppNavigationProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileMenuRef = useRef<HTMLElement | null>(null);
-  const links = variant === "admin"
-    ? ADMIN_LINKS
-    : [
-        ...(showAdmin
-          ? [{ href: "/admin", label: "Admin", emphasis: "danger" as const }]
-          : []),
-        ...PRODUCT_LINKS,
-      ];
+  const links = [
+    ...(showAdmin
+      ? [{ href: "/admin", label: "Admin", emphasis: "danger" as const }]
+      : []),
+    ...PRODUCT_LINKS,
+  ];
   const currentHref = links
     .filter((item) => linkIsCurrent(pathname, item))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
@@ -81,11 +70,9 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
     <>
       {links.map((item) => {
         const current = currentHref === item.href;
-        const className = item.emphasis === "primary"
-          ? "site-button site-button-primary min-h-11"
-          : item.emphasis === "danger"
-            ? "site-nav-link site-badge-danger min-h-11"
-            : "site-nav-link min-h-11";
+        const className = item.emphasis === "danger"
+          ? "site-nav-link site-badge-danger min-h-11"
+          : "site-nav-link min-h-11";
 
         return (
           <Link
@@ -105,7 +92,7 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
 
   return (
     <>
-      <nav className="hidden items-center gap-1 md:flex" aria-label={variant === "admin" ? "Admin navigation" : "Product navigation"}>
+      <nav className="hidden items-center gap-1 md:flex" aria-label="Product navigation">
         {renderLinks(false)}
       </nav>
       <button
@@ -113,7 +100,7 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
         type="button"
         className="site-icon-button md:hidden"
         aria-expanded={open}
-        aria-controls={`${variant}-mobile-navigation`}
+        aria-controls="product-mobile-navigation"
         aria-label={open ? "Close navigation" : "Open navigation"}
         onClick={() => setOpen((current) => !current)}
       >
@@ -122,9 +109,9 @@ export default function AppNavigation({ variant, showAdmin = false }: AppNavigat
       {open ? (
         <nav
           ref={mobileMenuRef}
-          id={`${variant}-mobile-navigation`}
+          id="product-mobile-navigation"
           className="absolute left-0 right-0 top-full grid gap-2 border-b border-site-border bg-site-canvas p-4 shadow-[var(--site-shadow-overlay)] md:hidden"
-          aria-label={`${variant === "admin" ? "Admin" : "Product"} mobile navigation`}
+          aria-label="Product mobile navigation"
         >
           {renderLinks(true)}
         </nav>

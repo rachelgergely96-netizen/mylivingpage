@@ -8,6 +8,10 @@ import {
   createUnavailablePageAnalyticsDashboard,
 } from "@/lib/analytics/pageAnalytics";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: () => undefined }),
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -81,11 +85,11 @@ describe("PageAnalyticsDashboard", () => {
     );
 
     expect(markup).toContain("Deeper detail is temporarily unavailable");
-    expect(markup).toContain("People Who Looked");
-    expect(markup).toContain("New People");
-    expect(markup).not.toContain("Clicked Through");
-    expect(markup).not.toContain("Content Performance");
-    expect(markup).toContain("Deeper detail will return automatically");
+    expect(markup).toContain("People who looked");
+    expect(markup).toContain("New people");
+    expect(markup).not.toContain("Clicked through");
+    expect(markup).not.toContain("Content performance");
+    expect(markup).not.toContain("Deeper detail will return automatically");
   });
 
   it("shows an unavailable card instead of the full dashboard when analytics cannot load", () => {
@@ -107,7 +111,8 @@ describe("PageAnalyticsDashboard", () => {
 
     expect(markup).toContain("Details are temporarily unavailable");
     expect(markup).toContain("Traffic data could not be loaded right now. Please try again soon.");
-    expect(markup).not.toContain("New People");
+    expect(markup).toContain("Try again");
+    expect(markup).not.toContain("New people");
     expect(markup).not.toContain("When people looked over");
   });
 

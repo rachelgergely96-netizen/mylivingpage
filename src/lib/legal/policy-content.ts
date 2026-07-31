@@ -42,7 +42,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
     return [
       {
         id: "free-service-legacy-billing",
-        heading: "Always-Free Core Service and Legacy Billing",
+        heading: "Always-free core Service and legacy billing",
         blocks: [
           {
             type: "paragraph",
@@ -56,7 +56,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
       },
       {
         id: "legacy-subscription-cancellation",
-        heading: "Legacy Subscription Cancellation and Refunds",
+        heading: "Legacy subscription cancellation and refunds",
         blocks: [
           {
             type: "list",
@@ -72,7 +72,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
       },
       {
         id: "legacy-payment-status",
-        heading: "Legacy Payment Status",
+        heading: "Legacy payment status",
         blocks: [
           {
             type: "paragraph",
@@ -82,7 +82,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
       },
       {
         id: "future-optional-paid-services",
-        heading: "Future Optional Paid Services",
+        heading: "Future optional paid services",
         blocks: [
           {
             type: "paragraph",
@@ -96,7 +96,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
   return [
     {
       id: "paid-services",
-      heading: "Paid Services and Billing",
+      heading: "Paid services and billing",
       blocks: [
         {
           type: "paragraph",
@@ -110,7 +110,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "subscription-renewal-cancellation",
-      heading: "Auto-Renewal, Cancellation, and Refunds",
+      heading: "Auto-renewal, cancellation, and refunds",
       blocks: [
         {
           type: "list",
@@ -126,7 +126,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "failed-payments-and-plan-status",
-      heading: "Failed Payments and Plan Status",
+      heading: "Failed payments and plan status",
       blocks: [
         {
           type: "paragraph",
@@ -136,7 +136,7 @@ function getBillingTermsSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "taxes-price-changes-chargebacks",
-      heading: "Taxes, Price Changes, and Chargebacks",
+      heading: "Taxes, price changes, and chargebacks",
       blocks: [
         {
           type: "list",
@@ -181,7 +181,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "user-obligations",
-      heading: "User Obligations",
+      heading: "User obligations",
       blocks: [
         {
           type: "list",
@@ -197,7 +197,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "prohibited-uses",
-      heading: "Prohibited Uses",
+      heading: "Prohibited uses",
       blocks: [
         {
           type: "list",
@@ -215,7 +215,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "intellectual-property",
-      heading: "Intellectual Property",
+      heading: "Intellectual property",
       blocks: [
         {
           type: "paragraph",
@@ -225,7 +225,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "user-content-license",
-      heading: "User Content License",
+      heading: "User Content license",
       blocks: [
         {
           type: "paragraph",
@@ -239,7 +239,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "sharing-public-indexing",
-      heading: "Sharing and Public Indexing",
+      heading: "Sharing and public indexing",
       blocks: [
         {
           type: "paragraph",
@@ -249,7 +249,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "ai-features",
-      heading: "AI-Assisted Features",
+      heading: "AI-assisted features",
       blocks: [
         {
           type: "paragraph",
@@ -263,7 +263,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "moderation-rights",
-      heading: "Moderation Rights",
+      heading: "Moderation rights",
       blocks: [
         {
           type: "paragraph",
@@ -296,7 +296,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "limitation-of-liability",
-      heading: "Limitation of Liability",
+      heading: "Limitation of liability",
       blocks: [
         {
           type: "paragraph",
@@ -320,7 +320,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "dispute-resolution",
-      heading: "Dispute Resolution",
+      heading: "Dispute resolution",
       blocks: [
         {
           type: "paragraph",
@@ -338,7 +338,7 @@ function getSharedCoreSections(site: LegalSiteConfig): LegalSection[] {
     },
     {
       id: "governing-law",
-      heading: "Governing Law",
+      heading: "Governing law",
       blocks: [
         {
           type: "paragraph",
@@ -384,7 +384,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     sections: [
       {
         id: "service-overview",
-        heading: "Service Overview",
+        heading: "Service overview",
         blocks: [
           {
             type: "paragraph",
@@ -398,7 +398,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "eligibility-accounts",
-        heading: "Eligibility and Accounts",
+        heading: "Eligibility and accounts",
         blocks: [
           {
             type: "list",
@@ -413,7 +413,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       ...getBillingTermsSections(site),
       {
         id: "third-party-services",
-        heading: "Third-Party Services",
+        heading: "Third-party services",
         blocks: [
           {
             type: "list",
@@ -434,7 +434,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "service-license-feedback",
-        heading: "Service License, Trademarks, and Feedback",
+        heading: "Service license, trademarks, and feedback",
         blocks: [
           {
             type: "paragraph",
@@ -448,7 +448,7 @@ function buildTermsPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "content-controls",
-        heading: "Content Controls and Visibility",
+        heading: "Content controls and visibility",
         blocks: [
           {
             type: "paragraph",
@@ -470,7 +470,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     sections: [
       {
         id: "privacy-scope",
-        heading: "Scope and Roles",
+        heading: "Scope and roles",
         blocks: [
           {
             type: "paragraph",
@@ -484,7 +484,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "categories-of-data",
-        heading: "Categories of Personal Data",
+        heading: "Categories of personal data",
         blocks: [
           {
             type: "list",
@@ -502,7 +502,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "sources",
-        heading: "Sources of Data",
+        heading: "Sources of data",
         blocks: [
           {
             type: "list",
@@ -517,13 +517,13 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "purposes",
-        heading: "Purposes of Processing",
+        heading: "Purposes of processing",
         blocks: [
           {
             type: "list",
             items: [
               "Provide, secure, maintain, and improve the Service.",
-              "Operate resume building, exports, and sharing features.",
+              "Operate résumé building, exports, and sharing features.",
               site.id === "mylivingpage"
                 ? "Maintain legacy billing records where applicable and provide customer support."
                 : "Process payments and provide customer support.",
@@ -535,7 +535,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "sharing",
-        heading: "Sharing Categories",
+        heading: "Sharing categories",
         blocks: [
           {
             type: "list",
@@ -556,7 +556,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "retention-rights",
-        heading: "Retention and User Rights",
+        heading: "Retention and user rights",
         blocks: [
           {
             type: "paragraph",
@@ -574,7 +574,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "cookies-dnt-children-transfers",
-        heading: "Cookies, Do Not Track, Children, and Transfers",
+        heading: "Cookies, Do Not Track, children, and transfers",
         blocks: [
           {
             type: "list",
@@ -594,7 +594,7 @@ function buildPrivacyPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "privacy-contact",
-        heading: "Privacy Contact",
+        heading: "Privacy contact",
         blocks: [
           {
             type: "list",
@@ -620,7 +620,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
     sections: [
       {
         id: "cookie-intro",
-        heading: "What Cookies Are",
+        heading: "What cookies are",
         blocks: [
           {
             type: "paragraph",
@@ -630,7 +630,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "cookie-categories",
-        heading: "Cookie Categories",
+        heading: "Cookie categories",
         blocks: [
           {
             type: "list",
@@ -651,7 +651,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "analytics-ads",
-        heading: "Analytics and Advertising Providers",
+        heading: "Analytics and advertising providers",
         blocks: [
           {
             type: "paragraph",
@@ -664,7 +664,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "manage-cookies",
-        heading: "How to Manage Cookies",
+        heading: "How to manage cookies",
         blocks: [
           {
             type: "list",
@@ -684,7 +684,7 @@ function buildCookiePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "consent",
-        heading: "Consent Mechanism",
+        heading: "Consent mechanism",
         blocks: [
           {
             type: "paragraph",
@@ -719,7 +719,7 @@ function buildAcceptableUsePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "aup-prohibited",
-        heading: "Prohibited Conduct",
+        heading: "Prohibited conduct",
         blocks: [
           {
             type: "list",
@@ -738,7 +738,7 @@ function buildAcceptableUsePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "aup-ai-use",
-        heading: "AI Feature Use",
+        heading: "AI feature use",
         blocks: [
           {
             type: "paragraph",
@@ -748,7 +748,7 @@ function buildAcceptableUsePolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "aup-reports-enforcement",
-        heading: "Reports and Enforcement",
+        heading: "Reports and enforcement",
         blocks: [
           {
             type: "paragraph",
@@ -770,7 +770,7 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     sections: [
       {
         id: "dmca-scope",
-        heading: "Scope",
+        heading: "Scope of this policy",
         blocks: [
           {
             type: "paragraph",
@@ -780,7 +780,7 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "dmca-agent",
-        heading: "Designated Agent",
+        heading: "Designated agent",
         blocks: [
           {
             type: "list",
@@ -795,7 +795,7 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "dmca-notice",
-        heading: "Notice Requirements",
+        heading: "Notice requirements",
         blocks: [
           {
             type: "list",
@@ -813,7 +813,7 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "dmca-counter-notice",
-        heading: "Counter-Notice Process",
+        heading: "Counter-notice process",
         blocks: [
           {
             type: "paragraph",
@@ -833,7 +833,7 @@ function buildDmcaPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "repeat-infringers",
-        heading: "Repeat Infringer Policy",
+        heading: "Repeat infringer policy",
         blocks: [
           {
             type: "paragraph",
@@ -855,7 +855,7 @@ function buildDisclaimerPolicy(site: LegalSiteConfig): LegalPolicyDocument {
     sections: [
       {
         id: "no-professional-advice",
-        heading: "No Professional Advice",
+        heading: "No professional advice",
         blocks: [
           {
             type: "paragraph",
@@ -865,7 +865,7 @@ function buildDisclaimerPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "ai-output-limitations",
-        heading: "AI Output Limitations",
+        heading: "AI output limitations",
         blocks: [
           {
             type: "paragraph",
@@ -875,7 +875,7 @@ function buildDisclaimerPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "user-responsibility",
-        heading: "User Responsibility",
+        heading: "User responsibility",
         blocks: [
           {
             type: "paragraph",
@@ -885,7 +885,7 @@ function buildDisclaimerPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "third-party-links",
-        heading: "Third-Party Links and Services",
+        heading: "Third-party links and services",
         blocks: [
           {
             type: "paragraph",
@@ -901,13 +901,13 @@ function buildDisclaimerPolicy(site: LegalSiteConfig): LegalPolicyDocument {
 function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
   return {
     policyId: "security",
-    title: "Security Overview",
+    title: "Security overview",
     summary: "This overview describes our security controls and vulnerability reporting process.",
     lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "security-overview",
-        heading: "Security Program Overview",
+        heading: "Security program overview",
         blocks: [
           {
             type: "list",
@@ -922,7 +922,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "shared-responsibility",
-        heading: "Shared Responsibility",
+        heading: "Shared responsibility",
         blocks: [
           {
             type: "paragraph",
@@ -932,7 +932,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "reporting-vulnerabilities",
-        heading: "How to Report a Vulnerability",
+        heading: "How to report a vulnerability",
         blocks: [
           {
             type: "paragraph",
@@ -946,7 +946,7 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "security-vendors",
-        heading: "Service Providers",
+        heading: "Service providers",
         blocks: [
           {
             type: "paragraph",
@@ -962,13 +962,13 @@ function buildSecurityPolicy(site: LegalSiteConfig): LegalPolicyDocument {
 function buildDeleteAccountPolicy(site: LegalSiteConfig): LegalPolicyDocument {
   return {
     policyId: "delete-account",
-    title: "Account Deletion",
+    title: "Account deletion",
     summary: "This page explains account deletion steps and what data may be retained after deletion.",
     lastUpdated: LAST_UPDATED,
     sections: [
       {
         id: "deletion-steps",
-        heading: "How to Delete Your Account",
+        heading: "How to delete your account",
         blocks: [
           {
             type: "list",
@@ -983,7 +983,7 @@ function buildDeleteAccountPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "retention-summary",
-        heading: "Data Retention Summary",
+        heading: "Data retention summary",
         blocks: [
           {
             type: "list",
@@ -998,7 +998,7 @@ function buildDeleteAccountPolicy(site: LegalSiteConfig): LegalPolicyDocument {
       },
       {
         id: "deletion-notes",
-        heading: "Important Notes",
+        heading: "Important notes",
         blocks: [
           {
             type: "paragraph",

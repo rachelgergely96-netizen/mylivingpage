@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import AuthMessage from "@/components/auth/AuthMessage";
+import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -23,7 +25,7 @@ export default function ResetPasswordPage() {
       if (!active) return;
       setVerification("error");
       setMessage("This reset link could not be verified. It may be expired or already used.");
-    }, 8_000);
+    }, 5_000);
 
     const markReady = () => {
       if (!active) return;
@@ -47,13 +49,22 @@ export default function ResetPasswordPage() {
     };
   }, []);
 
+  const clearErrorState = () => {
+    if (status !== "error" && !message) {
+      return;
+    }
+
+    setStatus("idle");
+    setMessage("");
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setMessage("");
 
     if (password.length < 8) {
       setStatus("error");
-      setMessage("Password must be at least 8 characters.");
+      setMessage("Password must be at least eight characters.");
       return;
     }
     if (password !== confirmPassword) {
@@ -68,11 +79,16 @@ export default function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       setStatus("success");
-      setMessage("Password updated! Redirecting...");
+      setMessage("Password updated. Redirecting…");
       redirectTimerRef.current = window.setTimeout(() => router.replace("/dashboard"), 2000);
-    } catch {
+    } catch (error) {
       setStatus("error");
-      setMessage("Unable to reset the password. Request a new reset link and try again.");
+      setMessage(
+        getFriendlyAuthErrorMessage(
+          error instanceof Error ? error.message : null,
+          "Unable to reset the password. Request a new reset link and try again.",
+        ),
+      );
     }
   };
 
@@ -84,24 +100,36 @@ export default function ResetPasswordPage() {
 
         {verification === "verifying" ? (
           <div className="mt-6">
-            <p role="status" className="text-sm text-site-secondary">Verifying reset link...</p>
+            <p role="status" className="flex items-center gap-2 text-sm text-site-secondary">
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-site-border border-t-site-action"
+              />
+              Verifying reset link…
+            </p>
           </div>
         ) : verification === "error" ? (
           <div className="mt-6">
-            <p role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+            <AuthMessage id="reset-message" tone="danger">
               {message}
-            </p>
+            </AuthMessage>
             <p className="mt-4 text-sm text-site-muted">
-              <Link href="/forgot-password" className="font-semibold text-site-action hover:text-site-action-hover">
+              <Link
+                href="/forgot-password"
+                className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
+              >
                 Request a new reset link
               </Link>
             </p>
           </div>
         ) : status === "success" ? (
           <div className="mt-6">
-            <p role="status" className="border-l-2 border-site-success pl-3 text-sm text-site-success">
+            <AuthMessage id="reset-message" tone="success">
               {message}
-            </p>
+            </AuthMessage>
+            <Link href="/dashboard" className="site-button site-button-primary mt-6">
+              Go to dashboard
+            </Link>
           </div>
         ) : (
           <form className="mt-6 space-y-4" onSubmit={onSubmit}>
@@ -111,13 +139,16 @@ export default function ResetPasswordPage() {
               </label>
               <input
                 id="new-password"
+                name="new-password"
                 type="password"
                 autoComplete="new-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  clearErrorState();
+                  setPassword(e.target.value);
+                }}
                 required
                 minLength={8}
-                placeholder="New password (min 8 characters)"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "reset-password-help reset-message" : "reset-password-help"}
                 className="site-field px-4"
@@ -132,13 +163,16 @@ export default function ResetPasswordPage() {
               </label>
               <input
                 id="confirm-password"
+                name="confirm-password"
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  clearErrorState();
+                  setConfirmPassword(e.target.value);
+                }}
                 required
                 minLength={8}
-                placeholder="Confirm password"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "reset-message" : undefined}
                 className="site-field px-4"
@@ -149,15 +183,27 @@ export default function ResetPasswordPage() {
               disabled={status === "loading"}
               className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
             >
-              {status === "loading" ? "Updating..." : "Reset password"}
+              {status === "loading" ? "Updating…" : "Reset password"}
             </button>
             {status === "error" ? (
-              <p id="reset-message" role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+              <AuthMessage id="reset-message" tone="danger">
                 {message}
-              </p>
+              </AuthMessage>
             ) : null}
           </form>
         )}
+
+        {verification !== "error" && status !== "success" ? (
+          <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
+            Link not working?{" "}
+            <Link
+              href="/forgot-password"
+              className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
+            >
+              Request a new reset link
+            </Link>
+          </p>
+        ) : null}
       </div>
     </main>
   );

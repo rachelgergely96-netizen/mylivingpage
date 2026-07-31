@@ -10,7 +10,7 @@ describe("AtsReadinessCard", () => {
       <AtsReadinessCard resumeData={DEMO_PAGES[0].data} />,
     );
 
-    expect(markup).toContain("Check your resume—and compare one specific job");
+    expect(markup).toContain("Check your résumé—and compare one specific job");
     expect(markup).toContain("Job context · Optional");
     expect(markup).toContain("Target job title");
     expect(markup).toContain("Job description");

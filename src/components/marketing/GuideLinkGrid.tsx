@@ -6,6 +6,7 @@ interface GuideLinkGridProps {
   title: string;
   description: string;
   className?: string;
+  id?: string;
 }
 
 export default function GuideLinkGrid({
@@ -13,9 +14,10 @@ export default function GuideLinkGrid({
   title,
   description,
   className = "",
+  id,
 }: GuideLinkGridProps) {
   return (
-    <section className={`site-panel px-5 py-8 sm:px-8 sm:py-10 ${className}`.trim()} data-site-ui>
+    <section id={id} className={`site-panel px-5 py-8 sm:px-8 sm:py-10 ${className}`.trim()} data-site-ui>
       <div className="max-w-3xl">
         <p className="site-eyebrow">{eyebrow}</p>
         <h2 className="site-section-title mt-3">
@@ -24,11 +26,11 @@ export default function GuideLinkGrid({
         <p className="mt-4 text-base leading-7 text-site-secondary">{description}</p>
       </div>
 
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+      <div className="mt-8 grid gap-px bg-site-border lg:grid-cols-3">
         {GUIDES.map((guide) => (
           <article
             key={guide.slug}
-            className="border border-site-border bg-site-canvas-alt p-5"
+            className="bg-site-surface p-5"
           >
             <p className="site-eyebrow">{guide.decisionStage}</p>
             <Link

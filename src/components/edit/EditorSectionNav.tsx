@@ -50,7 +50,12 @@ export default function EditorSectionNav({
         : 88;
       const sections = LIVING_PAGE_EDITOR_SECTIONS.map(({ id }) =>
         document.getElementById(id),
-      ).filter((section): section is HTMLElement => Boolean(section));
+      ).filter(
+        (section): section is HTMLElement =>
+          // Skip hidden sections (e.g. the editor column while mobile preview
+          // is active) so display:none elements cannot claim the active stop.
+          Boolean(section) && (section as HTMLElement).getBoundingClientRect().height > 0,
+      );
 
       const active = sections.reduce<HTMLElement | null>((current, section) => {
         if (section.getBoundingClientRect().top <= activationLine) {
@@ -123,21 +128,23 @@ export default function EditorSectionNav({
       className="editor-section-map mt-3 min-w-0 max-w-full overflow-hidden border-t border-site-border pt-3"
     >
       <div className="mb-2 flex items-center justify-between gap-4 px-0.5">
-        <p className="site-eyebrow text-[9px] text-site-muted">
+        <p className="site-eyebrow text-site-muted">
           Page map
         </p>
-        <p className="min-w-0 truncate font-mono text-[9px] tracking-[0.08em] text-site-secondary">
-          <span className="text-site-action-hover">{activeSection?.label}</span>
+        <p className="min-w-0 truncate text-xs text-site-secondary">
+          <span className="font-semibold text-site-action-hover">{activeSection?.label}</span>
           <span aria-hidden="true"> · </span>
-          {String(activeIndex + 1).padStart(2, "0")}/
-          {String(LIVING_PAGE_EDITOR_SECTIONS.length).padStart(2, "0")}
+          <span className="font-mono tracking-[0.08em] tabular-nums">
+            {String(activeIndex + 1).padStart(2, "0")}/
+            {String(LIVING_PAGE_EDITOR_SECTIONS.length).padStart(2, "0")}
+          </span>
         </p>
       </div>
       <ol
         ref={scrollRef}
         className="scrollbar-hide flex w-full min-w-0 max-w-full gap-1.5 overflow-x-auto scroll-smooth pb-0.5"
       >
-        {LIVING_PAGE_EDITOR_SECTIONS.map((section, index) => {
+        {LIVING_PAGE_EDITOR_SECTIONS.map((section) => {
           const active = section.id === activeSectionId;
           const hasSignal = signalSections.has(section.id);
           return (
@@ -172,15 +179,12 @@ export default function EditorSectionNav({
                   }
                   window.history.replaceState(null, "", `#${section.id}`);
                 }}
-                className={`inline-flex min-h-9 items-center gap-2 rounded-none border px-2.5 py-1.5 text-[10px] font-semibold transition-[background-color,border-color,color,transform] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-focus ${
+                className={`inline-flex min-h-11 items-center gap-2 rounded-none border px-2.5 py-1.5 text-xs font-semibold transition-[background-color,border-color,color,transform] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-focus sm:min-h-9 ${
                   active
                     ? "-translate-y-0.5 border-site-action bg-site-selected text-site-text"
                     : "border-site-border bg-site-canvas-alt text-site-secondary hover:border-site-border-strong hover:bg-site-surface hover:text-site-text"
                 }`}
               >
-                <span aria-hidden="true" className="font-mono text-[8px] text-site-muted">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
                 {section.label}
                 <span
                   aria-hidden="true"

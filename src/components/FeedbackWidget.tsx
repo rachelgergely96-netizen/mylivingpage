@@ -1,13 +1,13 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type FeedbackType = "bug" | "feature" | "general";
 
 const TYPE_LABELS: Record<FeedbackType, string> = {
-  bug: "Bug Report",
-  feature: "Feature Request",
+  bug: "Bug report",
+  feature: "Feature request",
   general: "General",
 };
 
@@ -27,7 +27,7 @@ export default function FeedbackWidget() {
     setOpen(true);
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
@@ -37,7 +37,7 @@ export default function FeedbackWidget() {
     setType("general");
     setStatus("idle");
     setError("");
-  };
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -85,7 +85,7 @@ export default function FeedbackWidget() {
     const trigger = triggerRef.current;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        handleClose();
       }
     };
 
@@ -95,7 +95,7 @@ export default function FeedbackWidget() {
       document.removeEventListener("keydown", closeOnEscape);
       trigger?.focus();
     };
-  }, [open]);
+  }, [open, handleClose]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" data-site-ui>
@@ -125,7 +125,7 @@ export default function FeedbackWidget() {
                     onClick={() => setType(t)}
                     type="button"
                     aria-pressed={type === t}
-                    className={`min-h-11 flex-1 rounded-none border px-2 py-2 text-[11px] font-semibold transition-colors ${
+                    className={`min-h-11 flex-1 rounded-none border px-2 py-2 text-xs font-semibold transition-colors ${
                       type === t
                         ? "border-site-action bg-site-selected text-site-text"
                         : "border-site-border text-site-secondary hover:border-site-border-strong hover:text-site-text"
@@ -142,9 +142,11 @@ export default function FeedbackWidget() {
                 id="feedback-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Share a thought, bug report, or request..."
+                placeholder="Share a thought, bug report, or request…"
                 maxLength={2000}
                 rows={4}
+                aria-invalid={status === "error" ? true : undefined}
+                aria-describedby={error ? "feedback-error" : "feedback-description"}
                 className="site-field w-full resize-none p-3 text-sm"
               />
               <p className="mt-1 text-right text-xs text-site-muted">
@@ -152,23 +154,37 @@ export default function FeedbackWidget() {
               </p>
 
               {error && (
-                <p className="mt-1 text-xs text-site-danger" role="alert">{error}</p>
+                <p id="feedback-error" className="mt-1 flex items-start gap-1.5 text-xs text-site-danger" role="alert">
+                  <svg
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                  >
+                    <circle cx="8" cy="8" r="6.5" />
+                    <path d="M8 4.75v3.75" strokeLinecap="square" />
+                    <path d="M8 11.25h.01" strokeLinecap="round" />
+                  </svg>
+                  <span>{error}</span>
+                </p>
               )}
 
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={handleClose}
                   type="button"
-                  className="site-button site-button-secondary flex-1 text-xs"
+                  className="site-button site-button-secondary flex-1"
                 >
                   Cancel
                 </button>
                 <button
                   disabled={status === "loading" || !message.trim()}
                   type="submit"
-                  className="site-button site-button-primary flex-1 text-xs disabled:opacity-50"
+                  className="site-button site-button-primary flex-1 disabled:opacity-50"
                 >
-                  {status === "loading" ? "Sending..." : "Send"}
+                  {status === "loading" ? "Sending…" : "Send"}
                 </button>
               </div>
             </form>
@@ -180,7 +196,7 @@ export default function FeedbackWidget() {
         ref={triggerRef}
         type="button"
         onClick={open ? handleClose : handleOpen}
-        className="site-button site-button-secondary shadow-[var(--site-shadow-raised)]"
+        className="site-button site-button-secondary bg-site-surface-raised shadow-[var(--site-shadow-raised)]"
         aria-expanded={open}
       >
         {open ? "Close" : "Feedback"}

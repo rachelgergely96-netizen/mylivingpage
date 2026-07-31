@@ -29,6 +29,7 @@ interface PolicyRouteInfo {
   shortLabel: string;
   pageTitle: string;
   seoDescription: string;
+  cardDescription: string;
 }
 
 export interface LegalNavItem {
@@ -62,6 +63,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     pageTitle: "Terms of Service",
     seoDescription:
       "Terms of Service for MyLivingPage.com and affiliated domains, including user responsibilities, billing, and dispute terms.",
+    cardDescription: "What you agree to when you create an account and publish a page.",
   },
   privacy: {
     href: "/privacy",
@@ -69,6 +71,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     pageTitle: "Privacy Policy",
     seoDescription:
       "Privacy Policy covering personal data categories, processing purposes, sharing, retention, and rights.",
+    cardDescription: "What data we collect, why we collect it, and the rights you have.",
   },
   cookies: {
     href: "/cookies",
@@ -76,13 +79,15 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     pageTitle: "Cookie Policy",
     seoDescription:
       "Cookie Policy describing cookie categories, analytics and advertising controls, and user preferences.",
+    cardDescription: "Essential storage, optional analytics, and how to change your choice.",
   },
   "acceptable-use": {
     href: "/acceptable-use",
-    shortLabel: "Acceptable Use",
+    shortLabel: "Acceptable use",
     pageTitle: "Acceptable Use Policy",
     seoDescription:
       "Acceptable Use Policy outlining prohibited conduct, platform abuse restrictions, and enforcement.",
+    cardDescription: "What is not allowed on the platform and how we enforce it.",
   },
   dmca: {
     href: "/dmca",
@@ -90,6 +95,7 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     pageTitle: "Copyright and DMCA Policy",
     seoDescription:
       "Copyright and DMCA Policy with notice and counter-notice instructions and repeat infringer terms.",
+    cardDescription: "How to send a copyright takedown notice or a counter-notice.",
   },
   disclaimer: {
     href: "/disclaimer",
@@ -97,20 +103,23 @@ export const POLICY_ROUTES: Record<LegalPolicyId, PolicyRouteInfo> = {
     pageTitle: "General Disclaimer",
     seoDescription:
       "General disclaimer for informational content, AI output limits, and user responsibility.",
+    cardDescription: "The service is informational and not professional advice.",
   },
   security: {
     href: "/security",
     shortLabel: "Security",
-    pageTitle: "Security Overview",
+    pageTitle: "Security overview",
     seoDescription:
       "Security overview with safeguards, account responsibilities, and vulnerability reporting details.",
+    cardDescription: "How we protect the service and how to report a vulnerability.",
   },
   "delete-account": {
     href: "/delete-account",
-    shortLabel: "Delete Account",
-    pageTitle: "Account Deletion",
+    shortLabel: "Delete account",
+    pageTitle: "Account deletion",
     seoDescription:
       "Account deletion instructions with retention summaries and post-deletion data handling details.",
+    cardDescription: "How to delete your account and what we keep afterward.",
   },
 };
 
@@ -140,7 +149,7 @@ const LEGAL_SITES: Record<LegalSiteId, LegalSiteConfig> = {
     contactEmailPlaceholder: MYLIVINGPAGE_CONTACT_EMAIL,
     mailingAddressPlaceholder: MYLIVINGPAGE_MAILING_ADDRESS,
     productDescription:
-      "A web application where people create and manage resume-based living pages containing text, photos, links, exports, analytics, and public sharing controls.",
+      "A web application where people create and manage résumé-based living pages containing text, photos, links, exports, analytics, and public sharing controls.",
     supportedPolicies: MYLIVINGPAGE_POLICIES,
   },
   "second-site": {
@@ -203,7 +212,7 @@ export function getLegalNavItems(siteId: LegalSiteId, includeIndex: boolean = tr
     return {
       href: route.href,
       label: route.pageTitle,
-      description: route.seoDescription,
+      description: route.cardDescription,
     };
   });
 
@@ -214,7 +223,7 @@ export function getLegalNavItems(siteId: LegalSiteId, includeIndex: boolean = tr
   return [
     {
       href: "/legal",
-      label: "Legal and Policies",
+      label: "Legal and policies",
       description: "Central index of legal policies and user agreements.",
     },
     ...links,
@@ -224,7 +233,7 @@ export function getLegalNavItems(siteId: LegalSiteId, includeIndex: boolean = tr
 export function getPolicyMetadata(policyId: LegalPolicyId): Metadata {
   const route = POLICY_ROUTES[policyId];
   return {
-    title: `${route.pageTitle} | ${SITE_NAME}`,
+    title: route.pageTitle,
     description: route.seoDescription,
     alternates: { canonical: route.href },
     openGraph: {
@@ -244,7 +253,7 @@ export function getPolicyMetadata(policyId: LegalPolicyId): Metadata {
 
 export function getLegalIndexMetadata(): Metadata {
   return {
-    title: `Legal and Policies | ${SITE_NAME}`,
+    title: "Legal and Policies",
     description: "Browse MyLivingPage terms, privacy, and related legal information.",
     alternates: { canonical: "/legal" },
     openGraph: {

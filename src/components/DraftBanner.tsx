@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+
 interface DraftBannerProps {
   savedAt: number;
   onRestore: () => void;
@@ -7,26 +10,40 @@ interface DraftBannerProps {
 }
 
 export default function DraftBanner({ savedAt, onRestore, onDiscard }: DraftBannerProps) {
+  const [confirmingRestore, setConfirmingRestore] = useState(false);
   const timeAgo = getTimeAgo(savedAt);
 
   return (
-    <div className="site-callout mb-4 flex flex-wrap items-center gap-3 px-4 py-3 text-sm" role="status">
-      <span className="flex-1">You have an unsaved draft from {timeAgo}.</span>
-      <button
-        type="button"
-        onClick={onRestore}
-        className="site-button site-button-primary px-3 py-2 text-xs"
-      >
-        Restore
-      </button>
-      <button
-        type="button"
-        onClick={onDiscard}
-        className="site-button site-button-secondary px-3 py-2 text-xs"
-      >
-        Discard
-      </button>
-    </div>
+    <>
+      <div className="site-callout flex flex-wrap items-center gap-3 px-4 py-3 text-sm" role="status">
+        <span className="flex-1">You have an unsaved draft saved {timeAgo}.</span>
+        <button
+          type="button"
+          onClick={() => setConfirmingRestore(true)}
+          className="site-button site-button-secondary px-3 py-2"
+        >
+          Restore
+        </button>
+        <button
+          type="button"
+          onClick={onDiscard}
+          className="site-button site-button-secondary px-3 py-2"
+        >
+          Discard
+        </button>
+      </div>
+      <ConfirmDialog
+        open={confirmingRestore}
+        title="Restore this draft?"
+        body={`Restoring replaces the content currently in the editor with the draft saved ${timeAgo}.`}
+        confirmLabel="Restore draft"
+        onConfirm={() => {
+          setConfirmingRestore(false);
+          onRestore();
+        }}
+        onClose={() => setConfirmingRestore(false)}
+      />
+    </>
   );
 }
 

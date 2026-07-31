@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export interface SiteHeaderLink {
   href: string;
@@ -35,6 +35,7 @@ export default function SiteHeader({
 }: SiteHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
+  const navRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -47,8 +48,22 @@ export default function SiteHeader({
       }
     };
 
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        navRef.current &&
+        !navRef.current.contains(event.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+    };
   }, [menuOpen]);
 
   return (
@@ -61,6 +76,7 @@ export default function SiteHeader({
       </a>
       <header className="site-header" data-site-ui>
         <nav
+          ref={navRef}
           aria-label="Primary navigation"
           className="site-container relative flex min-h-16 items-center justify-between gap-4"
         >

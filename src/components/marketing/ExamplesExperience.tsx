@@ -19,9 +19,7 @@ interface ExamplesExperienceProps {
 }
 
 function getInitialGroup(sampleGroups: ResolvedMarketingSampleGroup[]) {
-  const group =
-    sampleGroups.find((candidate) => candidate.id === "when-a-recruiter-clicks") ??
-    sampleGroups[0];
+  const group = sampleGroups[0];
 
   if (!group || !group.samples[0]) {
     throw new Error("ExamplesExperience requires at least one sample.");
@@ -95,6 +93,22 @@ export default function ExamplesExperience({
     );
   };
 
+  const revealStageOnSmallScreens = () => {
+    if (!window.matchMedia("(max-width: 1023px)").matches) {
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    window.requestAnimationFrame(() => {
+      document.getElementById("example-stage")?.scrollIntoView({
+        block: "nearest",
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    });
+  };
+
   const selectGroup = (group: ResolvedMarketingSampleGroup) => {
     const nextSample = group.samples[0];
     if (!nextSample) {
@@ -104,11 +118,13 @@ export default function ExamplesExperience({
     setActiveGroupId(group.id);
     setActiveSampleId(nextSample.id);
     updateHash(nextSample.id);
+    revealStageOnSmallScreens();
   };
 
   const selectSample = (sample: ResolvedMarketingSample) => {
     setActiveSampleId(sample.id);
     updateHash(sample.id);
+    revealStageOnSmallScreens();
   };
 
   const handleGroupKeyDown = (
@@ -117,9 +133,9 @@ export default function ExamplesExperience({
   ) => {
     let nextIndex = currentIndex;
 
-    if (event.key === "ArrowRight") {
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
       nextIndex = (currentIndex + 1) % sampleGroups.length;
-    } else if (event.key === "ArrowLeft") {
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       nextIndex = (currentIndex - 1 + sampleGroups.length) % sampleGroups.length;
     } else if (event.key === "Home") {
       nextIndex = 0;
@@ -210,6 +226,7 @@ export default function ExamplesExperience({
           <div
             className={styles.momentTabs}
             role="tablist"
+            aria-orientation="vertical"
             aria-label="Choose when you would share a Living Page"
           >
             {sampleGroups.map((group, index) => {

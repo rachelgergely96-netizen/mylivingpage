@@ -23,7 +23,7 @@
   --site-surface-raised: #11243b;
   --site-surface-selected: #16304d;
   --site-border: #2d4059;
-  --site-border-strong: #4a6684;
+  --site-border-strong: #547394;
   --site-text: #f4f7fc;
   --site-text-secondary: #b8c4d4;
   --site-text-muted: #8493a8;
@@ -32,6 +32,7 @@
   --site-action-active: #5b95ea;
   --site-action-ink: #06101f;
   --site-action-soft: rgb(120 173 255 / 12%);
+  --site-action-shadow: #274f80;
   --site-success: #69d99a;
   --site-warning: #f4c56b;
   --site-danger: #ff8491;
@@ -40,18 +41,10 @@
   --site-shadow-raised: 0 12px 32px rgb(0 0 0 / 28%);
   --site-shadow-overlay: 0 20px 56px rgb(0 0 0 / 42%);
 
-  /* Temporary aliases keep older route families visually coherent while their
-     source classes are migrated to semantic names. */
-  --gold: var(--site-action);
-  --gold-light: var(--site-action-hover);
-  --deep-purple: var(--site-canvas);
-  --mid-purple: var(--site-canvas-alt);
-  --rich-purple: var(--site-surface);
-  --text-primary: var(--site-text);
+  /* Temporary aliases kept only for LivingHomepagePrototype.module.css; delete
+     once that module reads the site-* tokens directly. */
   --text-secondary: var(--site-text-secondary);
   --text-muted: var(--site-text-muted);
-  --glass-bg: var(--site-surface);
-  --glass-border: var(--site-border);
 }
 
 * {
@@ -102,12 +95,6 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-}
-
-.glass-card {
-  background: var(--site-surface);
-  border: 1px solid var(--site-border);
-  border-radius: var(--site-radius);
 }
 
 @layer components {
@@ -255,7 +242,7 @@ a {
 
   .site-button {
     display: inline-flex;
-    min-height: 2.75rem;
+    min-height: 3rem;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
@@ -269,7 +256,7 @@ a {
     border-color: var(--site-action);
     background: var(--site-action);
     color: var(--site-action-ink);
-    box-shadow: 3px 3px 0 #274f80;
+    box-shadow: 3px 3px 0 var(--site-action-shadow);
   }
 
   .site-button-primary:hover {
@@ -361,6 +348,45 @@ a {
     color: var(--site-text-muted);
   }
 
+  [data-site-ui] .site-field[aria-invalid="true"] {
+    border-color: var(--site-danger);
+  }
+
+  [data-site-ui] .site-checkbox[aria-invalid="true"] {
+    border-color: var(--site-danger);
+  }
+
+  .site-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    border: 1px solid var(--site-border-strong);
+    border-radius: var(--site-radius);
+    background-color: var(--site-canvas-alt);
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .site-checkbox:checked {
+    border-color: var(--site-action);
+    background-color: var(--site-action);
+    /* Inline check glyph drawn in the action-ink color — an icon, not a palette value. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2306101f' stroke-width='2.5' stroke-linecap='square' d='M3 8.5 6.5 12 13 4.5'/%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 0.875rem 0.875rem;
+  }
+
+  .site-checkbox:focus-visible {
+    outline: 2px solid var(--site-focus);
+    outline-offset: 2px;
+  }
+
   .site-badge {
     display: inline-flex;
     align-items: center;
@@ -447,13 +473,18 @@ a {
 [data-site-ui]:focus-visible,
 [data-site-ui] :where(a, button, input, textarea, select, summary, [tabindex]):not([data-living-output] *):focus-visible {
   outline: 2px solid var(--site-focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 [data-living-output] [data-site-ui]:focus-visible,
 [data-living-output] [data-site-ui] :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--site-focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
+}
+
+[data-site-ui] .site-field[aria-invalid="true"]:focus-visible,
+[data-site-ui] .site-checkbox[aria-invalid="true"]:focus-visible {
+  outline-color: var(--site-danger);
 }
 
 [data-site-ui] :where(input, textarea, select):not([data-living-output] *)::placeholder {
@@ -464,14 +495,6 @@ a {
 [data-living-output] [data-site-ui] :where(input, textarea, select)::placeholder {
   color: var(--site-text-muted);
   opacity: 1;
-}
-
-.gold-pill {
-  border: 1px solid var(--site-action);
-  border-radius: var(--site-radius);
-  background: var(--site-action);
-  color: var(--site-action-ink);
-  box-shadow: 3px 3px 0 #274f80;
 }
 
 .resume-theme {
@@ -1397,9 +1420,6 @@ a {
     scroll-behavior: auto !important;
   }
 
-  .landing-motion *,
-  .landing-motion *::before,
-  .landing-motion *::after,
   .resume-theme *,
   .resume-theme *::before,
   .resume-theme *::after {
@@ -1439,11 +1459,6 @@ a {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
 }
 
 /* Live-preview foil catches. Their full-card rotated stage extends well beyond

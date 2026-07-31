@@ -2,12 +2,23 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import AuthMessage from "@/components/auth/AuthMessage";
+import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+
+  const clearErrorState = () => {
+    if (status !== "error" && !message) {
+      return;
+    }
+
+    setStatus("idle");
+    setMessage("");
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -23,7 +34,12 @@ export default function ForgotPasswordPage() {
       setMessage("Check your email for a password reset link.");
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Something went wrong.");
+      setMessage(
+        getFriendlyAuthErrorMessage(
+          error instanceof Error ? error.message : null,
+          "We couldn't send the reset link. Check the email address and try again.",
+        ),
+      );
     }
   };
 
@@ -32,15 +48,15 @@ export default function ForgotPasswordPage() {
       <div className="site-panel-raised w-full p-6 sm:p-8">
         <p className="site-eyebrow">Password reset</p>
         <h1 className="site-page-title mt-3">Forgot your password?</h1>
-        <p className="mt-3 text-sm leading-7 text-site-secondary">
+        <p className="mt-3 text-sm leading-6 text-site-secondary">
           Enter your email address and we&apos;ll send you a link to reset your password.
         </p>
 
         {status === "sent" ? (
           <div className="mt-6">
-            <p role="status" className="border-l-2 border-site-success pl-3 text-sm text-site-success">
+            <AuthMessage id="forgot-message" tone="success">
               {message}
-            </p>
+            </AuthMessage>
             <Link
               href="/login"
               className="site-button site-button-primary mt-6"
@@ -56,12 +72,16 @@ export default function ForgotPasswordPage() {
               </label>
               <input
                 id="forgot-email"
+                name="email"
                 type="email"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  clearErrorState();
+                  setEmail(e.target.value);
+                }}
                 required
-                placeholder="Email address"
+                placeholder="you@example.com"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "forgot-message" : undefined}
                 className="site-field px-4"
@@ -72,19 +92,22 @@ export default function ForgotPasswordPage() {
               disabled={status === "loading"}
               className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
             >
-              {status === "loading" ? "Sending..." : "Send reset link"}
+              {status === "loading" ? "Sending…" : "Send reset link"}
             </button>
             {status === "error" ? (
-              <p id="forgot-message" role="alert" className="border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+              <AuthMessage id="forgot-message" tone="danger">
                 {message}
-              </p>
+              </AuthMessage>
             ) : null}
           </form>
         )}
 
         <p className="mt-6 border-t border-site-border pt-5 text-sm text-site-secondary">
           Remember your password?{" "}
-          <Link href="/login" className="font-semibold text-site-action hover:text-site-action-hover">
+          <Link
+            href="/login"
+            className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
+          >
             Sign in
           </Link>
         </p>

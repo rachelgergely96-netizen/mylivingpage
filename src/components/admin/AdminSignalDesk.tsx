@@ -94,7 +94,10 @@ function SmallListPanel({
     <section className="site-panel overflow-hidden">
       <div className={styles.panelHeader}>
         <h2 className="site-panel-title">{title}</h2>
-        <Link href={href} className="text-xs font-semibold text-site-action">
+        <Link
+          href={href}
+          className="-mr-2 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-2 text-xs font-semibold text-site-action"
+        >
           View all
         </Link>
       </div>
@@ -124,7 +127,7 @@ export default function AdminSignalDesk({
             before looking at overall growth.
           </p>
         </div>
-        <span className="site-badge site-badge-success">Current snapshot</span>
+        <span className="site-badge">Current snapshot</span>
       </header>
 
       <section className={styles.hero} aria-labelledby="admin-attention-title">
@@ -173,7 +176,10 @@ export default function AdminSignalDesk({
               <p className="site-eyebrow">Latest feedback</p>
               <h2 className="site-panel-title mt-2">What users said most recently</h2>
             </div>
-            <Link href="/admin/feedback" className="text-xs font-semibold text-site-action">
+            <Link
+              href="/admin/feedback"
+              className="-mr-2 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-2 text-xs font-semibold text-site-action"
+            >
               Open inbox
             </Link>
           </div>
@@ -190,7 +196,7 @@ export default function AdminSignalDesk({
                     <span className="font-semibold text-site-text">
                       {item.sender.displayName}
                     </span>
-                    <span className="site-badge py-0.5 text-[10px]">
+                    <span className="site-badge py-0.5 text-xs">
                       {FEEDBACK_TYPE_LABELS[item.type]}
                     </span>
                     <time dateTime={item.createdAt}>{formatShortDate(item.createdAt)}</time>
@@ -213,7 +219,10 @@ export default function AdminSignalDesk({
               <p className="site-eyebrow">Activity ledger</p>
               <h2 className="site-panel-title mt-2">Recent product events</h2>
             </div>
-            <Link href="/admin/ops" className="text-xs font-semibold text-site-action">
+            <Link
+              href="/admin/ops"
+              className="-mr-2 inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-2 text-xs font-semibold text-site-action"
+            >
               System health
             </Link>
           </div>
@@ -229,7 +238,7 @@ export default function AdminSignalDesk({
                   </p>
                   <time
                     dateTime={item.createdAt}
-                    className="shrink-0 font-mono text-[10px] text-site-muted"
+                    className="shrink-0 font-mono text-xs text-site-muted"
                   >
                     {formatShortDate(item.createdAt)}
                   </time>
@@ -265,7 +274,7 @@ export default function AdminSignalDesk({
                 </div>
                 <time
                   dateTime={user.createdAt}
-                  className="shrink-0 font-mono text-[10px] text-site-muted"
+                  className="shrink-0 font-mono text-xs text-site-muted"
                 >
                   {formatShortDate(user.createdAt)}
                 </time>
@@ -285,13 +294,13 @@ export default function AdminSignalDesk({
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-site-text">{page.name}</p>
-                  <p className="truncate font-mono text-[10px] text-site-muted">/{page.slug}</p>
+                  <p className="truncate font-mono text-xs text-site-muted">/{page.slug}</p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="font-mono text-xs text-site-action">{page.views} views</p>
                   <time
                     dateTime={page.createdAt}
-                    className="font-mono text-[10px] text-site-muted"
+                    className="font-mono text-xs text-site-muted"
                   >
                     {formatShortDate(page.createdAt)}
                   </time>

@@ -58,7 +58,7 @@ export default function EditorReadinessBriefing({
           {nextTarget ? (
             <a
               href={nextTarget.href}
-              className="mt-4 inline-flex min-h-10 items-center gap-2 border-b border-site-action pb-1 text-xs font-semibold text-site-action-hover transition-colors hover:border-site-action-hover hover:text-site-text"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 border-b border-site-action pb-1 text-xs font-semibold text-site-action-hover transition-colors hover:border-site-action-hover hover:text-site-text"
             >
               Improve {nextTarget.label}
               <span aria-hidden="true">→</span>
@@ -70,10 +70,10 @@ export default function EditorReadinessBriefing({
           )}
         </div>
 
-        <div className="border-l border-site-border pl-4 sm:pl-5">
+        <div className="border-t border-site-border pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="site-eyebrow text-[9px] text-site-muted">
+              <p className="site-eyebrow text-site-muted">
                 Decision readiness
               </p>
               <p className="mt-1 text-xs leading-5 text-site-secondary">
@@ -83,7 +83,7 @@ export default function EditorReadinessBriefing({
             <p
               key={readiness.readyCount}
               data-editor-ready-count
-              className={`editor-signal-count font-mono text-2xl font-semibold ${
+              className={`editor-signal-count font-site text-2xl font-semibold tabular-nums ${
                 isReady ? "text-site-success" : "text-site-action-hover"
               }`}
             >

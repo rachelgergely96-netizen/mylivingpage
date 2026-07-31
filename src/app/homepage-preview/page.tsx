@@ -5,7 +5,7 @@ import { getAbsoluteUrl } from "@/lib/site";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "Turn Your Résumé Into a Page You Can Share | MyLivingPage Prototype",
+  title: "Homepage prototype",
   description: "A noindex prototype for creating a free professional page and ATS-ready résumé from one reviewed source.",
   alternates: { canonical: getAbsoluteUrl("/") },
   robots: {

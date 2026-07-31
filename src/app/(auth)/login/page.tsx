@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import AuthMessage from "@/components/auth/AuthMessage";
 import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
-import { getAuthErrorMessage, getPasswordAuthErrorMessage } from "@/lib/auth/auth-error";
+import { getAuthErrorMessage } from "@/lib/auth/auth-error";
+import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -37,6 +39,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [pendingAction, setPendingAction] = useState<"email" | "google" | null>(null);
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/dashboard");
   // Carry the destination through to signup only when the URL actually asked
@@ -76,12 +79,16 @@ export default function LoginPage() {
   const onLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus("loading");
+    setPendingAction("email");
     setMessage("");
     try {
       const supabase = createBrowserSupabaseClient();
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        throw error;
+        setStatus("error");
+        setPendingAction(null);
+        setMessage(getFriendlyAuthErrorMessage(error.message, "Unable to sign in. Please try again."));
+        return;
       }
       if (!data.session) {
         throw new Error("Sign-in succeeded but no session was created.");
@@ -95,16 +102,18 @@ export default function LoginPage() {
       window.location.replace(nextPath);
     } catch (error) {
       setStatus("error");
+      setPendingAction(null);
       setMessage(
-        error instanceof Error
-          ? getPasswordAuthErrorMessage(error.message)
-          : "Unable to sign in.",
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to sign in. Please try again.",
       );
     }
   };
 
   const onGoogleLogin = async () => {
     setStatus("loading");
+    setPendingAction("google");
     setMessage("");
     try {
       const googleAuthUrl = buildGoogleAuthStartUrl({
@@ -114,6 +123,7 @@ export default function LoginPage() {
       window.location.assign(googleAuthUrl);
     } catch (error) {
       setStatus("error");
+      setPendingAction(null);
       setMessage(error instanceof Error ? getAuthErrorMessage(error.message) : "Google login failed.");
     }
   };
@@ -133,7 +143,7 @@ export default function LoginPage() {
           disabled={status === "loading"}
           className="site-button site-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {status === "loading" ? "Redirecting to Google..." : "Continue with Google"}
+          {pendingAction === "google" ? "Redirecting to Google…" : "Continue with Google"}
         </button>
 
         <div className="my-5 flex items-center gap-3 text-xs text-site-muted">
@@ -149,6 +159,7 @@ export default function LoginPage() {
             </label>
             <input
               id="login-email"
+              name="email"
               type="email"
               autoComplete="email"
               value={email}
@@ -157,7 +168,7 @@ export default function LoginPage() {
                 setEmail(event.target.value);
               }}
               required
-              placeholder="Email address"
+              placeholder="you@example.com"
               aria-invalid={status === "error"}
               aria-describedby={message ? "login-message" : undefined}
               className="site-field px-4"
@@ -169,6 +180,7 @@ export default function LoginPage() {
             </label>
             <input
               id="login-password"
+              name="password"
               type="password"
               autoComplete="current-password"
               value={password}
@@ -177,7 +189,6 @@ export default function LoginPage() {
                 setPassword(event.target.value);
               }}
               required
-              placeholder="Password"
               aria-invalid={status === "error"}
               aria-describedby={message ? "login-message" : undefined}
               className="site-field px-4"
@@ -188,25 +199,31 @@ export default function LoginPage() {
             disabled={status === "loading"}
             className="site-button site-button-primary w-full disabled:cursor-wait disabled:opacity-70"
           >
-            {status === "loading" ? "Signing in..." : "Sign in"}
+            {pendingAction === "email" ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
         {message ? (
-          <p id="login-message" role="alert" className="mt-4 border-l-2 border-site-danger pl-3 text-sm text-site-danger">
+          <AuthMessage id="login-message" tone="danger" className="mt-4">
             {message}
-          </p>
+          </AuthMessage>
         ) : null}
 
         <div className="mt-3 text-right">
-          <Link href="/forgot-password" className="text-sm font-medium text-site-action hover:text-site-action-hover">
+          <Link
+            href="/forgot-password"
+            className="-my-2 inline-flex min-h-11 items-center text-sm font-medium text-site-action hover:text-site-action-hover"
+          >
             Forgot password?
           </Link>
         </div>
 
         <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
           New here?{" "}
-          <Link href={createAccountHref} className="font-semibold text-site-action hover:text-site-action-hover">
+          <Link
+            href={createAccountHref}
+            className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
+          >
             Create an account
           </Link>
         </p>

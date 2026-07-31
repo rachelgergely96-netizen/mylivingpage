@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+};
 
 export default function NotFound() {
   return (
     <main className="site-shell flex min-h-screen items-center px-5 py-16" data-site-ui>
-      <div className="site-panel-raised mx-auto w-full max-w-2xl p-6 sm:p-10">
+      <div className="site-panel-raised mx-auto w-full max-w-2xl p-6 sm:p-8">
         <Link href="/" className="site-wordmark">my<span>living</span>page</Link>
         <p className="site-eyebrow mt-12">404 · Page not found</p>
         <h1 className="site-page-title mt-3">This page is not available.</h1>
@@ -12,7 +17,7 @@ export default function NotFound() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/" className="site-button site-button-primary">Go to the homepage</Link>
-          <Link href="/login?next=/dashboard" className="site-button site-button-secondary">Open your account</Link>
+          <Link href="/login?next=/dashboard" className="site-button site-button-secondary">Sign in</Link>
         </div>
       </div>
     </main>

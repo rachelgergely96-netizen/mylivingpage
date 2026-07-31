@@ -11,9 +11,10 @@ import type { ResumeData } from "@/types/resume";
  * A static, device-framed glance at the user's real Living Page — the same
  * theme and content that is (or will be) live. Deliberately NOT animated: the
  * dashboard is a return-to utility, so the theme paints one frame and then
- * costs nothing. The rounded bezel + accent glow reuse the marketing preview
- * language so the dashboard finally shows the product instead of only
- * describing it.
+ * costs nothing. The bezel is quiet product chrome (sharp corners, site shadow
+ * token); only the pictured page inside carries the theme's own styling. A
+ * theme-colored fade at the bottom edge keeps the fixed-height crop from
+ * slicing content mid-row.
  */
 export default function DashboardPagePreview({
   themeId,
@@ -34,8 +35,7 @@ export default function DashboardPagePreview({
       data-dashboard-page-preview
       style={{
         border: `1px solid ${theme.presentation.border}`,
-        borderRadius: 16,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.14), 0 20px 44px rgba(0,0,0,0.5), 0 12px 34px -10px ${theme.presentation.accentSoft}`,
+        boxShadow: "var(--site-shadow-raised)",
         overflow: "hidden",
         position: "relative",
       }}
@@ -59,6 +59,19 @@ export default function DashboardPagePreview({
           />
         </div>
       </ThemeCanvas>
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 48,
+          pointerEvents: "none",
+          zIndex: 2,
+          background: `linear-gradient(180deg, transparent, ${theme.background})`,
+        }}
+      />
     </div>
   );
 }

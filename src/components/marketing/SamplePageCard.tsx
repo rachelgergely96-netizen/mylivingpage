@@ -131,7 +131,7 @@ export default function SamplePageCard({
               ref={triggerRef}
               type="button"
               onClick={() => setOpenPreview(true)}
-              className="site-button site-button-secondary min-h-11 px-4 py-2 text-xs"
+              className="site-button site-button-secondary px-4 py-2"
               aria-label={`Open full sample for ${sample.demo.data.name}, ${sample.roleLabel}`}
             >
               Open full sample

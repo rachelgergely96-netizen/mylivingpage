@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { FREE_THEMES } from "@/lib/plans";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import type {
@@ -143,6 +144,10 @@ export default function ThemePicker({
   const [requestedThemeIds, setRequestedThemeIds] = useState<ReadonlySet<ThemeId>>(
     () => new Set([selectedThemeId]),
   );
+  const [focusedThemeId, setFocusedThemeId] = useState<ThemeId | null>(null);
+  const filterScrollerRef = useRef<HTMLDivElement | null>(null);
+  const activeChipRef = useRef<HTMLButtonElement | null>(null);
+  const cardRefs = useRef(new Map<ThemeId, HTMLButtonElement>());
   const requestThemeRenderer = (themeId: ThemeId) => {
     setRequestedThemeIds((current) => {
       if (current.has(themeId)) {
@@ -174,18 +179,75 @@ export default function ThemePicker({
       .filter((section) => section.themes.length > 0);
   }, [activeCollection, themes]);
 
+  const visibleThemes = useMemo(
+    () => sections.flatMap((section) => section.themes),
+    [sections],
+  );
+  const visibleThemeIds = useMemo(
+    () => visibleThemes.map((theme) => theme.id),
+    [visibleThemes],
+  );
+  const anyVisibleLocked =
+    selectableThemeIds !== null &&
+    visibleThemes.some((theme) => !selectableThemeIds.includes(theme.id));
+  const rovingThemeId =
+    focusedThemeId && visibleThemeIds.includes(focusedThemeId)
+      ? focusedThemeId
+      : visibleThemeIds.includes(selectedThemeId)
+        ? selectedThemeId
+        : visibleThemeIds[0] ?? null;
+
+  // Keep the initially active filter chip visible inside the horizontal
+  // scroller on small screens without scrolling the page itself.
+  useEffect(() => {
+    const scroller = filterScrollerRef.current;
+    const chip = activeChipRef.current;
+    if (!scroller || !chip) {
+      return;
+    }
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const chipRect = chip.getBoundingClientRect();
+    if (chipRect.right > scrollerRect.right || chipRect.left < scrollerRect.left) {
+      scroller.scrollLeft += chipRect.left - scrollerRect.left - 16;
+    }
+    // Mount only: afterwards the user controls the scroll position.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCardKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    themeId: ThemeId,
+  ) => {
+    if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) {
+      return;
+    }
+
+    const index = visibleThemeIds.indexOf(themeId);
+    if (index === -1) {
+      return;
+    }
+
+    event.preventDefault();
+    const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+    const nextThemeId =
+      visibleThemeIds[(index + delta + visibleThemeIds.length) % visibleThemeIds.length];
+    cardRefs.current.get(nextThemeId)?.focus();
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div ref={filterScrollerRef} className="flex gap-2 overflow-x-auto pb-1">
         {THEME_COLLECTION_FILTER_IDS.map((collection) => {
           const active = activeCollection === collection;
           return (
             <button
               key={collection}
+              ref={active ? activeChipRef : undefined}
               type="button"
               onClick={() => setActiveCollection(collection)}
               aria-pressed={active}
-              className={`min-h-11 shrink-0 rounded-none border px-4 py-2 text-xs font-semibold transition-colors duration-200 ${active ? "border-site-action bg-site-selected text-site-text" : "border-site-border bg-site-surface text-site-secondary hover:border-site-border-strong"}`}
+              className={`min-h-11 shrink-0 rounded-none border px-4 py-2 text-sm font-semibold transition-colors duration-200 ${active ? "border-site-action bg-site-selected text-site-text" : "border-site-border bg-site-surface text-site-secondary hover:border-site-border-strong"}`}
             >
               {THEME_COLLECTION_META[collection].label}
             </button>
@@ -193,60 +255,105 @@ export default function ThemePicker({
         })}
       </div>
 
-      <div className="space-y-8">
+      <div role="radiogroup" aria-label="Theme" className="space-y-8">
         {sections.map((section) => (
           <section key={section.collection} className="space-y-3">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="site-eyebrow">Collection</p>
-                <h3 className="site-panel-title mt-1">{section.label}</h3>
+            {activeCollection === "all" ? (
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="site-eyebrow">Collection</p>
+                  <h3 className="site-panel-title mt-1">{section.label}</h3>
+                </div>
+                <p className="text-xs font-medium text-site-muted">
+                  {section.themes.length} themes
+                </p>
               </div>
-              <p className="text-xs font-medium text-site-muted">
+            ) : (
+              <p className="text-right text-xs font-medium text-site-muted">
                 {section.themes.length} themes
               </p>
-            </div>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {section.themes.map((theme) => {
                 const locked =
                   selectableThemeIds !== null &&
                   !selectableThemeIds.includes(theme.id);
+                const selected = selectedThemeId === theme.id;
                 return (
                   <button
                     key={theme.id}
+                    ref={(node) => {
+                      if (node) {
+                        cardRefs.current.set(theme.id, node);
+                      } else {
+                        cardRefs.current.delete(theme.id);
+                      }
+                    }}
                     type="button"
-                    aria-pressed={selectedThemeId === theme.id}
-                    aria-disabled={locked}
-                    onFocus={() => requestThemeRenderer(theme.id)}
+                    role="radio"
+                    aria-checked={selected}
+                    aria-disabled={locked || undefined}
+                    tabIndex={rovingThemeId === theme.id ? 0 : -1}
+                    onKeyDown={(event) => handleCardKeyDown(event, theme.id)}
+                    onFocus={() => {
+                      setFocusedThemeId(theme.id);
+                      requestThemeRenderer(theme.id);
+                    }}
                     onPointerEnter={() => requestThemeRenderer(theme.id)}
                     onClick={() => {
                       if (!locked) {
                         onSelectTheme(theme.id);
                       }
                     }}
-                    className={`site-panel rounded-none p-3 text-left transition-colors duration-200 ${selectedThemeId === theme.id ? "border-site-action bg-site-selected" : ""} ${locked ? "cursor-not-allowed opacity-60" : "hover:border-site-border-strong hover:bg-site-surface-raised"}`}
+                    className={`site-panel rounded-none p-3 text-left transition-colors duration-200 ${selected ? "border-site-action bg-site-selected ring-1 ring-site-action" : ""} ${locked ? "cursor-not-allowed opacity-60" : "hover:border-site-border-strong hover:bg-site-surface-raised"}`}
                   >
                     <div className="relative">
                       <ThemePickerPreview
                         theme={theme}
-                        selected={selectedThemeId === theme.id}
+                        selected={selected}
                         requested={requestedThemeIds.has(theme.id)}
                       />
                       {theme.signature ? (
-                        <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2.5 py-1 text-[9px] font-semibold text-site-warning">
+                        <span className="pointer-events-none absolute left-2 top-2 rounded-none border border-site-border-strong bg-site-surface px-2 py-0.5 text-xs font-semibold text-site-text">
                           Signature
                         </span>
                       ) : null}
+                      {selected ? (
+                        <span className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-none border border-site-action bg-site-surface px-2 py-0.5 text-xs font-semibold text-site-text">
+                          <svg
+                            aria-hidden="true"
+                            className="h-3 w-3"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2.5}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="m4.5 12.75 6 6 9-13.5"
+                            />
+                          </svg>
+                          Selected
+                        </span>
+                      ) : null}
                       {locked ? (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-none bg-black/60">
-                          <span className="rounded-none border border-site-border-strong bg-site-canvas px-3 py-1 text-[10px] text-site-secondary">
+                        <div
+                          className="absolute inset-0 flex items-center justify-center rounded-none"
+                          style={{
+                            background:
+                              "color-mix(in srgb, var(--site-canvas) 65%, transparent)",
+                          }}
+                        >
+                          <span className="rounded-none border border-site-border-strong bg-site-canvas px-3 py-1 text-xs text-site-secondary">
                             {lockedLabel}
                           </span>
                         </div>
                       ) : null}
                     </div>
                     <p className="mt-3 font-site text-xl font-semibold">{theme.name}</p>
-                    <p className="text-xs font-medium text-site-action">{theme.vibe}</p>
+                    <p className="text-xs font-medium text-site-secondary">{theme.vibe}</p>
                     {showDescription ? (
                       <p className="mt-2 text-xs leading-6 text-site-muted">{theme.description}</p>
                     ) : null}
@@ -257,6 +364,19 @@ export default function ThemePicker({
           </section>
         ))}
       </div>
+
+      {anyVisibleLocked ? (
+        <p className="text-xs leading-5 text-site-muted">
+          Locked themes unlock with a paid plan.{" "}
+          <Link
+            href="/pricing"
+            className="font-semibold text-site-action hover:text-site-action-hover"
+          >
+            See pricing
+          </Link>
+          .
+        </p>
+      ) : null}
     </div>
   );
 }

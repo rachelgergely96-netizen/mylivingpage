@@ -83,14 +83,21 @@ export default function VariantPlanner({
             Each version can sharpen the headline, opening summary, proof points, featured work, and CTA emphasis without replacing your base page.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={addVariant}
-          disabled={variants.length >= maxVariants}
-          className="site-button site-button-secondary disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {variants.length >= maxVariants ? `${maxVariants} version${maxVariants === 1 ? "" : "s"} saved` : "Add targeted version"}
-        </button>
+        <div className="flex flex-col gap-1.5 lg:items-end">
+          <button
+            type="button"
+            onClick={addVariant}
+            disabled={variants.length >= maxVariants}
+            className="site-button site-button-secondary self-start disabled:cursor-not-allowed disabled:opacity-50 lg:self-end"
+          >
+            Add targeted version
+          </button>
+          {variants.length >= maxVariants ? (
+            <p className="text-xs text-site-secondary">
+              Limit reached: {maxVariants} targeted version{maxVariants === 1 ? "" : "s"} on your plan.
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

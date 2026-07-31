@@ -1,30 +1,26 @@
-import type { Metadata } from "next";
-import { DM_Mono, DM_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import JsonLd from "@/components/seo/JsonLd";
 import AnalyticsConsent from "@/components/privacy/AnalyticsConsent";
+import { fontVariableClasses } from "@/lib/fonts";
 import { getAbsoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-});
-
-const dmMono = DM_Mono({
-  variable: "--font-dm-mono",
-  subsets: ["latin"],
-  weight: ["300", "400"],
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+  title: {
+    default: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    template: `%s | ${SITE_NAME}`,
+  },
   description: SITE_DESCRIPTION,
   openGraph: {
     siteName: SITE_NAME,
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#060e1c",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -55,7 +51,7 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} ${dmMono.variable} antialiased`}>
+      <body className={`${fontVariableClasses} antialiased`}>
         <JsonLd data={[organizationJsonLd, websiteJsonLd]} />
         {children}
         <AnalyticsConsent />

@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import GuideLinkGrid from "@/components/marketing/GuideLinkGrid";
+import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import SiteHeader from "@/components/marketing/SiteHeader";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
 
-const title = `Resume PDF and Living Page Guides | ${SITE_NAME}`;
+const pageTitle = "Résumé PDF and Living Page guides";
+const title = `${pageTitle} | ${SITE_NAME}`;
 const description =
-  "Answer-first guides on checking your Resume PDF, improving search visibility, and using a Living Page alongside your PDF.";
+  "Answer-first guides on checking your Résumé PDF, improving search visibility, and using a Living Page alongside your PDF.";
 const canonicalUrl = getAbsoluteUrl("/guides");
 
 function getSignupHref(ref: string) {
@@ -16,7 +18,7 @@ function getSignupHref(ref: string) {
 }
 
 export const metadata: Metadata = {
-  title,
+  title: pageTitle,
   description,
   alternates: { canonical: canonicalUrl },
   openGraph: {
@@ -54,13 +56,13 @@ export default async function GuidesPage() {
       />
 
       <main id="main-content" className="site-container py-12 sm:py-16">
-        <section className="site-panel-raised px-5 py-10 sm:px-10 sm:py-12">
+        <section id="guides-hero" className="site-panel-raised px-5 py-10 sm:px-10 sm:py-12">
           <p className="site-eyebrow">Guides</p>
           <h1 className="site-page-title mt-4 max-w-4xl">
-            Use the right guide at the right moment in the funnel.
+            Use the right guide at the right moment in your job search.
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-8 text-site-secondary sm:text-lg">
-            Start with the information you already use. First make sure the Resume PDF reads
+            Start with the information you already use. First make sure the Résumé PDF reads
             cleanly, then make sure the right terms are visible, then decide how to use a Living
             Page after a human clicks.
           </p>
@@ -78,15 +80,18 @@ export default async function GuidesPage() {
           eyebrow="Start here"
           title="Three practical guides, in the order active applicants usually need them"
           description="Guide one helps you check the file. Guide two helps you match recruiter search behavior. Guide three shows where a Living Page fits after the click."
-          className="mt-12"
+          className="mt-12 sm:mt-20"
         />
 
-        <section className="site-panel-raised mt-14 px-5 py-10 text-center sm:mt-20 sm:px-10 sm:py-12">
+        <section
+          id="guides-final-cta"
+          className="site-panel-raised mt-12 px-5 py-10 text-center sm:mt-20 sm:px-10 sm:py-12"
+        >
           <h2 className="site-section-title">
             Ready to start from the information you already use?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-site-secondary">
-            Upload your info once, publish a clearer page, and keep the Resume PDF aligned to the
+            Upload your info once, publish a clearer page, and keep the Résumé PDF aligned to the
             same saved content.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -100,6 +105,14 @@ export default async function GuidesPage() {
         </section>
       </main>
 
+      <MobileStickyCta
+        href={getSignupHref("guides_mobile_start")}
+        label="Create my free page"
+        supportingText="Free · private until published"
+        targetId="guides-hero"
+        hideNearId="guides-final-cta"
+        dismissStorageKey="mlp-guides-sticky-dismissed"
+      />
       <SiteLegalFooter siteId={site.id} />
     </div>
   );

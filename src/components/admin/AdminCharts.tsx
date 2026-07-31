@@ -40,9 +40,9 @@ export function AdminDailyChart({ title, dailyData }: { title: string; dailyData
             >
               <div
                 className="absolute bottom-0 w-full bg-site-action opacity-70 transition-opacity group-hover:opacity-100"
-                style={{ height: `${Math.max(height, 2)}%` }}
+                style={{ height: day.count > 0 ? `${Math.max(height, 2)}%` : "0%" }}
               />
-              <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap border border-site-border bg-site-surface-raised px-2 py-1 text-[10px] tabular-nums text-site-text shadow-[var(--site-shadow-raised)] group-hover:block">
+              <div className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap border border-site-border bg-site-surface-raised px-2 py-1 text-xs tabular-nums text-site-text shadow-[var(--site-shadow-raised)] group-hover:block">
                 {day.count}
                 <br />
                 {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", {
@@ -54,7 +54,7 @@ export function AdminDailyChart({ title, dailyData }: { title: string; dailyData
           );
         })}
       </div>
-      <div className="mt-2 flex justify-between text-[10px] tabular-nums text-site-muted">
+      <div className="mt-2 flex justify-between text-xs tabular-nums text-site-muted">
         <span>
           {dailyData.length > 0
             ? new Date(dailyData[0].date + "T00:00:00").toLocaleDateString("en-US", {

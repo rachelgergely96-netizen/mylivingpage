@@ -281,9 +281,9 @@ export default function FirstViewActivationHub({
                 type="button"
                 onClick={() => void checkForViews()}
                 disabled={checkingProof}
-                className="site-button site-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="site-button site-button-secondary min-w-48 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {checkingProof ? "Checking..." : "See if someone looked"}
+                {checkingProof ? "Checking for views…" : "See if someone looked"}
               </button>
               <button
                 type="button"
@@ -297,7 +297,7 @@ export default function FirstViewActivationHub({
         ) : loopState === "first_view_detected" ? (
           <>
             <h3 className="site-panel-title mt-2">
-              Someone looked at your page.
+              Someone looked at your page
             </h3>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
               {firstViewRelative
@@ -329,7 +329,7 @@ export default function FirstViewActivationHub({
               <button
                 type="button"
                 onClick={focusSharePanel}
-                className="site-button site-button-primary"
+                className="site-button site-button-secondary"
               >
                 Share again
               </button>
@@ -390,9 +390,9 @@ export default function FirstViewActivationHub({
               type="button"
               onClick={() => void checkForViews()}
               disabled={checkingProof}
-              className="site-button site-button-secondary disabled:cursor-not-allowed disabled:opacity-60"
+              className="site-button site-button-secondary min-w-48 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {checkingProof ? "Checking..." : "See if someone looked"}
+              {checkingProof ? "Checking for views…" : "See if someone looked"}
             </button>
           </div>
         </section>

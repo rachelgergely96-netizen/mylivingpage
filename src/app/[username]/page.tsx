@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import { unstable_noStore as noStore } from "next/cache";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import MadeWithBadge from "@/components/MadeWithBadge";
 import PageOwnerBar from "@/components/PageOwnerBar";
@@ -30,6 +31,10 @@ const VALID_THEMES: Set<string> = new Set(THEME_IDS);
 const getPublicPage = cache(async (username: string) => {
   const supabase = createServiceRoleSupabaseClient();
   return fetchPublicLivePage(supabase, username);
+});
+const getOfflinePageContext = cache(async (username: string) => {
+  const supabase = createServiceRoleSupabaseClient();
+  return fetchOfflinePageContext(username, supabase);
 });
 
 export const dynamic = "force-dynamic";
@@ -101,19 +106,27 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
   const { username } = await params;
   const page = await getPublicPage(username);
   if (!page) {
+    // Dead usernames must be real 404s; keep fallback metadata only for the
+    // legitimate offline-owner state (page exists but hosting is paused).
+    const offlineContext = await getOfflinePageContext(username);
+    if (!offlineContext) {
+      notFound();
+    }
+
     return {
-      title: SITE_NAME,
+      title: "Page offline",
       description: "Living digital pages for professionals.",
     };
   }
 
   const resume = page.resume_data;
-  const title = `${resume.name} - ${resume.headline} | ${SITE_NAME}`;
+  const pageTitle = `${resume.name} - ${resume.headline}`;
+  const title = `${pageTitle} | ${SITE_NAME}`;
   const description = resume.summary || `${resume.name}'s professional profile on ${SITE_NAME}.`;
   const url = absoluteUrl(`/${username}`);
 
   return {
-    title,
+    title: pageTitle,
     description,
     alternates: {
       canonical: url,
@@ -144,7 +157,7 @@ export default async function PublicLivingPage({
   const publicPageAvailable = isPubliclyAvailablePage(page);
 
   if (!page || !publicPageAvailable) {
-    const offlineContext = await fetchOfflinePageContext(username, supabase);
+    const offlineContext = await getOfflinePageContext(username);
 
     if (!offlineContext) {
       notFound();
@@ -155,6 +168,9 @@ export default async function PublicLivingPage({
       username,
     }).catch(() => undefined);
 
+    const offlineAuthClient = await createServerSupabaseClient();
+    const { data: { user: offlineViewer } } = await offlineAuthClient.auth.getUser();
+    const isOfflineOwner = offlineViewer?.id === offlineContext.ownerId;
     const pageName = offlineContext.page.resume_data?.name?.trim() || username;
 
     return (
@@ -162,14 +178,33 @@ export default async function PublicLivingPage({
         <div className="site-panel-raised mx-auto max-w-3xl p-6 sm:p-10">
           <p className="site-eyebrow">Page unavailable</p>
           <h1 className="site-page-title mt-3">
-            {pageName}&rsquo;s page is being updated.
+            This page is offline right now.
           </h1>
-          <p className="site-muted mt-4 text-base leading-7">
-            This link was live before and can be reactivated anytime. The owner can turn hosting
-            back on from their MyLivingPage settings when they are ready to share it again.
-          </p>
+          {isOfflineOwner ? (
+            <p className="site-muted mt-4 text-base leading-7">
+              Your link was live before and can be reactivated anytime. Turn hosting back on
+              from your settings when you are ready to share it again.
+            </p>
+          ) : (
+            <p className="site-muted mt-4 text-base leading-7">
+              {pageName}&rsquo;s link was live before and can be reactivated anytime. The owner
+              can turn hosting back on from their MyLivingPage settings.
+            </p>
+          )}
           <div className="site-callout mt-6 p-4 text-sm leading-6">
             The URL stays reserved so the page can come back without changing the link.
+          </div>
+          <div className="mt-8">
+            {isOfflineOwner ? (
+              <Link href="/dashboard/settings" className="site-button site-button-primary">
+                Turn hosting back on
+              </Link>
+            ) : (
+              <Link href="/" className="site-nav-link gap-1.5">
+                Go to MyLivingPage
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+            )}
           </div>
         </div>
       </main>
@@ -230,12 +265,13 @@ export default async function PublicLivingPage({
             {/*
               Reserve room for the fixed action dock + "made with" badge so the
               final section stays readable at full scroll. Sized to clear the
-              tallest stack: signed-out = lifted dock + badge; signed-in owner =
+              tallest stack: signed-out = lifted dock + badge (lifted through
+              tablet, so the taller padding holds until lg); signed-in owner =
               unlifted dock carrying the extra share-card button.
             */}
             <div
               data-analytics-scroll-root="true"
-              className="h-full overflow-y-auto scrollbar-hide pb-[calc(env(safe-area-inset-bottom,0px)+8.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)]"
+              className="h-full overflow-y-auto scrollbar-hide pb-[calc(env(safe-area-inset-bottom,0px)+8.5rem)] lg:pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)]"
             >
               <LivingPageSectionRail sectionIds={livingPageSectionIds} />
               {recruiterSkim ? (
@@ -278,8 +314,8 @@ export default async function PublicLivingPage({
         }
         analyticsCtaLabel={
           ownerAccess.analyticsTier === "full"
-            ? "Open Page Analytics"
-            : "Open Dashboard"
+            ? "Open page analytics"
+            : "Open dashboard"
         }
         avoidBadge={!viewer}
       />

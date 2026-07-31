@@ -304,6 +304,61 @@ describe("page analytics aggregation", () => {
     expect(last90Days.overview.views.value).toBe(3);
   });
 
+  it("uses qualitative insight copy below the percent sample threshold", () => {
+    const analytics = buildPageAnalyticsDashboard({
+      rangeKey: "7d",
+      allTimeViews: 2,
+      now: NOW,
+      views: [
+        makeView({
+          id: "view-1",
+          viewedAt: "2026-03-12T10:00:00.000Z",
+          viewerIp: "hash-a",
+          referrer: "https://www.linkedin.com/feed/",
+          engagedSeconds: 90,
+          primarySection: "projects",
+          hadOutboundClick: true,
+        }),
+        makeView({
+          id: "view-2",
+          viewedAt: "2026-03-11T10:00:00.000Z",
+          viewerIp: "hash-b",
+          referrer: "https://www.linkedin.com/in/sample/",
+          engagedSeconds: 60,
+          primarySection: "projects",
+        }),
+      ],
+      interactions: [makeInteraction({ pageViewId: "view-1", targetKey: "email" })],
+    });
+
+    expect(analytics.insights.length).toBeGreaterThan(0);
+    for (const insight of analytics.insights) {
+      expect(insight).not.toContain("%");
+    }
+  });
+
+  it("uses percent insight copy once the sample reaches the threshold", () => {
+    const analytics = buildPageAnalyticsDashboard({
+      rangeKey: "7d",
+      allTimeViews: 3,
+      now: NOW,
+      views: ["hash-a", "hash-b", "hash-c"].map((viewerIp, index) =>
+        makeView({
+          id: `view-${index + 1}`,
+          viewedAt: `2026-03-1${index}T10:00:00.000Z`,
+          viewerIp,
+          referrer: "https://www.linkedin.com/feed/",
+          engagedSeconds: 90,
+          primarySection: "projects",
+          hadOutboundClick: index === 0,
+        }),
+      ),
+      interactions: [makeInteraction({ pageViewId: "view-1", targetKey: "email" })],
+    });
+
+    expect(analytics.insights.some((insight) => insight.includes("%"))).toBe(true);
+  });
+
   it("returns full analytics when the engagement schema is available", async () => {
     const requests: MockQueryRequest[] = [];
     const supabase = createMockSupabase((request) => {
@@ -415,7 +470,7 @@ describe("page analytics aggregation", () => {
     });
 
     expect(analytics.state.availability).toBe("basic");
-    expect(analytics.state.notice).toContain("Detailed engagement analytics");
+    expect(analytics.state.notice).toContain("Detailed reading and click insights");
     expect(analytics.overview.views.value).toBe(1);
     expect(analytics.state.hasEngagement).toBe(false);
     expect(requests.map((request) => `${request.table}:${request.select.includes("engaged_seconds")}`)).toEqual([

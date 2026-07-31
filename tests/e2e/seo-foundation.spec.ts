@@ -65,14 +65,14 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
   const cases = [
     {
       path: "/",
-      title: "Turn Your Résumé Into a Page You Can Share | MyLivingPage",
+      title: "Turn your résumé into a page you can share | MyLivingPage",
       description:
         "Upload your résumé, review a private draft, and publish one professional web page—completely free.",
       pathname: "/",
     },
     {
       path: "/pricing",
-      title: "Simple Pricing: Free | MyLivingPage",
+      title: "Simple pricing: free | MyLivingPage",
       description:
         "Build one living professional page. Shape it for the moment. Share it anywhere.",
       pathname: "/pricing",
@@ -86,16 +86,16 @@ test("public acquisition pages expose unique metadata and canonicals", async ({ 
     },
     {
       path: "/guides",
-      title: "Resume PDF and Living Page Guides | MyLivingPage",
+      title: "Résumé PDF and Living Page guides | MyLivingPage",
       description:
-        "Answer-first guides on checking your Resume PDF, improving search visibility, and using a Living Page alongside your PDF.",
+        "Answer-first guides on checking your Résumé PDF, improving search visibility, and using a Living Page alongside your PDF.",
       pathname: "/guides",
     },
     {
       path: "/guides/resume-pdf-check",
-      title: "Resume PDF Check: How to Make Sure Your PDF Reads Cleanly | MyLivingPage",
+      title: "Résumé PDF check: how to make sure your PDF reads cleanly | MyLivingPage",
       description:
-        "Run a quick Resume PDF check to confirm your file copies clean text and is ready to share.",
+        "Run a quick Résumé PDF check to confirm your file copies clean text and is ready to share.",
       pathname: "/guides/resume-pdf-check",
     },
   ];
@@ -124,7 +124,7 @@ test("homepage, examples, and guide pages emit the expected JSON-LD types", asyn
   await page.goto("/guides/resume-pdf-check");
   jsonLd = await getJsonLdText(page);
   expect(jsonLd).toContain('"@type":"Article"');
-  expect(jsonLd).toContain('"headline":"Resume PDF Check: How to Make Sure Your PDF Reads Cleanly"');
+  expect(jsonLd).toContain('"headline":"Résumé PDF check: how to make sure your PDF reads cleanly"');
 });
 
 test("guide articles link into the funnel with distinct CTA refs", async ({ page }) => {
@@ -134,15 +134,15 @@ test("guide articles link into the funnel with distinct CTA refs", async ({ page
   await expect(page.getByText("Before you send it", { exact: true })).toBeVisible();
   await expect(page.getByText("By MyLivingPage Editorial Team")).toBeVisible();
   await expect(page.locator('time[dateTime="2026-03-20"]')).toHaveText("March 20, 2026");
-  await expect(page.getByRole("link", { name: "Start from the resume you already use" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: /Start from the résumé you already use/ })).toHaveAttribute(
     "href",
     "/signup?ref=guide_resume-pdf-check_build&next=/create",
   );
-  await expect(page.getByRole("link", { name: "See sample pages recruiters can scan quickly" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: /See sample pages recruiters can scan quickly/ })).toHaveAttribute(
     "href",
     "/examples?ref=guide_resume-pdf-check_examples",
   );
-  await expect(page.getByRole("link", { name: "See PDF export and QR-ready share card options" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: /See everything included: PDF export and share card/ })).toHaveAttribute(
     "href",
     "/pricing?ref=guide_resume-pdf-check_pricing",
   );

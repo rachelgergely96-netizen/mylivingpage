@@ -158,7 +158,7 @@ export default function AdminFeedbackInbox({ items }: AdminFeedbackInboxProps) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search message, person, email, or page"
-              className="site-field mt-2 min-h-11 w-full px-3 text-sm"
+              className="site-field mt-2 w-full px-3"
             />
           </div>
           <div
@@ -220,7 +220,7 @@ export default function AdminFeedbackInbox({ items }: AdminFeedbackInboxProps) {
                         {item.sender.displayName}
                       </strong>
                       <span
-                        className={`site-badge py-0.5 text-[10px] ${TYPE_BADGE_CLASSES[item.type]}`}
+                        className={`site-badge py-0.5 text-xs ${TYPE_BADGE_CLASSES[item.type]}`}
                       >
                         {FEEDBACK_TYPE_LABELS[item.type]}
                       </span>
@@ -229,14 +229,14 @@ export default function AdminFeedbackInbox({ items }: AdminFeedbackInboxProps) {
                       {item.message}
                     </span>
                     {item.page ? (
-                      <span className="mt-2 block truncate font-mono text-[10px] text-site-muted">
+                      <span className="mt-2 block truncate font-mono text-xs text-site-muted">
                         {item.page}
                       </span>
                     ) : null}
                   </span>
                   <time
                     dateTime={item.createdAt}
-                    className="shrink-0 font-mono text-[10px] text-site-muted"
+                    className="shrink-0 font-mono text-xs text-site-muted"
                   >
                     {new Date(item.createdAt).toLocaleDateString("en-US", {
                       month: "short",

@@ -29,10 +29,10 @@ export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {
 
   return (
     <footer
-      className="border-t border-site-border bg-site-canvas px-4 py-8 font-site sm:px-6 sm:py-10"
+      className="border-t border-site-border bg-site-canvas py-8 font-site sm:py-10"
       data-site-ui
     >
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-5 text-center md:grid-cols-[auto_minmax(0,1fr)_auto] md:text-left">
+      <div className="site-container grid items-center gap-5 text-center md:grid-cols-[auto_minmax(0,1fr)_auto] md:text-left">
         <Link
           href="/"
           aria-label="Back to home"
@@ -40,22 +40,21 @@ export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {
         >
           <BrandMark siteId={siteId} />
         </Link>
-        <nav
-          aria-label="Legal and policy links"
-          className="w-full border border-site-border bg-site-surface px-4 py-4 sm:px-6"
-        >
+        <nav aria-label="Legal and policy links" className="w-full">
           <p className="site-eyebrow">Legal</p>
           <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm text-site-secondary md:justify-start">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="transition-colors hover:text-site-action-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-focus"
+                className="-mx-1 -my-2 inline-flex min-h-11 items-center px-1 transition-colors hover:text-site-action-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-focus"
               >
                 {link.label}
               </Link>
             ))}
-            {siteId === "mylivingpage" ? <CookieSettingsButton /> : null}
+            {siteId === "mylivingpage" ? (
+              <CookieSettingsButton className="-mx-1 -my-2 inline-flex min-h-11 items-center px-1" />
+            ) : null}
           </div>
         </nav>
         <p className="text-xs text-site-muted md:text-right">

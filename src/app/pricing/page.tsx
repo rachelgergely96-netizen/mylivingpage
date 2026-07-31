@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import GuideLinkGrid from "@/components/marketing/GuideLinkGrid";
+import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import SiteHeader from "@/components/marketing/SiteHeader";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import {
@@ -18,11 +19,11 @@ import {
 const canonicalUrl = getAbsoluteUrl("/pricing");
 
 export const metadata: Metadata = {
-  title: `Simple Pricing: Free | ${SITE_NAME}`,
+  title: "Simple pricing: free",
   description: SITE_DESCRIPTION,
   alternates: { canonical: canonicalUrl },
   openGraph: {
-    title: `Simple Pricing: Free | ${SITE_NAME}`,
+    title: `Simple pricing: free | ${SITE_NAME}`,
     description: SITE_DESCRIPTION,
     url: canonicalUrl,
     siteName: SITE_NAME,
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `Simple Pricing: Free | ${SITE_NAME}`,
+    title: `Simple pricing: free | ${SITE_NAME}`,
     description: SITE_DESCRIPTION,
   },
 };
@@ -55,21 +56,21 @@ export default async function PricingPage() {
         }}
       />
 
-      <main id="main-content" className="site-container py-14 sm:py-20">
-        <section className="site-panel-raised px-5 py-10 text-center sm:px-10 sm:py-14">
+      <main id="main-content" className="site-container py-12 sm:py-16">
+        <section id="pricing-hero" className="site-panel-raised px-5 py-10 text-center sm:px-10 sm:py-14">
           <p className="site-eyebrow">Simple pricing: free</p>
           <h1 className="site-page-title mx-auto mt-4 max-w-4xl">{SITE_TAGLINE}.</h1>
           <p className="mx-auto mt-5 max-w-3xl text-base leading-7 text-site-secondary sm:text-lg">
             {SITE_DESCRIPTION}
           </p>
-          <p className="mx-auto mt-5 max-w-2xl border-l-2 border-site-success pl-4 text-left text-sm leading-6 text-site-secondary">
+          <p className="mx-auto mt-5 max-w-2xl border-l-2 border-site-border-strong pl-4 text-left text-sm leading-6 text-site-secondary">
             No credit card. No trial expiration. No hidden publishing, hosting, or download fee.
           </p>
         </section>
 
-        <section aria-label="Everything included for free" className="mt-8 grid gap-5 lg:grid-cols-3">
+        <section aria-label="Everything included for free" className="mt-12 grid gap-5 sm:mt-20 lg:grid-cols-3">
           {FREE_PRODUCT_FEATURE_GROUPS.map((group, index) => {
-            const featured = index === FREE_PRODUCT_FEATURE_GROUPS.length - 1;
+            const featured = index === 0;
 
             return (
               <article
@@ -83,7 +84,7 @@ export default async function PricingPage() {
                     <p className="site-eyebrow">{group.eyebrow}</p>
                     <h2 className="site-section-title mt-2 text-[2rem]">{group.name}</h2>
                   </div>
-                  {featured ? <span className="site-badge">Included</span> : null}
+                  <span className="site-badge">Included</span>
                 </div>
 
                 <p className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-site-text">Free</p>
@@ -114,26 +115,34 @@ export default async function PricingPage() {
         </section>
 
         <section className="site-callout mt-8 p-5 text-sm sm:p-6">
-          <p className="leading-7">
-            No card. No trial. No paid plan is required or newly offered. Build and publish one
-            Living Page, then keep the same link, ATS-ready PDF, and share card current as your
-            experience grows.
+          <p className="max-w-3xl leading-7">
+            No card. No trial. There is no paid plan. Build and publish one Living Page, then
+            keep the same link, ATS-ready PDF, and share card current as your experience grows.
           </p>
-          <p className="mt-3 text-xs leading-6 text-site-muted">
+          <p className="mt-3 max-w-3xl text-xs leading-6 text-site-muted">
             Already have a legacy subscription? It may continue until canceled in account
             settings. Your free access remains after cancellation.
           </p>
-          <p className="mt-3 text-xs leading-6 text-site-muted">{ATS_READINESS_DISCLOSURE}</p>
+          <p className="mt-3 max-w-3xl text-xs leading-6 text-site-muted">{ATS_READINESS_DISCLOSURE}</p>
         </section>
 
         <GuideLinkGrid
+          id="pricing-guides"
           eyebrow="Guides"
           title="Learn the mechanics before you publish."
-          description="The product is free. These guides help you tighten the Resume PDF, sharpen recruiter search language, and understand when a Living Page adds value beyond an attachment."
-          className="mt-14 sm:mt-20"
+          description="The product is free. These guides help you tighten the Résumé PDF, sharpen recruiter search language, and understand when a Living Page adds value beyond an attachment."
+          className="mt-12 sm:mt-20"
         />
       </main>
 
+      <MobileStickyCta
+        href="/signup?ref=pricing_mobile_start&next=/create"
+        label="Create my free page"
+        supportingText="Free · private until published"
+        targetId="pricing-hero"
+        hideNearId="pricing-guides"
+        dismissStorageKey="mlp-pricing-sticky-dismissed"
+      />
       <SiteLegalFooter siteId={site.id} />
     </div>
   );

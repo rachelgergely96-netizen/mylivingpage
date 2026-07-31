@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ANALYTICS_CONSENT_STORAGE_KEY,
   isAnalyticsEligiblePath,
@@ -41,8 +41,16 @@ export default function AnalyticsConsent() {
   const [choice, setChoice] = useState<AnalyticsConsentChoice | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [analyticsReady, setAnalyticsReady] = useState(false);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const eligible = eligibleHost && isAnalyticsEligiblePath(pathname);
   const analyticsActive = hydrated && eligible && choice === "analytics";
+
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    restoreFocusRef.current?.focus();
+    restoreFocusRef.current = null;
+  }, []);
 
   useEffect(() => {
     let storedChoice: AnalyticsConsentChoice | null = null;
@@ -61,6 +69,25 @@ export default function AnalyticsConsent() {
     window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
     return () => window.removeEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      return;
+    }
+
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    panelRef.current?.focus();
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeSettings();
+      }
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [settingsOpen, closeSettings]);
 
   useEffect(() => {
     if (!analyticsActive) {
@@ -111,7 +138,7 @@ export default function AnalyticsConsent() {
       // The in-memory choice still applies for this page if storage is blocked.
     }
     setChoice(nextChoice);
-    setSettingsOpen(false);
+    closeSettings();
     updateGoogleConsent(nextChoice);
   };
 
@@ -131,11 +158,29 @@ export default function AnalyticsConsent() {
 
       {showPrompt ? (
         <section
+          ref={panelRef}
+          tabIndex={-1}
+          role={settingsOpen ? "dialog" : undefined}
+          aria-modal={settingsOpen ? false : undefined}
           aria-label="Cookie and analytics settings"
-          className="fixed inset-x-3 bottom-3 z-[100] border border-site-border bg-site-surface p-4 shadow-2xl sm:left-auto sm:max-w-xl sm:p-5"
+          className="fixed inset-x-5 bottom-5 z-[100] border border-site-border bg-site-surface p-4 shadow-[var(--site-shadow-overlay)] sm:left-auto sm:max-w-xl sm:p-5"
           data-site-ui
         >
-          <p className="site-eyebrow">Your privacy choice</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="site-eyebrow">Your privacy choice</p>
+            {settingsOpen ? (
+              <button
+                type="button"
+                aria-label="Close cookie settings"
+                className="site-icon-button -mr-2 -mt-2 shrink-0"
+                onClick={closeSettings}
+              >
+                <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            ) : null}
+          </div>
           <h2 className="mt-2 text-lg font-semibold text-site-text">Optional, minimized analytics</h2>
           <p className="mt-2 text-sm leading-6 text-site-secondary">
             With your permission, Google Analytics measures visits on our marketing and policy
@@ -145,17 +190,36 @@ export default function AnalyticsConsent() {
               Cookie Policy
             </Link>.
           </p>
+          {choice !== null ? (
+            <p className="mt-3 text-sm leading-6 text-site-secondary">
+              Current setting:{" "}
+              <span className="font-semibold text-site-text">
+                {choice === "analytics" ? "analytics allowed" : "essential only"}
+              </span>
+              .
+            </p>
+          ) : null}
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
-              className="site-button site-button-secondary"
+              aria-pressed={choice === "essential"}
+              className={`site-button site-button-secondary ${
+                choice === "essential"
+                  ? "border-site-border-strong bg-site-surface-selected text-site-text"
+                  : ""
+              }`}
               onClick={() => saveChoice("essential")}
             >
               Essential only
             </button>
             <button
               type="button"
-              className="site-button site-button-primary"
+              aria-pressed={choice === "analytics"}
+              className={`site-button site-button-secondary ${
+                choice === "analytics"
+                  ? "border-site-border-strong bg-site-surface-selected text-site-text"
+                  : ""
+              }`}
               onClick={() => saveChoice("analytics")}
             >
               Allow analytics

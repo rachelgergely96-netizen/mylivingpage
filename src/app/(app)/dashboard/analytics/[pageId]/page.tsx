@@ -19,6 +19,11 @@ import {
 } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import type { PageRecord } from "@/types/resume";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Page activity",
+};
 
 interface AnalyticsPageProps {
   params: Promise<{ pageId: string }>;
@@ -43,7 +48,7 @@ export default async function AnalyticsPage({
     data: { user },
   } = await authClient.auth.getUser();
 
-  if (!user) notFound();
+  if (!user) redirect("/login");
 
   const supabase = createServiceRoleSupabaseClient();
   const rangeKey = isAnalyticsRangeKey(resolvedSearchParams.range)
@@ -134,7 +139,7 @@ export default async function AnalyticsPage({
   }
 
   return (
-    <main className="site-container py-6 sm:py-10">
+    <main id="main-content" tabIndex={-1} className="site-container-wide max-w-[84rem] py-6 sm:py-10">
       <div className="mb-6 sm:mb-8">
         <Link
           href="/dashboard"
@@ -154,7 +159,7 @@ export default async function AnalyticsPage({
               d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
             />
           </svg>
-          Back to Your Page
+          Back to dashboard
         </Link>
       </div>
 

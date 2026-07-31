@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import PageEditorClient from "@/components/edit/PageEditorClient";
+
+export const metadata: Metadata = {
+  title: "Edit your page",
+};
 
 interface LivingPageEditorRouteProps {
   params: Promise<{ pageId: string }>;

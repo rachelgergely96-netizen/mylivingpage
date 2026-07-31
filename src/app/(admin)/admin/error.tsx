@@ -10,12 +10,13 @@ export default function AdminError({
 }) {
   return (
     <main className={styles.page}>
-      <section className="site-panel-raised border-site-danger p-6 sm:p-8">
+      <section className="site-danger-panel p-6 sm:p-8">
         <p className="site-eyebrow text-site-danger">Admin data unavailable</p>
         <h1 className="site-page-title mt-2">This view could not load safely.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-site-secondary">
-          The dashboard will not turn a database error into a reassuring empty state.
-          Try again, and check system health if the problem continues.
+          The underlying data request failed, so this view shows an error instead
+          of an empty dashboard. Try again, and check system health if the problem
+          continues.
         </p>
         <button type="button" onClick={reset} className="site-button site-button-primary mt-5">
           Try again

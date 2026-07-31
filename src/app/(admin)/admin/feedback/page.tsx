@@ -59,12 +59,16 @@ export default async function AdminFeedbackPage() {
             Search by person, page, or message, then follow up directly by email.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2" aria-label="Feedback summary">
-          <span className="site-badge site-badge-danger">{counts.bug} bugs</span>
-          <span className="site-badge border-site-action bg-site-selected text-site-action-hover">
-            {counts.feature} ideas
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Feedback summary">
+          <span className="site-badge site-badge-danger">
+            {counts.bug} {counts.bug === 1 ? "bug" : "bugs"}
           </span>
-          <span className="site-badge">{counts.general} notes</span>
+          <span className="site-badge border-site-action bg-site-selected text-site-action-hover">
+            {counts.feature} {counts.feature === 1 ? "idea" : "ideas"}
+          </span>
+          <span className="site-badge">
+            {counts.general} {counts.general === 1 ? "note" : "notes"}
+          </span>
         </div>
       </header>
 

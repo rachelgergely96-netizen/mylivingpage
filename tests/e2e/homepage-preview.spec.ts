@@ -11,7 +11,7 @@ test("production homepage makes the value and first action clear above the fold"
   await expect(
     page.getByRole("heading", { name: "Your résumé, alive on the web." }),
   ).toBeVisible();
-  await expect(page.getByText("professional page you can update", { exact: false })).toBeVisible();
+  await expect(page.getByText("one link you can update anytime", { exact: false })).toBeVisible();
   await expect(page.getByLabel("Product assurances")).toContainText("Completely free");
   await expect(page.getByLabel("Product assurances")).toContainText("Private until published");
   await expect(page.getByLabel("Product assurances")).toBeVisible();
@@ -59,7 +59,7 @@ test("the transformation opens on the web page and keeps one résumé source vis
   const story = page.locator("[data-live-product-story]");
   await expect(
     story.getByRole("heading", {
-      name: "One résumé becomes a web page, a PDF, and a shareable card.",
+      name: "See one résumé become a Living Page.",
     }),
   ).toBeVisible();
 
@@ -73,7 +73,7 @@ test("the transformation opens on the web page and keeps one résumé source vis
   await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
   await expect(story.locator("[data-truth-source]")).toBeVisible();
   await expect(story.locator("[data-truth-destination]")).toBeVisible();
-  await expect(story.locator("[data-transform-motion]")).toContainText("Same facts, new form");
+  await expect(story.locator("[data-transform-motion]")).toContainText("Same facts");
   expect(
     await story.locator("[data-transform-motion] b").first().evaluate(
       (node) => getComputedStyle(node).animationName,
@@ -91,7 +91,7 @@ test("the transformation opens on the web page and keeps one résumé source vis
   await expect(story.getByText("Avery-Morgan_Product-Lead.pdf")).toBeVisible();
   await expect(story.locator("[data-story-style-chooser]")).toContainText("Page styles");
   await expect(story.locator("[data-story-style-chooser]")).toContainText(
-    "Choose a style to preview your web page again.",
+    "Pick a look to return to the Living Page.",
   );
 
   await introduction.click();
@@ -122,11 +122,11 @@ test("homepage defines an editable three-step path and a clear stopping point", 
   ).toEqual(["upload", "review", "publish"]);
   await expect(steps.nth(0)).toContainText("Bring your résumé");
   await expect(steps.nth(1)).toContainText("Review your details");
-  await expect(steps.nth(1)).toContainText("Every imported detail stays editable");
-  await expect(steps.nth(2)).toContainText("Publish and share");
+  await expect(steps.nth(1)).toContainText("Every field stays editable");
+  await expect(steps.nth(2)).toContainText("Publish your page");
 
   const shortcut = page.locator("[data-overwhelmed-shortcut]");
-  await expect(shortcut).toContainText("A simple first visit");
+  await expect(shortcut).toContainText("First visit");
   await expect(shortcut.locator("[data-stopping-point]")).toContainText("You can stop there");
   const shortcutLink = shortcut.getByRole("link", { name: "Create my free page" });
   await expect(shortcutLink).toHaveAttribute(
@@ -144,35 +144,35 @@ test("homepage explains readable content and the always-free promise without ove
   const searchReadiness = page.locator("[data-search-readiness]");
   await expect(
     searchReadiness.getByRole("heading", {
-      name: "The design can change. Your details stay easy to read.",
+      name: "Your style can change. Your details stay clear.",
     }),
   ).toBeVisible();
-  await expect(searchReadiness).toContainText("hiring software (often called an ATS)");
+  await expect(searchReadiness).toContainText("hiring software (ATS)");
   const readableDetails = searchReadiness.locator("[data-readable-detail-types]");
   await expect(readableDetails).toContainText("Job titles");
-  await expect(readableDetails).toContainText("The roles you have held");
+  await expect(readableDetails).toContainText("The roles you've held");
   await expect(readableDetails).toContainText("Skills");
   await expect(readableDetails).toContainText("What you know how to do");
   await expect(readableDetails).toContainText("Results");
   await expect(readableDetails).toContainText("What changed because of your work");
   await expect(
-    searchReadiness.getByRole("heading", { name: "PDF for job applications" }),
+    searchReadiness.getByRole("heading", { name: "Export a clean PDF" }),
   ).toBeVisible();
   await expect(
-    searchReadiness.getByRole("heading", { name: "Easy for recruiters and hiring tools to read" }),
+    searchReadiness.getByRole("heading", { name: "Keep the structure legible" }),
   ).toBeVisible();
   await expect(
-    searchReadiness.getByRole("heading", { name: "One link you can keep using" }),
+    searchReadiness.getByRole("heading", { name: "Update without a new link" }),
   ).toBeVisible();
   await expect(searchReadiness).toContainText(
-    "does not invent experience or guarantee how hiring software will read or rank your résumé",
+    "does not invent experience, guarantee how hiring software will read or rank a résumé",
   );
 
   const freePromise = searchReadiness.locator("[data-free-promise]");
   await expect(
-    freePromise.getByRole("heading", { name: "Everything shown here is free." }),
+    freePromise.getByRole("heading", { name: "Everything on this page is free." }),
   ).toBeVisible();
-  await expect(freePromise).toContainText("No credit card or subscription.");
+  await expect(freePromise).toContainText("No credit card. No subscription.");
   await expect(freePromise).toContainText("No trial. No hidden fees.");
 });
 
@@ -182,8 +182,8 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   const story = page.locator("[data-live-product-story]");
   const chooser = story.locator("[data-story-style-chooser]");
   await chooser.scrollIntoViewIfNeeded();
-  await expect(chooser).toContainText(/\d+ page styles/);
-  await expect(chooser).toContainText("Your information stays the same");
+  await expect(chooser).toContainText("59 page styles");
+  await expect(chooser).toContainText("Same information");
 
   const stageBox = await story.locator("[data-story-stage]").boundingBox();
   const chooserBox = await chooser.boundingBox();
@@ -195,10 +195,13 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
     name: "Choose a page style",
   });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
+  const transform = story.locator("[data-transform-motion]");
+  await expect(transform).toHaveAttribute("data-transform-cycle", "0");
   await expect(directions.getByRole("radio")).toHaveCount(5);
   await calm.click();
 
   await expect(calm).toHaveAttribute("aria-checked", "true");
+  await expect(transform).toHaveAttribute("data-transform-cycle", "0");
   await expect(story.getByRole("button", { name: /Web page/ }))
     .toHaveAttribute("aria-pressed", "true");
   const livingOutput = story.locator("[data-story-living-output]");
@@ -270,7 +273,7 @@ test("tablet and mobile layouts stay usable without horizontal overflow", async 
   await expect(page.getByTestId("homepage-primary-cta")).toBeVisible();
   await expect(page.getByRole("link", { name: "See an example" })).toBeVisible();
   await expect(page.locator("[data-story-mobile-summary]")).toContainText(
-    "Choose an output above. Your information stays the same.",
+    "Pick an output. Your facts stay the same.",
   );
   const sourceBox = await page.locator("[data-truth-source]").boundingBox();
   expect(sourceBox).not.toBeNull();

@@ -51,12 +51,13 @@ export function LandingStoryShareCard({
       data-theme-id={visual.themeId}
       data-theme-detail={visual.contentProfile}
       data-theme-collection={visual.collection}
-      className="relative min-w-0 overflow-hidden border border-site-border bg-site-canvas-alt p-1 shadow-[0_16px_44px_rgba(2,6,23,0.3)] sm:p-2 sm:shadow-[0_24px_70px_rgba(2,6,23,0.34)]"
+      data-share-card-preview-stage
+      className="relative min-w-0 overflow-visible border border-site-border bg-black p-2 shadow-[0_16px_44px_rgba(2,6,23,0.3)] sm:p-3 sm:shadow-[0_24px_70px_rgba(2,6,23,0.34)]"
     >
       <Heading className="sr-only">
         {model.name}&rsquo;s {visual.themeName} share card
       </Heading>
-      <TiltCard>
+      <TiltCard lift={14} max={5} targetSelector="[data-share-card-panel]">
         <ScaledShareCardArtwork
           animatedShine
           ctaHeadline={qrLabel}

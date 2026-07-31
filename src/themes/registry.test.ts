@@ -3,6 +3,9 @@ import { THEME_MAP, THEME_REGISTRY } from "@/themes/registry";
 import {
   THEME_CONTENT_PROFILE_IDS,
   THEME_IDS,
+  THEME_MATERIAL_PROFILE_IDS,
+  THEME_READING_MODE_IDS,
+  THEME_SIGNATURE_EXPERIENCE_IDS,
   type ThemeId,
 } from "@/themes/types";
 
@@ -13,7 +16,7 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     accentSoft: "rgba(91, 226, 193, 0.11)",
     accentBorder: "rgba(130, 243, 208, 0.28)",
     scrim:
-      "linear-gradient(90deg, rgba(2, 8, 20, 0.7) 0%, rgba(2, 8, 20, 0.42) 50%, rgba(2, 8, 20, 0.12) 100%)",
+      "linear-gradient(90deg, rgba(2, 8, 20, 0.86) 0%, rgba(2, 8, 20, 0.66) 50%, rgba(2, 8, 20, 0.34) 100%)",
   },
   atlas: {
     accent: "#67D6FF",
@@ -21,17 +24,17 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     accentSoft: "rgba(50, 193, 255, 0.11)",
     accentBorder: "rgba(103, 214, 255, 0.3)",
     scrim:
-      "linear-gradient(90deg, rgba(1, 9, 15, 0.76) 0%, rgba(1, 9, 15, 0.5) 47%, rgba(1, 9, 15, 0.1) 100%)",
+      "linear-gradient(90deg, rgba(1, 9, 15, 0.86) 0%, rgba(1, 9, 15, 0.66) 47%, rgba(1, 9, 15, 0.34) 100%)",
   },
   velvet: {
     accent: "#E8A7B9",
     accentBright: "#FFD9E2",
     accentSoft: "rgba(232, 117, 151, 0.12)",
     accentBorder: "rgba(244, 168, 190, 0.3)",
-    surface: "rgba(30, 7, 18, 0.48)",
-    surfaceStrong: "rgba(30, 7, 18, 0.74)",
+    surface: "rgba(30, 7, 18, 0.76)",
+    surfaceStrong: "rgba(30, 7, 18, 0.92)",
     scrim:
-      "linear-gradient(90deg, rgba(15, 3, 10, 0.7) 0%, rgba(15, 3, 10, 0.42) 50%, rgba(15, 3, 10, 0.2) 100%)",
+      "linear-gradient(90deg, rgba(15, 3, 10, 0.86) 0%, rgba(15, 3, 10, 0.66) 50%, rgba(15, 3, 10, 0.36) 100%)",
   },
   quarry: {
     accent: "#E9AF72",
@@ -39,7 +42,7 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     accentSoft: "rgba(217, 143, 72, 0.12)",
     accentBorder: "rgba(233, 175, 114, 0.29)",
     scrim:
-      "linear-gradient(90deg, rgba(12, 8, 5, 0.72) 0%, rgba(12, 8, 5, 0.4) 52%, rgba(12, 8, 5, 0.14) 100%)",
+      "linear-gradient(90deg, rgba(12, 8, 5, 0.86) 0%, rgba(12, 8, 5, 0.66) 52%, rgba(12, 8, 5, 0.34) 100%)",
   },
   atelier: {
     accent: "#A83D2B",
@@ -47,9 +50,18 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     accentSoft: "rgba(230, 111, 85, 0.13)",
     accentBorder: "rgba(24, 22, 27, 0.34)",
     text: "#18161B",
-    surface: "rgba(246, 240, 224, 0.76)",
+    textMuted: "rgba(24, 22, 27, 0.82)",
+    textSubtle: "rgba(24, 22, 27, 0.68)",
+    surface: "rgba(246, 240, 224, 0.9)",
+    surfaceStrong: "rgba(246, 240, 224, 0.97)",
     scrim:
-      "linear-gradient(90deg, rgba(232, 223, 207, 0.82) 0%, rgba(232, 223, 207, 0.56) 50%, rgba(232, 223, 207, 0.08) 100%)",
+      "linear-gradient(90deg, rgba(232, 223, 207, 0.92) 0%, rgba(232, 223, 207, 0.74) 50%, rgba(232, 223, 207, 0.34) 100%)",
+  },
+  axiom: {
+    surface: "rgba(4, 7, 19, 0.76)",
+    surfaceStrong: "rgba(4, 7, 19, 0.92)",
+    scrim:
+      "linear-gradient(90deg, rgba(4, 7, 19, 0.86) 0%, rgba(4, 7, 19, 0.66) 50%, rgba(4, 7, 19, 0.34) 100%)",
   },
   nocturne: {
     accent: "#C8D4FF",
@@ -57,7 +69,19 @@ const SIGNATURE_PRESENTATION_OVERRIDES = {
     accentSoft: "rgba(151, 171, 255, 0.11)",
     accentBorder: "rgba(200, 212, 255, 0.27)",
     scrim:
-      "linear-gradient(90deg, rgba(3, 5, 14, 0.72) 0%, rgba(3, 5, 14, 0.42) 52%, rgba(3, 5, 14, 0.1) 100%)",
+      "linear-gradient(90deg, rgba(3, 5, 14, 0.86) 0%, rgba(3, 5, 14, 0.66) 52%, rgba(3, 5, 14, 0.34) 100%)",
+  },
+  sakura: {
+    surface: "rgba(24, 10, 17, 0.8)",
+    surfaceStrong: "rgba(24, 10, 17, 0.94)",
+    scrim:
+      "linear-gradient(90deg, rgba(15, 6, 11, 0.9) 0%, rgba(15, 6, 11, 0.72) 54%, rgba(15, 6, 11, 0.4) 100%)",
+  },
+  solstice: {
+    surface: "rgba(22, 10, 5, 0.8)",
+    surfaceStrong: "rgba(22, 10, 5, 0.94)",
+    scrim:
+      "linear-gradient(90deg, rgba(12, 5, 2, 0.9) 0%, rgba(12, 5, 2, 0.72) 52%, rgba(12, 5, 2, 0.4) 100%)",
   },
 } as const;
 
@@ -68,6 +92,12 @@ function backgroundChannels(background: string): string {
     .slice(1)
     .map((channel) => Number.parseInt(channel, 16))
     .join(", ");
+}
+
+function rgbaAlpha(value: string): number {
+  const match = /rgba\([^)]*,\s*([0-9.]+)\)/.exec(value);
+  expect(match).not.toBeNull();
+  return Number(match?.[1] ?? 0);
 }
 
 describe("theme registry", () => {
@@ -90,7 +120,42 @@ describe("theme registry", () => {
   it("identifies the redesigned signature set", () => {
     expect(
       THEME_REGISTRY.filter((theme) => theme.signature).map((theme) => theme.id),
-    ).toEqual(["aurora", "atlas", "velvet", "quarry", "atelier", "nocturne"]);
+    ).toEqual([
+      "aurora",
+      "sakura",
+      "atlas",
+      "velvet",
+      "quarry",
+      "atelier",
+      "solstice",
+      "axiom",
+      "nocturne",
+    ]);
+  });
+
+  it("assigns the six signature experiences to their authored themes", () => {
+    const experienceThemes = THEME_REGISTRY.filter(
+      (theme) => theme.signatureExperience,
+    );
+
+    expect(
+      experienceThemes.map((theme) => [
+        theme.id,
+        theme.signatureExperience?.id,
+      ]),
+    ).toEqual([
+      ["sakura", "bloom-composition"],
+      ["atlas", "achievement-atlas"],
+      ["atelier", "editorial-feature"],
+      ["solstice", "solar-briefing"],
+      ["axiom", "proof-museum"],
+      ["nocturne", "midnight-edition"],
+    ]);
+    expect(
+      new Set(
+        experienceThemes.map((theme) => theme.signatureExperience?.id),
+      ),
+    ).toEqual(new Set(THEME_SIGNATURE_EXPERIENCE_IDS));
   });
 
   it("assigns every theme its own authored accent family", () => {
@@ -118,12 +183,63 @@ describe("theme registry", () => {
     );
   });
 
+  it("assigns every content profile an explicit reading mode", () => {
+    const validModes = new Set(THEME_READING_MODE_IDS);
+
+    for (const theme of THEME_REGISTRY) {
+      expect(validModes.has(theme.readingMode)).toBe(true);
+    }
+
+    expect(new Set(THEME_REGISTRY.map((theme) => theme.readingMode))).toEqual(
+      validModes,
+    );
+  });
+
+  it("assigns every content language a complete material system", () => {
+    const validProfiles = new Set(THEME_MATERIAL_PROFILE_IDS);
+    const expectedByContentProfile = {
+      precision: "engraved",
+      cartography: "engraved",
+      cinema: "refractive",
+      "night-editorial": "refractive",
+      material: "organic-glass",
+      botanical: "organic-glass",
+      couture: "refractive",
+      "print-studio": "engraved",
+      ornamental: "organic-glass",
+      celestial: "refractive",
+    } as const;
+
+    for (const theme of THEME_REGISTRY) {
+      expect(theme.materialProfile).toBe(
+        expectedByContentProfile[theme.contentProfile],
+      );
+      expect(validProfiles.has(theme.materialProfile)).toBe(true);
+      if (theme.materialProfile === "refractive") {
+        expect(theme.readingMode).toBe("glass");
+      }
+      if (theme.materialProfile === "engraved") {
+        expect(theme.readingMode).toBe("solid");
+      }
+      if (
+        theme.materialProfile === "organic-glass" &&
+        theme.readingMode === "solid"
+      ) {
+        expect(theme.contentProfile).toBe("material");
+      }
+    }
+
+    expect(new Set(THEME_REGISTRY.map((theme) => theme.materialProfile))).toEqual(
+      validProfiles,
+    );
+  });
+
   it("derives non-signature surfaces from each theme background", () => {
     for (const theme of THEME_REGISTRY.filter(({ signature }) => !signature)) {
       const channels = backgroundChannels(theme.background);
 
-      expect(theme.presentation.surface).toBe(`rgba(${channels}, 0.56)`);
-      expect(theme.presentation.surfaceStrong).toBe(`rgba(${channels}, 0.8)`);
+      expect(theme.presentation.surface).toBe(`rgba(${channels}, 0.76)`);
+      expect(theme.presentation.surfaceStrong).toBe(`rgba(${channels}, 0.92)`);
     }
   });
 
@@ -132,8 +248,22 @@ describe("theme registry", () => {
       const channels = backgroundChannels(theme.background);
 
       expect(theme.presentation.scrim).toBe(
-        `linear-gradient(90deg, rgba(${channels}, 0.8) 0%, rgba(${channels}, 0.52) 50%, rgba(${channels}, 0.12) 100%)`,
+        `linear-gradient(90deg, rgba(${channels}, 0.86) 0%, rgba(${channels}, 0.66) 50%, rgba(${channels}, 0.34) 100%)`,
       );
+    }
+  });
+
+  it("keeps every semantic text and surface token above the readability floor", () => {
+    for (const theme of THEME_REGISTRY) {
+      expect(rgbaAlpha(theme.presentation.textMuted), `${theme.id} muted text`).toBeGreaterThanOrEqual(0.82);
+      expect(rgbaAlpha(theme.presentation.textSubtle), `${theme.id} subtle text`).toBeGreaterThanOrEqual(0.68);
+      expect(rgbaAlpha(theme.presentation.surface), `${theme.id} surface`).toBeGreaterThanOrEqual(0.76);
+      expect(rgbaAlpha(theme.presentation.surfaceStrong), `${theme.id} strong surface`).toBeGreaterThanOrEqual(0.92);
+
+      const edgeAlpha = Array.from(
+        theme.presentation.scrim.matchAll(/rgba\([^)]*,\s*([0-9.]+)\)\s+100%/g),
+      ).at(-1);
+      expect(Number(edgeAlpha?.[1] ?? 0), `${theme.id} scrim edge`).toBeGreaterThanOrEqual(0.34);
     }
   });
 
@@ -145,12 +275,15 @@ describe("theme registry", () => {
     }
   });
 
-  it("keeps signature surfaces on their established presentation model", () => {
-    expect(THEME_MAP.aurora.presentation.surface).toBe("rgba(7, 9, 20, 0.5)");
-    expect(THEME_MAP.atlas.presentation.surface).toBe("rgba(4, 15, 25, 0.5)");
-    expect(THEME_MAP.velvet.presentation.surface).toBe("rgba(30, 7, 18, 0.48)");
-    expect(THEME_MAP.quarry.presentation.surface).toBe("rgba(19, 13, 9, 0.5)");
-    expect(THEME_MAP.atelier.presentation.surface).toBe("rgba(246, 240, 224, 0.76)");
-    expect(THEME_MAP.nocturne.presentation.surface).toBe("rgba(7, 9, 20, 0.5)");
+  it("keeps signature surfaces theme-specific while applying the shared contrast floor", () => {
+    expect(THEME_MAP.aurora.presentation.surface).toBe("rgba(7, 9, 20, 0.76)");
+    expect(THEME_MAP.atlas.presentation.surface).toBe("rgba(4, 15, 25, 0.76)");
+    expect(THEME_MAP.velvet.presentation.surface).toBe("rgba(30, 7, 18, 0.76)");
+    expect(THEME_MAP.quarry.presentation.surface).toBe("rgba(19, 13, 9, 0.76)");
+    expect(THEME_MAP.atelier.presentation.surface).toBe("rgba(246, 240, 224, 0.9)");
+    expect(THEME_MAP.axiom.presentation.surface).toBe("rgba(4, 7, 19, 0.76)");
+    expect(THEME_MAP.nocturne.presentation.surface).toBe("rgba(7, 9, 20, 0.76)");
+    expect(THEME_MAP.sakura.presentation.surface).toBe("rgba(24, 10, 17, 0.8)");
+    expect(THEME_MAP.solstice.presentation.surface).toBe("rgba(22, 10, 5, 0.8)");
   });
 });

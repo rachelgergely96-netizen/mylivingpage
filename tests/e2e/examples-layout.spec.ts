@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("examples puts a live sample and clear sharing moments in the first screen", async ({
+test("examples leads with a Living Page and keeps the switcher simple", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -11,23 +11,50 @@ test("examples puts a live sample and clear sharing moments in the first screen"
 
   await expect(
     page.getByRole("heading", {
-      name: "See what someone sees when they open your link.",
+      name: "See a Living Page in action.",
     }),
   ).toBeVisible();
-  await expect(page.getByRole("tab", { name: /A recruiter is interested/ })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /After applying/ })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: /After applying/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Recruiter interested/ })).toHaveAttribute(
     "aria-selected",
     "true",
   );
   await expect(stage.locator("canvas[aria-hidden='true']")).toBeVisible();
   await expect(stage).toBeInViewport({ ratio: 0.35 });
   await expect(stage).toHaveCSS("transform", "none");
-
-  await page.getByRole("tab", { name: /A recruiter is interested/ }).click();
+  await expect(page.getByText("What the link changes")).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Software engineer re-entering the market" }),
+    page.getByText("Need the résumé vs. page distinction?"),
   ).toBeVisible();
-  await expect(page.locator("#laid-off-tech")).toBeVisible();
+
+  const desktopFlow = await page.evaluate(() => {
+    const stageElement = document.querySelector<HTMLElement>("[data-example-stage]");
+    const switcher = document.querySelector<HTMLElement>("[data-example-switcher]");
+    const experienceElement = document.querySelector<HTMLElement>(
+      "[data-examples-experience]",
+    );
+    const stageRect = stageElement?.getBoundingClientRect();
+    const switcherRect = switcher?.getBoundingClientRect();
+    const experienceRect = experienceElement?.getBoundingClientRect();
+    return {
+      deadSpace: experienceRect && stageRect
+        ? experienceRect.bottom - stageRect.bottom
+        : Number.POSITIVE_INFINITY,
+      previewLeads:
+        Boolean(stageRect && switcherRect) && stageRect!.left < switcherRect!.left,
+      previewWider:
+        Boolean(stageRect && switcherRect) && stageRect!.width > switcherRect!.width,
+    };
+  });
+  expect(desktopFlow.previewLeads).toBe(true);
+  expect(desktopFlow.previewWider).toBe(true);
+  expect(desktopFlow.deadSpace).toBeLessThanOrEqual(2);
+
+  await page.getByRole("tab", { name: /After applying/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Early-career litigation attorney" }),
+  ).toBeVisible();
+  await expect(page.locator("#early-career-attorney")).toBeVisible();
 
   const momentButtons = experience.getByRole("tab");
   for (const button of await momentButtons.all()) {
@@ -42,13 +69,21 @@ test("examples puts a live sample and clear sharing moments in the first screen"
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("examples stays compact on mobile and keeps modal controls fixed", async ({ page }) => {
+test("examples keeps the complete Living Page inside its compact mobile preview", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/examples");
 
-  await page.getByRole("tab", { name: /A referral asks/ }).click();
   const stage = page.locator("[data-example-stage]");
+  const switcher = page.locator("[data-example-switcher]");
+  const mobileOrder = await Promise.all([stage.boundingBox(), switcher.boundingBox()]);
+  expect(mobileOrder[0]).not.toBeNull();
+  expect(mobileOrder[1]).not.toBeNull();
+  expect(mobileOrder[0]!.y).toBeLessThan(mobileOrder[1]!.y);
+
+  await page.getByRole("tab", { name: /Referral asks/ }).click();
   await expect(
     page.getByRole("heading", { name: "Designer moving into a new in-house role" }),
   ).toBeVisible();
@@ -58,23 +93,33 @@ test("examples stays compact on mobile and keeps modal controls fixed", async ({
   );
   expect(Number.parseFloat(animationDuration || "0")).toBeLessThanOrEqual(0.00001);
 
-  await stage
-    .getByRole("button", { name: /Open full sample for Morgan Sample/ })
-    .click();
-  const dialog = page.getByRole("dialog", { name: /Morgan Sample/ });
-  const closeButton = dialog.getByRole("button", { name: "Close large preview" });
-  await expect(closeButton).toBeInViewport();
-  const overlayZIndex = await page.locator("[data-example-preview-overlay]").evaluate(
-    (element) => Number.parseInt(window.getComputedStyle(element).zIndex, 10),
-  );
-  const stickyZIndex = await page.getByTestId("mobile-sticky-cta").evaluate(
-    (element) => Number.parseInt(window.getComputedStyle(element).zIndex, 10),
-  );
-  expect(overlayZIndex).toBeGreaterThan(stickyZIndex);
+  const preview = stage.locator("[data-example-living-page]");
+  const scrollRoot = preview.getByRole("region", {
+    name: "Morgan Sample sample Living Page",
+  });
+  await expect(preview.locator("[data-resume-density='full']")).toBeVisible();
+  expect((await preview.boundingBox())?.height).toBeLessThanOrEqual(353);
+  await expect(
+    stage.getByRole("button", { name: /Open full sample/ }),
+  ).toHaveCount(0);
+  await expect(page.locator("[data-example-preview-overlay]")).toHaveCount(0);
+  expect(
+    await scrollRoot.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
 
-  await dialog.getByRole("button", { name: "Next chapter: Impact" }).click();
-  await expect(closeButton).toBeInViewport();
-  await closeButton.click();
+  await preview.getByRole("button", { name: "Next chapter: Impact" }).click();
+  await expect
+    .poll(() => scrollRoot.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+
+  await page.getByRole("tab", { name: /Recruiter interested/ }).click();
+  const nextScrollRoot = page.getByRole("region", {
+    name: "Avery Sample sample Living Page",
+  });
+  await expect(nextScrollRoot).toBeVisible();
+  expect(await nextScrollRoot.evaluate((element) => element.scrollTop)).toBe(0);
 
   await page.locator("#choose-a-moment").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("mobile-sticky-cta")).toHaveAttribute(

@@ -253,6 +253,7 @@ export default function ResumeLayout({
             {data.stats.slice(0, 4).map((stat, statIndex) => (
               <article
                 key={`${stat.label}-${stat.value}`}
+                data-stat-index={statIndex}
                 data-motion-item={`stat-${stat.label}`}
                 data-motion-kind="stat"
                 className="resume-theme-card rounded-none border p-2.5 text-center sm:p-3"
@@ -269,14 +270,17 @@ export default function ResumeLayout({
           </section>
         ) : null}
 
-        {/* ── Experience ──────────────────────────────────────────── */}
+        {/* ── Proof ───────────────────────────────────────────────── */}
         {proofs.length ? (
           <section
             data-motion-section="proof"
             data-analytics-section="proof"
             className={`resume-theme-section ${compact ? "mb-3 sm:mb-4" : "mb-6 sm:mb-8"}`}
           >
-            <div className="mb-2 flex items-center justify-between gap-3">
+            <div
+              data-section-heading
+              className="mb-2 flex items-center justify-between gap-3"
+            >
               <h2
                 data-motion-kind="section-title"
                 data-attention-role="section-title"
@@ -290,7 +294,10 @@ export default function ResumeLayout({
                 </span>
               ) : null}
             </div>
-            <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
+            <div
+              data-proof-grid
+              className="grid gap-2 sm:gap-3 md:grid-cols-2"
+            >
               {proofs.map((proof, proofIndex) => {
                 const proofUrl =
                   !disableExternalLinks && proof.url
@@ -300,6 +307,7 @@ export default function ResumeLayout({
                 return (
                   <article
                     key={proof.id}
+                    data-proof-index={proofIndex}
                     data-motion-item={`proof-${proof.id}`}
                     data-motion-kind="proof"
                     className="resume-theme-card-accent rounded-none border p-3 sm:p-4"
@@ -358,13 +366,17 @@ export default function ResumeLayout({
             className={`resume-theme-section ${compact ? "mb-3 sm:mb-4" : "mb-6 sm:mb-8"}`}
           >
             <h2
+              data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
               className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
             >
               Testimonials
             </h2>
-            <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
+            <div
+              data-testimonial-grid
+              className="grid gap-2 sm:gap-3 md:grid-cols-2"
+            >
               {testimonials.map((testimonial) => (
                 <article
                   key={testimonial.id}
@@ -393,16 +405,18 @@ export default function ResumeLayout({
             className={`resume-theme-section ${compact ? "mb-3 sm:mb-4" : "mb-6 sm:mb-8"}`}
           >
             <h2
+              data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
               className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
             >
               Experience
             </h2>
-            <div className="space-y-2">
-              {experience.map((exp) => (
+            <div data-experience-list className="space-y-2">
+              {experience.map((exp, experienceIndex) => (
                 <article
                   key={`${exp.company}-${exp.title}-${exp.dates}`}
+                  data-experience-index={experienceIndex}
                   data-motion-item={`experience-${exp.company}-${exp.title}`}
                   data-motion-kind="experience"
                   className={`resume-theme-card rounded-none border ${compact ? "p-2.5 sm:p-3" : "p-3 sm:p-4"}`}
@@ -429,7 +443,12 @@ export default function ResumeLayout({
                         ) : exp.company}
                       </span>
                     </p>
-                    <p className="resume-theme-subtle font-mono text-[11px]">{exp.dates}</p>
+                    <p
+                      data-experience-dates
+                      className="resume-theme-subtle font-mono text-[11px]"
+                    >
+                      {exp.dates}
+                    </p>
                   </div>
                   {!compact && exp.highlights?.length ? (
                     // The editor authors highlights one per line, so render them
@@ -464,14 +483,15 @@ export default function ResumeLayout({
             className="resume-theme-section mb-6 sm:mb-8"
           >
             <h2
+              data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
               className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
             >
               Projects
             </h2>
-            <div className="space-y-2">
-              {data.projects.map((project) => {
+            <div data-project-list className="space-y-2">
+              {data.projects.map((project, projectIndex) => {
                 const projectUrl = !disableExternalLinks && project.url
                   ? (project.url.startsWith("http") ? project.url : `https://${project.url}`)
                   : null;
@@ -485,6 +505,7 @@ export default function ResumeLayout({
                 return (
                   <article
                     key={project.name}
+                    data-project-index={projectIndex}
                     data-motion-item={`project-${project.name}`}
                     data-motion-kind="project"
                   >
@@ -556,13 +577,14 @@ export default function ResumeLayout({
             className="resume-theme-section mb-6 sm:mb-8"
           >
             <h2
+              data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
               className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
             >
               Education
             </h2>
-            <div className="space-y-2">
+            <div data-education-list className="space-y-2">
               {data.education.map((education) => (
                 <article
                   key={`${education.school}-${education.degree}-${education.year}`}
@@ -590,13 +612,14 @@ export default function ResumeLayout({
             className={`resume-theme-section ${compact ? "mb-3" : "mb-6 sm:mb-8"}`}
           >
             <h2
+              data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
               className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
             >
               Skills
             </h2>
-            <div className="space-y-3">
+            <div data-skill-list className="space-y-3">
               {skills.map((group) => (
                 <div key={group.category}>
                   {skills.length > 1 ? (
@@ -628,13 +651,14 @@ export default function ResumeLayout({
             className="resume-theme-section"
           >
             <h2
+              data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
               className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
             >
               Certifications
             </h2>
-            <div className="space-y-2">
+            <div data-certification-list className="space-y-2">
               {certs.map((cert) => (
                 <div
                   key={cert.name}

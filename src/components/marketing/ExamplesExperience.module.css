@@ -1,41 +1,27 @@
 .experience {
   display: grid;
-  grid-template-columns: minmax(20rem, 0.72fr) minmax(0, 1.28fr);
-  overflow: hidden;
+  gap: 1rem;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: clamp(1.5rem, 4vw, 4rem);
   border: 1px solid var(--site-border-strong);
-  background: var(--site-surface-raised);
-  box-shadow: var(--site-shadow-raised);
-}
-
-.controlPanel {
-  position: relative;
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2rem;
-  border-right: 1px solid var(--site-border);
-  padding: clamp(1.5rem, 4vw, 3rem);
   background:
-    linear-gradient(145deg, var(--site-action-soft), transparent 38%),
+    linear-gradient(120deg, var(--site-action-soft), transparent 42%),
     var(--site-surface-raised);
-}
-
-.controlPanel::after {
-  position: absolute;
-  right: -1px;
-  top: 0;
-  width: 1px;
-  height: 7rem;
-  background: var(--site-action);
-  content: "";
+  box-shadow: var(--site-shadow-raised);
+  padding: clamp(1.5rem, 4vw, 2.75rem);
 }
 
 .title {
-  max-width: 13ch;
-  margin-top: 1rem;
+  max-width: 18ch;
+  margin-top: 0.8rem;
   color: var(--site-text);
   font-family: var(--font-dm-sans), sans-serif;
-  font-size: clamp(2.5rem, 5vw, 4.75rem);
+  font-size: clamp(2.5rem, 5vw, 4.4rem);
   font-weight: 600;
   letter-spacing: -0.055em;
   line-height: 0.98;
@@ -43,111 +29,65 @@
 
 .lead {
   max-width: 38rem;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   color: var(--site-text-secondary);
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
-  line-height: 1.7;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.6;
 }
 
 .disclosure {
-  max-width: 36rem;
-  margin-top: 1rem;
+  margin-top: 0.55rem;
   color: var(--site-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.6;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.introActions {
+  min-width: min(100%, 17rem);
 }
 
 .heroActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.75rem;
+  justify-content: flex-end;
 }
 
-.trustStrip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--site-border);
-  color: var(--site-text-secondary);
-  font-size: 0.75rem;
-}
-
-.trustStrip span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.trustStrip span::before {
-  width: 0.35rem;
-  height: 0.35rem;
-  background: var(--site-action);
-  content: "";
-}
-
-.signalBlock {
-  padding: 1rem;
-  border: 1px solid var(--site-border);
-  background: var(--site-canvas-alt);
-}
-
-.signalFlow {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
+.trustLine {
   margin-top: 0.75rem;
-  overflow: hidden;
-  background: var(--site-border);
+  color: var(--site-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: right;
 }
 
-.signalFlow > span:not(.signalPulse) {
-  position: relative;
-  z-index: 1;
-  min-height: 5.5rem;
-  padding: 1rem 0.75rem;
-  background: var(--site-surface);
-  color: var(--site-text-secondary);
-  font-size: 0.75rem;
-  line-height: 1.45;
+.showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(17rem, 0.55fr);
+  align-items: start;
+  gap: 1rem;
 }
 
-.signalFlow small {
-  display: block;
-  margin-bottom: 0.75rem;
-  color: var(--site-action);
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+.stage {
+  min-width: 0;
+  border: 1px solid var(--site-border-strong);
+  background:
+    linear-gradient(180deg, var(--site-action-soft), transparent 16rem),
+    var(--site-canvas-alt);
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  animation: stage-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.signalPulse {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  width: 33.333%;
-  height: 2px;
-  background: var(--site-action);
-  box-shadow: 0 0 18px var(--site-action);
-  animation: signal-travel 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.resumeRule {
-  margin-top: 0.9rem;
-  color: var(--site-text-secondary);
-  font-size: 0.8rem;
-  line-height: 1.6;
+.controlPanel {
+  position: sticky;
+  top: 5rem;
+  min-width: 0;
+  border: 1px solid var(--site-border-strong);
+  background: var(--site-surface-raised);
+  box-shadow: var(--site-shadow-raised);
+  padding: clamp(1rem, 2.5vw, 1.5rem);
 }
 
 .momentPicker {
   scroll-margin-top: 6rem;
-  padding-top: 0.25rem;
 }
 
 .pickerHeading h2 {
@@ -170,7 +110,7 @@
 
 .momentTabs button,
 .sampleChoices button {
-  min-height: 3.75rem;
+  min-height: 3.25rem;
   border: 0;
   background: var(--site-canvas-alt);
   color: var(--site-text-secondary);
@@ -182,60 +122,55 @@
 .momentTabs button {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
   column-gap: 0.65rem;
-  padding: 0.85rem 1rem;
+  padding: 0.8rem 1rem;
 }
 
 .momentTabs button[data-active="true"],
 .sampleChoices button[data-active="true"] {
   background: var(--site-surface-selected);
   color: var(--site-text);
-  box-shadow: inset 2px 0 0 var(--site-action);
+  box-shadow: inset 3px 0 0 var(--site-action);
 }
 
 .momentTabs button > span {
-  grid-row: span 2;
   color: var(--site-action);
-  font-family: var(--font-dm-sans), sans-serif;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.7rem;
 }
 
 .momentTabs strong,
-.momentTabs small,
 .sampleChoices span,
 .sampleChoices small {
   display: block;
 }
 
 .momentTabs strong {
-  font-size: 0.9rem;
-}
-
-.momentTabs small,
-.sampleChoices small {
-  margin-top: 0.2rem;
-  color: var(--site-text-muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-size: 0.86rem;
 }
 
 .sampleChoices {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   margin-top: 1px;
   background: var(--site-border);
 }
 
 .sampleChoices button {
-  padding: 0.85rem 1rem;
+  padding: 0.8rem 1rem;
 }
 
 .sampleChoices span {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
+}
+
+.sampleChoices small {
+  margin-top: 0.2rem;
+  color: var(--site-text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
 }
 
 .momentTabs button:focus-visible,
@@ -252,8 +187,8 @@
   border: 1px solid var(--site-border);
   border-top: 0;
   color: var(--site-text-muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .selectionStatus strong {
@@ -262,24 +197,12 @@
 }
 
 .groupDescription {
-  padding: 0.85rem 1rem;
+  padding: 0.8rem 1rem;
   border: 1px solid var(--site-border);
   border-top: 0;
   color: var(--site-text-secondary);
-  font-size: 0.78rem;
-  line-height: 1.55;
-}
-
-.stage {
-  position: sticky;
-  top: 5rem;
-  align-self: start;
-  min-width: 0;
-  padding: clamp(1rem, 2.5vw, 2rem);
-  background:
-    linear-gradient(180deg, var(--site-action-soft), transparent 16rem),
-    var(--site-canvas-alt);
-  animation: stage-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  font-size: 0.76rem;
+  line-height: 1.5;
 }
 
 @keyframes stage-enter {
@@ -292,78 +215,61 @@
   }
 }
 
-@keyframes signal-travel {
-  from {
-    opacity: 0;
-    transform: translateX(0);
-  }
-
-  20% {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(200%);
-  }
-}
-
 @media (max-width: 1023px) {
-  .experience {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .introActions {
+    min-width: 0;
+  }
+
+  .heroActions {
+    justify-content: flex-start;
+  }
+
+  .trustLine {
+    text-align: left;
+  }
+
+  .showcase {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .controlPanel {
-    border-right: 0;
-    border-bottom: 1px solid var(--site-border);
-  }
-
-  .controlPanel::after {
-    right: auto;
-    width: 7rem;
-    height: 1px;
-  }
-
-  .title {
-    max-width: 16ch;
-  }
-
-  .stage {
     position: static;
   }
 }
 
 @media (max-width: 639px) {
-  .controlPanel {
-    gap: 1.5rem;
+  .experience {
+    gap: 0.75rem;
+  }
+
+  .intro {
+    gap: 1.25rem;
     padding: 1.25rem;
   }
 
   .title {
-    font-size: clamp(2.35rem, 12vw, 3.4rem);
+    font-size: clamp(2.35rem, 12vw, 3.3rem);
   }
 
   .heroActions {
     display: grid;
   }
 
-  .signalFlow > span:not(.signalPulse) {
-    min-height: 5rem;
-    padding: 0.8rem 0.55rem;
-    font-size: 0.75rem;
-  }
-
-  .sampleChoices {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .stage {
-    padding: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .controlPanel {
+    padding: 1.25rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .signalPulse,
   .stage {
     animation: none;
   }

@@ -6,10 +6,16 @@ import {
   SHARE_INTENT_EVENT_NAMES,
 } from "@/lib/analytics/proofSummary";
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
-import { isPubliclyAvailablePage, syncPageHostingState } from "@/lib/hosting-state";
+import {
+  isPubliclyAvailablePage,
+  syncPageHostingState,
+} from "@/lib/hosting-state";
 import { MAX_PAGES_PER_ACCOUNT } from "@/lib/plans";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
-import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import {
+  createServerSupabaseClient,
+  createServiceRoleSupabaseClient,
+} from "@/lib/supabase/server";
 import type { PageRecord } from "@/types/resume";
 import DashboardSignalDesk from "@/components/dashboard/DashboardSignalDesk";
 
@@ -30,7 +36,17 @@ interface DashboardEventRow {
   metadata: Record<string, unknown> | null;
 }
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams?: Promise<{
+    welcome?: string | string[];
+  }>;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const welcomeBackRequested = resolvedSearchParams.welcome === "1";
   const authClient = await createServerSupabaseClient();
   const {
     data: { user },
@@ -49,7 +65,8 @@ export default async function DashboardPage() {
       stripe_trial_ends_at?: string | null;
     }>({
       supabase,
-      select: "full_name, username, plan, billing_cohort, hosting_trial_started_at",
+      select:
+        "full_name, username, plan, billing_cohort, hosting_trial_started_at",
       matchField: "id",
       matchValue: user?.id ?? "",
     }),
@@ -82,7 +99,10 @@ export default async function DashboardPage() {
           .from("events")
           .select("event_name, created_at, metadata")
           .eq("user_id", user?.id ?? "")
-          .in("event_name", [...SHARE_INTENT_EVENT_NAMES, "page.offline_view_attempted"])
+          .in("event_name", [
+            ...SHARE_INTENT_EVENT_NAMES,
+            "page.offline_view_attempted",
+          ])
           .order("created_at", { ascending: false }),
       ])
     : [{ data: [] }, { data: [] }];
@@ -147,14 +167,17 @@ export default async function DashboardPage() {
       pages={syncedList.map((page) => ({
         offlineAttemptAt: offlineAttemptAtByPageId.get(page.id) ?? null,
         page,
-        proof: proofByPageId.get(page.id) ?? buildPageProofSummary({
-          pageId: page.id,
-          views: [],
-          events: [],
-        }),
+        proof:
+          proofByPageId.get(page.id) ??
+          buildPageProofSummary({
+            pageId: page.id,
+            views: [],
+            events: [],
+          }),
         publicViewAvailable: isPubliclyAvailablePage(page),
       }))}
       publicSlug={publicSlug}
+      welcomeBackRequested={welcomeBackRequested}
     />
   );
 }

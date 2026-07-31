@@ -72,57 +72,35 @@ export default async function ExamplesPage() {
           signupHref={getSignupHref("examples_after_apply")}
         />
 
-        <section
-          className="mx-auto mt-12 grid max-w-[76rem] gap-5 border-y border-site-border bg-site-surface px-5 py-6 sm:mt-20 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-7"
-          aria-labelledby="examples-guides-title"
-        >
-          <div>
-            <p className="site-eyebrow">Need the basics first?</p>
-            <h2 id="examples-guides-title" className="site-section-title mt-2 text-[1.75rem]">
-              See how a Living Page works with your résumé.
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-site-secondary">
-              Your résumé still handles applications that require a file. Your page gives people
-              a clearer link to open in follow-ups, recruiter conversations, and referrals.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/guides/living-page-vs-pdf-resume"
-              className="site-button site-button-secondary"
-            >
-              Read the short guide
-            </Link>
-            <Link
-              href="/guides"
-              className="inline-flex min-h-11 items-center text-sm font-semibold text-site-action transition-colors hover:text-site-action-hover"
-            >
-              Browse all guides
-            </Link>
-          </div>
-        </section>
+        <p className="mt-6 border-y border-site-border px-1 py-4 text-sm text-site-secondary">
+          Need the résumé vs. page distinction?{" "}
+          <Link
+            href="/guides/living-page-vs-pdf-resume"
+            className="font-semibold text-site-action hover:text-site-action-hover"
+          >
+            Read the short guide
+          </Link>
+          .
+        </p>
 
         <section
           id="examples-final-cta"
-          className="site-panel-raised mx-auto mt-12 max-w-[76rem] px-5 py-10 text-center sm:mt-20 sm:px-10 sm:py-12"
+          className="site-panel-raised mt-6 px-5 py-8 text-center sm:px-10 sm:py-10"
         >
-          <p className="site-eyebrow">Start with what you already have</p>
+          <p className="site-eyebrow">Ready when you are</p>
           <h2 className="site-section-title mx-auto mt-3 max-w-3xl">
-            Turn your résumé into a page you can send as one link.
+            Turn your résumé into one link.
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-site-secondary">
-            Create a private draft, review every detail, and publish only when it feels ready.
+          <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-site-secondary">
+            Private draft first. Publish only when it feels ready.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link href={getSignupHref("examples_final_start")} className="site-button site-button-primary">
               Create my free page
             </Link>
-            <Link href="/" className="site-button site-button-secondary">
-              Back to home
-            </Link>
           </div>
           <p className="mt-5 text-xs text-site-muted">
-            No credit card. No subscription. Private until you publish.
+            No credit card · No subscription · Private until you publish
           </p>
         </section>
       </main>

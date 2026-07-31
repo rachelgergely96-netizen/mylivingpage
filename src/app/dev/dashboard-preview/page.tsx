@@ -56,10 +56,21 @@ const previewProof: PageProofSummary = {
   bestScenarioLast7d: "recruiter_reply",
 };
 
-export default function DashboardLayoutPreviewPage() {
+interface DashboardLayoutPreviewPageProps {
+  searchParams?: Promise<{
+    empty?: string | string[];
+    welcome?: string | string[];
+  }>;
+}
+
+export default async function DashboardLayoutPreviewPage({
+  searchParams,
+}: DashboardLayoutPreviewPageProps) {
   if (!isEditorPreviewEnabled()) {
     notFound();
   }
+
+  const resolvedSearchParams = searchParams ? await searchParams : {};
 
   return (
     <div className="site-shell" data-site-ui>
@@ -84,15 +95,20 @@ export default function DashboardLayoutPreviewPage() {
         activePaidPlanPriceLabel="$9.99/mo"
         displayName="Avery"
         maxPagesPerAccount={1}
-        pages={[
-          {
-            offlineAttemptAt: null,
-            page: previewPage,
-            proof: previewProof,
-            publicViewAvailable: true,
-          },
-        ]}
+        pages={
+          resolvedSearchParams.empty === "1"
+            ? []
+            : [
+                {
+                  offlineAttemptAt: null,
+                  page: previewPage,
+                  proof: previewProof,
+                  publicViewAvailable: true,
+                },
+              ]
+        }
         publicSlug={previewPage.slug}
+        welcomeBackRequested={resolvedSearchParams.welcome === "1"}
       />
     </div>
   );

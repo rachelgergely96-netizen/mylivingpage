@@ -45,7 +45,7 @@ export function ScaledShareCardArtwork({
         contain: "layout",
         maxWidth: "100%",
         minWidth: 0,
-        overflow: "hidden",
+        overflow: "visible",
         position: "relative",
         width: "100%",
       }}

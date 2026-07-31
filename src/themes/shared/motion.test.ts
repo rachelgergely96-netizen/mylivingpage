@@ -118,6 +118,7 @@ describe("Living Page motion model", () => {
       scrollVelocity: 0,
       storyProgress: 0.375,
       hasFocus: true,
+      focusStrength: 1,
       interactionImpulse: 0,
       pointerSpeed: 0,
     });

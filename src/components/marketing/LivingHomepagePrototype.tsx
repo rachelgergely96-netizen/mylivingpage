@@ -98,19 +98,19 @@ const STORY_MOMENTS: readonly StoryMoment[] = [
     label: "Web page",
     output: "Your Living Page",
     flavor: "Professional web page",
-    note: "Give recruiters one current page with your experience and key details.",
+    note: "One current link for recruiters—update it without changing the URL.",
   },
   {
     id: "application",
     label: "Résumé PDF",
     output: "PDF for applications",
-    note: "Choose the details that matter for a job, check every word, then download a standard résumé PDF.",
+    note: "Pick what matters for the role, check every word, then download a clean résumé PDF.",
   },
   {
     id: "introduction",
     label: "Card + QR code",
     output: "Card + QR code",
-    note: "Share a small card or QR code that opens your full page.",
+    note: "Share a card or QR code that opens your full Living Page.",
   },
 ] as const;
 
@@ -120,39 +120,39 @@ const DEFAULT_WORKFLOW = [
     index: "01",
     name: "Bring your résumé",
     timing: "PDF or pasted text",
-    note: "Use the résumé you already send to employers. You do not start from an empty form.",
+    note: "Import what you already send employers.",
   },
   {
     stepId: "review",
     index: "02",
     name: "Review your details",
-    timing: "Name · headline · result",
-    note: "Every imported detail stays editable before you publish.",
+    timing: "Name · headline · results",
+    note: "Every field stays editable before you publish.",
   },
   {
     stepId: "publish",
     index: "03",
-    name: "Publish and share",
+    name: "Publish your page",
     timing: "Private until you publish",
-    note: "Update your page later without changing the link you already shared.",
+    note: "Share one link. Update later without breaking it.",
   },
 ] as const;
 
 const SEARCH_BENEFITS = [
   {
-    label: "Application",
-    name: "PDF for job applications",
-    note: "Selectable text, familiar sections, and a clear order help hiring software read it.",
+    label: "Applications",
+    name: "Export a clean PDF",
+    note: "Selectable text and familiar sections help hiring software read your file.",
   },
   {
-    label: "Reviewing",
-    name: "Easy for recruiters and hiring tools to read",
-    note: "Your titles, skills, dates, and results stay as normal text.",
+    label: "Review",
+    name: "Keep the structure legible",
+    note: "Titles, skills, dates, and results stay as text—not buried in images.",
   },
   {
-    label: "Sharing",
-    name: "One link you can keep using",
-    note: "Update the page later without changing the link you already shared.",
+    label: "Ongoing",
+    name: "Update without a new link",
+    note: "Publish once, then refresh the page as your work changes.",
   },
 ] as const;
 
@@ -218,14 +218,19 @@ function StorySourceResume() {
 
 function TruthTransfer({ motionKey }: { motionKey: number }) {
   return (
-    <div className={styles.truthTransfer} aria-hidden="true" data-transform-motion>
+    <div
+      className={styles.truthTransfer}
+      aria-hidden="true"
+      data-transform-motion
+      data-transform-cycle={motionKey}
+    >
       <span className={styles.truthLine} />
       <div key={motionKey} className={styles.truthTokens}>
         <b>Name</b>
         <b>Title</b>
         <b>Result</b>
       </div>
-      <small>Same facts, new form</small>
+      <small>Same facts</small>
     </div>
   );
 }
@@ -452,6 +457,7 @@ export default function LivingHomepagePrototype({
   }, []);
 
   const selectMoment = (momentId: StoryMomentId) => {
+    if (momentId === storyMomentId) return;
     setStoryMomentId(momentId);
     setMotionKey((current) => current + 1);
   };
@@ -464,7 +470,6 @@ export default function LivingHomepagePrototype({
   ) => {
     setActiveThemeId(world.id);
     setStoryMomentId("referral");
-    setMotionKey((current) => current + 1);
     if (moveFocus) {
       window.requestAnimationFrame(() => controls.current[index]?.focus());
     }
@@ -537,14 +542,14 @@ export default function LivingHomepagePrototype({
           <div className={styles.heroGlow} aria-hidden="true" />
           <div className={styles.heroGrid}>
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}><span>One résumé</span>A page, a PDF, and a shareable card</p>
+              <p className={styles.eyebrow}><span>One résumé</span>One Living Page</p>
               <h1>Your résumé, alive on the web.</h1>
               <p className={styles.heroLead}>
-                Turn the résumé you already have into a professional page you can update
-                anytime and share as one link.
+                Turn the résumé you already have into one link you can update anytime.
               </p>
               <p className={styles.heroBody}>
-                Upload or paste your résumé, then review every field before publishing.
+                Import it once, review every field, and publish when you&apos;re ready.
+                A clean PDF and share card are included.
               </p>
               <div className={styles.heroActions}>
                 <Link
@@ -574,9 +579,9 @@ export default function LivingHomepagePrototype({
             >
               <div className={styles.storyHeader}>
                 <div>
-                  <p>From one résumé</p>
+                  <p>Live demo</p>
                   <h2 id="live-product-story-title">
-                    One résumé becomes a web page, a PDF, and a shareable card.
+                    See one résumé become a Living Page.
                   </h2>
                 </div>
                 <span>Sample data</span>
@@ -608,7 +613,7 @@ export default function LivingHomepagePrototype({
               </div>
 
               <p className={styles.storyMobileSummary} data-story-mobile-summary>
-                Choose an output above. Your information stays the same.
+                Pick an output. Your facts stay the same.
               </p>
 
               <div className={styles.storyStage} data-story-stage data-transformation-stage>
@@ -642,8 +647,8 @@ export default function LivingHomepagePrototype({
                     <span>{storyMomentId === "referral" ? `${THEME_COUNT} page styles` : "Page styles"}</span>
                     <h3>
                       {storyMomentId === "referral"
-                        ? "Try five styles. Your information stays the same."
-                        : "Choose a style to preview your web page again."}
+                        ? "Try five looks. Same information."
+                        : "Pick a look to return to the Living Page."}
                     </h3>
                   </div>
                   <Link href="/examples">See more examples</Link>
@@ -695,18 +700,18 @@ export default function LivingHomepagePrototype({
         </section>
 
         <div className={styles.identityBand} aria-label="How your résumé becomes a web page">
-          <span>Your résumé</span><i />
-          <span>Review details</span><i />
-          <span>Publish a page</span><i />
-          <span>Share one link</span>
+          <span>Import</span><i />
+          <span>Review</span><i />
+          <span>Publish</span><i />
+          <span>Share</span>
         </div>
 
         <section id="how-it-works" className={styles.sourceSection} data-default-workflow data-reveal>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>How it works</span>Start with your résumé</p>
-            <h2>Start with the résumé you already have.</h2>
+            <p className={styles.eyebrow}><span>How it works</span>Three steps</p>
+            <h2>From résumé to published page.</h2>
             <p>
-              Upload your current résumé, review the details, and publish one professional page.
+              Start with the résumé you already use—not a blank form.
             </p>
           </div>
 
@@ -725,9 +730,9 @@ export default function LivingHomepagePrototype({
 
           <aside id="quick-start" className={styles.quickStart} data-overwhelmed-shortcut>
             <div>
-              <p className={styles.quickStartLabel}>A simple first visit</p>
-              <h3>Add your résumé. Check the basics. Publish.</h3>
-              <p data-stopping-point><strong>You can stop there.</strong> Your page can grow when your work does.</p>
+              <p className={styles.quickStartLabel}>First visit</p>
+              <h3>Import. Check. Publish.</h3>
+              <p data-stopping-point><strong>You can stop there.</strong> Add more as your work grows.</p>
             </div>
             <Link
               href={`/signup?ref=${signupRefs.quickStart}&next=/create`}
@@ -741,22 +746,21 @@ export default function LivingHomepagePrototype({
 
         <section id="search-ready" className={styles.visibilitySection} data-search-readiness data-reveal>
           <div className={styles.visibilityIntro}>
-            <p className={styles.eyebrow}><span>Easy to read</span>For people and hiring software</p>
-            <h2>The design can change. Your details stay easy to read.</h2>
+            <p className={styles.eyebrow}><span>Easy to read</span>People and hiring tools</p>
+            <h2>Your style can change. Your details stay clear.</h2>
             <p>
-              Whatever style you pick, your job titles, dates, skills, and results stay as
-              normal text. That makes them easier for recruiters, hiring software (often called
-              an ATS), search, and AI tools to read.
+              Job titles, dates, skills, and results stay as readable text for recruiters,
+              hiring software (ATS), search, and AI tools.
             </p>
           </div>
 
-          <p className={styles.searchStatementIntro}>Keep the details employers look for clear:</p>
+          <p className={styles.searchStatementIntro}>What stays easy to read:</p>
           <div
             className={styles.searchStatement}
             aria-label="Résumé details kept easy to read"
             data-readable-detail-types
           >
-            <span><small>Job titles</small><strong>The roles you have held</strong></span>
+            <span><small>Job titles</small><strong>The roles you&apos;ve held</strong></span>
             <span><small>Skills</small><strong>What you know how to do</strong></span>
             <span><small>Results</small><strong>What changed because of your work</strong></span>
           </div>
@@ -774,29 +778,29 @@ export default function LivingHomepagePrototype({
           <div className={styles.searchNote}>
             <strong>Your real experience comes first.</strong>
             <p>
-              MyLivingPage helps make your information easier to read. It does not invent
-              experience or guarantee how hiring software will read or rank your résumé, or
-              promise interviews, search placement, or AI citations.
+              MyLivingPage presents what you provide more clearly. It does not invent experience,
+              guarantee how hiring software will read or rank a résumé, or promise interviews,
+              search placement, or AI citations.
             </p>
           </div>
 
           <div className={styles.freePromise} data-free-promise>
             <div>
-              <span>Free from start to finish</span>
-              <h3>Everything shown here is free.</h3>
+              <span>Always free</span>
+              <h3>Everything on this page is free.</h3>
             </div>
             <p>
-              Build, publish, host, update, and download your page. All current page styles,
-              shareable cards and QR codes, up to three versions for different jobs, and page-view
-              analytics are included. No credit card or subscription. No trial. No hidden fees.
+              Build, publish, host, update, and download. All current page styles, share cards and
+              QR codes, up to three role versions, and page-view analytics are included. No credit
+              card. No subscription. No trial. No hidden fees.
             </p>
           </div>
         </section>
 
         <section id="closing-cta" className={styles.finalCta} data-reveal>
-          <p className={styles.eyebrow}><span>Ready when you are</span>Start with your résumé</p>
-          <h2>Make your experience easier to see and share.</h2>
-          <p>Create a private draft from your résumé. Review everything. Publish when it feels right.</p>
+          <p className={styles.eyebrow}><span>Ready when you are</span>Start free</p>
+          <h2>Publish a Living Page from the résumé you already have.</h2>
+          <p>Create a private draft, review every field, and go live when it feels right.</p>
           <div className={styles.heroActions}>
             <Link
               href={`/signup?ref=${signupRefs.final}&next=/create`}

@@ -35,6 +35,7 @@ import { GET, PATCH } from "@/app/api/profile/route";
 
 function createServiceRoleClient(options?: {
   latestPage?: Record<string, unknown> | null;
+  latestPageError?: { message: string } | null;
   profileUpdateError?: { message: string } | null;
 }) {
   return {
@@ -42,12 +43,12 @@ function createServiceRoleClient(options?: {
       if (table === "pages") {
         return {
           select: () => ({
-            eq: () => ({
+            or: () => ({
               order: () => ({
                 limit: () => ({
                   maybeSingle: vi.fn().mockResolvedValue({
                     data: options?.latestPage ?? null,
-                    error: null,
+                    error: options?.latestPageError ?? null,
                   }),
                 }),
               }),
@@ -152,8 +153,25 @@ describe("/api/profile", () => {
         id: "user-1",
         username: "rachel",
         accountAccess: { status: "active" },
+        hasLivingPage: false,
         latestPage: null,
         hasPassword: true,
+      });
+    });
+
+    it("leaves page ownership inconclusive when the page lookup fails", async () => {
+      mocks.createServiceRoleSupabaseClient.mockReturnValue(
+        createServiceRoleClient({
+          latestPageError: { message: "database unavailable" },
+        }),
+      );
+
+      const response = await GET();
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        hasLivingPage: null,
+        latestPage: null,
       });
     });
   });

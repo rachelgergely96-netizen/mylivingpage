@@ -70,4 +70,40 @@ export const SIGNAL_FRAME_SAMPLE: ResumeData = {
     { value: "38%", label: "Faster Releases" },
     { value: "8+", label: "Years Experience" },
   ],
+  proofs: [
+    {
+      id: "release-system-result",
+      type: "quantified_result",
+      title: "Release system redesign",
+      summary:
+        "Reframed planning, ownership, and release signals into one operating model shared across product and engineering.",
+      outcome: "38% faster releases across the platform group.",
+      url: null,
+      source_label: "Operating metric",
+    },
+    {
+      id: "platform-model-artifact",
+      type: "project_artifact",
+      title: "Platform operating model",
+      summary:
+        "A reusable decision and delivery framework built for cross-functional platform teams.",
+      outcome: "Adopted as the working system for roadmap and release reviews.",
+      url: null,
+      source_label: "Selected work",
+    },
+  ],
+  testimonials: [
+    {
+      id: "sample-leadership-quote",
+      name: "Jordan Lee",
+      role: "VP, Product",
+      company: "Northstar Systems",
+      relationship: "Executive partner",
+      quote:
+        "Avery turns complex platform work into a story teams can understand, trust, and act on.",
+      status: "approved",
+      requested_at: "2026-06-01",
+      approved_at: "2026-06-03",
+    },
+  ],
 };

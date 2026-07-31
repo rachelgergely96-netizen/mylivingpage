@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   getUser: vi.fn(),
   incrementSignInCount: vi.fn(),
+  lookupExistingPage: vi.fn(),
   recordLegalAcceptance: vi.fn(),
   serviceRoleFactory: vi.fn(),
   trackEvent: vi.fn(),
@@ -47,8 +48,21 @@ describe("GET /callback", () => {
     mocks.ensureUserProfile.mockResolvedValue(undefined);
     mocks.recordLegalAcceptance.mockResolvedValue(undefined);
     mocks.incrementSignInCount.mockResolvedValue(undefined);
+    mocks.lookupExistingPage.mockResolvedValue({
+      data: null,
+      error: null,
+    });
     mocks.trackEvent.mockResolvedValue(undefined);
     mocks.serviceRoleFactory.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          or: vi.fn(() => ({
+            limit: vi.fn(() => ({
+              maybeSingle: mocks.lookupExistingPage,
+            })),
+          })),
+        })),
+      })),
       rpc: mocks.incrementSignInCount,
     });
   });
@@ -62,8 +76,83 @@ describe("GET /callback", () => {
       }),
     );
 
-    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard",
+    );
     expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("preserves a returning-user welcome intent through the OAuth callback", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fdashboard%3Fwelcome%3D1",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard?welcome=1",
+    );
+  });
+
+  it("does not send an existing page owner back through create onboarding", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-123",
+          app_metadata: {
+            provider: "google",
+          },
+          user_metadata: {},
+        },
+      },
+    });
+    mocks.lookupExistingPage.mockResolvedValue({
+      data: { id: "page-123" },
+      error: null,
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fcreate",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard?welcome=1",
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-123",
+      "auth.callback.succeeded",
+      expect.objectContaining({
+        has_living_page: true,
+        next: "/dashboard?welcome=1",
+        requested_next: "/create",
+      }),
+    );
+  });
+
+  it("resumes onboarding for an authenticated account without a page", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-123",
+          app_metadata: {
+            provider: "google",
+          },
+          user_metadata: {},
+        },
+      },
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fdashboard%3Fwelcome%3D1",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/create",
+    );
   });
 
   it.each([
@@ -75,7 +164,9 @@ describe("GET /callback", () => {
       new NextRequest(`https://www.mylivingpage.com/callback?next=${next}`),
     );
 
-    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/dashboard");
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/dashboard",
+    );
   });
 
   it("tracks callback failures with both request host and canonical auth origin", async () => {
@@ -84,11 +175,14 @@ describe("GET /callback", () => {
     });
 
     const response = await GET(
-      new NextRequest("https://mylivingpage.com/callback?code=test-code&next=%2Fdashboard", {
-        headers: {
-          host: "mylivingpage.com",
+      new NextRequest(
+        "https://mylivingpage.com/callback?code=test-code&next=%2Fdashboard",
+        {
+          headers: {
+            host: "mylivingpage.com",
+          },
         },
-      }),
+      ),
     );
 
     expect(response.headers.get("location")).toBe(
@@ -131,13 +225,17 @@ describe("GET /callback", () => {
       ),
     );
 
-    expect(response.headers.get("location")).toBe("https://www.mylivingpage.com/create");
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/create",
+    );
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       "user-123",
       "auth.callback.succeeded",
       expect.objectContaining({
         auth_provider: "google",
         next: "/create",
+        requested_next: "/create",
+        has_living_page: false,
         request_host: "www.mylivingpage.com",
         legal_accept_requested: true,
         legal_source: "signup",

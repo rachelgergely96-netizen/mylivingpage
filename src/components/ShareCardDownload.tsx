@@ -5,6 +5,7 @@ import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
 import { ShareCardArtwork } from "@/components/ShareCardArtwork";
 import TiltCard from "@/components/marketing/TiltCard";
 import type { ShareIntentEventName } from "@/lib/analytics/proofSummary";
+import { getShareCardFinish } from "@/lib/share-card-finish";
 import {
   buildShareCardModel,
   getShareCardVisual,
@@ -75,7 +76,9 @@ export default function ShareCardDownload({
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
-  const [appUrl, setAppUrl] = useState(() => normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL));
+  const [appUrl, setAppUrl] = useState(() =>
+    normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL),
+  );
   const [shareFeedback, setShareFeedback] = useState<{
     title: string;
     body: string;
@@ -88,9 +91,10 @@ export default function ShareCardDownload({
 
   useEffect(() => {
     if (!open) return;
-    const previouslyFocused = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const trigger = triggerRef.current;
     const previousBodyOverflow = document.body.style.overflow;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -137,6 +141,7 @@ export default function ShareCardDownload({
   if (!enabled) return null;
 
   const visual = getShareCardVisual(themeId);
+  const shareCardTreatment = getShareCardFinish("holographic", visual);
   const cardModel = buildShareCardModel({
     appUrl,
     liveUrl,
@@ -144,7 +149,8 @@ export default function ShareCardDownload({
     slug,
   });
   const { firstName, livePageUrl, name: safeName } = cardModel;
-  const resolvedAnalyticsHref = analyticsHref ?? `/dashboard/analytics/${pageId}`;
+  const resolvedAnalyticsHref =
+    analyticsHref ?? `/dashboard/analytics/${pageId}`;
 
   const trackShareIntent = async (eventName: ShareIntentEventName) => {
     try {
@@ -171,8 +177,7 @@ export default function ShareCardDownload({
   const showProofFeedback = (title: string) => {
     setShareFeedback({
       title,
-      body:
-        "When someone opens your page, Analytics records the visit so you can see that your link was used.",
+      body: "When someone opens your page, Analytics records the visit so you can see that your link was used.",
     });
   };
 
@@ -192,7 +197,7 @@ export default function ShareCardDownload({
       await prepareCardImages(exportNode);
       const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(exportNode, {
-        backgroundColor: visual.background,
+        backgroundColor: shareCardTreatment.outerBackground,
         cacheBust: true,
         canvasHeight: SHARE_CARD_SIZE.height,
         canvasWidth: SHARE_CARD_SIZE.width,
@@ -245,8 +250,9 @@ export default function ShareCardDownload({
     <>
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-site-canvas p-0 sm:items-center sm:p-4"
           onClick={() => setOpen(false)}
+          data-share-card-backdrop="static"
           data-site-ui
         >
           <div
@@ -261,7 +267,12 @@ export default function ShareCardDownload({
             <div className="sticky top-0 z-20 flex items-start justify-between gap-3 border-b border-site-border bg-site-surface-raised px-4 py-3 sm:static sm:gap-4 sm:px-6 sm:py-4">
               <div className="min-w-0">
                 <p className="site-eyebrow">Share Card</p>
-                <h3 id="share-card-dialog-title" className="site-panel-title mt-1 truncate sm:mt-2">{safeName}</h3>
+                <h3
+                  id="share-card-dialog-title"
+                  className="site-panel-title mt-1 truncate sm:mt-2"
+                >
+                  {safeName}
+                </h3>
                 <p className="site-muted mt-1 truncate text-xs sm:text-sm">
                   Unique QR code and downloadable card for @{slug}
                 </p>
@@ -273,8 +284,18 @@ export default function ShareCardDownload({
                 className="site-icon-button shrink-0"
                 aria-label="Close share card"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -282,6 +303,7 @@ export default function ShareCardDownload({
             <div
               ref={exportCardRef}
               aria-hidden="true"
+              data-share-card-export
               style={{
                 height: SHARE_CARD_SIZE.height,
                 left: -20000,
@@ -292,18 +314,28 @@ export default function ShareCardDownload({
                 zIndex: -1,
               }}
             >
-              <ShareCardArtwork finish="holographic" model={cardModel} visual={visual} />
+              <ShareCardArtwork
+                finish="holographic"
+                model={cardModel}
+                visual={visual}
+              />
             </div>
 
             <div className="grid gap-4 p-3 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div
                 data-living-output
+                data-share-card-preview-stage
                 data-theme-id={visual.themeId}
                 data-theme-detail={visual.contentProfile}
                 data-theme-collection={visual.collection}
-                className="min-w-0 self-start overflow-hidden border border-site-border bg-site-canvas-alt p-1 sm:p-2"
+                className="min-w-0 self-start overflow-visible border border-site-border p-2 sm:p-3"
+                style={{ background: shareCardTreatment.outerBackground }}
               >
-                <TiltCard>
+                <TiltCard
+                  lift={14}
+                  max={5}
+                  targetSelector="[data-share-card-panel]"
+                >
                   <ScaledShareCardArtwork
                     animatedShine
                     finish="holographic"
@@ -320,26 +352,35 @@ export default function ShareCardDownload({
                     Choose how to share {firstName}&rsquo;s page
                   </h4>
                   <p className="site-muted mt-2 text-sm leading-6">
-                    Download the themed card, copy the page link, or preview the live page before you send it.
+                    Download the themed card, copy the page link, or preview the
+                    live page before you send it.
                   </p>
                 </div>
 
                 <div className="border border-site-border bg-site-canvas-alt p-4">
-                  <p className="text-xs font-semibold text-site-muted">Page link</p>
-                  <p className="mt-2 break-all font-mono text-sm text-site-text">{livePageUrl}</p>
+                  <p className="text-xs font-semibold text-site-muted">
+                    Page link
+                  </p>
+                  <p className="mt-2 break-all font-mono text-sm text-site-text">
+                    {livePageUrl}
+                  </p>
                 </div>
 
                 {downloadError ? (
                   <div className="site-callout p-4" role="alert">
                     <p className="site-eyebrow">Sharing needs another try</p>
-                    <p className="site-muted mt-2 text-sm leading-6">{downloadError}</p>
+                    <p className="site-muted mt-2 text-sm leading-6">
+                      {downloadError}
+                    </p>
                   </div>
                 ) : null}
 
                 {shareFeedback ? (
                   <div className="site-callout p-4" role="status">
                     <p className="site-eyebrow">Ready to share</p>
-                    <p className="mt-2 font-semibold text-site-text">{shareFeedback.title}</p>
+                    <p className="mt-2 font-semibold text-site-text">
+                      {shareFeedback.title}
+                    </p>
                     <p className="site-muted mt-2 text-sm leading-6">
                       {shareFeedback.body}
                     </p>
@@ -390,8 +431,18 @@ export default function ShareCardDownload({
         onClick={() => setOpen(true)}
         className={`site-button site-button-secondary ${className ?? ""}`}
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"
+          />
         </svg>
         <span>Share {firstName}&rsquo;s page</span>
       </button>

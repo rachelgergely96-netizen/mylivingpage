@@ -5,12 +5,51 @@ import {
   type CatalogThemeId,
 } from "./theme-frame-baselines";
 
-const CATALOG_THEME_IDS = THEME_REGISTRY.filter((theme) => !theme.signature).map(
-  (theme) => theme.id,
-) as CatalogThemeId[];
-const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter((theme) => theme.signature).map(
-  (theme) => theme.id,
-);
+const CATALOG_THEME_IDS = THEME_REGISTRY.filter(
+  (theme) => !theme.signature,
+).map((theme) => theme.id) as CatalogThemeId[];
+const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter(
+  (theme) => theme.signature,
+).map((theme) => theme.id);
+const MATERIAL_THEME_IDS = THEME_REGISTRY.map((theme) => theme.id);
+const SIGNATURE_EXPERIENCE_THEMES = [
+  {
+    themeId: "atlas",
+    experienceId: "achievement-atlas",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "Waypoint",
+  },
+  {
+    themeId: "axiom",
+    experienceId: "proof-museum",
+    markerSelector: '[data-motion-kind="project"]',
+    markerText: "Exhibit",
+  },
+  {
+    themeId: "atelier",
+    experienceId: "editorial-feature",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "PLATE",
+  },
+  {
+    themeId: "sakura",
+    experienceId: "bloom-composition",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "STEM",
+  },
+  {
+    themeId: "solstice",
+    experienceId: "solar-briefing",
+    markerSelector: '[data-motion-kind="proof"]',
+    markerText: "FLARE",
+  },
+  {
+    themeId: "nocturne",
+    experienceId: "midnight-edition",
+    markerSelector: '[data-motion-kind="experience"]',
+    markerText: "ENTRY",
+  },
+] as const;
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -37,22 +76,23 @@ async function downloadToBuffer(
   return Buffer.concat(chunks);
 }
 
-test("paired prototypes keep the Living Page and share card identity in sync", async ({
+test("paired prototypes keep the Living Page palette and canonical share-card skeleton in sync", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/dev/theme-lab");
 
   const prototypeThemes = [
-    ["Meridian", "meridian", "bearing"],
-    ["Halo", "halo", "orbit"],
-    ["Sakura", "sakura", "petal"],
-    ["Aurora", "aurora", "curtain"],
-    ["Silk", "silk", "weave"],
-    ["Topo", "topo", "contour"],
+    ["Meridian", "meridian"],
+    ["Halo", "halo"],
+    ["Sakura", "sakura"],
+    ["Aurora", "aurora"],
+    ["Silk", "silk"],
+    ["Topo", "topo"],
   ] as const;
+  let canonicalLayerOrder: string[] | null = null;
 
-  for (const [name, themeId, motif] of prototypeThemes) {
+  for (const [name, themeId] of prototypeThemes) {
     await page
       .locator("[data-theme-prototype-selector]")
       .getByRole("button", { name, exact: true })
@@ -63,15 +103,372 @@ test("paired prototypes keep the Living Page and share card identity in sync", a
     );
     const shareCard = page.getByTestId("story-share-card");
 
-    await expect(livingPage).toHaveAttribute("data-theme-renderer-status", "ready");
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-material",
+      THEME_MAP[themeId].materialProfile,
+    );
     await expect(shareCard).toHaveAttribute("data-theme-id", themeId);
     await expect(shareCard).toHaveAttribute(
       "data-theme-detail",
       THEME_MAP[themeId].contentProfile,
     );
-    await expect(
-      shareCard.locator("[data-share-card-profile]"),
-    ).toHaveAttribute("data-share-card-profile", motif);
+    const skeleton = shareCard.locator(
+      '[data-share-card-skeleton="canonical"]',
+    );
+    await expect(skeleton).toBeVisible();
+    await expect(shareCard.locator("[data-share-card-profile]")).toHaveCount(0);
+
+    const layerOrder = await skeleton
+      .locator("[data-share-card-skeleton-layer]")
+      .evaluateAll((layers) =>
+        layers.map(
+          (layer) => layer.getAttribute("data-share-card-skeleton-layer") ?? "",
+        ),
+      );
+    if (canonicalLayerOrder === null) {
+      canonicalLayerOrder = layerOrder;
+    } else {
+      expect(layerOrder).toEqual(canonicalLayerOrder);
+    }
+  }
+});
+
+test("all theme materials keep readable plates stationary across desktop and mobile", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const themeId of MATERIAL_THEME_IDS) {
+    await select.selectOption(themeId);
+    const theme = THEME_MAP[themeId];
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-material",
+      theme.materialProfile,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const card = livingPage.locator(".resume-theme-card").first();
+    const restingStyle = await card.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        backdrop: style.backdropFilter,
+        borderRadius: style.borderRadius,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    expect(restingStyle.borderRadius).toBe("0px");
+    expect(restingStyle.outlineStyle).toBe("solid");
+    expect(restingStyle.outlineWidth).toBe("1px");
+    if (
+      theme.readingMode === "glass" &&
+      theme.materialProfile === "refractive"
+    ) {
+      expect(restingStyle.backdrop).toContain("blur(14px)");
+    } else if (
+      theme.readingMode === "glass" &&
+      theme.materialProfile === "organic-glass"
+    ) {
+      expect(restingStyle.backdrop).toContain("blur(12px)");
+    } else {
+      expect(restingStyle.backdrop).toBe("none");
+    }
+
+    await card.hover();
+    const hoverState = await card.evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      const boxShadow = window.getComputedStyle(element).boxShadow;
+      if (transform === "none") return { boxShadow, x: 0, y: 0 };
+      const matrix = new DOMMatrixReadOnly(transform);
+      return { boxShadow, x: matrix.m41, y: matrix.m42 };
+    });
+    expect(Math.abs(hoverState.x)).toBeLessThan(0.001);
+    expect(Math.abs(hoverState.y)).toBeLessThan(0.001);
+    expect(hoverState.boxShadow).toContain("inset");
+
+    const focusTranslation = await card.evaluate((element) => {
+      element.tabIndex = 0;
+      element.focus();
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return { x: 0, y: 0 };
+      const matrix = new DOMMatrixReadOnly(transform);
+      return { x: matrix.m41, y: matrix.m42 };
+    });
+    expect(Math.abs(focusTranslation.x)).toBeLessThan(0.001);
+    expect(Math.abs(focusTranslation.y)).toBeLessThan(0.001);
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const themeId of MATERIAL_THEME_IDS) {
+    await select.selectOption(themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
+    await livingPage.scrollIntoViewIfNeeded();
+    expect(
+      await livingPage.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
+    ).toBe(0);
+  }
+});
+
+test("the six signature experiences keep one narrative order while presenting distinct authored formats", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+  let canonicalSectionOrder: string[] | null = null;
+
+  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+    await select.selectOption(signature.themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+    );
+
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-experience",
+      signature.experienceId,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const sectionOrder = await livingPage
+      .locator("[data-motion-section]")
+      .evaluateAll((sections) =>
+        sections.map(
+          (section) => section.getAttribute("data-motion-section") ?? "",
+        ),
+      );
+    if (canonicalSectionOrder === null) {
+      canonicalSectionOrder = sectionOrder;
+    } else {
+      expect(sectionOrder).toEqual(canonicalSectionOrder);
+    }
+
+    const markerContent = await livingPage
+      .locator(signature.markerSelector)
+      .first()
+      .evaluate((element) =>
+        window.getComputedStyle(element, "::before").content.replaceAll('"', ""),
+      );
+    expect(markerContent).toContain(signature.markerText);
+  }
+});
+
+test("the six signature experiences use compact laptop scale and mobile flow", async ({
+  page,
+}) => {
+  const laptopViewports = [
+    { width: 1280, height: 720 },
+    { width: 1366, height: 768 },
+    { width: 1512, height: 982 },
+  ];
+
+  await page.setViewportSize(laptopViewports[0]);
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const viewport of laptopViewports) {
+    await page.setViewportSize(viewport);
+
+    for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+      await select.selectOption(signature.themeId);
+      const livingPage = page.locator(
+        `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+      );
+      await expect(livingPage).toHaveAttribute(
+        "data-theme-renderer-status",
+        "ready",
+      );
+
+      const scale = await livingPage.evaluate((element) => {
+        const header = element.querySelector<HTMLElement>(
+          "[data-resume-header]",
+        );
+        const name = element.querySelector<HTMLElement>("[data-resume-name]");
+        const scrollRoot = element.querySelector<HTMLElement>(
+          "[data-analytics-scroll-root='true']",
+        );
+
+        return {
+          headerHeight: header?.getBoundingClientRect().height ?? 0,
+          nameFontSize: Number.parseFloat(
+            name ? window.getComputedStyle(name).fontSize : "0",
+          ),
+          viewportHeight: scrollRoot?.clientHeight ?? 0,
+        };
+      });
+
+      expect(scale.viewportHeight).toBeGreaterThan(0);
+      expect(
+        scale.headerHeight / scale.viewportHeight,
+        `${signature.themeId} masthead share at ${viewport.width}x${viewport.height}`,
+      ).toBeLessThan(0.8);
+      expect(
+        scale.nameFontSize,
+        `${signature.themeId} name scale at ${viewport.width}x${viewport.height}`,
+      ).toBeLessThanOrEqual(112);
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+    await select.selectOption(signature.themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-renderer-status",
+      "ready",
+    );
+
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow, `${signature.themeId} mobile overflow`).toBe(0);
+  }
+});
+
+test("the six signature experiences express different hierarchy without moving content plates", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  await select.selectOption("atlas");
+  const atlas = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="achievement-atlas"]',
+  );
+  const atlasExperience = atlas.locator("[data-experience-list]");
+  const atlasProof = atlas.locator("[data-proof-grid]");
+  expect((await atlasExperience.boundingBox())?.height ?? 0).toBeGreaterThan(
+    (await atlasProof.boundingBox())?.height ?? 0,
+  );
+
+  await select.selectOption("axiom");
+  const axiom = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="proof-museum"]',
+  );
+  const axiomProofs = axiom.locator('[data-motion-kind="proof"]');
+  expect((await axiomProofs.nth(0).boundingBox())?.width ?? 0).toBeGreaterThan(
+    (await axiomProofs.nth(1).boundingBox())?.width ?? 0,
+  );
+
+  await select.selectOption("atelier");
+  const atelier = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="editorial-feature"]',
+  );
+  const atelierType = await atelier.evaluate((element) => {
+    const summary = element.querySelector<HTMLElement>(
+      "[data-resume-summary] > p",
+    );
+    const experienceBody = element.querySelector<HTMLElement>(
+      '[data-motion-kind="experience"] li',
+    );
+    return {
+      experience: Number.parseFloat(
+        experienceBody ? window.getComputedStyle(experienceBody).fontSize : "0",
+      ),
+      summary: Number.parseFloat(
+        summary ? window.getComputedStyle(summary).fontSize : "0",
+      ),
+    };
+  });
+  expect(atelierType.summary).toBeGreaterThan(atelierType.experience);
+
+  await select.selectOption("sakura");
+  const sakura = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="bloom-composition"]',
+  );
+  const sakuraProofs = sakura.locator('[data-motion-kind="proof"]');
+  expect((await sakuraProofs.nth(0).boundingBox())?.width ?? 0).toBeGreaterThan(
+    (await sakuraProofs.nth(1).boundingBox())?.width ?? 0,
+  );
+
+  await select.selectOption("solstice");
+  const solstice = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="solar-briefing"]',
+  );
+  const solsticeMetricType = await solstice.evaluate((element) => {
+    const primary = element.querySelector<HTMLElement>(
+      '[data-stat-index="0"] [data-attention-signal="metric"]',
+    );
+    const secondary = element.querySelector<HTMLElement>(
+      '[data-stat-index="1"] > div:first-child',
+    );
+    return {
+      primary: Number.parseFloat(
+        primary ? window.getComputedStyle(primary).fontSize : "0",
+      ),
+      secondary: Number.parseFloat(
+        secondary ? window.getComputedStyle(secondary).fontSize : "0",
+      ),
+    };
+  });
+  expect(solsticeMetricType.primary).toBeGreaterThan(
+    solsticeMetricType.secondary,
+  );
+
+  await select.selectOption("nocturne");
+  const nocturne = page.locator(
+    '[data-theme-lab-canvas] [data-theme-experience="midnight-edition"]',
+  );
+  const nocturneType = await nocturne.evaluate((element) => {
+    const testimonial = element.querySelector<HTMLElement>(
+      '[data-motion-kind="testimonial"] > p:first-child',
+    );
+    const experience = element.querySelector<HTMLElement>(
+      '[data-motion-kind="experience"] li',
+    );
+    return {
+      testimonial: Number.parseFloat(
+        testimonial ? window.getComputedStyle(testimonial).fontSize : "0",
+      ),
+      experience: Number.parseFloat(
+        experience ? window.getComputedStyle(experience).fontSize : "0",
+      ),
+    };
+  });
+  expect(nocturneType.testimonial).toBeGreaterThan(nocturneType.experience);
+
+  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
+    await select.selectOption(signature.themeId);
+    const plate = page
+      .locator(
+        `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+      )
+      .locator(signature.markerSelector)
+      .first();
+    await plate.hover();
+    const translation = await plate.evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return { x: 0, y: 0 };
+      const matrix = new DOMMatrixReadOnly(transform);
+      return { x: matrix.m41, y: matrix.m42 };
+    });
+    expect(Math.abs(translation.x)).toBeLessThan(0.001);
+    expect(Math.abs(translation.y)).toBeLessThan(0.001);
   }
 });
 
@@ -154,6 +551,118 @@ test("all themes use one narrative font across Living Pages and share cards", as
   }
 });
 
+test("all themes apply their reading guard to identity, summaries, and cards", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+
+  const select = page.getByLabel("Catalog theme");
+  for (const theme of THEME_REGISTRY) {
+    await select.selectOption(theme.id);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
+    );
+    await expect(livingPage).toHaveAttribute(
+      "data-theme-reading",
+      theme.readingMode,
+    );
+
+    const guard = await livingPage.evaluate((element) => {
+      const masthead = element.querySelector<HTMLElement>(
+        ".resume-theme-masthead",
+      );
+      const summary = element.querySelector<HTMLElement>(
+        ".resume-theme-summary",
+      );
+      const card = element.querySelector<HTMLElement>(
+        '[data-motion-kind="experience"]',
+      );
+      const stats = element.querySelector<HTMLElement>("[data-resume-stats]");
+      const statsCard = stats?.querySelector<HTMLElement>(".resume-theme-card");
+      const muted = element.querySelector<HTMLElement>(".resume-theme-muted");
+      const read = (node: HTMLElement | null | undefined) =>
+        node ? window.getComputedStyle(node) : null;
+      const mastheadStyle = read(masthead);
+      const summaryStyle = read(summary);
+      const cardStyle = read(card);
+      const statsStyle = read(stats);
+      const statsCardStyle = read(statsCard);
+      const mutedStyle = read(muted);
+      const colorAlpha = (value: string | undefined) => {
+        if (!value) return 0;
+        const matches = [
+          ...Array.from(value.matchAll(/rgba?\(([^)]*)\)/g), (match) => {
+            const slashAlpha = /\/\s*([0-9.]+)/.exec(match[1])?.[1];
+            const commaAlpha = match[1].split(",")[3]?.trim();
+            return {
+              alpha: Number(slashAlpha ?? commaAlpha ?? 1),
+              index: match.index,
+            };
+          }),
+          ...Array.from(
+            value.matchAll(/color\([^)]*?\/\s*([0-9.]+)\s*\)/g),
+            (match) => ({
+              alpha: Number(match[1]),
+              index: match.index,
+            }),
+          ),
+        ].sort((left, right) => left.index - right.index);
+        return matches.at(-1)?.alpha ?? 0;
+      };
+      const alpha = mutedStyle?.color.match(
+        /rgba?\([^,]+,[^,]+,[^,]+(?:,\s*([0-9.]+))?\)/,
+      )?.[1];
+
+      return {
+        cardBackdrop: cardStyle?.backdropFilter ?? "none",
+        cardBaseAlpha: colorAlpha(cardStyle?.backgroundColor),
+        cardGradientTailAlpha: colorAlpha(cardStyle?.backgroundImage),
+        mastheadBackground: mastheadStyle?.backgroundImage ?? "none",
+        mastheadRadius: mastheadStyle?.borderRadius ?? "",
+        mutedAlpha: alpha ? Number(alpha) : 1,
+        statsGuardAlpha: Math.max(
+          colorAlpha(statsStyle?.backgroundColor),
+          colorAlpha(statsStyle?.backgroundImage),
+          colorAlpha(statsCardStyle?.backgroundColor),
+          colorAlpha(statsCardStyle?.backgroundImage),
+        ),
+        summaryBackground: summaryStyle?.backgroundImage ?? "none",
+        summaryRadius: summaryStyle?.borderRadius ?? "",
+      };
+    });
+
+    expect(guard.mastheadBackground, `${theme.id} masthead guard`).not.toBe(
+      "none",
+    );
+    expect(guard.summaryBackground, `${theme.id} summary guard`).not.toBe(
+      "none",
+    );
+    expect(
+      Math.max(guard.cardBaseAlpha, guard.cardGradientTailAlpha),
+      `${theme.id} card guard`,
+    ).toBeGreaterThanOrEqual(0.76);
+    expect(
+      guard.mutedAlpha,
+      `${theme.id} muted text alpha`,
+    ).toBeGreaterThanOrEqual(0.82);
+    expect(
+      guard.statsGuardAlpha,
+      `${theme.id} stats guard`,
+    ).toBeGreaterThanOrEqual(0.76);
+    expect(guard.mastheadRadius, `${theme.id} masthead geometry`).toBe("0px");
+    expect(guard.summaryRadius, `${theme.id} summary geometry`).toBe("0px");
+    if (theme.readingMode === "glass") {
+      expect(guard.cardBackdrop, `${theme.id} glass separation`).not.toBe(
+        "none",
+      );
+    } else {
+      expect(guard.cardBackdrop, `${theme.id} solid separation`).toBe("none");
+    }
+  }
+});
+
 test("the real share-card modal exports one complete 1200 by 630 card on every viewport", async ({
   page,
 }) => {
@@ -168,7 +677,55 @@ test("the real share-card modal exports one complete 1200 by 630 card on every v
 
   const dialog = page.getByRole("dialog", { name: "Avery Morgan" });
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close share card" })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Close share card" }),
+  ).toBeFocused();
+
+  const stage = dialog.locator("[data-share-card-preview-stage]");
+  const previewOuter = stage.locator("[data-share-card-outer]");
+  const previewPanel = stage.locator("[data-share-card-panel]");
+  const previewBounds = await stage.boundingBox();
+  expect(previewBounds).not.toBeNull();
+  if (previewBounds) {
+    await page.mouse.move(
+      previewBounds.x + previewBounds.width * 0.78,
+      previewBounds.y + previewBounds.height * 0.28,
+    );
+  }
+  await expect
+    .poll(() =>
+      previewPanel.evaluate(
+        (element) => window.getComputedStyle(element).transform,
+      ),
+    )
+    .not.toBe("none");
+  expect(
+    await stage.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+  expect(
+    await previewOuter.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+
+  const exportOuter = dialog.locator(
+    "[data-share-card-export] [data-share-card-outer]",
+  );
+  const exportPanel = dialog.locator(
+    "[data-share-card-export] [data-share-card-panel]",
+  );
+  expect(
+    await exportOuter.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+  expect(
+    await exportPanel.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
 
   const downloadPromise = page.waitForEvent("download");
   await dialog.getByRole("button", { name: "Download share card" }).click();
@@ -209,6 +766,134 @@ test("the real share-card modal exports one complete 1200 by 630 card on every v
   await expect(trigger).toBeFocused();
 });
 
+test("share-card panel motion is isolated and disabled for reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+
+  // Prove the client boundary has hydrated before sending pointer input. Under
+  // the full catalog run, canvas initialization can otherwise outlast the
+  // initial locator readiness while the server-rendered card is already visible.
+  const motionToggle = page.getByRole("button", { name: "Enable motion" });
+  await motionToggle.click();
+  const pauseMotion = page.getByRole("button", { name: "Pause motion" });
+  await expect(pauseMotion).toBeVisible();
+  await pauseMotion.click();
+  await expect(motionToggle).toBeVisible();
+
+  const story = page.getByTestId("story-share-card");
+  await story.scrollIntoViewIfNeeded();
+  const storyOuter = story.locator("[data-share-card-outer]");
+  const storyPanel = story.locator("[data-share-card-panel]");
+  const readTiltMagnitude = () =>
+    storyPanel.evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return 0;
+      const matrix = new DOMMatrixReadOnly(transform);
+      return Math.max(
+        Math.abs(matrix.m12),
+        Math.abs(matrix.m13),
+        Math.abs(matrix.m14),
+        Math.abs(matrix.m21),
+        Math.abs(matrix.m23),
+        Math.abs(matrix.m24),
+        Math.abs(matrix.m31),
+        Math.abs(matrix.m32),
+        Math.abs(matrix.m41),
+        Math.abs(matrix.m42),
+        Math.abs(matrix.m43),
+      );
+    });
+  const storyBounds = await story.boundingBox();
+  expect(storyBounds).not.toBeNull();
+  if (storyBounds) {
+    await page.mouse.move(
+      storyBounds.x + storyBounds.width * 0.8,
+      storyBounds.y + storyBounds.height * 0.22,
+    );
+  }
+  await expect.poll(readTiltMagnitude).toBeGreaterThan(0.001);
+  await expect
+    .poll(() =>
+      storyPanel.evaluate((element) =>
+        element.style.getPropertyValue("--share-card-specular-x"),
+      ),
+    )
+    .not.toBe("");
+  await expect(story.locator(".share-card-glass-specular")).toBeVisible();
+  expect(
+    await storyOuter.evaluate(
+      (element) => window.getComputedStyle(element).backgroundColor,
+    ),
+  ).toBe("rgb(5, 5, 7)");
+  expect(
+    await storyOuter.evaluate(
+      (element) => window.getComputedStyle(element).transform,
+    ),
+  ).toBe("none");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  const reducedMotionToggle = page.getByRole("button", {
+    name: "Enable motion",
+  });
+  await reducedMotionToggle.click();
+  const reducedPauseMotion = page.getByRole("button", {
+    name: "Pause motion",
+  });
+  await expect(reducedPauseMotion).toBeVisible();
+  await reducedPauseMotion.click();
+  await expect(reducedMotionToggle).toBeVisible();
+
+  const reducedStory = page.getByTestId("story-share-card");
+  await reducedStory.scrollIntoViewIfNeeded();
+  const reducedBounds = await reducedStory.boundingBox();
+  if (reducedBounds) {
+    await page.mouse.move(
+      reducedBounds.x + reducedBounds.width * 0.8,
+      reducedBounds.y + reducedBounds.height * 0.22,
+    );
+  }
+  expect(
+    await reducedStory
+      .locator("[data-share-card-outer]")
+      .evaluate((element) => window.getComputedStyle(element).transform),
+  ).toBe("none");
+  const reducedTiltMagnitude = await reducedStory
+    .locator("[data-share-card-panel]")
+    .evaluate((element) => {
+      const transform = window.getComputedStyle(element).transform;
+      if (transform === "none") return 0;
+      const matrix = new DOMMatrixReadOnly(transform);
+      return Math.max(
+        Math.abs(matrix.m12),
+        Math.abs(matrix.m13),
+        Math.abs(matrix.m14),
+        Math.abs(matrix.m21),
+        Math.abs(matrix.m23),
+        Math.abs(matrix.m24),
+        Math.abs(matrix.m31),
+        Math.abs(matrix.m32),
+        Math.abs(matrix.m41),
+        Math.abs(matrix.m42),
+        Math.abs(matrix.m43),
+      );
+    });
+  expect(reducedTiltMagnitude).toBeLessThan(0.001);
+  const reducedGlassLight = await reducedStory
+    .locator(".share-card-glass-ambient")
+    .evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        animationName: style.animationName,
+        opacity: Number.parseFloat(style.opacity),
+      };
+    });
+  expect(reducedGlassLight.animationName).toBe("none");
+  expect(reducedGlassLight.opacity).toBeGreaterThan(0.25);
+});
+
 test("attention motion stays brief and fully respects reduced motion", async ({
   page,
 }) => {
@@ -240,7 +925,9 @@ test("attention motion stays brief and fully respects reduced motion", async ({
   expect(reducedSignalMotion).toBe("none");
 });
 
-test("every catalog theme renders a detailed deterministic frame", async ({ page }) => {
+test("every catalog theme renders a detailed deterministic frame", async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/dev/theme-lab");
@@ -248,7 +935,8 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
   const select = page.getByLabel("Catalog theme");
   await expect(select.locator("option")).toHaveCount(THEME_REGISTRY.length);
 
-  const weakFrames: Array<{ themeId: string; colors: number; range: number }> = [];
+  const weakFrames: Array<{ themeId: string; colors: number; range: number }> =
+    [];
   const frameSignatures: Record<
     string,
     { hash: string; mean: [number, number, number] }
@@ -277,7 +965,12 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
         };
       }
 
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      ).data;
       const stepX = Math.max(1, Math.floor(canvas.width / 20));
       const stepY = Math.max(1, Math.floor(canvas.height / 16));
       const colors = new Set<string>();
@@ -362,7 +1055,9 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
     frameSignatures[themeId] = { hash: detail.hash, mean: detail.mean };
   }
 
-  expect(weakFrames, "catalog themes with insufficient visible detail").toEqual([]);
+  expect(weakFrames, "catalog themes with insufficient visible detail").toEqual(
+    [],
+  );
 
   if (process.env.UPDATE_THEME_BASELINES === "1") {
     console.log(`THEME_FRAME_BASELINES=${JSON.stringify(frameSignatures)}`);
@@ -389,6 +1084,56 @@ test("every catalog theme renders a detailed deterministic frame", async ({ page
       ).toBeLessThanOrEqual(4);
     });
   }
+});
+
+test("every theme stays renderer-ready through an animated pointer sweep", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/dev/theme-lab?motion=1");
+
+  const select = page.getByLabel("Catalog theme");
+  for (const [index, theme] of THEME_REGISTRY.entries()) {
+    await select.selectOption(theme.id);
+    const world = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
+    );
+    await expect(world).toHaveAttribute("data-theme-renderer-status", "ready");
+    expect(
+      await world.getAttribute("data-theme-quality"),
+      `${theme.id} adaptive quality state`,
+    ).toMatch(/^(full|no-bloom|scaled)$/);
+
+    const bounds = await world.boundingBox();
+    expect(bounds, `${theme.id} interactive bounds`).not.toBeNull();
+    if (!bounds) continue;
+
+    const direction = index % 2 === 0 ? 1 : -1;
+    await page.mouse.move(
+      bounds.x + bounds.width * (direction > 0 ? 0.2 : 0.8),
+      bounds.y + Math.min(bounds.height * 0.35, 260),
+    );
+    await page.mouse.move(
+      bounds.x + bounds.width * (direction > 0 ? 0.8 : 0.2),
+      bounds.y + Math.min(bounds.height * 0.6, 420),
+      { steps: 4 },
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+
+    await expect(world).toHaveAttribute("data-theme-renderer-status", "ready");
+  }
+
+  expect(pageErrors, "renderer errors during catalog pointer sweep").toEqual(
+    [],
+  );
 });
 
 test("signature themes expose authored content profiles and deterministic detail", async ({
@@ -446,7 +1191,9 @@ test("signature themes expose authored content profiles and deterministic detail
 
     expect(secondFrame, `${themeId} static frame`).toBe(firstFrame);
     expect(detail.colors, `${themeId} visible color detail`).toBeGreaterThan(3);
-    expect(detail.range, `${themeId} visible luminance detail`).toBeGreaterThan(6);
+    expect(detail.range, `${themeId} visible luminance detail`).toBeGreaterThan(
+      6,
+    );
   }
 });
 
@@ -487,31 +1234,35 @@ test("signature themes fit mobile and keep Living Resume surfaces sharp", async 
       };
     });
 
-    expect(geometry.overflow, `${themeId} mobile overflow`).toBeLessThanOrEqual(0);
-    expect(geometry.surfaceCount, `${themeId} themed surfaces`).toBeGreaterThan(0);
+    expect(geometry.overflow, `${themeId} mobile overflow`).toBeLessThanOrEqual(
+      0,
+    );
+    expect(geometry.surfaceCount, `${themeId} themed surfaces`).toBeGreaterThan(
+      0,
+    );
     expect(geometry.sharp, `${themeId} sharp corners`).toBe(true);
   }
 });
 
-test("theme lab remains static with reduced motion and fits mobile", async ({ page }) => {
+test("theme lab remains static with reduced motion and fits mobile", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/dev/theme-lab");
 
   await page.getByLabel("Catalog theme").selectOption("topo");
-  const theme = page.locator(
-    '[data-theme-lab-canvas] [data-theme-id="topo"]',
-  );
+  const theme = page.locator('[data-theme-lab-canvas] [data-theme-id="topo"]');
   await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
   await page.getByRole("button", { name: "Enable motion" }).click();
 
-  const firstFrame = await theme.locator("canvas").evaluate((element) =>
-    (element as HTMLCanvasElement).toDataURL(),
-  );
+  const firstFrame = await theme
+    .locator("canvas")
+    .evaluate((element) => (element as HTMLCanvasElement).toDataURL());
   await page.waitForTimeout(250);
-  const secondFrame = await theme.locator("canvas").evaluate((element) =>
-    (element as HTMLCanvasElement).toDataURL(),
-  );
+  const secondFrame = await theme
+    .locator("canvas")
+    .evaluate((element) => (element as HTMLCanvasElement).toDataURL());
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
@@ -544,5 +1295,8 @@ test("catalog motion advances and keeps keyboard focus connected to the world", 
   expect(animatedFrame).not.toBe(firstFrame);
 
   await page.getByRole("button", { name: /Focus/ }).focus();
-  await expect(theme).toHaveAttribute("data-motion-focus-kind", "quality-signal");
+  await expect(theme).toHaveAttribute(
+    "data-motion-focus-kind",
+    "quality-signal",
+  );
 });

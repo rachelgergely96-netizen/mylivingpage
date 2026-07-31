@@ -1,0 +1,784 @@
+.root {
+  --welcome-accent: var(--site-action);
+  --welcome-accent-bright: var(--site-action-hover);
+  --welcome-accent-soft: var(--site-action-soft);
+  --welcome-reveal-duration: 760ms;
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background:
+    radial-gradient(
+      circle at 72% 34%,
+      color-mix(in srgb, var(--welcome-accent) 18%, transparent),
+      transparent 31rem
+    ),
+    linear-gradient(135deg, #050b14 0%, #08111f 48%, #040912 100%);
+  color: var(--site-text);
+  animation: welcome-backdrop-in 240ms ease-out both;
+  will-change: clip-path, opacity;
+}
+
+.root::before {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--welcome-accent) 7%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--welcome-accent) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 3rem 3rem;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+  opacity: 0.54;
+}
+
+.root::after {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 38%,
+    color-mix(in srgb, var(--welcome-accent) 10%, transparent) 50%,
+    transparent 62%
+  );
+  content: "";
+  transform: translateX(-55%);
+  animation: welcome-atmosphere-pass 1050ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+.root[data-state="revealing"] {
+  overflow: hidden;
+  pointer-events: none;
+  animation: welcome-dashboard-reveal var(--welcome-reveal-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.root[data-state="revealing"] .stage {
+  animation: welcome-stage-reveal var(--welcome-reveal-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.root[data-state="revealing"] .preview {
+  animation: welcome-preview-reveal var(--welcome-reveal-duration)
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.root[data-state="holding"] .preview {
+  animation: welcome-preview-hold var(--welcome-hold-duration) ease-in-out both;
+}
+
+.shell {
+  display: grid;
+  width: min(100%, 92rem);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  grid-template-rows: auto 1fr;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3rem;
+  gap: 1rem;
+}
+
+.wordmark {
+  color: #f5f8ff;
+  font-family: var(--font-dm-sans), sans-serif;
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+}
+
+.wordmark span {
+  color: var(--welcome-accent-bright);
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pause,
+.skip {
+  min-height: 2.75rem;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--welcome-accent) 48%, transparent);
+  color: rgba(229, 238, 249, 0.74);
+  font-size: 0.76rem;
+  font-weight: 650;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.pause:hover,
+.pause:focus-visible,
+.skip:hover,
+.skip:focus-visible {
+  border-color: var(--welcome-accent-bright);
+  color: #fff;
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  align-self: center;
+  overflow: hidden;
+  min-height: min(43rem, calc(100dvh - 7.5rem));
+  margin: 1rem 0;
+  border: 1px solid color-mix(in srgb, var(--welcome-accent) 34%, #25354a);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--welcome-accent) 8%, rgba(6, 13, 24, 0.96)),
+    rgba(4, 10, 19, 0.94) 48%,
+    rgba(3, 8, 16, 0.98)
+  );
+  box-shadow:
+    0 32px 100px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 color-mix(in srgb, var(--welcome-accent) 10%, transparent);
+  grid-template-columns: minmax(0, 0.86fr) minmax(24rem, 1.14fr);
+  animation: welcome-stage-in 720ms 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stage::before {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--welcome-accent-bright),
+    transparent
+  );
+  content: "";
+  opacity: 0;
+  animation: welcome-signal-scan 880ms 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  pointer-events: none;
+}
+
+.copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 5.5rem);
+  flex-direction: column;
+  justify-content: center;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--welcome-accent-bright);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  animation: welcome-copy-in 440ms 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.eyebrow::before {
+  width: 1.8rem;
+  height: 1px;
+  background: var(--welcome-accent);
+  content: "";
+  box-shadow: 0 0 16px var(--welcome-accent);
+}
+
+.title {
+  max-width: 10ch;
+  margin-top: 1.25rem;
+  color: #f6f8fc;
+  font-family: var(--font-dm-sans), sans-serif;
+  font-size: clamp(2.75rem, 5.3vw, 5.8rem);
+  font-weight: 720;
+  letter-spacing: -0.065em;
+  line-height: 0.94;
+  text-wrap: balance;
+  animation: welcome-copy-in 560ms 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.body {
+  max-width: 35rem;
+  margin-top: 1.5rem;
+  color: rgba(222, 232, 244, 0.7);
+  font-size: clamp(0.95rem, 1.5vw, 1.12rem);
+  line-height: 1.7;
+  animation: welcome-copy-in 520ms 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.signalRail {
+  display: grid;
+  max-width: 35rem;
+  margin-top: 2rem;
+  border-top: 1px solid color-mix(in srgb, var(--welcome-accent) 28%, #27364a);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--welcome-accent) 18%, #27364a);
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  animation: welcome-copy-in 480ms 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.signalCell {
+  min-width: 0;
+  padding: 0.9rem 0;
+}
+
+.signalCell + .signalCell {
+  border-left: 1px solid color-mix(in srgb, var(--welcome-accent) 18%, #27364a);
+  padding-left: 1rem;
+}
+
+.signalLabel {
+  color: rgba(193, 210, 229, 0.48);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 650;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.signalValue {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  margin-top: 0.45rem;
+  gap: 0.5rem;
+  color: #e9f1fb;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.signalValue span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: 0 0 auto;
+  background: var(--welcome-accent);
+  box-shadow: 0 0 18px var(--welcome-accent);
+  animation: welcome-status-lock 480ms 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.handoff {
+  max-width: 35rem;
+  margin-top: 1.25rem;
+  animation: welcome-copy-in 460ms 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.handoffMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(193, 210, 229, 0.5);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.handoffMeta span:last-child {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--welcome-accent-bright) 78%, #fff);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handoffTrack {
+  height: 2px;
+  margin-top: 0.7rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--welcome-accent) 18%, #1b2a3e);
+}
+
+.handoffFill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--welcome-accent),
+    var(--welcome-accent-bright)
+  );
+  box-shadow: 0 0 14px var(--welcome-accent);
+}
+
+.root[data-state="holding"] .handoffFill {
+  animation: welcome-handoff-progress var(--welcome-hold-duration) linear both;
+  animation-play-state: running;
+}
+
+.root[data-state="holding"][data-paused="true"] .handoffFill {
+  animation-play-state: paused;
+}
+
+.root[data-state="revealing"] .handoffFill {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  margin-top: 2rem;
+  gap: 1rem;
+  animation: welcome-copy-in 460ms 580ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.continue {
+  min-height: 3.25rem;
+  border: 1px solid var(--welcome-accent);
+  background: var(--welcome-accent);
+  padding: 0.75rem 1.25rem;
+  color: #06101f;
+  font-size: 0.82rem;
+  font-weight: 750;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.continue:hover,
+.continue:focus-visible {
+  border-color: var(--welcome-accent-bright);
+  background: var(--welcome-accent-bright);
+  transform: translateY(-1px);
+}
+
+.escapeHint {
+  color: rgba(193, 210, 229, 0.48);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.visual {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid color-mix(in srgb, var(--welcome-accent) 18%, #27364a);
+  background:
+    radial-gradient(
+      circle at 50% 44%,
+      color-mix(in srgb, var(--welcome-accent) 17%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035),
+      transparent 44%
+    ),
+    rgba(2, 7, 14, 0.62);
+  padding: clamp(2rem, 5vw, 5rem);
+  flex-direction: column;
+  justify-content: center;
+}
+
+.visual::before,
+.visual::after {
+  position: absolute;
+  width: 5rem;
+  height: 5rem;
+  border-color: color-mix(in srgb, var(--welcome-accent) 54%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
+.visual::before {
+  top: 1.25rem;
+  right: 1.25rem;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.visual::after {
+  bottom: 1.25rem;
+  left: 1.25rem;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.visualLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+  gap: 1rem;
+  color: rgba(207, 221, 238, 0.56);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.preview {
+  position: relative;
+  z-index: 2;
+  border: 1px solid
+    color-mix(in srgb, var(--welcome-accent-bright) 26%, rgba(255, 255, 255, 0.08));
+  background: rgba(2, 7, 14, 0.56);
+  box-shadow:
+    0 2.5rem 5rem rgba(0, 0, 0, 0.38),
+    0 0 4rem color-mix(in srgb, var(--welcome-accent) 10%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform-origin: 50% 60%;
+  animation: welcome-preview-in 720ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  will-change: transform, opacity;
+}
+
+.preview::after {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in srgb, var(--welcome-accent-bright) 17%, transparent) 49%,
+    transparent 60%
+  );
+  content: "";
+  transform: translateX(-125%);
+  animation: welcome-preview-light 850ms 430ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+  pointer-events: none;
+}
+
+.pageIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.pageName {
+  overflow: hidden;
+  color: #edf3fb;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pageTheme {
+  flex: 0 0 auto;
+  color: var(--welcome-accent-bright);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@keyframes welcome-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes welcome-dashboard-reveal {
+  0% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+
+  46% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+@keyframes welcome-atmosphere-pass {
+  from {
+    transform: translateX(-55%);
+  }
+
+  to {
+    transform: translateX(55%);
+  }
+}
+
+@keyframes welcome-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes welcome-signal-scan {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  24% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(min(42rem, 68vh));
+  }
+}
+
+@keyframes welcome-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes welcome-status-lock {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes welcome-preview-in {
+  from {
+    opacity: 0;
+    transform: perspective(75rem) translate3d(2rem, 1.2rem, 0) rotateY(-5deg)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: perspective(75rem) translate3d(0, 0, 0) rotateY(0) scale(1);
+  }
+}
+
+@keyframes welcome-preview-light {
+  from {
+    transform: translateX(-125%);
+  }
+
+  to {
+    transform: translateX(125%);
+  }
+}
+
+@keyframes welcome-preview-hold {
+  0%,
+  100% {
+    transform: perspective(75rem) translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: perspective(75rem) translate3d(0, -0.22rem, 0.8rem)
+      scale(1.006);
+  }
+}
+
+@keyframes welcome-handoff-progress {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes welcome-stage-reveal {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(2.5rem) scale(0.988);
+  }
+}
+
+@keyframes welcome-preview-reveal {
+  from {
+    opacity: 1;
+    transform: perspective(75rem) translate3d(0, 0, 0) rotateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: perspective(75rem) translate3d(3rem, 0, 4rem) rotateY(-1.5deg)
+      scale(1.04);
+  }
+}
+
+@media (max-width: 767px) {
+  .shell {
+    min-height: 100dvh;
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .stage {
+    min-height: auto;
+    margin: 0.65rem 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .copy {
+    padding: 1.65rem 1.25rem 1.35rem;
+  }
+
+  .title {
+    max-width: 12ch;
+    margin-top: 0.85rem;
+    font-size: clamp(2.25rem, 11vw, 3.35rem);
+  }
+
+  .body {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .signalRail {
+    margin-top: 1.25rem;
+  }
+
+  .handoff {
+    margin-top: 1rem;
+  }
+
+  .handoffMeta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .handoffMeta span:last-child {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .actions {
+    align-items: stretch;
+    margin-top: 1.25rem;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .continue {
+    width: 100%;
+  }
+
+  .escapeHint {
+    text-align: center;
+  }
+
+  .visual {
+    border-top: 1px solid color-mix(in srgb, var(--welcome-accent) 18%, #27364a);
+    border-left: 0;
+    padding: 1.35rem 1.25rem 1.6rem;
+  }
+
+  .visual::before,
+  .visual::after {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .root::after,
+  .stage,
+  .stage::before,
+  .eyebrow,
+  .title,
+  .body,
+  .signalRail,
+  .handoff,
+  .handoffFill,
+  .actions,
+  .statusDot,
+  .preview,
+  .preview::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .root[data-state="revealing"] {
+    clip-path: none;
+    opacity: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .root,
+  .stage,
+  .visual {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .root::before,
+  .root::after,
+  .preview::after {
+    display: none;
+  }
+}

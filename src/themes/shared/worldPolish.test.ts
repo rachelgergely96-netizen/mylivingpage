@@ -88,20 +88,50 @@ describe("world polish", () => {
       expect(profile.anchorX).toBeLessThanOrEqual(0.82);
       expect(profile.anchorY).toBeGreaterThanOrEqual(0.28);
       expect(profile.anchorY).toBeLessThanOrEqual(0.48);
+      expect(profile.depthStrength).toBeGreaterThanOrEqual(0.7);
+      expect(profile.depthStrength).toBeLessThanOrEqual(1);
     }
   });
 
-  it("keeps signature renderers untouched", () => {
-    const renderer = vi.fn() as unknown as ThemeRenderer;
+  it("gives every material language calm, deterministic depth", () => {
+    const expectedDepth = {
+      refractive: 0.7,
+      "organic-glass": 0.74,
+      engraved: 0.72,
+    } as const;
 
-    expect(withWorldPolish(THEME_MAP.aurora, renderer)).toBe(renderer);
+    for (const theme of THEME_REGISTRY) {
+      expect(getWorldPolishProfile(theme).depthStrength).toBe(
+        expectedDepth[theme.materialProfile],
+      );
+    }
   });
 
-  it("keeps explicitly bespoke catalog worlds untouched", () => {
+  it("covers every theme while preserving only authored signature and bespoke worlds", () => {
     const renderer = vi.fn() as unknown as ThemeRenderer;
+    const preservedIds: string[] = [];
+    const polishedIds: string[] = [];
 
-    expect(withWorldPolish(THEME_MAP.filigree, renderer)).toBe(renderer);
-    expect(withWorldPolish(THEME_MAP.luxe, renderer)).toBe(renderer);
+    for (const theme of THEME_REGISTRY) {
+      const result = withWorldPolish(theme, renderer);
+      if (result === renderer) preservedIds.push(theme.id);
+      else polishedIds.push(theme.id);
+    }
+
+    expect(preservedIds).toEqual([
+      "aurora",
+      "sakura",
+      "luxe",
+      "atlas",
+      "velvet",
+      "quarry",
+      "atelier",
+      "filigree",
+      "solstice",
+      "axiom",
+      "nocturne",
+    ]);
+    expect(polishedIds).toHaveLength(THEME_REGISTRY.length - preservedIds.length);
   });
 
   it("adds bounded motif and focus drawing after a catalog renderer", () => {

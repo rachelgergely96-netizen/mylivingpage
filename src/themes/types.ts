@@ -101,6 +101,46 @@ export const THEME_CONTENT_PROFILE_IDS = [
  */
 export type ThemeContentProfileId = (typeof THEME_CONTENT_PROFILE_IDS)[number];
 
+export const THEME_READING_MODE_IDS = ["glass", "solid"] as const;
+
+/**
+ * Defines how semantic resume content is optically separated from a moving
+ * renderer. Glass profiles keep more of the world visible through a sharp
+ * blur; solid profiles use denser authored plates without blur.
+ */
+export type ThemeReadingMode = (typeof THEME_READING_MODE_IDS)[number];
+
+export const THEME_MATERIAL_PROFILE_IDS = [
+  "refractive",
+  "organic-glass",
+  "engraved",
+] as const;
+
+/**
+ * Material profiles refine surface and light behavior without changing the
+ * semantic resume or replacing a theme's authored content profile.
+ */
+export type ThemeMaterialProfileId =
+  (typeof THEME_MATERIAL_PROFILE_IDS)[number];
+
+export const THEME_SIGNATURE_EXPERIENCE_IDS = [
+  "achievement-atlas",
+  "proof-museum",
+  "editorial-feature",
+  "bloom-composition",
+  "solar-briefing",
+  "midnight-edition",
+] as const;
+
+export type ThemeSignatureExperienceId =
+  (typeof THEME_SIGNATURE_EXPERIENCE_IDS)[number];
+
+export interface ThemeSignatureExperience {
+  id: ThemeSignatureExperienceId;
+  name: string;
+  description: string;
+}
+
 /**
  * A small, renderer-agnostic model of what is happening on a Living Page.
  *
@@ -122,6 +162,8 @@ export interface ThemeMotionContext {
   focusKind: string | null;
   focusX: number;
   focusY: number;
+  /** Optional host-smoothed focus blend used by shared visual polish. */
+  focusStrength?: number;
   interactionImpulse: number;
   /** Normalized canvas-widths / canvas-heights per second. */
   pointerVelocityX: number;
@@ -170,6 +212,9 @@ export interface ThemeMeta {
   id: ThemeId;
   collection: ThemeCollectionId;
   contentProfile: ThemeContentProfileId;
+  materialProfile: ThemeMaterialProfileId;
+  readingMode: ThemeReadingMode;
+  signatureExperience?: ThemeSignatureExperience;
   name: string;
   description: string;
   vibe: string;

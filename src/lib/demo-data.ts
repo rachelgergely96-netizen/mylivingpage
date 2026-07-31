@@ -166,6 +166,28 @@ export const DEMO_PAGES: DemoPage[] = [
         { value: "12", label: "Builds Shipped" },
         { value: "500+", label: "Team Users" },
       ],
+      proofs: [
+        {
+          id: "service-migration-result",
+          type: "quantified_result",
+          title: "Service migration at production scale",
+          summary:
+            "Led the architecture and rollout from a monolith to independently deployable services.",
+          outcome: "Sustained more than 2M requests per day.",
+          url: null,
+          source_label: "Engineering result",
+        },
+        {
+          id: "traceboard-artifact",
+          type: "project_artifact",
+          title: "TraceBoard",
+          summary:
+            "A low-friction tracing toolkit designed for teams operating Node.js services.",
+          outcome: "Made production traces easier for engineering teams to adopt.",
+          url: null,
+          source_label: "Selected work",
+        },
+      ],
     },
   },
   {
@@ -280,6 +302,20 @@ export const DEMO_PAGES: DemoPage[] = [
         { value: "40%", label: "Task Lift" },
         { value: "30+", label: "Projects" },
         { value: "200+", label: "Interviews" },
+      ],
+      testimonials: [
+        {
+          id: "design-leadership-quote",
+          name: "Casey Sample",
+          role: "VP, Product",
+          company: "Example Care Studio",
+          relationship: "Cross-functional partner",
+          quote:
+            "Morgan makes complex product decisions feel clear, human, and inevitable.",
+          status: "approved",
+          requested_at: "2026-05-14",
+          approved_at: "2026-05-16",
+        },
       ],
     },
   },
@@ -471,6 +507,18 @@ export const DEMO_PAGES: DemoPage[] = [
         { value: "25+", label: "Motions Drafted" },
         { value: "40+", label: "Research Memos" },
         { value: "100%", label: "Bar Passed" },
+      ],
+      proofs: [
+        {
+          id: "commercial-motion-sample",
+          type: "writing_sample",
+          title: "Commercial motion practice",
+          summary:
+            "Selected motion and research work prepared for complex business disputes.",
+          outcome: "25+ motions drafted with partner-ready supporting research.",
+          url: null,
+          source_label: "Selected legal writing",
+        },
       ],
     },
   },

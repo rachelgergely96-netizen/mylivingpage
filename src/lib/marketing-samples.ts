@@ -1,5 +1,6 @@
 import type { DemoPage } from "@/lib/demo-data";
 import { DEMO_PAGES } from "@/lib/demo-data";
+import type { ThemeId } from "@/themes/types";
 
 export interface MarketingSample {
   id: string;
@@ -12,6 +13,7 @@ export interface MarketingSample {
   sampleBadge: string;
   ctaRef: string;
   demoIndex: number;
+  themeId?: ThemeId;
 }
 
 export interface MarketingSampleGroup {
@@ -330,6 +332,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     sampleBadge: "Sample page",
     ctaRef: "landing_recruiter_click_engineer",
     demoIndex: 0,
+    themeId: "axiom",
   },
   {
     id: "career-switching-designer",
@@ -342,6 +345,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     sampleBadge: "Sample page",
     ctaRef: "landing_referral_designer",
     demoIndex: 1,
+    themeId: "atelier",
   },
   {
     id: "early-career-attorney",
@@ -354,6 +358,7 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
     sampleBadge: "Sample page",
     ctaRef: "landing_after_apply_attorney",
     demoIndex: 3,
+    themeId: "atlas",
   },
   {
     id: "senior-finance-search",
@@ -370,10 +375,17 @@ export const MARKETING_SAMPLES: MarketingSample[] = [
 ];
 
 export function getMarketingSamples(): ResolvedMarketingSample[] {
-  return MARKETING_SAMPLES.map((sample) => ({
-    ...sample,
-    demo: DEMO_PAGES[sample.demoIndex],
-  }));
+  return MARKETING_SAMPLES.map((sample) => {
+    const demo = DEMO_PAGES[sample.demoIndex];
+
+    return {
+      ...sample,
+      demo: {
+        ...demo,
+        themeId: sample.themeId ?? demo.themeId,
+      },
+    };
+  });
 }
 
 export function getMarketingSampleGroups(): Array<MarketingSampleGroup & { samples: ResolvedMarketingSample[] }> {

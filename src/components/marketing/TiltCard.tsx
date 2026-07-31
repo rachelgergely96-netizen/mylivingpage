@@ -44,6 +44,10 @@ function setGlassLight(
     "--share-card-rim-strength",
     `${(0.34 + Math.abs(pointerX) * 0.16).toFixed(3)}`,
   );
+  element.style.setProperty(
+    "--share-card-holo-hue",
+    `${(pointerX * 50).toFixed(1)}deg`,
+  );
 }
 
 /**

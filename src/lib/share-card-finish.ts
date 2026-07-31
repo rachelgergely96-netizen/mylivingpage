@@ -96,6 +96,23 @@ const FULL_BLEED: CSSProperties = {
   left: 0,
 };
 
+/**
+ * Deterministic glitter points for the holographic finish: [left%, top%,
+ * size(px), tint]. Fixed positions keep the PNG/OG exports reproducible.
+ */
+const HOLO_SPARKLES: Array<[number, number, number, string]> = [
+  [74, 18, 3, "rgba(255,255,255,0.85)"],
+  [83, 34, 2, "rgba(96,225,255,0.8)"],
+  [68, 52, 2, "rgba(255,110,224,0.7)"],
+  [88, 58, 3, "rgba(255,255,255,0.75)"],
+  [79, 74, 2, "rgba(96,225,255,0.7)"],
+  [64, 30, 2, "rgba(255,255,255,0.6)"],
+  [92, 22, 2, "rgba(255,110,224,0.65)"],
+  [71, 86, 2, "rgba(255,255,255,0.65)"],
+  [85, 80, 2, "rgba(96,225,255,0.6)"],
+  [60, 68, 2, "rgba(255,110,224,0.55)"],
+];
+
 function classicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
   return {
     id: "classic",
@@ -256,6 +273,15 @@ function holographicTreatment(
         background:
           "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 22%, rgba(0,0,0,0.1) 74%, rgba(0,0,0,0.24) 100%)",
       },
+      // Full-panel diffraction wash: the spectrum a hologram throws when the
+      // light is fixed. Low-alpha linear spectrum (Satori-safe — no conic),
+      // strongest in the open glass, dimmed under the reading scrim.
+      {
+        ...FULL_BLEED,
+        background:
+          "linear-gradient(112deg, rgba(96,225,255,0.05) 6%, rgba(120,170,255,0.065) 20%, rgba(170,130,255,0.075) 33%, rgba(255,110,224,0.08) 46%, rgba(255,140,160,0.065) 58%, rgba(255,196,120,0.055) 69%, rgba(150,235,150,0.05) 80%, rgba(96,225,255,0.06) 92%)",
+        opacity: 0.85,
+      },
       // Sparse cyan/theme/magenta refraction stays on the physical edge.
       {
         position: "absolute",
@@ -278,13 +304,38 @@ function holographicTreatment(
         background: `linear-gradient(180deg, rgba(116,238,255,0.16) 0%, rgba(255,255,255,0.07) 24%, ${rgba(accentBright, 0.22)} 54%, rgba(255,104,220,0.17) 78%, rgba(255,255,255,0.1) 100%)`,
         borderRadius: 8,
       },
-      // Static export-safe specular at the glass rest pose. Live previews add
-      // a pointer-coupled light above it; PNG and OG stay deterministic.
+      // Static export-safe specular at the glass rest pose, chromatically
+      // split into cyan / white / magenta bands — light through foil. Live
+      // previews add a pointer-coupled twin above; PNG and OG stay
+      // deterministic.
+      {
+        ...FULL_BLEED,
+        background:
+          "linear-gradient(112deg, rgba(0,0,0,0) 50%, rgba(96,225,255,0.09) 60%, rgba(96,225,255,0.02) 66%, rgba(0,0,0,0) 72%)",
+        opacity: 0.5,
+      },
       {
         ...FULL_BLEED,
         background: `linear-gradient(112deg, rgba(0,0,0,0) 54%, rgba(112,238,255,0.03) 61%, rgba(255,255,255,0.08) 66%, ${rgba(accentBright, 0.055)} 69%, rgba(255,110,220,0.035) 72%, rgba(0,0,0,0) 80%)`,
         opacity: 0.5,
       },
+      {
+        ...FULL_BLEED,
+        background:
+          "linear-gradient(112deg, rgba(0,0,0,0) 58%, rgba(255,110,224,0.02) 66%, rgba(255,110,224,0.085) 71%, rgba(0,0,0,0) 78%)",
+        opacity: 0.5,
+      },
+      // Specular sparkle field — deterministic glitter points in the open
+      // glass zone, clear of the reading lane.
+      ...HOLO_SPARKLES.map(([left, top, size, tint]) => ({
+        position: "absolute" as const,
+        left: `${left}%`,
+        top: `${top}%`,
+        width: size,
+        height: size,
+        background: `radial-gradient(circle, ${tint} 0%, rgba(0,0,0,0) 70%)`,
+        opacity: 0.8,
+      })),
     ],
     specular: null,
     bodyScrim: {

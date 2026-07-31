@@ -162,6 +162,52 @@ export function ShareCardArtwork({
                 }}
               />
             ) : null}
+            {treatment.id === "holographic" ? (
+              <div
+                className="share-card-holo-rainbow"
+                style={{
+                  background:
+                    "linear-gradient(112deg, rgba(96,225,255,0.08) 6%, rgba(120,170,255,0.1) 20%, rgba(170,130,255,0.11) 33%, rgba(255,110,224,0.12) 46%, rgba(255,140,160,0.1) 58%, rgba(255,196,120,0.085) 69%, rgba(150,235,150,0.08) 80%, rgba(96,225,255,0.09) 92%)",
+                  height: "130%",
+                  left: "-15%",
+                  position: "absolute",
+                  top: "-15%",
+                  width: "130%",
+                }}
+              />
+            ) : null}
+            {treatment.id === "holographic" && treatment.shine ? (
+              <div
+                className="share-card-holo-fringe"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(0,0,0,0) 20%, rgba(96,225,255,0.14) 50%, rgba(0,0,0,0) 80%)",
+                  height: "180%",
+                  left: "42%",
+                  position: "absolute",
+                  top: "-40%",
+                  transform: `translate3d(calc(var(--share-card-specular-x, 24px) - 8px), 0, 0) rotate(${treatment.shine.rotateDeg}deg)`,
+                  transformOrigin: "center",
+                  width: treatment.shine.width,
+                }}
+              />
+            ) : null}
+            {treatment.id === "holographic" && treatment.shine ? (
+              <div
+                className="share-card-holo-fringe"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(0,0,0,0) 20%, rgba(255,110,224,0.13) 50%, rgba(0,0,0,0) 80%)",
+                  height: "180%",
+                  left: "42%",
+                  position: "absolute",
+                  top: "-40%",
+                  transform: `translate3d(calc(var(--share-card-specular-x, 24px) + 8px), 0, 0) rotate(${treatment.shine.rotateDeg}deg)`,
+                  transformOrigin: "center",
+                  width: treatment.shine.width,
+                }}
+              />
+            ) : null}
             <div
               className={
                 treatment.id === "metal"

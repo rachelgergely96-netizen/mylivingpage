@@ -273,6 +273,8 @@ describe("ShareCardArtwork", () => {
     expect(staticMarkup).not.toContain("share-card-glass-ambient");
     expect(staticMarkup).not.toContain("share-card-glass-specular");
     expect(staticMarkup).not.toContain("share-card-glass-caustic");
+    expect(staticMarkup).not.toContain("share-card-holo-rainbow");
+    expect(staticMarkup).not.toContain("share-card-holo-fringe");
     expect(staticMarkup).not.toContain("data-share-card-light-stage");
 
     // Live preview opts in.
@@ -287,6 +289,8 @@ describe("ShareCardArtwork", () => {
     expect(liveMarkup).toContain("share-card-glass-ambient");
     expect(liveMarkup).toContain("share-card-glass-specular");
     expect(liveMarkup).toContain("share-card-glass-caustic");
+    expect(liveMarkup).toContain("share-card-holo-rainbow");
+    expect(liveMarkup).toContain("share-card-holo-fringe");
     expect(liveMarkup).toContain('data-share-card-glass-shell="acrylic"');
     expect(liveMarkup).toContain("data-share-card-light-stage");
 

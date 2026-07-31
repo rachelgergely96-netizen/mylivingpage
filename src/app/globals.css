@@ -3747,6 +3747,39 @@ a {
   transition: opacity 120ms ease;
 }
 
+/* Live diffraction wash: the spectrum slides and re-hues with the tilt, so
+   the color at any point changes with viewing angle — the core holographic
+   cue. Export paths omit this node; they keep the static rest-pose wash. */
+.share-card-holo-rainbow {
+  opacity: 0.42;
+  transform: translate3d(
+    calc(var(--share-card-light-x, 0px) * 0.6),
+    calc(var(--share-card-light-y, 0px) * 0.4),
+    0
+  );
+  filter: hue-rotate(var(--share-card-holo-hue, 0deg));
+  transition:
+    transform 110ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 180ms ease;
+  will-change: transform, filter;
+}
+
+.share-card-holo-fringe {
+  opacity: 0.4;
+  transition:
+    transform 90ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 160ms ease;
+  will-change: transform, opacity;
+}
+
+[data-share-card-glass-shell][data-tilt-active="true"] .share-card-holo-rainbow {
+  opacity: 0.56;
+}
+
+[data-share-card-glass-shell][data-tilt-active="true"] .share-card-holo-fringe {
+  opacity: 0.55;
+}
+
 [data-share-card-glass-shell][data-tilt-active="true"]
   .share-card-glass-specular {
   opacity: 0.62;
@@ -3775,6 +3808,8 @@ a {
   .share-card-glass-specular,
   .share-card-glass-caustic,
   .share-card-glass-rim-light,
+  .share-card-holo-rainbow,
+  .share-card-holo-fringe,
   .share-card-metal-shine {
     animation: none !important;
     transition: none !important;

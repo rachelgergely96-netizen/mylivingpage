@@ -512,7 +512,7 @@ export default function DashboardSignalDesk({
                                   </p>
                                 </div>
                               </div>
-                              <div className="mt-5 grid grid-cols-3 gap-2 lg:grid-cols-1">
+                              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1">
                                 <SignalMetric
                                   label="Views"
                                   value={String(proof.viewsLast7d)}

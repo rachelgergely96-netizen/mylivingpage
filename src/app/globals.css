@@ -1515,7 +1515,7 @@ a {
   margin-right: auto;
   margin-left: auto;
   border: 1px solid var(--theme-border);
-  background: var(--theme-surface-strong);
+  background: linear-gradient(var(--theme-surface-strong), var(--theme-surface-strong));
   padding: clamp(1.1rem, 3vw, 2rem);
 }
 
@@ -1926,7 +1926,7 @@ a {
   border: 0;
   border-top: 2px solid #18161b;
   border-bottom: 1px solid #18161b;
-  background: transparent;
+  background: linear-gradient(var(--theme-surface), var(--theme-surface));
   box-shadow: none;
   padding: clamp(3.5rem, 8vw, 7rem) 0 clamp(1.5rem, 4vw, 3rem);
 }
@@ -2016,7 +2016,7 @@ a {
   margin-left: 0;
   border: 0;
   border-bottom: 1px solid #18161b;
-  background: transparent;
+  background: linear-gradient(var(--theme-surface), var(--theme-surface));
   padding: clamp(1.25rem, 3vw, 2.25rem) 0;
 }
 
@@ -2063,7 +2063,7 @@ a {
   border-color: rgba(24, 22, 27, 0.54);
   background: transparent;
   color: #18161b;
-  outline: 0;
+  outline-color: transparent;
   box-shadow: none;
 }
 
@@ -2254,7 +2254,7 @@ a {
     .resume-theme-subtle,
     [data-experience-dates]
   ) {
-  color: rgba(24, 22, 27, 0.78);
+  color: rgba(24, 22, 27, 0.82);
 }
 
 [data-theme-experience="editorial-feature"]

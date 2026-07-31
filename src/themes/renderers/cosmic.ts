@@ -1,5 +1,5 @@
 import { fbm } from "../shared/noise";
-import { finiteClamp } from "../shared/motion";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { star4 } from "../shared/draw";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
@@ -49,7 +49,14 @@ const COS_CLOUDS=[
 let cosmicGlow: CanvasGradient | null = null;
 let cosmicGlowContext: CanvasRenderingContext2D | null = null;
 
-export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+  // Uniform page-motion plumbing: the resolved model is all zero/centered at
+  // rest and zeroes transients under reducedMotion. Cosmic's approved moving
+  // composition predates the motion model, so no resolved term feeds the draw
+  // math yet — reducedMotion only freezes time to the canonical t=0 pose.
+  resolveThemeMotion(motion);
+  const reduced=!!(motion&&motion.reducedMotion);
+  const T=reduced?0:finiteClamp(t,0,1e6);
   const S=Math.min(w,h);
   let _glow=cosmicGlow;
   if(!_glow || cosmicGlowContext!==ctx){
@@ -66,7 +73,7 @@ export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.save(); ctx.globalCompositeOperation="screen";
   for(let ci=0;ci<COS_CLOUDS.length;ci++){
     const c=COS_CLOUDS[ci];
-    const cx=(c[0]+Math.sin(t*0.05+ci*1.7)*0.03)*w, cy=(c[1]+Math.cos(t*0.045+ci)*0.03)*h, r=c[2]*S;
+    const cx=(c[0]+Math.sin(T*0.05+ci*1.7)*0.03)*w, cy=(c[1]+Math.cos(T*0.045+ci)*0.03)*h, r=c[2]*S;
     const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
     g.addColorStop(0,`hsla(${c[3]},${c[4]}%,${c[5]}%,${c[6]})`);
     g.addColorStop(0.45,`hsla(${c[3]+18},${c[4]}%,${c[5]-8}%,${c[6]*0.4})`);
@@ -77,7 +84,7 @@ export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // 2 — dust lane across the galactic band, fbm-textured (coarser step for perf)
   ctx.save(); ctx.translate(w*0.5,h*0.5); ctx.rotate(-0.42); ctx.globalCompositeOperation="screen";
   for(let x=-w;x<w;x+=10){
-    const n=fbm(x*0.004+t*0.02,3.1,3);
+    const n=fbm(x*0.004+T*0.02,3.1,3);
     const band=(0.5+n*0.5)*h*0.10;
     const a=0.02+Math.max(0,n)*0.05;
     ctx.fillStyle=`hsla(250,40%,52%,${a})`;
@@ -91,12 +98,12 @@ export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
     const st=COS_STARS[sI]; const depth=st.depth, par=depth*8;
     // Wrap the intrinsic star path only; parallax offsets after the wrap and
     // the seam fade keeps deep-layer stars from popping under pointer motion.
-    const wxs=wrapSoft(st.bx*w + Math.sin(t*0.15*depth+st.i)*2, w, 0.03);
-    const wys=wrapSoft(st.by*h + Math.cos(t*0.12*depth+st.i)*2, h, 0.03);
+    const wxs=wrapSoft(st.bx*w + Math.sin(T*0.15*depth+st.i)*2, w, 0.03);
+    const wys=wrapSoft(st.by*h + Math.cos(T*0.12*depth+st.i)*2, h, 0.03);
     const wrapA=wxs.alpha*wys.alpha;
     const sx=wxs.u - px0*par;
     const sy=wys.u - py0*par;
-    const tw=0.35+0.4*Math.sin(t*st.twF+st.twP)+0.15*Math.sin(t*0.4+st.i);
+    const tw=0.35+0.4*Math.sin(T*st.twF+st.twP)+0.15*Math.sin(T*0.4+st.i);
     const twp=tw>0?tw:0;
     const dx=mx*w-sx, dy=my*h-sy; const dist=Math.hypot(dx,dy);
     const boost=dist<140?(1-dist/140)*0.35:0;
@@ -121,16 +128,16 @@ export const renderCosmic: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
         const al=(1-d/(w*0.13))*0.14;
         ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by);
         ctx.strokeStyle=`hsla(44,70%,70%,${al})`; ctx.stroke();
-        const fp=(t*0.35+i*0.7)%1;
+        const fp=(T*0.35+i*0.7)%1;
         stamp(ax+(bx-ax)*fp, ay+(by-ay)*fp, 7, al*1.5);
       }
     }
   }
   // 5 — shooting stars with tapered gradient trail
   for(let k=0;k<2;k++){
-    const phase=(t*0.13+k*0.5)%1;
+    const phase=(T*0.13+k*0.5)%1;
     if(phase<0.16){
-      const p=phase/0.16; const seed=Math.floor(t*0.13+k*0.5)*73.1+k*40;
+      const p=phase/0.16; const seed=Math.floor(T*0.13+k*0.5)*73.1+k*40;
       const sxp=(Math.sin(seed)*0.5+0.5)*w; const syp=Math.abs(Math.sin(seed*1.3))*h*0.35;
       const ang=0.45+Math.sin(seed*2)*0.3; const len=90+p*70;
       const x=sxp+Math.cos(ang)*p*w*0.5, y=syp+Math.sin(ang)*p*h*0.4;

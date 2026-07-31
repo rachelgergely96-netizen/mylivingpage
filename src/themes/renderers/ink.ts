@@ -1,5 +1,5 @@
 import { fbm } from "../shared/noise";
-import { finiteClamp } from "../shared/motion";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -14,7 +14,14 @@ export const renderInk: ThemeRenderer = (
   _deltaSeconds,
   motion,
 ) => {
-  const t = motion?.reducedMotion ? 0 : time;
+  // Uniform motion plumbing: resolve the page-motion contract once per frame.
+  // Ink's approved composition predates page-level motion nuance, so the
+  // resolved fields stay unread (keeping motion-active output identical to the
+  // pre-upgrade renderer); only the reducedMotion gate below consumes the
+  // contract, freezing time so the theme holds its canonical still frame.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
   const lightX=w*(0.94+Math.sin(t*TAU/38)*0.018);
   const lightY=h*0.12;
 

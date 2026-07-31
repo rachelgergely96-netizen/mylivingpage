@@ -1,4 +1,5 @@
 import { fbm } from "../shared/noise";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import type { ThemeRenderer } from "../types";
 
 const TAU = Math.PI * 2;
@@ -13,7 +14,12 @@ export const renderTerracotta: ThemeRenderer = (
   _deltaSeconds,
   motion,
 ) => {
-  const t = motion?.reducedMotion ? 0 : time;
+  // Uniform motion contract: resolve the page-motion model once. This theme's
+  // preserved composition takes no page-motion nuance, so only reducedMotion
+  // (frozen time) is consumed from the context.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
   const mxp=mx*w, myp=my*h;
   const kilnX=w*1.04, kilnY=h*0.96;
   const kilnSweep=Math.sin(t*TAU/32)*(4*Math.PI/180);

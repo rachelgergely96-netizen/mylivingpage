@@ -356,46 +356,34 @@ const THEME_ACCENT_PALETTES = {
   rosaline: accentPalette("#E6AFC2", "#FCE3EC", "191, 100, 136", "230, 175, 194"),
 } as const satisfies Record<ThemeId, ThemeAccentPalette>;
 
+// Signature themes restate their accent family here so the override table
+// remains the single authored word on their presentation; the values are the
+// palette entries above, referenced rather than repeated.
 const THEME_PRESENTATION_OVERRIDES: Partial<Record<ThemeId, Partial<ThemePresentation>>> = {
   velvet: {
-    accent: "#E8A7B9",
-    accentBright: "#FFD9E2",
-    accentSoft: "rgba(232, 117, 151, 0.12)",
-    accentBorder: "rgba(244, 168, 190, 0.3)",
+    ...THEME_ACCENT_PALETTES.velvet,
     surface: "rgba(30, 7, 18, 0.76)",
     surfaceStrong: "rgba(30, 7, 18, 0.92)",
     scrim:
       "linear-gradient(90deg, rgba(15, 3, 10, 0.86) 0%, rgba(15, 3, 10, 0.66) 50%, rgba(15, 3, 10, 0.36) 100%)",
   },
   atlas: {
-    accent: "#67D6FF",
-    accentBright: "#C9F3FF",
-    accentSoft: "rgba(50, 193, 255, 0.11)",
-    accentBorder: "rgba(103, 214, 255, 0.3)",
+    ...THEME_ACCENT_PALETTES.atlas,
     scrim:
       "linear-gradient(90deg, rgba(1, 9, 15, 0.86) 0%, rgba(1, 9, 15, 0.66) 47%, rgba(1, 9, 15, 0.34) 100%)",
   },
   aurora: {
-    accent: "#82F3D0",
-    accentBright: "#D6FFF3",
-    accentSoft: "rgba(91, 226, 193, 0.11)",
-    accentBorder: "rgba(130, 243, 208, 0.28)",
+    ...THEME_ACCENT_PALETTES.aurora,
     scrim:
       "linear-gradient(90deg, rgba(2, 8, 20, 0.86) 0%, rgba(2, 8, 20, 0.66) 50%, rgba(2, 8, 20, 0.34) 100%)",
   },
   quarry: {
-    accent: "#E9AF72",
-    accentBright: "#FFE0B8",
-    accentSoft: "rgba(217, 143, 72, 0.12)",
-    accentBorder: "rgba(233, 175, 114, 0.29)",
+    ...THEME_ACCENT_PALETTES.quarry,
     scrim:
       "linear-gradient(90deg, rgba(12, 8, 5, 0.86) 0%, rgba(12, 8, 5, 0.66) 52%, rgba(12, 8, 5, 0.34) 100%)",
   },
   nocturne: {
-    accent: "#C8D4FF",
-    accentBright: "#F1F4FF",
-    accentSoft: "rgba(151, 171, 255, 0.11)",
-    accentBorder: "rgba(200, 212, 255, 0.27)",
+    ...THEME_ACCENT_PALETTES.nocturne,
     scrim:
       "linear-gradient(90deg, rgba(3, 5, 14, 0.86) 0%, rgba(3, 5, 14, 0.66) 52%, rgba(3, 5, 14, 0.34) 100%)",
   },
@@ -565,6 +553,7 @@ const THEME_DEFINITIONS: Array<
   },
   {
     id: "luxe",
+    bespokeWorld: true,
     name: "Luxe",
     description:
       "One monumental fold of liquid gold moves through black lacquer, its mirror ridge following the page story.",
@@ -813,6 +802,7 @@ const THEME_DEFINITIONS: Array<
   },
   {
     id: "filigree",
+    bespokeWorld: true,
     name: "Filigree",
     description:
       "A continuous line of chased gold climbs the page in asymmetric openwork, catching a jeweler's light as each chapter comes forward.",

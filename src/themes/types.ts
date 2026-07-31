@@ -221,4 +221,10 @@ export interface ThemeMeta {
   background: string;
   presentation: ThemePresentation;
   signature?: boolean;
+  /**
+   * The renderer authors its own complete world (atmosphere, depth, focus,
+   * vignette), so the shared world-polish pass must leave it untouched.
+   * Signature themes are exempt implicitly; this flag opts out catalog themes.
+   */
+  bespokeWorld?: true;
 }

@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -56,7 +57,22 @@ const CFG = (function () {
 let GRADE: CanvasGradient | null = null, GRADE_H = 0;
 let VIG: CanvasGradient | null = null, VIG_W = 0, VIG_H = 0;
 
-export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+export const renderFluid: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion contract: resolve the page-motion model once at the top.
+  // The fluid composition is parity-locked, so only reducedMotion (frozen
+  // time) is consumed from it today; page motion hooks in here later.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const T = reduced ? 0 : finiteClamp(t, 0, 1e6);
   const cx = mx * w, cy = my * h;
   const diag = Math.hypot(w, h) || 1;
   const parX = mx - 0.5, parY = my - 0.5;
@@ -76,8 +92,8 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.fillRect(0, 0, w, h);
 
   // key light sinking from the surface — soft round bloom, dimmed over the top-left reading column
-  const lx = w * (0.32 + Math.sin(t * 0.05) * 0.12);
-  const ly = h * (0.06 + Math.cos(t * 0.04) * 0.05);
+  const lx = w * (0.32 + Math.sin(T * 0.05) * 0.12);
+  const ly = h * (0.06 + Math.cos(T * 0.04) * 0.05);
   const key = ctx.createRadialGradient(lx, ly, 0, lx, ly, diag * 0.75);
   key.addColorStop(0, "rgba(80,168,176,0.12)");
   key.addColorStop(0.44, "rgba(28,80,100,0.045)");
@@ -89,26 +105,26 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   // volumetric depth fog (fbm-modulated teal masses)
   for (const f of CFG.fog) {
-    const fx = w * (f.ox + Math.sin(t * f.speed + f.phase) * 0.06) - parX * 10;
-    const fy = h * (f.oy + Math.cos(t * f.speed * 0.8 + f.phase) * 0.05) - parY * 10;
-    const n = fbm(f.ox * 3 + t * 0.03, f.oy * 3 - t * 0.02, 2);
+    const fx = w * (f.ox + Math.sin(T * f.speed + f.phase) * 0.06) - parX * 10;
+    const fy = h * (f.oy + Math.cos(T * f.speed * 0.8 + f.phase) * 0.05) - parY * 10;
+    const n = fbm(f.ox * 3 + T * 0.03, f.oy * 3 - T * 0.02, 2);
     const rr = f.r * diag * 0.5 * (0.86 + n * 0.18);
     softGlow(ctx, fx, fy, rr, "hsla(" + f.hue + ",58%,26%," + (f.alpha * (0.8 + n * 0.2)) + ")", "transparent");
   }
 
   // surface glimmer band — dimmed so the header/top reading zone stays legible under bloom
   const surf = ctx.createLinearGradient(0, 0, 0, h * 0.34);
-  surf.addColorStop(0, "hsla(180,68%,56%," + (0.028 + Math.sin(t * 0.4) * 0.012) + ")");
+  surf.addColorStop(0, "hsla(180,68%,56%," + (0.028 + Math.sin(T * 0.4) * 0.012) + ")");
   surf.addColorStop(1, "transparent");
   ctx.fillStyle = surf;
   ctx.fillRect(0, 0, w, h * 0.34);
 
   // soft god-ray shafts (wide, tapered, blurred gradient wedges)
   for (const s of CFG.shafts) {
-    const baseX = (s.x + Math.sin(t * s.sway + s.ph) * s.swayA) * w;
+    const baseX = (s.x + Math.sin(T * s.sway + s.ph) * s.swayA) * w;
     const topW = s.w * w;
-    const botX = baseX + s.tilt * w + Math.sin(t * 0.1 + s.ph) * w * 0.02;
-    const a = s.alpha * (0.6 + Math.sin(t * 0.5 + s.ph) * 0.4);
+    const botX = baseX + s.tilt * w + Math.sin(T * 0.1 + s.ph) * w * 0.02;
+    const a = s.alpha * (0.6 + Math.sin(T * 0.5 + s.ph) * 0.4);
     const g = ctx.createLinearGradient(baseX, 0, botX, h);
     g.addColorStop(0, "hsla(" + s.hue + ",70%,74%," + a + ")");
     g.addColorStop(0.5, "hsla(" + s.hue + ",64%,56%," + (a * 0.35) + ")");
@@ -142,15 +158,15 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   for (const r of CFG.rivers) {
     const L = CFG.layers[r.layer];
     const N = L.len;
-    const dxb = Math.sin(t * 0.03 * r.spd + r.phase) * 0.10;
-    const dyb = Math.cos(t * 0.025 * r.spd + r.phase * 1.3) * 0.08;
+    const dxb = Math.sin(T * 0.03 * r.spd + r.phase) * 0.10;
+    const dyb = Math.cos(T * 0.025 * r.spd + r.phase * 1.3) * 0.08;
     let px = (0.03 + r.sx * 0.94 + dxb) * w - parX * L.par;
     let py = (0.03 + r.sy * 0.94 + dyb) * h - parY * L.par;
     const halfW = L.width * 0.5;
     for (let s = 0; s <= N; s++) {
       const u = N > 0 ? s / N : 0;
-      const n = fbm(px * L.res + t * L.speed + r.phase, py * L.res - t * L.speed * 0.6, L.oct);
-      let ang = n * TAU * r.wobble + t * 0.02;
+      const n = fbm(px * L.res + T * L.speed + r.phase, py * L.res - T * L.speed * 0.6, L.oct);
+      let ang = n * TAU * r.wobble + T * 0.02;
       const ddx = cx - px, ddy = cy - py;
       const dd = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
       if (dd < 240) {
@@ -161,7 +177,7 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
       // taper both ends to a point; swell in the middle
       const env = Math.pow(Math.sin(Math.PI * u), 0.7);
       // organic width variation along the current (bulges and pinches)
-      const wn = 0.45 + 0.6 * (0.5 + fbm(px * L.res * r.wf + r.wSeed, py * L.res * r.wf - t * 0.05, 2));
+      const wn = 0.45 + 0.6 * (0.5 + fbm(px * L.res * r.wf + r.wSeed, py * L.res * r.wf - T * 0.05, 2));
       const hw = halfW * env * (wn > 0.12 ? wn : 0.12) * r.wJit;
       MX[s] = px; MY[s] = py;
       NX[s] = -ty; NY[s] = tx;
@@ -169,7 +185,7 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
       px += tx * L.step;
       py += ty * L.step;
     }
-    const shimmer = 0.7 + Math.sin(t * 0.6 + r.phase) * 0.3;
+    const shimmer = 0.7 + Math.sin(T * 0.6 + r.phase) * 0.3;
     const lit = L.lit * r.litJ;
     // near currents get a soft outer bloom for glowing edges
     if (r.layer === 2) {
@@ -192,14 +208,14 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   // bioluminescent plankton — lightness + peak alpha capped so points don't pre-bloom to hot dots
   for (const p of CFG.particles) {
-    let bx = (p.sx + Math.sin(t * p.speed + p.tw) * 0.14) * w - parX * p.par;
-    let by = (p.sy + Math.cos(t * p.speed * 0.9 + p.tw) * 0.12) * h - parY * p.par;
-    const n = fbm(bx * p.res + t * 0.04, by * p.res - t * 0.03, 2);
+    let bx = (p.sx + Math.sin(T * p.speed + p.tw) * 0.14) * w - parX * p.par;
+    let by = (p.sy + Math.cos(T * p.speed * 0.9 + p.tw) * 0.12) * h - parY * p.par;
+    const n = fbm(bx * p.res + T * 0.04, by * p.res - T * 0.03, 2);
     const ang = n * TAU;
-    const adv = p.drift * (0.6 + Math.sin(t * 0.5 + p.tw) * 0.4);
+    const adv = p.drift * (0.6 + Math.sin(T * 0.5 + p.tw) * 0.4);
     bx += Math.cos(ang) * adv;
     by += Math.sin(ang) * adv;
-    const tw = 0.55 + Math.sin(t * p.tws + p.tw) * 0.45;
+    const tw = 0.55 + Math.sin(T * p.tws + p.tw) * 0.45;
     const a = (0.10 + p.bright * 0.20) * tw;
     if (p.bright > 0.72) {
       softGlow(ctx, bx, by, p.size * 7, "hsla(" + p.hue + ",82%,70%," + (a * 0.5) + ")", "transparent");
@@ -212,9 +228,9 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   // rising rim-lit bubbles (highlight lightness clamped so tiny bright dots don't bloom hot)
   for (const b of CFG.bubbles) {
-    const prog = (t * b.rise + b.phase) % 1;
+    const prog = (T * b.rise + b.phase) % 1;
     const by = h * (1.05 - prog * 1.12);
-    const bx = b.x * w + Math.sin(t * 0.5 * b.swayF + b.phase * 6.283) * b.swayA;
+    const bx = b.x * w + Math.sin(T * 0.5 * b.swayF + b.phase * 6.283) * b.swayA;
     const edge = Math.max(0, Math.min(1, prog / 0.12, (1 - prog) / 0.12));
     const a = 0.20 * edge;
     ctx.beginPath();
@@ -231,9 +247,9 @@ export const renderFluid: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   // pulsing bioluminescent blooms — core lightness (74->70) and alpha (0.13->0.10) capped;
   // outer wash eased to 0.08 to protect the central reading column as blooms drift through it
   for (const bl of CFG.blooms) {
-    const ox = w * (bl.ox + Math.sin(t * bl.dspeed + bl.dphase) * 0.10 * bl.dx) - parX * bl.par;
-    const oy = h * (bl.oy + Math.cos(t * bl.dspeed * 0.85 + bl.dphase) * 0.09 * bl.dy) - parY * bl.par;
-    const pulse = 0.6 + Math.sin(t * 0.5 + bl.pulse) * 0.4;
+    const ox = w * (bl.ox + Math.sin(T * bl.dspeed + bl.dphase) * 0.10 * bl.dx) - parX * bl.par;
+    const oy = h * (bl.oy + Math.cos(T * bl.dspeed * 0.85 + bl.dphase) * 0.09 * bl.dy) - parY * bl.par;
+    const pulse = 0.6 + Math.sin(T * 0.5 + bl.pulse) * 0.4;
     softGlow(ctx, ox, oy, bl.r * pulse, "hsla(" + bl.hue + ",85%,55%," + (0.08 * pulse) + ")", "transparent");
     softGlow(ctx, ox, oy, bl.r * 0.3 * pulse, "hsla(" + bl.hue + ",88%,70%," + (0.10 * pulse) + ")", "transparent");
   }

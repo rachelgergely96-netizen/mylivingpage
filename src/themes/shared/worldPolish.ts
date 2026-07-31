@@ -13,7 +13,6 @@ import type {
 } from "../types";
 
 const TAU = Math.PI * 2;
-const BESPOKE_WORLD_THEME_IDS = new Set<ThemeId>(["filigree", "luxe"]);
 
 type WorldMotif =
   | "cinematic-orbit"
@@ -925,14 +924,14 @@ function drawWorldPolish(
 
 /**
  * Adds a bounded, deterministic depth and page-motion pass to catalog themes.
- * Signature renderers and explicitly bespoke worlds keep their compositions
- * unchanged without altering their presentation profile.
+ * Signature renderers and themes flagged `bespokeWorld` keep their
+ * compositions unchanged without altering their presentation profile.
  */
 export function withWorldPolish(
   theme: ThemeMeta,
   renderer: ThemeRenderer,
 ): ThemeRenderer {
-  if (theme.signature || BESPOKE_WORLD_THEME_IDS.has(theme.id)) {
+  if (theme.signature || theme.bespokeWorld) {
     return renderer;
   }
 

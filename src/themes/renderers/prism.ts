@@ -1,5 +1,6 @@
 import { noise2D } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -115,7 +116,14 @@ export const renderPrism: ThemeRenderer = (
   _deltaSeconds,
   motion,
 ) => {
-  const t = motion?.reducedMotion ? 0 : time;
+  // Uniform motion contract: resolve page motion once at the top. All resolved
+  // values are zero/centered at rest and in the preview; prism keeps its base
+  // composition untouched by page motion, so M is plumbing only for now and
+  // reducedMotion simply freezes time to the canonical t=0 pose.
+  const M = resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
+  void M;
   const minWH = Math.min(w, h);
   const cx = w * 0.5, cy = h * 0.5;
   const span = Math.hypot(w, h) * 0.78;

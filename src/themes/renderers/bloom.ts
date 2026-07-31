@@ -1,6 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
-import { finiteClamp } from "../shared/motion";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -131,11 +131,16 @@ const buildBloomCache = (ctx:CanvasRenderingContext2D, w:number, h:number) => {
 let bloomCache: ReturnType<typeof buildBloomCache> | null = null;
 let bloomCacheContext: CanvasRenderingContext2D | null = null;
 
-export const renderBloom: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderBloom: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
   if(!(w>0)||!(h>0)) return;
+  // Uniform motion contract: resolve the page-motion model once. This theme's
+  // preserved composition takes no page-motion nuance, so only reducedMotion
+  // (frozen time) is consumed from the context.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
   const cx = w*0.5;
   const diag = Math.hypot(w,h) || 1;
-  const tt = finiteClamp(t, -1e12, 1e12, 0);
+  const tt = reduced ? 0 : finiteClamp(t, -1e12, 1e12, 0);
   const pmx = finiteClamp(mx, 0, 1, 0.5);
   const pmy = finiteClamp(my, 0, 1, 0.5);
   const px = pmx - 0.5, py = pmy - 0.5;

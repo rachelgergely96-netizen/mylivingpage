@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -51,7 +52,22 @@ const CFG=(function(){
   return {dust:dust,layers:layers,haze:haze,shafts:shafts};
 })();
 
-export const renderVault: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderVault: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion contract: resolve the page-motion model once. This theme's
+  // preserved composition takes no page-motion nuance, so only reducedMotion
+  // (frozen time) is consumed from the context.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
   const cl=(v: number)=>v<0?0:v>1?1:v;
   const lerp=(a: number,b: number,k: number)=>a+(b-a)*k;
   const cx=w*0.5;

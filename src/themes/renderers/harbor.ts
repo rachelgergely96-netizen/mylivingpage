@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -71,7 +72,24 @@ const CFG = (function () {
   return { stars: stars, beacons: beacons, towers: towers, glints: glints, gc };
 })();
 
-export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+export const renderHarbor: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion contract: resolve page motion once at the top. All resolved
+  // values are zero/centered at rest and in the preview; harbor keeps its base
+  // composition untouched by page motion, so M is plumbing only for now and
+  // reducedMotion simply freezes time to the canonical T=0 pose.
+  const M = resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const T = reduced ? 0 : finiteClamp(t, 0, 1e6);
+  void M;
   const HOR = h * (0.52 + (my - 0.5) * 0.03);
   const GRADIENT_HORIZON = h * 0.52;
   const WH = Math.max(1, h - HOR);
@@ -143,7 +161,7 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   for (const s of CFG.stars) {
     const sx = s.x * w - px * 16 * (0.3 + s.br);
     const sy = s.y * HOR * 0.82 - py * 10 * (0.3 + s.br);
-    const tw = 0.5 + 0.5 * Math.sin(t * s.sp + s.tw);
+    const tw = 0.5 + 0.5 * Math.sin(T * s.sp + s.tw);
     const a = (0.16 + 0.42 * s.br) * tw;
     const col = s.warm ? "255,226,182" : GL;
     ctx.beginPath();
@@ -190,7 +208,7 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     if (!b.light) continue;
     const bx = b.x * w,
       bh = b.h * h;
-    const fl = 0.4 + 0.6 * Math.sin(t * 0.7 + b.lp);
+    const fl = 0.4 + 0.6 * Math.sin(T * 0.7 + b.lp);
     const col = b.warm ? WM : CY2;
     ctx.fillStyle = "rgba(" + col + "," + 0.4 * fl + ")";
     ctx.fillRect(bx - 0.8, HOR - bh * 0.6, 1.6, 1.6);
@@ -201,8 +219,8 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   const towerH = h * 0.15;
   const lampY = HOR - towerH;
   const beamLen = Math.max(w, h) * 0.95;
-  const angA = 0.06 + Math.sin(t * 0.2) * 0.26 + px * 0.28;
-  const angB = Math.PI - 0.06 + Math.sin(t * 0.17 + 1.3) * 0.26 + px * 0.28;
+  const angA = 0.06 + Math.sin(T * 0.2) * 0.26 + px * 0.28;
+  const angB = Math.PI - 0.06 + Math.sin(T * 0.17 + 1.3) * 0.26 + px * 0.28;
   const beam = (
     x: number,
     y0: number,
@@ -281,7 +299,7 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.globalCompositeOperation = "lighter";
   for (const b of CFG.beacons) {
     const bx = b.x * w;
-    const pulse = 0.5 + 0.5 * Math.sin(t * b.speed + b.phase);
+    const pulse = 0.5 + 0.5 * Math.sin(T * b.speed + b.phase);
     const col = b.warm ? WM : CY;
     const pale = b.warm ? PWW : PCW;
     softGlow(
@@ -325,9 +343,9 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     ctx.beginPath();
     for (let x = 0; x <= w; x += step) {
       const yo =
-        Math.sin(x * 0.012 + t * 1.25 + f * 6) * amp +
-        Math.sin(x * 0.03 - t * 0.85 + f * 10) * amp * 0.4 +
-        fbm(x * 0.006, y * 0.02 + t * 0.22, 2) * amp * 0.7;
+        Math.sin(x * 0.012 + T * 1.25 + f * 6) * amp +
+        Math.sin(x * 0.03 - T * 0.85 + f * 10) * amp * 0.4 +
+        fbm(x * 0.006, y * 0.02 + T * 0.22, 2) * amp * 0.7;
       if (x === 0) ctx.moveTo(x, y + yo);
       else ctx.lineTo(x, y + yo);
     }
@@ -351,15 +369,15 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.globalCompositeOperation = "lighter";
   for (const b of CFG.beacons) {
     const bx = b.x * w;
-    const pulse = 0.5 + 0.5 * Math.sin(t * b.speed + b.phase);
+    const pulse = 0.5 + 0.5 * Math.sin(T * b.speed + b.phase);
     const col = b.warm ? WM : CY;
     const steps = 14;
     for (let i = 1; i <= steps; i++) {
       const f = i / steps;
       const y = HOR + f * WH;
       const wob =
-        Math.sin(y * 0.055 + t * 1.5 + b.phase) * (3 + f * 20) +
-        fbm(bx * 0.01, y * 0.02 + t * 0.3, 2) * (5 + f * 16);
+        Math.sin(y * 0.055 + T * 1.5 + b.phase) * (3 + f * 20) +
+        fbm(bx * 0.01, y * 0.02 + T * 0.3, 2) * (5 + f * 16);
       const half = (2 + f * 9) * (1 - f * 0.25);
       const a = 0.15 * pulse * (1 - f) * (1 - f);
       ctx.fillStyle = "rgba(" + col + "," + a + ")";
@@ -370,9 +388,9 @@ export const renderHarbor: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.globalCompositeOperation = "lighter";
   for (const g of CFG.glints) {
     const y = HOR + g.d * WH;
-    const tw = 0.5 + 0.5 * Math.sin(t * g.sp + g.ph);
+    const tw = 0.5 + 0.5 * Math.sin(T * g.sp + g.ph);
     if (tw < 0.14) continue;
-    const wob = Math.sin(y * 0.05 + t * 1.15 + g.ph) * (3 + g.d * 18);
+    const wob = Math.sin(y * 0.05 + T * 1.15 + g.ph) * (3 + g.d * 18);
     const gx = g.x * w + wob;
     const a = 0.2 * tw * (1 - g.d * 0.5);
     const len = g.len * (2 + g.d * 4);

@@ -12,8 +12,297 @@ interface CarbonVarnCache {
   varn: number[];
 }
 
-const CFG=(function(){const rnd=createSeededRandom(91237);const glints=[];for(let i=0;i<40;i++){glints.push({u:0.28+rnd()*0.72,v:rnd(),ph:rnd()*TAU,sz:0.5+rnd()*1.1,sp:0.6+rnd()*0.7});}const motes=[];for(let i=0;i<18;i++){motes.push({u:0.30+rnd()*0.68,v:rnd(),ph:rnd()*TAU,sp:0.4+rnd()*0.8,sz:rnd()});}return {glints:glints,motes:motes};})();
-function buildVarn(w:number,h:number,S:number,cols:number,rows:number){const arr=new Array((cols+1)*(rows+1));let k=0;for(let gy=0;gy<=rows;gy++){const v=(gy*S+S*0.5)/h;for(let gx=0;gx<=cols;gx++){const u=(gx*S+S*0.5)/w;arr[k++]=fbm(u*5.2,v*5.2,2)*0.5+0.5;}}return arr;}
-let WV: CarbonVarnCache | null=null;
+const CFG = (function () {
+  const rnd = createSeededRandom(91237);
+  const glints = [];
+  for (let i = 0; i < 40; i++) {
+    glints.push({
+      u: 0.28 + rnd() * 0.72,
+      v: rnd(),
+      ph: rnd() * TAU,
+      sz: 0.5 + rnd() * 1.1,
+      sp: 0.6 + rnd() * 0.7,
+    });
+  }
+  const motes = [];
+  for (let i = 0; i < 18; i++) {
+    motes.push({
+      u: 0.3 + rnd() * 0.68,
+      v: rnd(),
+      ph: rnd() * TAU,
+      sp: 0.4 + rnd() * 0.8,
+      sz: rnd(),
+    });
+  }
+  return { glints: glints, motes: motes };
+})();
+function buildVarn(
+  w: number,
+  h: number,
+  S: number,
+  cols: number,
+  rows: number,
+) {
+  const arr = new Array((cols + 1) * (rows + 1));
+  let k = 0;
+  for (let gy = 0; gy <= rows; gy++) {
+    const v = (gy * S + S * 0.5) / h;
+    for (let gx = 0; gx <= cols; gx++) {
+      const u = (gx * S + S * 0.5) / w;
+      arr[k++] = fbm(u * 5.2, v * 5.2, 2) * 0.5 + 0.5;
+    }
+  }
+  return arr;
+}
+let WV: CarbonVarnCache | null = null;
 
-export const renderCarbon: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{if(!(w>0)||!(h>0))return;const M=resolveThemeMotion(motion);const story=M.storyProgress;const vel=M.scrollVelocity;const live=Math.min(1,Math.abs(vel)*0.42+M.pointerSpeed*0.22);const minSide=Math.min(w,h);const maxSide=Math.max(w,h);const fract=(x:number)=>x-Math.floor(x);const clamp=(v:number,a:number,b:number)=>v<a?a:(v>b?b:v);const f=(n:number)=>n.toFixed(3);const rbias=(u:number)=>{const x=clamp((u-0.36)/0.36,0,1);return x*x*(3-2*x);};const px=mx-0.5;const py=my-0.5;const tilt=0.24;const grade=ctx.createLinearGradient(0,0,0,h);grade.addColorStop(0,'rgba(10,14,19,0.5)');grade.addColorStop(0.5,'rgba(5,7,10,0.15)');grade.addColorStop(1,'rgba(2,3,5,0.6)');ctx.fillStyle=grade;ctx.fillRect(0,0,w,h);const b1=fract(t*0.040+story*0.55)*1.6-0.3+px*0.045+vel*0.022;const b2=fract(t*0.026+0.40+story*0.55)*1.6-0.3+px*0.045+vel*0.022;const b3=fract(t*0.017+0.72+story*0.42)*1.6-0.3+px*0.035+vel*0.016;const S=Math.max(42,Math.min(76,minSide*0.066));const cols=Math.ceil(w/S);const rows=Math.ceil(h/S);const key=w+'|'+h;if(!WV||WV.key!==key){WV={key:key,varn:buildVarn(w,h,S,cols,rows)};}const varnArr=WV.varn;const stride=cols+1;ctx.lineCap='butt';for(let gy=0;gy<=rows;gy++){const y0=gy*S;const vv=(y0+S*0.5)/h;for(let gx=0;gx<=cols;gx++){const x0=gx*S;const u=(x0+S*0.5)/w;const dir=((((gx>>1)+(gy>>1))&1)===0)?1:-1;const s=u+(vv-0.5)*tilt;const g1=Math.exp(-((s-b1)*(s-b1))/0.010);const g2=Math.exp(-((s-b2)*(s-b2))/0.016);const g3=Math.exp(-((s-b3)*(s-b3))/0.020);const lit=dir>0?(g1+g2*0.40+g3*0.25):(g1*0.40+g2+g3*0.50);const varn=varnArr[gy*stride+gx];const rb=rbias(u);const l=clamp(0.10+varn*0.06+(dir>0?0.03:0.0)+lit*0.16*rb,0,0.6);ctx.beginPath();if(dir>0){ctx.moveTo(x0,y0);ctx.lineTo(x0+S,y0+S);}else{ctx.moveTo(x0+S,y0);ctx.lineTo(x0,y0+S);}ctx.lineWidth=S*0.72;ctx.strokeStyle='rgb('+((16+l*150)|0)+','+((22+l*166)|0)+','+((30+l*182)|0)+')';ctx.stroke();if(lit>0.10&&rb>0.06){ctx.beginPath();if(dir>0){ctx.moveTo(x0,y0);ctx.lineTo(x0+S,y0+S);}else{ctx.moveTo(x0+S,y0);ctx.lineTo(x0,y0+S);}ctx.lineWidth=S*0.16;ctx.strokeStyle='rgba(200,222,242,'+f(clamp(0.03+lit*0.26,0,0.30)*rb)+')';ctx.stroke();}}}ctx.save();ctx.globalCompositeOperation='lighter';const drawSweep=(bc:number,intensity:number,tint:string,bwf:number)=>{const rb=0.10+0.90*rbias(bc);const sx=bc*w;ctx.save();ctx.translate(sx,h*(0.5+py*0.04));ctx.rotate(-tilt);const bw=w*bwf;const mid=clamp(0.15*intensity*rb,0,0.18);const edge=clamp(0.03*intensity*rb,0,0.045);const sg=ctx.createLinearGradient(-bw,0,bw,0);sg.addColorStop(0,'rgba('+tint+',0)');sg.addColorStop(0.42,'rgba('+tint+','+f(edge)+')');sg.addColorStop(0.5,'rgba('+tint+','+f(mid)+')');sg.addColorStop(0.58,'rgba('+tint+','+f(edge)+')');sg.addColorStop(1,'rgba('+tint+',0)');ctx.fillStyle=sg;ctx.fillRect(-bw,-maxSide,bw*2,maxSide*2);ctx.restore();};const swb=1+live*0.30;drawSweep(b3,0.9*swb,'198,224,246',0.16);drawSweep(b2,0.6*swb,'150,185,220',0.17);ctx.restore();ctx.save();ctx.globalCompositeOperation='lighter';const gThresh=0.34-live*0.08;for(let i=0;i<CFG.glints.length;i++){const gl=CFG.glints[i];const rb=rbias(gl.u);if(rb<=0.02)continue;const s=gl.u+(gl.v-0.5)*tilt;const gg=Math.exp(-((s-b1)*(s-b1))/0.006)+0.7*Math.exp(-((s-b2)*(s-b2))/0.008)+0.5*Math.exp(-((s-b3)*(s-b3))/0.010);const tw=0.6+0.4*Math.sin(t*gl.sp*(1.7+live*0.6)+gl.ph);const inten=gg*tw*rb;if(inten>gThresh){const x=gl.u*w;const y=gl.v*h;const r=(5+gl.sz*9)*clamp(inten,0,1.2);softGlow(ctx,x,y,r,'rgba(214,232,250,'+f(clamp(inten*0.30,0,0.34))+')','transparent');softGlow(ctx,x,y,r*0.42,'rgba(234,244,255,'+f(clamp(inten*0.34,0,0.38))+')','transparent');}}ctx.restore();ctx.save();ctx.globalCompositeOperation='lighter';for(let i=0;i<CFG.motes.length;i++){const m=CFG.motes[i];const wy=wrapSoft(m.v+t*0.006*m.sp*(1+live*0.7),1,0.05);/* soft wrap: motes fade at the seam instead of teleporting */const u=m.u+Math.sin(t*0.05*m.sp+m.ph)*0.02+px*0.02*(m.sz+0.3);const x=u*w;const y=wy.u*h-py*10*(m.sz+0.2);const tw=0.4+0.6*Math.sin(t*0.6*m.sp+m.ph);const a=clamp(0.03+tw*0.06,0,0.11)*(0.4+0.6*rbias(u))*wy.alpha;const r=1.5+m.sz*3.2;softGlow(ctx,x,y,r,'rgba(196,220,242,'+f(a)+')','transparent');}ctx.restore();ctx.save();ctx.globalCompositeOperation='lighter';softGlow(ctx,w*(0.62+px*0.06),h*(0.10+py*0.04),maxSide*0.42,'rgba(120,150,185,0.06)','transparent');if(M.hasFocus){const fx=M.focusX*w;const fy=M.focusY*h;const imp=M.interactionImpulse;softGlow(ctx,fx,fy,minSide*(0.09+imp*0.05),'rgba(206,228,248,'+f(clamp(0.08+imp*0.16,0,0.26))+')','transparent');softGlow(ctx,fx,fy,minSide*0.035,'rgba(232,242,255,'+f(clamp(0.10+imp*0.16,0,0.30))+')','transparent');}ctx.restore();const clearSpace=ctx.createLinearGradient(0,0,w*0.6,0);clearSpace.addColorStop(0,'rgba(2,4,7,0.5)');clearSpace.addColorStop(0.66,'rgba(2,4,7,0.18)');clearSpace.addColorStop(1,'rgba(2,4,7,0)');ctx.fillStyle=clearSpace;ctx.fillRect(0,0,w*0.62,h);const vg=ctx.createRadialGradient(w*0.6,h*0.48,minSide*0.18,w*0.55,h*0.5,maxSide*0.74);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,1,3,0.42)');ctx.fillStyle=vg;ctx.fillRect(0,0,w,h);const cg=ctx.createLinearGradient(0,0,0,h);cg.addColorStop(0,'rgba(30,50,72,0.05)');cg.addColorStop(0.5,'rgba(0,0,0,0)');cg.addColorStop(1,'rgba(3,6,12,0.16)');ctx.fillStyle=cg;ctx.fillRect(0,0,w,h);};
+export const renderCarbon: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  if (!(w > 0) || !(h > 0)) return;
+  const M = resolveThemeMotion(motion);
+  const story = M.storyProgress;
+  const vel = M.scrollVelocity;
+  const live = Math.min(1, Math.abs(vel) * 0.42 + M.pointerSpeed * 0.22);
+  const minSide = Math.min(w, h);
+  const maxSide = Math.max(w, h);
+  const fract = (x: number) => x - Math.floor(x);
+  const clamp = (v: number, a: number, b: number) =>
+    v < a ? a : v > b ? b : v;
+  const f = (n: number) => n.toFixed(3);
+  const rbias = (u: number) => {
+    const x = clamp((u - 0.36) / 0.36, 0, 1);
+    return x * x * (3 - 2 * x);
+  };
+  const px = mx - 0.5;
+  const py = my - 0.5;
+  const tilt = 0.24;
+  const grade = ctx.createLinearGradient(0, 0, 0, h);
+  grade.addColorStop(0, "rgba(10,14,19,0.5)");
+  grade.addColorStop(0.5, "rgba(5,7,10,0.15)");
+  grade.addColorStop(1, "rgba(2,3,5,0.6)");
+  ctx.fillStyle = grade;
+  ctx.fillRect(0, 0, w, h);
+  const b1 =
+    fract(t * 0.04 + story * 0.55) * 1.6 - 0.3 + px * 0.045 + vel * 0.022;
+  const b2 =
+    fract(t * 0.026 + 0.4 + story * 0.55) * 1.6 -
+    0.3 +
+    px * 0.045 +
+    vel * 0.022;
+  const b3 =
+    fract(t * 0.017 + 0.72 + story * 0.42) * 1.6 -
+    0.3 +
+    px * 0.035 +
+    vel * 0.016;
+  const S = Math.max(42, Math.min(76, minSide * 0.066));
+  const cols = Math.ceil(w / S);
+  const rows = Math.ceil(h / S);
+  const key = w + "|" + h;
+  if (!WV || WV.key !== key) {
+    WV = { key: key, varn: buildVarn(w, h, S, cols, rows) };
+  }
+  const varnArr = WV.varn;
+  const stride = cols + 1;
+  ctx.lineCap = "butt";
+  for (let gy = 0; gy <= rows; gy++) {
+    const y0 = gy * S;
+    const vv = (y0 + S * 0.5) / h;
+    for (let gx = 0; gx <= cols; gx++) {
+      const x0 = gx * S;
+      const u = (x0 + S * 0.5) / w;
+      const dir = (((gx >> 1) + (gy >> 1)) & 1) === 0 ? 1 : -1;
+      const s = u + (vv - 0.5) * tilt;
+      const g1 = Math.exp(-((s - b1) * (s - b1)) / 0.01);
+      const g2 = Math.exp(-((s - b2) * (s - b2)) / 0.016);
+      const g3 = Math.exp(-((s - b3) * (s - b3)) / 0.02);
+      const lit =
+        dir > 0 ? g1 + g2 * 0.4 + g3 * 0.25 : g1 * 0.4 + g2 + g3 * 0.5;
+      const varn = varnArr[gy * stride + gx];
+      const rb = rbias(u);
+      const l = clamp(
+        0.1 + varn * 0.06 + (dir > 0 ? 0.03 : 0.0) + lit * 0.16 * rb,
+        0,
+        0.6,
+      );
+      ctx.beginPath();
+      if (dir > 0) {
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0 + S, y0 + S);
+      } else {
+        ctx.moveTo(x0 + S, y0);
+        ctx.lineTo(x0, y0 + S);
+      }
+      ctx.lineWidth = S * 0.72;
+      ctx.strokeStyle =
+        "rgb(" +
+        ((16 + l * 150) | 0) +
+        "," +
+        ((22 + l * 166) | 0) +
+        "," +
+        ((30 + l * 182) | 0) +
+        ")";
+      ctx.stroke();
+      if (lit > 0.1 && rb > 0.06) {
+        ctx.beginPath();
+        if (dir > 0) {
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x0 + S, y0 + S);
+        } else {
+          ctx.moveTo(x0 + S, y0);
+          ctx.lineTo(x0, y0 + S);
+        }
+        ctx.lineWidth = S * 0.16;
+        ctx.strokeStyle =
+          "rgba(200,222,242," + f(clamp(0.03 + lit * 0.26, 0, 0.3) * rb) + ")";
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const drawSweep = (
+    bc: number,
+    intensity: number,
+    tint: string,
+    bwf: number,
+  ) => {
+    const rb = 0.1 + 0.9 * rbias(bc);
+    const sx = bc * w;
+    ctx.save();
+    ctx.translate(sx, h * (0.5 + py * 0.04));
+    ctx.rotate(-tilt);
+    const bw = w * bwf;
+    const mid = clamp(0.15 * intensity * rb, 0, 0.18);
+    const edge = clamp(0.03 * intensity * rb, 0, 0.045);
+    const sg = ctx.createLinearGradient(-bw, 0, bw, 0);
+    sg.addColorStop(0, "rgba(" + tint + ",0)");
+    sg.addColorStop(0.42, "rgba(" + tint + "," + f(edge) + ")");
+    sg.addColorStop(0.5, "rgba(" + tint + "," + f(mid) + ")");
+    sg.addColorStop(0.58, "rgba(" + tint + "," + f(edge) + ")");
+    sg.addColorStop(1, "rgba(" + tint + ",0)");
+    ctx.fillStyle = sg;
+    ctx.fillRect(-bw, -maxSide, bw * 2, maxSide * 2);
+    ctx.restore();
+  };
+  const swb = 1 + live * 0.3;
+  drawSweep(b3, 0.9 * swb, "198,224,246", 0.16);
+  drawSweep(b2, 0.6 * swb, "150,185,220", 0.17);
+  ctx.restore();
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const gThresh = 0.34 - live * 0.08;
+  for (let i = 0; i < CFG.glints.length; i++) {
+    const gl = CFG.glints[i];
+    const rb = rbias(gl.u);
+    if (rb <= 0.02) continue;
+    const s = gl.u + (gl.v - 0.5) * tilt;
+    const gg =
+      Math.exp(-((s - b1) * (s - b1)) / 0.006) +
+      0.7 * Math.exp(-((s - b2) * (s - b2)) / 0.008) +
+      0.5 * Math.exp(-((s - b3) * (s - b3)) / 0.01);
+    const tw = 0.6 + 0.4 * Math.sin(t * gl.sp * (1.7 + live * 0.6) + gl.ph);
+    const inten = gg * tw * rb;
+    if (inten > gThresh) {
+      const x = gl.u * w;
+      const y = gl.v * h;
+      const r = (5 + gl.sz * 9) * clamp(inten, 0, 1.2);
+      softGlow(
+        ctx,
+        x,
+        y,
+        r,
+        "rgba(214,232,250," + f(clamp(inten * 0.3, 0, 0.34)) + ")",
+        "transparent",
+      );
+      softGlow(
+        ctx,
+        x,
+        y,
+        r * 0.42,
+        "rgba(234,244,255," + f(clamp(inten * 0.34, 0, 0.38)) + ")",
+        "transparent",
+      );
+    }
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < CFG.motes.length; i++) {
+    const m = CFG.motes[i];
+    const wy = wrapSoft(m.v + t * 0.006 * m.sp * (1 + live * 0.7), 1, 0.05);
+    /* soft wrap: motes fade at the seam instead of teleporting */ const u =
+      m.u + Math.sin(t * 0.05 * m.sp + m.ph) * 0.02 + px * 0.02 * (m.sz + 0.3);
+    const x = u * w;
+    const y = wy.u * h - py * 10 * (m.sz + 0.2);
+    const tw = 0.4 + 0.6 * Math.sin(t * 0.6 * m.sp + m.ph);
+    const a =
+      clamp(0.03 + tw * 0.06, 0, 0.11) * (0.4 + 0.6 * rbias(u)) * wy.alpha;
+    const r = 1.5 + m.sz * 3.2;
+    softGlow(ctx, x, y, r, "rgba(196,220,242," + f(a) + ")", "transparent");
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  softGlow(
+    ctx,
+    w * (0.62 + px * 0.06),
+    h * (0.1 + py * 0.04),
+    maxSide * 0.42,
+    "rgba(120,150,185,0.06)",
+    "transparent",
+  );
+  if (M.hasFocus) {
+    const fx = M.focusX * w;
+    const fy = M.focusY * h;
+    const imp = M.interactionImpulse;
+    softGlow(
+      ctx,
+      fx,
+      fy,
+      minSide * (0.09 + imp * 0.05),
+      "rgba(206,228,248," + f(clamp(0.08 + imp * 0.16, 0, 0.26)) + ")",
+      "transparent",
+    );
+    softGlow(
+      ctx,
+      fx,
+      fy,
+      minSide * 0.035,
+      "rgba(232,242,255," + f(clamp(0.1 + imp * 0.16, 0, 0.3)) + ")",
+      "transparent",
+    );
+  }
+  ctx.restore();
+  const clearSpace = ctx.createLinearGradient(0, 0, w * 0.6, 0);
+  clearSpace.addColorStop(0, "rgba(2,4,7,0.5)");
+  clearSpace.addColorStop(0.66, "rgba(2,4,7,0.18)");
+  clearSpace.addColorStop(1, "rgba(2,4,7,0)");
+  ctx.fillStyle = clearSpace;
+  ctx.fillRect(0, 0, w * 0.62, h);
+  const vg = ctx.createRadialGradient(
+    w * 0.6,
+    h * 0.48,
+    minSide * 0.18,
+    w * 0.55,
+    h * 0.5,
+    maxSide * 0.74,
+  );
+  vg.addColorStop(0, "rgba(0,0,0,0)");
+  vg.addColorStop(1, "rgba(0,1,3,0.42)");
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  const cg = ctx.createLinearGradient(0, 0, 0, h);
+  cg.addColorStop(0, "rgba(30,50,72,0.05)");
+  cg.addColorStop(0.5, "rgba(0,0,0,0)");
+  cg.addColorStop(1, "rgba(3,6,12,0.16)");
+  ctx.fillStyle = cg;
+  ctx.fillRect(0, 0, w, h);
+};

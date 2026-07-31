@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
@@ -123,7 +124,22 @@ const GRAD: {
   vig: CanvasGradient | null;
 } = { key: "", ctx: null, col: null, vig: null };
 
-export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+export const renderBiolume: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion contract: resolve the page-motion model once. This theme's
+  // preserved composition takes no page-motion nuance, so only reducedMotion
+  // (frozen time) is consumed from the context.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const T = reduced ? 0 : finiteClamp(t, 0, 1e6);
   const C = CFG;
   const mxp = mx * w, myp = my * h;
   const px = mx - 0.5, py = my - 0.5;
@@ -161,12 +177,12 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   for (let i = 0; i < C.rays.length; i++) {
     const r = C.rays[i];
-    const sway = Math.sin(t * r.swaySpeed + r.swayPh) * r.sway;
+    const sway = Math.sin(T * r.swaySpeed + r.swayPh) * r.sway;
     const cx = (r.x + sway + px * 0.05) * w;
     const topX = cx + r.tilt * w * 0.12;
     const halfTop = r.w * w * 0.5;
     const halfBot = halfTop * 2.4;
-    const a = (0.05 + 0.03 * Math.sin(t * 0.2 + r.swayPh)) * r.bright * 0.82;
+    const a = (0.05 + 0.03 * Math.sin(T * 0.2 + r.swayPh)) * r.bright * 0.82;
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, "rgba(108, 216, 196, " + a + ")");
     g.addColorStop(0.5, "rgba(70, 200, 180, " + (a * 0.4) + ")");
@@ -183,18 +199,18 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   for (let i = 0; i < C.fog.length; i++) {
     const f = C.fog[i];
-    const drift = Math.sin(t * f.drift + f.ph);
+    const drift = Math.sin(T * f.drift + f.ph);
     const fx = (f.x + drift * 0.05) * w;
-    const fy = (f.y + Math.cos(t * f.drift * 0.7 + f.ph) * 0.03) * h;
+    const fy = (f.y + Math.cos(T * f.drift * 0.7 + f.ph) * 0.03) * h;
     const rad = f.r * Math.min(w, h);
-    const n = 0.55 + 0.45 * fbm(f.x * 3 + t * 0.03, f.y * 3, 3);
+    const n = 0.55 + 0.45 * fbm(f.x * 3 + T * 0.03, f.y * 3, 3);
     const a = f.op * n;
     softGlow(ctx, fx, fy, rad, "rgba(40, 150, 140, " + a + ")", "transparent");
   }
 
   for (let i = 0; i < 3; i++) {
-    const by = h * (0.28 + i * 0.24) + Math.sin(t * 0.12 + i * 2) * 14;
-    const ba = 0.02 + Math.sin(t * 0.18 + i) * 0.008;
+    const by = h * (0.28 + i * 0.24) + Math.sin(T * 0.12 + i * 2) * 14;
+    const ba = 0.02 + Math.sin(T * 0.18 + i) * 0.008;
     const band = ctx.createLinearGradient(0, by - 70, 0, by + 70);
     band.addColorStop(0, "rgba(30,120,110,0)");
     band.addColorStop(0.5, "rgba(30,120,110," + Math.max(0, ba) + ")");
@@ -210,12 +226,12 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     ctx.beginPath();
     ctx.moveTo(cpx, cpy);
     for (let s = 0; s < c.len; s++) {
-      const ang = fbm(cpx * 0.0026 + t * 0.02 + c.ph, cpy * 0.0026, 2) * TAU;
+      const ang = fbm(cpx * 0.0026 + T * 0.02 + c.ph, cpy * 0.0026, 2) * TAU;
       cpx += Math.cos(ang) * 5;
       cpy += Math.sin(ang) * 5;
       ctx.lineTo(cpx, cpy);
     }
-    const op = c.op + Math.sin(t * 0.3 + c.ph) * 0.01;
+    const op = c.op + Math.sin(T * 0.3 + c.ph) * 0.01;
     ctx.strokeStyle = "hsla(" + c.hue + ", 72%, 56%, " + Math.max(0, op) + ")";
     ctx.stroke();
   }
@@ -226,8 +242,8 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const par = (s.layer + 1) * 0.012;
     // Wrap the intrinsic drift only and fade at the seam; parallax shifts the
     // wrapped position afterwards so pointer motion can never cause a pop.
-    const wy = wrapSoft(s.y + t * s.speed, 1, 0.05);
-    const wx = wrapSoft(s.x + Math.sin(t * 0.1 * s.sway + s.swayPh) * 0.01, 1, 0.05);
+    const wy = wrapSoft(s.y + T * s.speed, 1, 0.05);
+    const wx = wrapSoft(s.x + Math.sin(T * 0.1 * s.sway + s.swayPh) * 0.01, 1, 0.05);
     const sx = (wx.u - px * par) * w;
     const nxs = wx.u - 0.42, nys = wy.u - 0.46;
     let rf = Math.sqrt(nxs * nxs * 1.2 + nys * nys) / 0.42;
@@ -242,8 +258,8 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   for (let i = 0; i < C.plankton.length; i++) {
     const p = C.plankton[i];
     const par = 0.02 + p.layer * 0.04;
-    const wbx = wrapSoft(p.x + Math.sin(t * 0.08 * p.drift + p.ph) * 0.02, 1, 0.06);
-    const wby = wrapSoft(p.y + Math.cos(t * 0.07 * p.drift + p.ph) * 0.015, 1, 0.06);
+    const wbx = wrapSoft(p.x + Math.sin(T * 0.08 * p.drift + p.ph) * 0.02, 1, 0.06);
+    const wby = wrapSoft(p.y + Math.cos(T * 0.07 * p.drift + p.ph) * 0.015, 1, 0.06);
     const wrapA = wbx.alpha * wby.alpha;
     const bx = wbx.u - px * par;
     const by = wby.u - py * par;
@@ -259,10 +275,10 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     let readF = Math.sqrt(rdx * rdx * 1.2 + rdy * rdy) / 0.42;
     readF = readF > 1 ? 1 : readF;
     readF = 0.5 + 0.5 * readF;
-    const ftv = Math.sin(t * p.flashRate + p.flashPh);
+    const ftv = Math.sin(T * p.flashRate + p.flashPh);
     let flash = ftv > 0.9 ? (ftv - 0.9) / 0.1 : 0;
     flash *= readF;
-    const base = 0.12 + 0.1 * Math.sin(t * 1.1 + p.ph);
+    const base = 0.12 + 0.1 * Math.sin(T * 1.1 + p.ph);
     const bri = Math.max(0.015, (base + flash * 0.5) * readF) * wrapA;
     if (flash * wrapA > 0.15) {
       softGlow(ctx, x, y, 6 + flash * 9, "hsla(" + p.hue + ", 82%, 66%, " + (flash * wrapA * 0.11) + ")", "transparent");
@@ -275,13 +291,13 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   for (let i = 0; i < C.chains.length; i++) {
     const ch = C.chains[i];
-    const headX = (ch.x + Math.sin(t * ch.sx + ch.phx) * ch.ax - px * 0.05) * w;
-    const headY = (ch.y + Math.sin(t * ch.bob + ch.phx) * 0.11) * h;
+    const headX = (ch.x + Math.sin(T * ch.sx + ch.phx) * ch.ax - px * 0.05) * w;
+    const headY = (ch.y + Math.sin(T * ch.bob + ch.phx) * 0.11) * h;
     ctx.beginPath();
     ctx.moveTo(headX, headY);
     for (let n = 1; n <= ch.nodes; n++) {
       const ny = headY + n * ch.seg;
-      const nx = headX + Math.sin(t * ch.speed + n * 0.6 + ch.phx) * ch.seg * ch.wobble;
+      const nx = headX + Math.sin(T * ch.speed + n * 0.6 + ch.phx) * ch.seg * ch.wobble;
       ctx.lineTo(nx, ny);
     }
     ctx.strokeStyle = "hsla(" + ch.hue + ", 70%, 58%, 0.09)";
@@ -289,8 +305,8 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     ctx.stroke();
     for (let n = 0; n <= ch.nodes; n += 2) {
       const ny = headY + n * ch.seg;
-      const nx = headX + Math.sin(t * ch.speed + n * 0.6 + ch.phx) * ch.seg * ch.wobble;
-      const pul = 0.5 + 0.5 * Math.sin(t * 1.4 + n * 0.5 + ch.phx);
+      const nx = headX + Math.sin(T * ch.speed + n * 0.6 + ch.phx) * ch.seg * ch.wobble;
+      const pul = 0.5 + 0.5 * Math.sin(T * 1.4 + n * 0.5 + ch.phx);
       ctx.beginPath();
       ctx.arc(nx, ny, 1.5 + pul * 1.4, 0, TAU);
       ctx.fillStyle = "hsla(" + (ch.hue + 10) + ", 80%, 68%, " + (0.16 + 0.20 * pul) + ")";
@@ -302,8 +318,8 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   for (let i = 0; i < C.jellies.length; i++) {
     const j = C.jellies[i];
     const dpar = 0.02 + j.depth * 0.1;
-    let jx = (j.bx + Math.sin(t * j.sx + j.phx) * j.ax - px * dpar) * w;
-    let jy = (j.by + Math.cos(t * j.sy + j.phy) * j.ay + Math.sin(t * 0.3 + j.phx) * 0.01 - py * dpar) * h;
+    let jx = (j.bx + Math.sin(T * j.sx + j.phx) * j.ax - px * dpar) * w;
+    let jy = (j.by + Math.cos(T * j.sy + j.phy) * j.ay + Math.sin(T * 0.3 + j.phx) * 0.01 - py * dpar) * h;
     const rdx = jx - mxp, rdy = jy - myp;
     const rdist = Math.hypot(rdx, rdy);
     const reach = 180 + j.size * 2;
@@ -313,7 +329,7 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
       jy += (rdy / rdist) * push;
     }
     const size = j.size;
-    const pulse = 0.82 + Math.sin(t * j.pulseSpeed + j.pulsePh) * 0.18;
+    const pulse = 0.82 + Math.sin(T * j.pulseSpeed + j.pulsePh) * 0.18;
     const bw = size * pulse;
     const bh = size * (0.62 + (1 - pulse) * 0.5);
     const hue = j.hue;
@@ -329,7 +345,7 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
       ctx.moveTo(rootX, rootY);
       for (let seg = 1; seg <= 10; seg++) {
         const sy = rootY + seg * (size * 0.2 * j.tail);
-        const swy = Math.sin(t * 0.7 * j.pulseSpeed + i + ten * 0.6 + seg * 0.45) * (2 + seg * 0.9) * j.wob;
+        const swy = Math.sin(T * 0.7 * j.pulseSpeed + i + ten * 0.6 + seg * 0.45) * (2 + seg * 0.9) * j.wob;
         const sx = rootX + (frac - 0.5) * seg * 1.2 + swy;
         ctx.lineTo(sx, sy);
       }
@@ -345,7 +361,7 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
       ctx.moveTo(rootX, rootY);
       for (let seg = 1; seg <= 6; seg++) {
         const sy = rootY + seg * (size * 0.16);
-        const swy = Math.sin(t * 0.9 + i * 1.3 + oa * 1.1 + seg * 0.7) * (1.5 + seg * 1.3);
+        const swy = Math.sin(T * 0.9 + i * 1.3 + oa * 1.1 + seg * 0.7) * (1.5 + seg * 1.3);
         ctx.lineTo(rootX + swy, sy);
       }
       ctx.strokeStyle = "hsla(" + (hue - 6) + ", 65%, 64%, " + (0.08 + 0.04 * pulse) + ")";
@@ -392,10 +408,10 @@ export const renderBiolume: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   wf = wf < 0 ? 0 : (wf > 1 ? 1 : wf);
   wf = wf * wf * (3 - 2 * wf);
   if (wf > 0.001) {
-    const wob = 0.5 + 0.5 * Math.sin(t * 2.4);
+    const wob = 0.5 + 0.5 * Math.sin(T * 2.4);
     softGlow(ctx, mxp, myp, 120, "hsla(172, 82%, 62%, " + ((0.05 + wob * 0.03) * wf) + ")", "transparent");
     for (let r = 0; r < 3; r++) {
-      const rr = (t * 40 + r * 40) % 120;
+      const rr = (T * 40 + r * 40) % 120;
       const a = (1 - rr / 120) * 0.12 * wf;
       ctx.beginPath();
       ctx.arc(mxp, myp, rr + 8, 0, TAU);

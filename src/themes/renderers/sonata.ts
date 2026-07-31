@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow, star4 } from "../shared/draw";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
@@ -86,7 +87,22 @@ const ribHB = (x: number, r: SonataRibbon, t: number, h: number) => {
 // Cache for the two static full-screen gradients (rebuilt only on ctx/size change).
 const GRAD: SonataGradientCache = { ctx:null, w:0, h:0, wash:null, vg:null };
 
-export const renderSonata: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderSonata: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion contract: resolve the page-motion model once. This theme's
+  // preserved composition takes no page-motion nuance, so only reducedMotion
+  // (frozen time) is consumed from the context.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
   const hasStar = typeof star4 === "function";
   const lift = (my-0.5)*h*0.12;
   const ab = 1 + Math.abs(mx-0.5)*0.5;

@@ -1,6 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
-import { finiteClamp } from "../shared/motion";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -47,8 +47,26 @@ for (let i = 0; i < 8; i++) {
 }
 const _neonCache: NeonCache = { w: 0, h: 0, sunY: 0, sunR: 0, sky: null, sun: null, mtnFill: null, refl: null, hglow: null, ridge: null };
 
-export const renderNeon: ThemeRenderer = (ctx, w, h, t, mx, _my) => {
+export const renderNeon: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  _my,
+  _deltaSeconds,
+  motion,
+) => {
   if (!(w > 0) || !(h > 0)) return;
+  // Uniform motion plumbing: resolve the page-motion contract once per frame.
+  // Neon's approved composition predates page-level motion nuance (and it
+  // deliberately ignores pointer Y), so the resolved fields stay unread
+  // (keeping motion-active output identical to the legacy renderer); only the
+  // reducedMotion gate below consumes the contract, freezing time so the
+  // theme holds its canonical still frame.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
   const mxx = finiteClamp(mx, 0, 1, 0.5);
   const horizonY = h * 0.56;
   const vpX = w * (0.5 + (mxx - 0.5) * 0.1);

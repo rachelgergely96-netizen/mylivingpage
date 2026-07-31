@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { star4 } from "../shared/draw";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
@@ -117,7 +118,24 @@ const CFG = (function () {
   return { crystals, layers, fog, aur, glints };
 })();
 
-export const renderGlacier: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+export const renderGlacier: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  time,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion plumbing: resolve the page-motion contract once per frame.
+  // Glacier's approved composition predates page-level motion nuance, so the
+  // resolved fields stay unread (keeping motion-active output identical to the
+  // legacy renderer); only the reducedMotion gate below consumes the contract,
+  // freezing time so the theme holds its canonical still frame.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const t = reduced ? 0 : finiteClamp(time, 0, 1e6);
   const pxo = mx - 0.5;
   const pyo = my - 0.5;
   const HEX = Math.PI / 6;

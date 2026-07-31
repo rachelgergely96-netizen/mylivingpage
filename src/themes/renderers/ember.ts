@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
@@ -94,7 +95,22 @@ for (let i = 0; i < 22; i++) {
   ASH.push({ xf: emberRand(), phase: emberRand(), drift: emberRand() * TAU, aSeed: emberRand() * TAU });
 }
 
-export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
+export const renderEmber: ThemeRenderer = (
+  ctx,
+  w,
+  h,
+  t,
+  mx,
+  my,
+  _deltaSeconds,
+  motion,
+) => {
+  // Uniform motion contract: resolve the page-motion model once at the top.
+  // The ember composition is parity-locked, so only reducedMotion (frozen
+  // time) is consumed from it today; page motion hooks in here later.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const T = reduced ? 0 : finiteClamp(t, 0, 1e6);
   const sw = Math.max(1, w);
   const sh = Math.max(1, h);
   const heat = 0.7 + my * 0.6;
@@ -102,7 +118,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   // Deep haze wash (single cached-shape gradient)
   const haze = ctx.createLinearGradient(0, sh, 0, 0);
-  haze.addColorStop(0, `hsla(12,72%,13%,${0.18 + Math.sin(t * 0.3) * 0.025})`);
+  haze.addColorStop(0, `hsla(12,72%,13%,${0.18 + Math.sin(T * 0.3) * 0.025})`);
   haze.addColorStop(0.34, "hsla(20,52%,7%,0.09)");
   haze.addColorStop(1, "transparent");
   ctx.fillStyle = haze;
@@ -119,12 +135,12 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     for (let k = 0; k < 11; k++) {
-      const n = fbm(sx * 0.004 + t * 0.03 + s.seed, sy * 0.004 + t * 0.02, 3);
+      const n = fbm(sx * 0.004 + T * 0.03 + s.seed, sy * 0.004 + T * 0.02, 3);
       sx += n * 22 + (mx - 0.5) * (k * 2.2);
       sy -= sh * 0.058;
       ctx.lineTo(sx, sy);
     }
-    ctx.strokeStyle = `hsla(18,28%,${s.light}%,${0.018 + Math.sin(t * 0.3 + s.aSeed) * 0.007})`;
+    ctx.strokeStyle = `hsla(18,28%,${s.light}%,${0.018 + Math.sin(T * 0.3 + s.aSeed) * 0.007})`;
     ctx.stroke();
   }
   ctx.restore();
@@ -134,19 +150,19 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < FLAMES.length; i++) {
     const f = FLAMES[i];
-    const fx = f.xf * sw + Math.sin(t * 0.6 + f.seed) * 12;
-    const flick = 0.55 + 0.45 * Math.sin(t * 3 + f.flick);
-    const fh = sh * (0.11 + 0.08 * flick) * (0.82 + fbm(fx * 0.01, t * 0.4, 2) * 0.36);
+    const fx = f.xf * sw + Math.sin(T * 0.6 + f.seed) * 12;
+    const flick = 0.55 + 0.45 * Math.sin(T * 3 + f.flick);
+    const fh = sh * (0.11 + 0.08 * flick) * (0.82 + fbm(fx * 0.01, T * 0.4, 2) * 0.36);
     ctx.beginPath();
     ctx.moveTo(fx - f.hw, sh);
     for (let k = 0; k <= 8; k++) {
       const yy = sh - (k / 8) * fh;
-      const swy = Math.sin(t * 3 + f.seed + k * 0.6) * (k * 1.5) + fbm(fx * 0.02 + k, t * 0.5 + f.seed, 2) * 9;
+      const swy = Math.sin(T * 3 + f.seed + k * 0.6) * (k * 1.5) + fbm(fx * 0.02 + k, T * 0.5 + f.seed, 2) * 9;
       ctx.lineTo(fx + swy, yy);
     }
     for (let k = 8; k >= 0; k--) {
       const yy = sh - (k / 8) * fh;
-      const swy = Math.sin(t * 3 + f.seed + k * 0.6 + 3.14) * (k * 1.3);
+      const swy = Math.sin(T * 3 + f.seed + k * 0.6 + 3.14) * (k * 1.3);
       ctx.lineTo(fx + swy, yy);
     }
     ctx.closePath();
@@ -166,7 +182,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
     const c = COALS[i];
     const cx = c.xf * sw;
     const cy = sh - 8 - c.yj * 12;
-    const pulse = 0.5 + Math.sin(t * 1.5 + c.pulse) * 0.5;
+    const pulse = 0.5 + Math.sin(T * 1.5 + c.pulse) * 0.5;
     const points: Array<[number, number]> = [];
     ctx.beginPath();
     for (let s = 0; s <= c.sides; s++) {
@@ -213,14 +229,14 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   // Rising embers, stateless helper so the two composite passes stay in sync
   const cycleLen = sh * 1.5;
   const emberAt = (e:EmberParticle) => {
-    const drift = Math.sin(t * 0.3 + e.driftA) * 30 + Math.sin(t * 0.7 + e.driftB) * 11;
+    const drift = Math.sin(T * 0.3 + e.driftA) * 30 + Math.sin(T * 0.7 + e.driftB) * 11;
     const rawX = e.xf * sw + drift;
-    const cycle = ((t * 16 * e.speed * heat) + e.phase * cycleLen) % cycleLen;
+    const cycle = ((T * 16 * e.speed * heat) + e.phase * cycleLen) % cycleLen;
     const rawY = sh + sh * 0.2 - cycle;
     const life = 1 - cycle / cycleLen;
     if (life <= 0) return null;
     const heightRatio = 1 - rawY / sh;
-    const shimmer = fbm(rawX * 0.01 + t * 0.1 + e.sway, rawY * 0.01, 2) * heightRatio * 16;
+    const shimmer = fbm(rawX * 0.01 + T * 0.1 + e.sway, rawY * 0.01, 2) * heightRatio * 16;
     // wrap intrinsic drift only, fade at the seam; wind (pointer) applies after so the seam can't move with the cursor
     const wx = wrapSoft(rawX + shimmer, sw, 0.05);
     const x = wx.u + wind * e.speed;
@@ -272,7 +288,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   const bw = sw / cols;
   for (let c = 0; c < cols; c++) {
     const x = c * bw;
-    const n = fbm(x * 0.02, t * 0.8, 2);
+    const n = fbm(x * 0.02, T * 0.8, 2);
     const a = 0.012 + Math.max(0, n) * 0.018;
     ctx.fillStyle = `hsla(24,88%,52%,${a})`;
     ctx.fillRect(x, sh * 0.86 + n * 10, bw + 1, sh * 0.16);
@@ -282,10 +298,10 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
   // Falling ash (source-over, faint)
   for (let i = 0; i < ASH.length; i++) {
     const a = ASH[i];
-    const wx = wrapSoft(a.xf * sw + Math.sin(t * 0.2 + a.drift) * 10, sw, 0.05);
+    const wx = wrapSoft(a.xf * sw + Math.sin(T * 0.2 + a.drift) * 10, sw, 0.05);
     const x = wx.u + (mx - 0.5) * 8;
-    const y = ((t * 5 + a.phase * sh * 1.2) % (sh * 1.2)) - sh * 0.1;
-    const alpha = (0.05 + Math.sin(t * 0.5 + a.aSeed) * 0.02) * wx.alpha;
+    const y = ((T * 5 + a.phase * sh * 1.2) % (sh * 1.2)) - sh * 0.1;
+    const alpha = (0.05 + Math.sin(T * 0.5 + a.aSeed) * 0.02) * wx.alpha;
     ctx.beginPath();
     ctx.arc(x, y, 0.6, 0, TAU);
     ctx.fillStyle = `hsla(20,14%,54%,${alpha})`;
@@ -294,7 +310,7 @@ export const renderEmber: ThemeRenderer = (ctx, w, h, t, mx, my) => {
 
   // Molten base glow (single radial, lightness capped)
   const fire = ctx.createRadialGradient(sw * 0.5, sh * 1.08, 0, sw * 0.5, sh, sw * 0.58);
-  fire.addColorStop(0, `hsla(18,82%,28%,${(0.085 + Math.sin(t * 0.5) * 0.025) * heat})`);
+  fire.addColorStop(0, `hsla(18,82%,28%,${(0.085 + Math.sin(T * 0.5) * 0.025) * heat})`);
   fire.addColorStop(1, "transparent");
   ctx.fillStyle = fire;
   ctx.fillRect(0, 0, sw, sh);

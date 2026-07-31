@@ -1,6 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
-import { finiteClamp } from "../shared/motion";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { star4 } from "../shared/draw";
 import type { ThemeRenderer } from "../types";
 
@@ -53,7 +53,15 @@ const CFG=(function(){
   return {discs,haze,tex,spark,motes};
 })();
 
-export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+  // Uniform motion contract: resolve page motion once at the top. All resolved
+  // values are zero/centered at rest and in the preview; opaline keeps its base
+  // composition untouched by page motion, so M is plumbing only for now and
+  // reducedMotion simply freezes time to the canonical T=0 pose.
+  const M=resolveThemeMotion(motion);
+  const reduced=!!(motion&&motion.reducedMotion);
+  const T=reduced?0:finiteClamp(t,0,1e6);
+  void M;
   const minSide=Math.min(w,h);
   const px=mx*w, py=my*h;
   const offx=mx-0.5, offy=my-0.5;
@@ -85,9 +93,9 @@ export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // iridescent haze masses (fewer + smaller than before to cut full-viewport additive overdraw)
   for(let i=0;i<CFG.haze.length;i++){
     const m=CFG.haze[i];
-    const pulse=0.5+0.5*Math.sin(t*0.2+m.pulse);
-    const hx=(m.bx+Math.sin(t*m.driftSpeed+m.driftA)*m.driftAmp)*w-offx*44*(0.5+i*0.08);
-    const hy=(m.by+Math.cos(t*m.driftSpeed*0.9+m.driftA)*m.driftAmp)*h-offy*36*(0.5+i*0.08);
+    const pulse=0.5+0.5*Math.sin(T*0.2+m.pulse);
+    const hx=(m.bx+Math.sin(T*m.driftSpeed+m.driftA)*m.driftAmp)*w-offx*44*(0.5+i*0.08);
+    const hy=(m.by+Math.cos(T*m.driftSpeed*0.9+m.driftA)*m.driftAmp)*h-offy*36*(0.5+i*0.08);
     const rr=m.r*minSide*(0.85+0.25*pulse);
     if(rr<=0) continue;
     const a=0.04+0.045*pulse;
@@ -102,15 +110,15 @@ export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // fbm-textured opal veil for volumetric depth (thinned 52->20)
   for(let i=0;i<CFG.tex.length;i++){
     const p=CFG.tex[i];
-    const n=fbm(p.x*3+t*0.03,p.y*3-t*0.02,3);
+    const n=fbm(p.x*3+T*0.03,p.y*3-T*0.02,3);
     const a=0.045+n*0.05;
     if(a<=0.002) continue;
-    const fx=p.x*w+Math.sin(t*p.sp+p.drift)*minSide*0.02-offx*22*p.y;
-    const fy=p.y*h+Math.cos(t*p.sp*0.8+p.drift)*minSide*0.02-offy*18*p.y;
+    const fx=p.x*w+Math.sin(T*p.sp+p.drift)*minSide*0.02-offx*22*p.y;
+    const fy=p.y*h+Math.cos(T*p.sp*0.8+p.drift)*minSide*0.02-offy*18*p.y;
     const rr=p.r*minSide*(0.8+0.4*(n*0.5+0.5));
     if(rr<=0) continue;
     const g=ctx.createRadialGradient(fx,fy,0,fx,fy,rr);
-    g.addColorStop(0,opal(p.hue+t*0.18+n,a));
+    g.addColorStop(0,opal(p.hue+T*0.18+n,a));
     g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=g;
     ctx.fillRect(fx-rr,fy-rr,rr*2,rr*2);
@@ -119,16 +127,16 @@ export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // soft opal bokeh drifting for foreground depth (thinned 32->22)
   for(let i=0;i<CFG.motes.length;i++){
     const m=CFG.motes[i];
-    const tw=0.5+0.5*Math.sin(t*m.speed+m.phase);
+    const tw=0.5+0.5*Math.sin(T*m.speed+m.phase);
     const depth=0.4+m.r*20;
-    const mox=m.x*w-offx*90*depth+m.dir*Math.sin(t*m.speed*0.5+m.phase)*26;
-    const moy=m.y*h-offy*70*depth+Math.cos(t*m.speed*0.4+m.phase)*20;
+    const mox=m.x*w-offx*90*depth+m.dir*Math.sin(T*m.speed*0.5+m.phase)*26;
+    const moy=m.y*h-offy*70*depth+Math.cos(T*m.speed*0.4+m.phase)*20;
     const rr=m.r*minSide*(0.8+0.3*tw);
     if(rr<=0) continue;
     const a=0.05+tw*0.08;
     const g=ctx.createRadialGradient(mox,moy,0,mox,moy,rr);
-    g.addColorStop(0,opal(m.hue+t*0.1,a));
-    g.addColorStop(0.6,opal(m.hue+t*0.1,a*0.3));
+    g.addColorStop(0,opal(m.hue+T*0.1,a));
+    g.addColorStop(0.6,opal(m.hue+T*0.1,a*0.3));
     g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=g;
     ctx.fillRect(mox-rr,moy-rr,rr*2,rr*2);
@@ -138,14 +146,14 @@ export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for(let i=0;i<CFG.discs.length;i++){
     const d=CFG.discs[i];
     const r=d.r*minSide;
-    const dx=d.bx*w+Math.sin(t*d.driftSpeed+d.driftA)*d.driftRx-offx*66*d.depth;
-    const dy=d.by*h+Math.cos(t*d.driftSpeed*0.85+d.driftA)*d.driftRy-offy*66*d.depth;
+    const dx=d.bx*w+Math.sin(T*d.driftSpeed+d.driftA)*d.driftRx-offx*66*d.depth;
+    const dy=d.by*h+Math.cos(T*d.driftSpeed*0.85+d.driftA)*d.driftRy-offy*66*d.depth;
     const dist=Math.hypot(dx-px,dy-py);
     const reach=r*2.6;
     const inter=dist<reach?1-dist/reach:0;
     const dn=Math.min(1,d.depth/1.3);
-    const ph=t*0.4+d.hue*TAU;
-    const rot=t*d.spin+d.ringPhase;
+    const ph=T*0.4+d.hue*TAU;
+    const rot=T*d.spin+d.ringPhase;
     const lg=guard(dx/w,dy/h);
 
     // outer iridescent bloom (softened)
@@ -203,9 +211,9 @@ export const renderOpaline: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for(let i=0;i<CFG.spark.length;i++){
     const s=CFG.spark[i];
     const depth=0.4+s.layer*0.42;
-    const sx=s.x*w-offx*30*depth+Math.sin(t*0.12+s.phase)*4;
-    const sy=s.y*h-offy*30*depth+Math.cos(t*0.12+s.phase)*4;
-    const tw=0.5+0.5*Math.sin(t*s.speed+s.phase);
+    const sx=s.x*w-offx*30*depth+Math.sin(T*0.12+s.phase)*4;
+    const sy=s.y*h-offy*30*depth+Math.cos(T*0.12+s.phase)*4;
+    const tw=0.5+0.5*Math.sin(T*s.speed+s.phase);
     const slg=guard(sx/w,sy/h);
     const a=(0.10+tw*0.32)*(0.5+0.2*s.layer)*slg;
     const sz=(0.6+s.size*1.7)*(0.6+depth*0.5);

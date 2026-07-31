@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
 
@@ -85,7 +86,15 @@ const CFG=(function(){
 })();
 const CACHE: SakuraGradientCache={w:0,h:0,gradeUR:null,gradeLL:null,vig:null,amb:null,basal:null,sunG:[],sunR:[]};
 
-export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
+export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my,_deltaSeconds,motion)=>{
+  // Uniform motion contract: resolve page motion once at the top. All resolved
+  // values are zero/centered at rest and in the preview; sakura keeps its base
+  // composition untouched by page motion, so M is plumbing only for now and
+  // reducedMotion simply freezes time to the canonical T=0 pose.
+  const M=resolveThemeMotion(motion);
+  const reduced=!!(motion&&motion.reducedMotion);
+  const T=reduced?0:finiteClamp(t,0,1e6);
+  void M;
   w=w>0?w:1;h=h>0?h:1;
   const cx=w*0.5,cy=h*0.5,maxD=Math.max(w,h);
   const px=(mx-0.5),py=(my-0.5);
@@ -137,11 +146,11 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // B. watercolor washes (screen) — pure soft blooms that bloom & dissolve (no ink rings)
   ctx.save();ctx.globalCompositeOperation="screen";
   for(const s of CFG.washes){
-    const breathe=0.5+0.5*SIN(t*s.brf+s.ph);
-    const nx=fbm(s.seed,t*0.05*s.spd,2),ny=fbm(s.seed+50,t*0.05*s.spd+9,2);
-    const bx=(s.ox+SIN(t*0.03*s.spd+s.ph)*0.10+nx*0.05)*w;
-    const by=(s.oy+COS(t*0.026*s.spd+s.ph)*0.10+ny*0.05)*h;
-    const rr=Math.abs((s.r+SIN(t*0.12+s.ph)*0.03)*maxD*(1+fbm(s.seed+t*0.04,3,2)*0.10))+1;
+    const breathe=0.5+0.5*SIN(T*s.brf+s.ph);
+    const nx=fbm(s.seed,T*0.05*s.spd,2),ny=fbm(s.seed+50,T*0.05*s.spd+9,2);
+    const bx=(s.ox+SIN(T*0.03*s.spd+s.ph)*0.10+nx*0.05)*w;
+    const by=(s.oy+COS(T*0.026*s.spd+s.ph)*0.10+ny*0.05)*h;
+    const rr=Math.abs((s.r+SIN(T*0.12+s.ph)*0.03)*maxD*(1+fbm(s.seed+T*0.04,3,2)*0.10))+1;
     const a=s.a*(0.35+0.65*breathe);
     const gr=ctx.createRadialGradient(bx,by,0,bx,by,rr);
     gr.addColorStop(0,`hsla(${s.hue},${s.sat}%,${s.lig}%,${a})`);
@@ -157,7 +166,7 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.save();ctx.globalCompositeOperation="screen";
   for(let i=0;i<CACHE.sunG.length;i++){
     const s=CFG.sun[i];
-    let pulse=0.7+0.3*SIN(t*s.spd+s.ph);
+    let pulse=0.7+0.3*SIN(T*s.spd+s.ph);
     pulse=pulse<0?0:(pulse>1?1:pulse);
     const ox=s.ox*w,oy=s.oy*h,rr=CACHE.sunR[i];
     ctx.globalAlpha=pulse;ctx.fillStyle=CACHE.sunG[i];
@@ -169,10 +178,10 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   ctx.save();ctx.globalCompositeOperation="screen";
   for(const b of CFG.bokeh){
     const par=(1-b.depth);
-    const bx=b.x*w+SIN(t*0.04*b.spd+b.ph)*w*0.02-px*40*par;
-    const by=b.y*h+COS(t*0.05*b.spd+b.ph)*h*0.02-py*30*par;
-    const tw=0.6+0.4*SIN(t*b.twf+b.ph);
-    const rr=b.r*maxD*(0.9+0.15*SIN(t*0.2+b.ph));
+    const bx=b.x*w+SIN(T*0.04*b.spd+b.ph)*w*0.02-px*40*par;
+    const by=b.y*h+COS(T*0.05*b.spd+b.ph)*h*0.02-py*30*par;
+    const tw=0.6+0.4*SIN(T*b.twf+b.ph);
+    const rr=b.r*maxD*(0.9+0.15*SIN(T*0.2+b.ph));
     const gr=ctx.createRadialGradient(bx,by,0,bx,by,rr);
     gr.addColorStop(0,`hsla(${b.hue},${b.sat}%,${b.lig}%,${b.a*tw})`);
     gr.addColorStop(0.7,`hsla(${b.hue},${b.sat}%,${b.lig-8}%,${b.a*tw*0.35})`);
@@ -185,7 +194,7 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   for(const br of CFG.branches){
     const pts=br.pts;
     for(let i=0;i<pts.length-1;i++){
-      const s1=SIN(t*0.3+br.ph+i)*br.sway*i,s2=SIN(t*0.3+br.ph+i+1)*br.sway*(i+1);
+      const s1=SIN(T*0.3+br.ph+i)*br.sway*i,s2=SIN(T*0.3+br.ph+i+1)*br.sway*(i+1);
       const p0x=(pts[i].x+s1)*w,p0y=pts[i].y*h;
       const p1x=(pts[i+1].x+s2)*w,p1y=pts[i+1].y*h;
       ctx.strokeStyle="hsla(330,22%,10%,0.5)";
@@ -193,7 +202,7 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       ctx.beginPath();ctx.moveTo(p0x,p0y);ctx.lineTo(p1x,p1y);ctx.stroke();
     }
     for(const nd of br.nodes){
-      const sway=SIN(t*0.3+br.ph)*br.sway*3;
+      const sway=SIN(T*0.3+br.ph)*br.sway*3;
       const nx=(nd.x+sway)*w,ny=nd.y*h,br2=nd.r*3.2;
       ctx.save();ctx.globalCompositeOperation="lighter";
       const gr=ctx.createRadialGradient(nx,ny,0,nx,ny,br2*3);
@@ -202,7 +211,7 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
       ctx.fillStyle=gr;ctx.beginPath();ctx.arc(nx,ny,br2*3,0,TAU);ctx.fill();
       ctx.restore();
       for(let k=0;k<5;k++){
-        const pa=nd.ph+k*(TAU/5)+SIN(t*0.4+nd.ph)*0.05;
+        const pa=nd.ph+k*(TAU/5)+SIN(T*0.4+nd.ph)*0.05;
         ctx.save();ctx.translate(nx,ny);ctx.rotate(pa);
         ctx.fillStyle=`hsla(${nd.hue+3},58%,72%,0.5)`;
         ctx.beginPath();ctx.moveTo(0,0);
@@ -217,16 +226,16 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // G. parallax petal layers with soft sheen, veins, and gentle bloom (peak lightness clamped for HD)
   for(const p of CFG.petals){
     const vy=p.fall*h,span=h*1.4;
-    const y=((t*vy+p.cycleOff*span)%span+span)%span-h*0.2;
+    const y=((T*vy+p.cycleOff*span)%span+span)%span-h*0.2;
     const par=(1-p.depth);
-    const sway=SIN(t*p.swayFreq+p.phase)*p.swayAmp+fbm(p.seedX,t*0.1,2)*p.swayAmp*0.6;
+    const sway=SIN(T*p.swayFreq+p.phase)*p.swayAmp+fbm(p.seedX,T*0.1,2)*p.swayAmp*0.6;
     // Wrap only the intrinsic sway path; pointer parallax is added after so a
     // gust of cursor motion cannot teleport petals across the frame edge.
     const wrapP=w+140;
     const wxp=wrapSoft(p.baseX*w+sway,wrapP,0.05);
     const x=wxp.u-70+px*90*par;
-    const rot=p.wobble+t*p.spin*0.6+SIN(t*0.4+p.phase)*0.4;
-    let sx=COS(t*p.spin*0.8+p.phase);
+    const rot=p.wobble+T*p.spin*0.6+SIN(T*0.4+p.phase)*0.4;
+    let sx=COS(T*p.spin*0.8+p.phase);
     if(Math.abs(sx)<0.12)sx=sx<0?-0.12:0.12;
     const light=0.5+0.5*COS(rot-0.8);
     const topFade=cl((y+h*0.2)/(h*0.22)),botFade=cl((h*1.18-y)/(h*0.22));
@@ -263,9 +272,9 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // H. rising pollen / light motes (lighter) — soft round twinkle only (no 4-point sparkle)
   ctx.save();ctx.globalCompositeOperation="lighter";
   for(const p of CFG.pollen){
-    const y=((p.y*h-t*p.rise)%(h+40)+(h+40))%(h+40)-20;
-    const x=p.x*w+SIN(t*p.swf+p.ph)*p.swa+px*20*(1-p.depth);
-    const tw=0.35+0.65*(0.5+0.5*SIN(t*p.twf+p.ph));
+    const y=((p.y*h-T*p.rise)%(h+40)+(h+40))%(h+40)-20;
+    const x=p.x*w+SIN(T*p.swf+p.ph)*p.swa+px*20*(1-p.depth);
+    const tw=0.35+0.65*(0.5+0.5*SIN(T*p.twf+p.ph));
     const r=p.r*(0.8+0.5*tw),hue=p.warm?44:340;
     ctx.fillStyle=`hsla(${hue},68%,${p.warm?72:70}%,${0.10*tw})`;
     ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
@@ -281,7 +290,7 @@ export const renderSakura: ThemeRenderer = (ctx,w,h,t,mx,my)=>{
   // I. settled ground petals shimmer + soft basal wash (cached gradient)
   for(const gp of CFG.ground){
     const gx=gp.x*w,gy=h-gp.off-SIN(gp.ph)*6;
-    const a=cl(gp.a+SIN(t*0.3+gp.ph)*gp.tw*0.15);
+    const a=cl(gp.a+SIN(T*0.3+gp.ph)*gp.tw*0.15);
     ctx.save();ctx.translate(gx,gy);ctx.rotate(gp.rot);
     ctx.fillStyle=`hsla(${gp.hue},44%,58%,${a})`;ctx.beginPath();ctx.moveTo(0,0);
     ctx.quadraticCurveTo(gp.size,-gp.size*0.5,0,-gp.size*1.6);

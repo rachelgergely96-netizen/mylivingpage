@@ -1,5 +1,6 @@
 import { fbm } from "../shared/noise";
 import { createSeededRandom } from "../shared/random";
+import { finiteClamp, resolveThemeMotion } from "../shared/motion";
 import { softGlow } from "../shared/draw";
 import { wrapSoft } from "../shared/wrap";
 import type { ThemeRenderer } from "../types";
@@ -78,13 +79,19 @@ export const renderDusk: ThemeRenderer = (
   ctx,
   w,
   h,
-  time,
+  t,
   mx,
   my,
   _deltaSeconds,
   motion,
 ) => {
-  const t = motion?.reducedMotion ? 0 : time;
+  // Uniform page-motion plumbing: the resolved model is all zero/centered at
+  // rest and zeroes transients under reducedMotion. Dusk's approved moving
+  // composition predates the motion model, so no resolved term feeds the draw
+  // math yet — reducedMotion only freezes time to the canonical t=0 pose.
+  resolveThemeMotion(motion);
+  const reduced = !!(motion && motion.reducedMotion);
+  const T = reduced ? 0 : finiteClamp(t, 0, 1e6);
   const clamp=(v:number,a:number,b:number)=> v<a?a:(v>b?b:v);
   const hy = h*0.60;
   const px = mx-0.5, py = my-0.5;
@@ -125,8 +132,8 @@ export const renderDusk: ThemeRenderer = (
   }
 
   // sun nudged to the upper-right corner, clear of the centre + upper-left reading column
-  const sunX = w*(0.62 + Math.sin(t*0.045)*0.04) + px*50;
-  const sunY = h*0.32 + Math.sin(t*0.03)*h*0.010 + py*22;
+  const sunX = w*(0.62 + Math.sin(T*0.045)*0.04) + px*50;
+  const sunY = h*0.32 + Math.sin(T*0.03)*h*0.010 + py*22;
 
   // 1. sky wash + horizon glow band
   ctx.fillStyle=GRAD.sky!;
@@ -138,8 +145,8 @@ export const renderDusk: ThemeRenderer = (
   // 2. atmospheric colour masses (soft round blooms only)
   const masses=[[345,0.25],[18,0.5],[300,0.75]];
   for(let i=0;i<3;i++){
-    const ax=w*(0.22+0.27*i)+Math.sin(t*0.02+i*2)*w*0.06;
-    const ay=hy*(0.30+0.2*i)+Math.cos(t*0.017+i)*h*0.02;
+    const ax=w*(0.22+0.27*i)+Math.sin(T*0.02+i*2)*w*0.06;
+    const ay=hy*(0.30+0.2*i)+Math.cos(T*0.017+i)*h*0.02;
     softGlow(ctx,ax,ay,w*(0.24-i*0.03),"hsla("+masses[i][0]+",70%,40%,0.07)","transparent");
   }
   ctx.globalCompositeOperation="source-over";
@@ -150,7 +157,7 @@ export const renderDusk: ThemeRenderer = (
     const sy = s.y*hy*0.92;
     const fade = clamp(1 - sy/(hy*0.82),0,1);
     if(fade<=0.02) continue;
-    const tw = 0.35 + 0.65*Math.sin(t*s.sp + s.ph);
+    const tw = 0.35 + 0.65*Math.sin(T*s.sp + s.ph);
     const a = tw*0.5*fade;
     if(a<=0.01) continue;
     const sx = s.x*w - px*22*(0.3+s.r*0.2);
@@ -172,8 +179,8 @@ export const renderDusk: ThemeRenderer = (
     const cy=hy-(i*0.145+0.14)*hy;
     const thk=hy*0.14;
     const amp=10+i*4;
-    const drift=t*(0.05+i*0.012);
-    const hue=bh[i]+Math.sin(t*0.1+i)*6;
+    const drift=T*(0.05+i*0.012);
+    const hue=bh[i]+Math.sin(T*0.1+i)*6;
     ctx.beginPath();
     ctx.moveTo(0,cy-thk*0.5);
     for(let x=0;x<=w;x+=step){
@@ -194,7 +201,7 @@ export const renderDusk: ThemeRenderer = (
 
   // 5. sun: soft volumetric bloom + disc ONLY, capped so the bright-pass bloom can't clip to white
   ctx.globalCompositeOperation="lighter";
-  const breathe=0.97+0.03*Math.sin(t*0.22);
+  const breathe=0.97+0.03*Math.sin(T*0.22);
   softGlow(ctx,sunX,sunY,w*0.30*breathe,"hsla(30,88%,52%,0.035)","transparent");
   const sunR=w*0.028;
   softGlow(ctx,sunX,sunY,sunR*2.8,"hsla(34,96%,60%,0.10)","transparent");
@@ -212,15 +219,15 @@ export const renderDusk: ThemeRenderer = (
   for(const c of CFG.clouds){
     const cw=c.w;
     const span=w+cw*2;
-    const cx=((c.off*span + t*c.sp)%span+span)%span - cw;
-    const cyc=c.y*hy + Math.sin(t*0.08+c.seed)*6;
+    const cx=((c.off*span + T*c.sp)%span+span)%span - cw;
+    const cyc=c.y*hy + Math.sin(T*0.08+c.seed)*6;
     const ch=c.h;
     const cstep=Math.max(10,cw/13);
     ctx.beginPath();
     ctx.moveTo(cx,cyc);
     for(let x=0;x<=cw;x+=cstep){
       const env=Math.sin((x/cw)*Math.PI);
-      const n=fbm(x*0.02+c.seed,t*0.03+c.seed,2);
+      const n=fbm(x*0.02+c.seed,T*0.03+c.seed,2);
       ctx.lineTo(cx+x, cyc-env*ch*(0.8+0.5*n));
     }
     for(let x=cw;x>=0;x-=cstep){
@@ -235,8 +242,8 @@ export const renderDusk: ThemeRenderer = (
   for(const c of CFG.clouds){
     const cw=c.w;
     const span=w+cw*2;
-    const cx=((c.off*span + t*c.sp)%span+span)%span - cw;
-    const cyc=c.y*hy + Math.sin(t*0.08+c.seed)*6;
+    const cx=((c.off*span + T*c.sp)%span+span)%span - cw;
+    const cyc=c.y*hy + Math.sin(T*0.08+c.seed)*6;
     softGlow(ctx,cx+cw*0.5,cyc+c.h*0.2,cw*0.5,"hsla(30,90%,55%,"+(c.op*0.45)+")","transparent");
   }
   ctx.globalCompositeOperation="source-over";
@@ -247,7 +254,7 @@ export const renderDusk: ThemeRenderer = (
     ctx.beginPath();
     ctx.moveTo(0,hy+2);
     for(let x=0;x<=w;x+=rstep){
-      const n=fbm(x*0.003+L*10,L*5+t*0.01,2);
+      const n=fbm(x*0.003+L*10,L*5+T*0.01,2);
       const nn=fbm(x*0.011+L*3,7,2);
       ctx.lineTo(x, hy-(10+L*16)-n*(14+L*10)-nn*4);
     }
@@ -285,12 +292,12 @@ export const renderDusk: ThemeRenderer = (
   for(const s of CFG.shimmer){
     const df=s.y;
     const yy=hy+df*(h-hy);
-    const wob=Math.abs(Math.sin(t*s.sp+s.ph));
+    const wob=Math.abs(Math.sin(T*s.sp+s.ph));
     const hw=colBase*(0.25+df*1.6)*(0.5+0.7*wob)*s.w;
     const barH=Math.max(1.2,(h-hy)*0.012*(0.6+df));
     const fade=1-df*0.85;
     ctx.beginPath();
-    ctx.ellipse(sunX+Math.sin(t*0.6+s.ph)*hw*0.15 + (s.hp-0.5)*w*0.05, yy, hw, barH, 0,0,TAU);
+    ctx.ellipse(sunX+Math.sin(T*0.6+s.ph)*hw*0.15 + (s.hp-0.5)*w*0.05, yy, hw, barH, 0,0,TAU);
     ctx.fillStyle="hsla("+(34-df*8)+",92%,"+(60-df*18)+"%,"+(0.12*fade*(0.5+0.6*wob))+")";
     ctx.fill();
   }
@@ -304,10 +311,10 @@ export const renderDusk: ThemeRenderer = (
     // Soft wrap on the intrinsic drift path; parallax applies after the wrap
     // so cursor motion cannot pop motes across the seam.
     const wrapP=w+40;
-    const wxm=wrapSoft(m.bx*w + t*m.drift + Math.sin(t*0.4*m.sp+m.ph)*m.bob, wrapP, 0.05);
+    const wxm=wrapSoft(m.bx*w + T*m.drift + Math.sin(T*0.4*m.sp+m.ph)*m.bob, wrapP, 0.05);
     const x=wxm.u - 20 - px*60*par;
-    const y=m.by*h + Math.sin(t*0.3*m.sp+m.ph*1.7)*m.bob - py*40*par;
-    const pulse=0.45+0.55*Math.sin(t*1.3*m.sp+m.ph);
+    const y=m.by*h + Math.sin(T*0.3*m.sp+m.ph*1.7)*m.bob - py*40*par;
+    const pulse=0.45+0.55*Math.sin(T*1.3*m.sp+m.ph);
     const dS=Math.hypot(x-sunX,y-sunY);
     const lit=clamp(1-dS/(w*0.5),0,1);
     const md=Math.hypot(x-mxp,y-myp);

@@ -129,7 +129,9 @@ describe("GET /api/pages/[pageId]/proof", () => {
     });
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    await expect(response.json()).resolves.toEqual({
+      error: "Your session has expired. Sign in again to continue.",
+    });
   });
 
   it("returns the repeat-share prompt before any share is recorded", async () => {
@@ -214,7 +216,7 @@ describe("GET /api/pages/[pageId]/proof", () => {
       loopState: "first_view_detected",
       lastShareScenario: "application_follow_up",
       firstViewAfterLatestShareAt: "2026-03-23T14:05:00.000Z",
-      firstViewAfterLatestShareDeviceLabel: "Mobile",
+      firstViewAfterLatestShareDeviceLabel: "mobile",
       firstViewAfterLatestShareEngagedSeconds: 28,
     });
   });
@@ -250,7 +252,7 @@ describe("GET /api/pages/[pageId]/proof", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       loopState: "first_view_detected",
-      firstViewAfterLatestShareDeviceLabel: "Desktop",
+      firstViewAfterLatestShareDeviceLabel: "desktop",
       firstViewAfterLatestShareEngagedSeconds: null,
     });
   });

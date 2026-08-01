@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import React, { useId, useState } from "react";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
 import type { ResumeData } from "@/types/resume";
 
@@ -52,7 +52,7 @@ export default function RecruiterSkimPanel({
       <div className="theme-surface-strong rounded-none border px-4 py-4 sm:px-5 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="resume-theme-accent text-[10px] uppercase tracking-[0.18em]">
+            <p className="resume-theme-accent text-xs uppercase tracking-[0.18em]">
               Recruiter version
             </p>
             <p className="resume-theme-muted mt-1 text-sm">{variantLabel}</p>
@@ -74,9 +74,9 @@ export default function RecruiterSkimPanel({
             aria-expanded={expanded}
             aria-controls={contentId}
             onClick={() => setExpanded((current) => !current)}
-            className="theme-surface resume-theme-link inline-flex items-center gap-2 self-start rounded-none border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors sm:self-center"
+            className="theme-surface resume-theme-link inline-flex min-h-11 items-center gap-2 self-start rounded-none border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:self-center"
           >
-            <span>{expanded ? "Collapse recruiter skim" : "Expand recruiter skim"}</span>
+            <span>{expanded ? "Hide the highlights" : "Show the highlights"}</span>
             <svg
               className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
               fill="none"
@@ -100,17 +100,20 @@ export default function RecruiterSkimPanel({
               <div className="max-w-3xl space-y-4">
                 {roleHeading ? (
                   <div>
-                    <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
+                    <p className="resume-theme-subtle text-xs uppercase tracking-[0.16em]">
                       Target role
                     </p>
-                    <h2 className="resume-theme-name mt-2 text-xl font-semibold sm:text-2xl">
+                    {/* Styled as a heading but kept a <p>: the panel renders
+                        before ResumeLayout's h1, so a real h2 here would put
+                        the page outline out of order for screen readers. */}
+                    <p className="resume-theme-name mt-2 text-xl font-semibold sm:text-2xl">
                       {roleHeading}
-                    </h2>
+                    </p>
                   </div>
                 ) : null}
                 {summary ? (
                   <div>
-                    <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
+                    <p className="resume-theme-subtle text-xs uppercase tracking-[0.16em]">
                       Opening summary
                     </p>
                     <p className="resume-theme-muted mt-2 max-w-3xl text-sm leading-7">
@@ -135,7 +138,7 @@ export default function RecruiterSkimPanel({
                 {resumeData.email ? (
                   <a
                     href={`mailto:${resumeData.email}`}
-                    className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
+                    className="theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
                   >
                     Email
                   </a>
@@ -145,23 +148,23 @@ export default function RecruiterSkimPanel({
                     href={toHref(resumeData.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
+                    className="theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
                   >
                     LinkedIn
                   </a>
                 ) : null}
                 <a
                   href={publicPath}
-                  className="theme-surface-strong theme-link rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 sm:text-sm"
+                  className="theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
                 >
-                  Open current page
+                  Open the full page
                 </a>
               </div>
             </div>
 
             {featuredProject ? (
               <div className="theme-surface mt-5 rounded-none border p-4">
-                <p className="resume-theme-subtle text-[10px] uppercase tracking-[0.16em]">
+                <p className="resume-theme-subtle text-xs uppercase tracking-[0.16em]">
                   Featured work sample
                 </p>
                 <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -188,7 +191,7 @@ export default function RecruiterSkimPanel({
                       href={toHref(featuredProject.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="theme-link rounded-none border border-[var(--theme-accent-border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors"
+                      className="theme-link inline-flex min-h-11 items-center rounded-none border border-[var(--theme-accent-border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)]"
                     >
                       Open project
                     </a>

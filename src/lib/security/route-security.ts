@@ -60,7 +60,10 @@ export async function requireAuthenticatedUser(): Promise<
 
   if (!user) {
     return {
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Your session has expired. Sign in again to continue." },
+        { status: 401 },
+      ),
     };
   }
 

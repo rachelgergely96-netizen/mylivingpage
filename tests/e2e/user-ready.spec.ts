@@ -391,7 +391,7 @@ test.describe.serial("authenticated user journeys", () => {
       await viewerPage.goto(`/${profile.username}?v=${recruiterVariant.id}`);
 
       const panel = viewerPage.getByTestId("recruiter-skim-panel");
-      const expandButton = panel.getByRole("button", { name: "Expand recruiter skim" });
+      const expandButton = panel.getByRole("button", { name: "Show the highlights" });
 
       await expect(panel).toBeVisible();
       await expect(panel.getByText("Recruiter reply version")).toBeVisible();
@@ -403,12 +403,12 @@ test.describe.serial("authenticated user journeys", () => {
       await expect(panel.getByTestId("recruiter-skim-content")).toHaveCount(0);
       await expect(panel.getByRole("button", { name: "Download Résumé PDF" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Email" })).toHaveCount(0);
-      await expect(panel.getByRole("link", { name: "Open current page" })).toHaveCount(0);
+      await expect(panel.getByRole("link", { name: "Open the full page" })).toHaveCount(0);
 
       await expandButton.click();
 
-      await expect(panel.getByRole("button", { name: "Collapse recruiter skim" })).toBeVisible();
-      await expect(panel.getByRole("button", { name: "Collapse recruiter skim" })).toHaveAttribute(
+      await expect(panel.getByRole("button", { name: "Hide the highlights" })).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Hide the highlights" })).toHaveAttribute(
         "aria-expanded",
         "true",
       );
@@ -416,7 +416,11 @@ test.describe.serial("authenticated user journeys", () => {
       await expect(panel.getByRole("button", { name: "Download Résumé PDF" })).toBeVisible();
       await expect(panel.getByRole("link", { name: "Email" })).toBeVisible();
       await expect(panel.getByRole("link", { name: "LinkedIn" })).toHaveCount(0);
-      await expect(panel.getByRole("link", { name: "Open current page" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "Open the full page" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "Open the full page" })).toHaveAttribute(
+        "href",
+        `/${profile.username}`,
+      );
       await expect(panel.getByText("Target role")).toBeVisible();
       await expect(panel.getByText("Staff Product Leader")).toBeVisible();
       await expect(

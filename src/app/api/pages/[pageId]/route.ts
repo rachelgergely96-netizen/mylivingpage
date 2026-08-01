@@ -16,6 +16,7 @@ import {
 } from "@/lib/security/page-write";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
+import { getTheme } from "@/themes/registry";
 import { THEME_IDS } from "@/themes/types";
 
 const routeTrustLevel = "authenticated_user";
@@ -50,7 +51,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pag
   }
 
   const userId = await getAuthUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   const { page, error } = await fetchOwnedPage(pageId, userId);
   if (error) {
@@ -59,7 +65,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pag
       { status: 503 },
     );
   }
-  if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
+  if (!page) return NextResponse.json({ error: "Page not found." }, { status: 404 });
 
   return NextResponse.json(page);
 }
@@ -79,7 +85,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
   }
 
   const userId = await getAuthUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   const { page, error: pageLookupError } = await fetchOwnedPage(pageId, userId);
   if (pageLookupError) {
@@ -88,11 +99,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
       { status: 503 },
     );
   }
-  if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
+  if (!page) return NextResponse.json({ error: "Page not found." }, { status: 404 });
 
   const parsedBody = await request.json().catch(() => null);
   if (!isPlainJsonObject(parsedBody)) {
-    return NextResponse.json({ error: "Invalid page payload." }, { status: 400 });
+    return NextResponse.json(
+      { error: "We could not read that save. Refresh the page and try again." },
+      { status: 400 },
+    );
   }
   const body = parsedBody;
 
@@ -157,8 +171,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
       typeof body.theme_id === "string" &&
       !isThemeAllowed(body.theme_id, accountAccess.allowedThemeIds)
     ) {
+      const themeName = getTheme(body.theme_id)?.name ?? "chosen";
       return NextResponse.json(
-        { error: `The "${body.theme_id}" theme is not available for this account.` },
+        {
+          error: `The ${themeName} theme is not included in your current plan. Choose another theme or upgrade to keep it.`,
+        },
         { status: 403 },
       );
     }
@@ -254,7 +271,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
 export async function DELETE(_request: Request, { params }: { params: Promise<{ pageId: string }> }) {
   const { pageId } = await params;
   const userId = await getAuthUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   const { page, error: pageLookupError } = await fetchOwnedPage(pageId, userId);
   if (pageLookupError) {
@@ -263,7 +285,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       { status: 503 },
     );
   }
-  if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
+  if (!page) return NextResponse.json({ error: "Page not found." }, { status: 404 });
 
   const supabase = createServiceRoleSupabaseClient();
   const { error: deleteError } = await supabase.from("pages").delete().eq("id", pageId);

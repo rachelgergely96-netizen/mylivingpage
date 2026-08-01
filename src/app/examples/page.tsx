@@ -22,6 +22,7 @@ export const metadata: Metadata = {
     "Browse sample Living Pages that help recruiters understand you faster after they click.",
   alternates: { canonical: canonicalUrl },
   openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
     title: `Examples | ${SITE_NAME}`,
     description:
       "Browse sample Living Pages that help recruiters understand you faster after they click.",

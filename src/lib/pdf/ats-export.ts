@@ -15,7 +15,7 @@ const CONTENT_GUTTER = 0;
 const SECTION_TITLE_GAP = 2;
 const SECTION_CONTENT_GAP = 4;
 const ENTRY_COLUMN_GAP = 8;
-const ENTRY_DATE_WIDTH = 64;
+const ENTRY_DATE_WIDTH = 110;
 const NAME_FONT_SIZE = 17;
 const META_FONT_SIZE = 11;
 const SECTION_TITLE_FONT_SIZE = 9.6;
@@ -39,6 +39,14 @@ function displayLink(value: string | null) {
 
   const clean = normalizeResumeText(value);
   return clean.replace(/^https?:\/\//i, "");
+}
+
+function buildExperienceSubtitle(entry: ResumeData["experience"][number]) {
+  return [entry.company, displayLink(entry.url)].filter(Boolean).join(" | ");
+}
+
+function buildProjectDescriptionLine(project: ResumeData["projects"][number]) {
+  return [project.description, displayLink(project.url)].filter(Boolean).join(" | ");
 }
 
 export function formatExperienceHighlightsAsParagraph(highlights: string[]) {
@@ -116,6 +124,19 @@ function buildFallbackSectionLines(data: ResumeData) {
     });
   }
 
+  if (data.projects.length) {
+    sections.push({
+      title: "Projects",
+      lines: data.projects.flatMap((project) => {
+        const lines = [project.name, buildProjectDescriptionLine(project)].filter(Boolean);
+        if (project.tech.length) {
+          lines.push(project.tech.join(", "));
+        }
+        return lines;
+      }),
+    });
+  }
+
   if (data.skills.length) {
     sections.push({
       title: "Skills",
@@ -131,19 +152,6 @@ function buildFallbackSectionLines(data: ResumeData) {
       lines: data.education
         .map((entry) => [entry.degree, entry.school, entry.year].filter(Boolean).join(" | "))
         .filter(Boolean),
-    });
-  }
-
-  if (data.projects.length) {
-    sections.push({
-      title: "Projects",
-      lines: data.projects.flatMap((project) => {
-        const lines = [project.name, project.description].filter(Boolean);
-        if (project.tech.length) {
-          lines.push(project.tech.join(", "));
-        }
-        return lines;
-      }),
     });
   }
 
@@ -167,13 +175,13 @@ function countOverflowReasons(data: ResumeData) {
   const totalHighlights = data.experience.reduce((count, entry) => count + entry.highlights.length, 0);
 
   if (data.summary.length > 320) {
-    reasons.push("The summary is still too long for a one-page Resume PDF.");
+    reasons.push("The summary is still too long for a one-page Résumé PDF.");
     fixes.push("Shorten the summary to two tight sentences with the exact role and top skills.");
   }
 
   if (data.experience.length > 4) {
     reasons.push("There are more than four roles in the export.");
-    fixes.push("Keep the four strongest roles on the exported resume.");
+    fixes.push("Keep the four strongest roles on the exported résumé.");
   }
 
   if (totalHighlights > 8) {
@@ -183,7 +191,7 @@ function countOverflowReasons(data: ResumeData) {
 
   if (data.projects.length > 2) {
     reasons.push("Projects are taking too much one-page space.");
-    fixes.push("Keep only the two most relevant projects in the Resume PDF.");
+    fixes.push("Keep only the two most relevant projects in the Résumé PDF.");
   }
 
   if (data.certifications.length > 2) {
@@ -341,7 +349,7 @@ function estimateExperienceEntryHeight(doc: PdfDocumentInstance, entry: ResumeDa
   let height = estimateEntryDateLineHeight(
     doc,
     entry.title,
-    `${entry.company}${entry.url ? ` | ${displayLink(entry.url)}` : ""}`,
+    buildExperienceSubtitle(entry),
     entry.dates,
   );
 
@@ -387,8 +395,9 @@ function estimateProjectHeight(doc: PdfDocumentInstance, project: ResumeData["pr
     },
   );
 
-  if (project.description) {
-    height += estimateParagraphHeight(doc, project.description);
+  const descriptionLine = buildProjectDescriptionLine(project);
+  if (descriptionLine) {
+    height += estimateParagraphHeight(doc, descriptionLine);
   }
 
   if (project.tech.length) {
@@ -568,7 +577,7 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
       renderEntryDateLine(
         doc,
         entry.title,
-        `${entry.company}${entry.url ? ` | ${displayLink(entry.url)}` : ""}`,
+        buildExperienceSubtitle(entry),
         entry.dates,
       );
 
@@ -581,6 +590,36 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
         });
       }
 
+      doc.moveDown(0.12);
+    });
+  }
+
+  if (data.projects.length) {
+    ensureSpace(
+      doc,
+      estimateSectionTitleHeight(doc, "Projects") + estimateProjectHeight(doc, data.projects[0]),
+    );
+    renderSectionTitle(doc, "Projects");
+    data.projects.forEach((project) => {
+      ensureSpace(doc, estimateProjectHeight(doc, project));
+      applyBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(project.name, left, doc.y, {
+        width,
+      });
+      const descriptionLine = buildProjectDescriptionLine(project);
+      if (descriptionLine) {
+        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(descriptionLine, left, doc.y, {
+          width,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
+        });
+      }
+      if (project.tech.length) {
+        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
+          width,
+          lineGap: BODY_LINE_GAP,
+          align: "justify",
+        });
+      }
       doc.moveDown(0.12);
     });
   }
@@ -621,33 +660,6 @@ async function renderPrimaryPdfDocument(data: ResumeData) {
       ensureSpace(doc, estimateEducationEntryHeight(doc, entry));
       renderEntryDateLine(doc, entry.degree, entry.school, entry.year);
       doc.moveDown(0.04);
-    });
-  }
-
-  if (data.projects.length) {
-    ensureSpace(
-      doc,
-      estimateSectionTitleHeight(doc, "Projects") + estimateProjectHeight(doc, data.projects[0]),
-    );
-    renderSectionTitle(doc, "Projects");
-    data.projects.forEach((project) => {
-      ensureSpace(doc, estimateProjectHeight(doc, project));
-      applyBoldFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#111827").text(project.name, left, doc.y, {
-        width,
-      });
-      applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.description, left, doc.y, {
-        width,
-        lineGap: BODY_LINE_GAP,
-        align: "justify",
-      });
-      if (project.tech.length) {
-        applyRegularFont(doc).fontSize(BODY_FONT_SIZE).fillColor("#374151").text(project.tech.join(", "), left, doc.y, {
-          width,
-          lineGap: BODY_LINE_GAP,
-          align: "justify",
-        });
-      }
-      doc.moveDown(0.12);
     });
   }
 
@@ -758,7 +770,7 @@ export function countPdfPages(buffer: Uint8Array | ArrayBuffer) {
 
 export function getFriendlyResumePdfError(
   exportCheck: Partial<AtsExportCheck> | null | undefined,
-  fallback = "Unable to generate the Resume PDF right now. Please try again.",
+  fallback = "Unable to generate the Résumé PDF right now. Please try again.",
 ) {
   return (
     exportCheck?.renderFailureReason ??
@@ -788,7 +800,7 @@ export async function checkResumeExport(data: unknown): Promise<AtsExportCheck> 
           ? []
           : heuristics.overflowReasons.length
             ? heuristics.overflowReasons
-            : ["The exported resume still spans more than one page."],
+            : ["The exported résumé still spans more than one page."],
       recommendedFixes:
         pageCount === 1
           ? []
@@ -800,7 +812,7 @@ export async function checkResumeExport(data: unknown): Promise<AtsExportCheck> 
     return {
       renderable: false,
       renderFailureReason:
-        "The Resume PDF could not render cleanly from the current content.",
+        "The Résumé PDF could not render cleanly from the current content.",
       pageCount: null,
       fitsOnOnePage: null,
       overflowReasons: [],

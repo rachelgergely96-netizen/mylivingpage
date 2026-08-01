@@ -48,6 +48,7 @@ export default function LivingPageSectionRail({
   sectionIds,
 }: LivingPageSectionRailProps) {
   const navRef = useRef<HTMLElement | null>(null);
+  const listRef = useRef<HTMLOListElement | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<LivingPageSectionId | null>(
     sectionIds[0] ?? null,
   );
@@ -123,6 +124,29 @@ export default function LivingPageSectionRail({
     };
   }, [sectionIds]);
 
+  // Full-size chapter labels can overflow the desktop list; keep the active
+  // chip in view as the scroll-spy advances so the rail never points offscreen.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list || list.scrollWidth <= list.clientWidth) return;
+    const activeChip = list.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!activeChip) return;
+
+    const listRect = list.getBoundingClientRect();
+    const chipRect = activeChip.getBoundingClientRect();
+    const overflowLeft = chipRect.left - listRect.left;
+    const overflowRight = chipRect.right - listRect.right;
+    if (overflowLeft >= 0 && overflowRight <= 0) return;
+
+    const prefersReducedMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    list.scrollTo({
+      left: list.scrollLeft + (overflowLeft < 0 ? overflowLeft : overflowRight),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, [activeSectionId]);
+
   if (sectionIds.length < 2) return null;
 
   const activeIndex = Math.max(0, sectionIds.indexOf(activeSectionId ?? sectionIds[0]));
@@ -168,7 +192,7 @@ export default function LivingPageSectionRail({
       className="resume-theme theme-surface-strong sticky top-0 z-30 rounded-none border-b"
     >
       <div className="mx-auto max-w-4xl px-4 py-2 sm:px-6 md:px-8">
-        <div className="flex min-h-9 items-center justify-between gap-3 lg:hidden">
+        <div className="flex min-h-11 items-center justify-between gap-3 lg:hidden">
           <button
             type="button"
             disabled={!previousId}
@@ -178,7 +202,7 @@ export default function LivingPageSectionRail({
                 ? `Previous chapter: ${LIVING_PAGE_SECTION_LABELS[previousId]}`
                 : "No previous chapter"
             }
-            className="resume-theme-card resume-theme-link grid h-9 w-9 shrink-0 place-items-center rounded-none border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+            className="resume-theme-card resume-theme-link grid h-11 w-11 shrink-0 place-items-center rounded-none border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] disabled:cursor-not-allowed disabled:opacity-35"
           >
             <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="square" strokeLinejoin="miter" d="m15 18-6-6 6-6" />
@@ -188,11 +212,11 @@ export default function LivingPageSectionRail({
           <div className="min-w-0 flex-1 text-center">
             <span
               aria-current="step"
-              className="resume-theme-accent block truncate text-[10px] font-semibold uppercase tracking-[0.18em]"
+              className="resume-theme-accent block truncate text-xs font-semibold uppercase tracking-[0.14em]"
             >
               {LIVING_PAGE_SECTION_LABELS[currentId]}
             </span>
-            <span className="resume-theme-subtle mt-0.5 block font-mono text-[9px]">
+            <span className="resume-theme-subtle mt-0.5 block font-mono text-xs">
               {activeIndex + 1} / {sectionIds.length}
             </span>
           </div>
@@ -206,7 +230,7 @@ export default function LivingPageSectionRail({
                 ? `Next chapter: ${LIVING_PAGE_SECTION_LABELS[nextId]}`
                 : "No next chapter"
             }
-            className="resume-theme-card resume-theme-link grid h-9 w-9 shrink-0 place-items-center rounded-none border transition-colors disabled:cursor-not-allowed disabled:opacity-35"
+            className="resume-theme-card resume-theme-link grid h-11 w-11 shrink-0 place-items-center rounded-none border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] disabled:cursor-not-allowed disabled:opacity-35"
           >
             <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="square" strokeLinejoin="miter" d="m9 6 6 6-6 6" />
@@ -214,17 +238,20 @@ export default function LivingPageSectionRail({
           </button>
         </div>
 
-        <ol className="hidden items-stretch gap-1 lg:flex">
+        <ol
+          ref={listRef}
+          className="scrollbar-hide -mx-1 hidden items-stretch gap-1 overflow-x-auto p-1 lg:flex"
+        >
           {sectionIds.map((sectionId, index) => {
             const active = sectionId === currentId;
             return (
-              <li key={sectionId} className="min-w-0 flex-1">
+              <li key={sectionId} className="flex-1">
                 <button
                   type="button"
                   aria-current={active ? "step" : undefined}
                   aria-label={`Chapter ${index + 1} of ${sectionIds.length}: ${LIVING_PAGE_SECTION_LABELS[sectionId]}`}
                   onClick={() => navigateToSection(sectionId)}
-                  className={`flex min-h-9 w-full items-center justify-center gap-2 rounded-none border px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] ${
+                  className={`flex min-h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-none border px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] ${
                     active
                       ? "border-[var(--theme-accent-border)] bg-[var(--theme-accent-soft)] text-[var(--theme-accent-bright)]"
                       : "border-transparent text-[var(--theme-text-subtle)] hover:border-[var(--theme-border)] hover:text-[var(--theme-text)]"
@@ -238,7 +265,7 @@ export default function LivingPageSectionRail({
                         : "border border-[var(--theme-text-subtle)]"
                     }`}
                   />
-                  <span className="truncate">{LIVING_PAGE_SECTION_LABELS[sectionId]}</span>
+                  <span>{LIVING_PAGE_SECTION_LABELS[sectionId]}</span>
                 </button>
               </li>
             );

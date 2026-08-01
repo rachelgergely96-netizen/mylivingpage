@@ -14,7 +14,10 @@ export async function POST(request: Request) {
   const authSupabase = await createServerSupabaseClient();
   const { data: { user } } = await authSupabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
   }
 
   const declaredLength = Number(request.headers.get("content-length"));
@@ -135,7 +138,10 @@ export async function DELETE() {
   const authSupabase = await createServerSupabaseClient();
   const { data: { user } } = await authSupabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
   }
 
   const supabase = createServiceRoleSupabaseClient();

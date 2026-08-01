@@ -10,7 +10,12 @@ const routeTrustLevel = "authenticated_user";
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   try {
     const rateLimit = await enforceRateLimit({

@@ -21,14 +21,14 @@ async function getAuthUserId() {
 
 async function fetchOwnedPage(pageId: string, userId: string) {
   const supabase = createServiceRoleSupabaseClient();
-  const { data: page } = await supabase
+  const { data: page, error } = await supabase
     .from("pages")
     .select("id")
     .eq("id", pageId)
     .or(`user_id.eq.${userId},owner_id.eq.${userId}`)
     .maybeSingle();
 
-  return page;
+  return { page, error };
 }
 
 export async function GET(
@@ -39,12 +39,21 @@ export async function GET(
   const userId = await getAuthUserId();
 
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
   }
 
-  const page = await fetchOwnedPage(pageId, userId);
+  const { page, error: pageLookupError } = await fetchOwnedPage(pageId, userId);
+  if (pageLookupError) {
+    return NextResponse.json(
+      { error: "Page access is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
   if (!page) {
-    return NextResponse.json({ error: "Page not found" }, { status: 404 });
+    return NextResponse.json({ error: "Page not found." }, { status: 404 });
   }
 
   const supabase = createServiceRoleSupabaseClient();

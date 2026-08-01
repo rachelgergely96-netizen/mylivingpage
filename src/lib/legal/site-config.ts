@@ -237,6 +237,7 @@ export function getPolicyMetadata(policyId: LegalPolicyId): Metadata {
     description: route.seoDescription,
     alternates: { canonical: route.href },
     openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
       title: `${route.pageTitle} | ${SITE_NAME}`,
       description: route.seoDescription,
       url: route.href,
@@ -257,6 +258,7 @@ export function getLegalIndexMetadata(): Metadata {
     description: "Browse MyLivingPage terms, privacy, and related legal information.",
     alternates: { canonical: "/legal" },
     openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
       title: `Legal and Policies | ${SITE_NAME}`,
       description: "Browse MyLivingPage terms, privacy, and related legal information.",
       url: "/legal",

@@ -85,7 +85,7 @@ export function normalizeAppUrl(url?: string): string {
 export function truncate(value: string | null | undefined, maxChars: number): string {
   if (!value) return "";
   if (value.length <= maxChars) return value;
-  return `${value.slice(0, Math.max(0, maxChars - 3)).trimEnd()}...`;
+  return `${value.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`;
 }
 
 export function toDisplayDomainUrl(url: string, slug: string): string {
@@ -264,9 +264,14 @@ export function getShareCardTags(resume: ResumeData): string[] {
   ).slice(0, 4);
 }
 
+/**
+ * First word of the name for possessive chrome like "Share {firstName}'s page".
+ * Returns "" when no usable name exists so callers can fall back to
+ * non-possessive copy instead of rendering "Your's".
+ */
 export function getFirstName(name: string | null | undefined): string {
   const first = (name ?? "").trim().split(/\s+/)[0] ?? "";
-  return truncate(first || "Your", 16);
+  return truncate(first, 16);
 }
 
 function getNameFontSize(name: string): number {

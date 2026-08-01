@@ -4,8 +4,10 @@ import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import GuideLinkGrid from "@/components/marketing/GuideLinkGrid";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import SiteHeader from "@/components/marketing/SiteHeader";
+import JsonLd from "@/components/seo/JsonLd";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
+import { buildCollectionPageStructuredData } from "@/lib/structured-data";
 
 const pageTitle = "Résumé PDF and Living Page guides";
 const title = `${pageTitle} | ${SITE_NAME}`;
@@ -22,6 +24,7 @@ export const metadata: Metadata = {
   description,
   alternates: { canonical: canonicalUrl },
   openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
     title,
     description,
     url: canonicalUrl,
@@ -40,6 +43,13 @@ export default async function GuidesPage() {
 
   return (
     <div className="site-shell" data-site-ui>
+      <JsonLd
+        data={buildCollectionPageStructuredData({
+          path: "/guides",
+          name: pageTitle,
+          description,
+        })}
+      />
       <SiteHeader
         brandName={site.brandName}
         links={[

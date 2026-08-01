@@ -119,7 +119,7 @@ Acme Systems
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Add more resume text before autofilling your page.",
+      error: "Add more résumé text before autofilling your page.",
     });
   });
 });

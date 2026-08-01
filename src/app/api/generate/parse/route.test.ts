@@ -29,7 +29,9 @@ describe("POST /api/generate/parse", () => {
     const response = await POST();
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    await expect(response.json()).resolves.toEqual({
+      error: "Your session has expired. Sign in again to continue.",
+    });
   });
 
   it("returns a permanent 410 response for signed-in callers", async () => {

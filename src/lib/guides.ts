@@ -1,6 +1,9 @@
 export const GUIDE_AUTHOR_NAME = "MyLivingPage Editorial Team";
 export const GUIDE_PUBLISHED_AT = "2026-03-12";
 export const GUIDE_UPDATED_AT = "2026-03-20";
+// Bump when the marketing pages (/, /pricing, /examples, /guides) change
+// meaningfully — the sitemap reports it as their lastModified date.
+export const MARKETING_UPDATED_AT = "2026-07-20";
 
 export type GuideSlug =
   | "resume-pdf-check"

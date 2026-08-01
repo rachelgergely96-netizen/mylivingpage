@@ -49,6 +49,7 @@ export async function generateMetadata({ params }: GuidePageProps): Promise<Meta
     description: guide.description,
     alternates: { canonical: canonicalUrl },
     openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
       title: `${guide.title} | ${SITE_NAME}`,
       description: guide.description,
       url: canonicalUrl,

@@ -81,7 +81,7 @@ describe("buildPageProofSummary", () => {
     expect(summary.mobileViewsLast7d).toBe(1);
     expect(summary.avgEngagedSecondsLast7d).toBe(44);
     expect(summary.firstViewAfterLatestShareAt).toBe("2026-03-23T14:05:00.000Z");
-    expect(summary.firstViewAfterLatestShareDeviceLabel).toBe("Mobile");
+    expect(summary.firstViewAfterLatestShareDeviceLabel).toBe("mobile");
     expect(summary.firstViewAfterLatestShareEngagedSeconds).toBe(44);
     expect(summary.lastShareScenario).toBe("application_follow_up");
     expect(summary.lastShareVariantLabel).toBe("Recruiter version");
@@ -139,6 +139,6 @@ describe("buildPageProofSummary", () => {
 
     expect(response.loopState).toBe("first_view_detected");
     expect(response.lastShareScenario).toBe("connection");
-    expect(response.firstViewAfterLatestShareDeviceLabel).toBe("Mobile");
+    expect(response.firstViewAfterLatestShareDeviceLabel).toBe("mobile");
   });
 });

@@ -107,19 +107,20 @@ function isMobile(userAgent: string | null) {
   return /Mobile|Android|iPhone/i.test(userAgent ?? "");
 }
 
+// Labels render mid-sentence ("Viewed on mobile"), so they stay lowercase.
 function detectDeviceLabel(userAgent: string | null) {
   const normalized = userAgent ?? "";
 
   if (/Tablet|iPad/i.test(normalized)) {
-    return "Tablet";
+    return "tablet";
   }
 
   if (/Mobile|Android|iPhone/i.test(normalized)) {
-    return "Mobile";
+    return "mobile";
   }
 
   if (normalized) {
-    return "Desktop";
+    return "desktop";
   }
 
   return null;

@@ -12,28 +12,34 @@ interface CollectionPageInput {
   description: string;
 }
 
-export function buildHomeStructuredData() {
-  return {
+/**
+ * Sitewide Organization + WebSite JSON-LD rendered once from the root layout.
+ * The single source for this graph — keep route-level builders below in sync
+ * with the @id anchors it defines.
+ */
+export function buildSiteStructuredData() {
+  const organization = {
     "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        name: ORGANIZATION_NAME,
-        url: absoluteUrl("/"),
-        description: SITE_DESCRIPTION,
-      },
-      {
-        "@type": "WebSite",
-        name: SITE_NAME,
-        url: absoluteUrl("/"),
-        description: SITE_DESCRIPTION,
-        publisher: {
-          "@type": "Organization",
-          name: ORGANIZATION_NAME,
-        },
-      },
-    ],
+    "@type": "Organization",
+    "@id": `${absoluteUrl("/")}#organization`,
+    name: ORGANIZATION_NAME,
+    url: absoluteUrl("/"),
+    description: SITE_DESCRIPTION,
   };
+
+  const website = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${absoluteUrl("/")}#website`,
+    name: SITE_NAME,
+    url: absoluteUrl("/"),
+    description: SITE_DESCRIPTION,
+    publisher: {
+      "@id": `${absoluteUrl("/")}#organization`,
+    },
+  };
+
+  return [organization, website];
 }
 
 export function buildCollectionPageStructuredData({ path, name, description }: CollectionPageInput) {

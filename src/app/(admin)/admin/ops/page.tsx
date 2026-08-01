@@ -614,7 +614,9 @@ export default async function AdminOpsPage() {
                   Most common callback failure: {topAuthFailure[0]} x{topAuthFailure[1]}
                 </p>
                 <p className="mt-2 text-site-secondary">
-                  {topAuthFailure[0] === "google_signin_expired"
+                  {["google_signin_expired", "signin_expired", "confirm_link_expired"].includes(
+                    topAuthFailure[0],
+                  )
                     ? "Recent PKCE-style callback failures usually mean the browser returned without the verifier cookie state that started the OAuth flow."
                     : "Review the recent auth event feed for the specific callback error metadata and verify the same-browser OAuth return path."}
                 </p>

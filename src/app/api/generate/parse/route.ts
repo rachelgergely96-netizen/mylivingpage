@@ -11,7 +11,10 @@ export async function POST() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
   }
 
   return NextResponse.json(

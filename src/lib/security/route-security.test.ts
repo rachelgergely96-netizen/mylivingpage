@@ -40,6 +40,9 @@ describe("route security helpers", () => {
     expect("response" in result).toBe(true);
     if ("response" in result) {
       expect(result.response.status).toBe(401);
+      await expect(result.response.json()).resolves.toEqual({
+        error: "Your session has expired. Sign in again to continue.",
+      });
     }
   });
 

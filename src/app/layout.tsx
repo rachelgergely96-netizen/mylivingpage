@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import JsonLd from "@/components/seo/JsonLd";
 import AnalyticsConsent from "@/components/privacy/AnalyticsConsent";
 import { fontVariableClasses } from "@/lib/fonts";
-import { getAbsoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import { buildSiteStructuredData } from "@/lib/structured-data";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,31 +29,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const organizationJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${getAbsoluteUrl("/")}#organization`,
-    name: SITE_NAME,
-    url: getAbsoluteUrl("/"),
-    description: SITE_DESCRIPTION,
-  };
-
-  const websiteJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${getAbsoluteUrl("/")}#website`,
-    name: SITE_NAME,
-    url: getAbsoluteUrl("/"),
-    description: SITE_DESCRIPTION,
-    publisher: {
-      "@id": `${getAbsoluteUrl("/")}#organization`,
-    },
-  };
-
   return (
     <html lang="en">
       <body className={`${fontVariableClasses} antialiased`}>
-        <JsonLd data={[organizationJsonLd, websiteJsonLd]} />
+        <JsonLd data={buildSiteStructuredData()} />
         {children}
         <AnalyticsConsent />
       </body>

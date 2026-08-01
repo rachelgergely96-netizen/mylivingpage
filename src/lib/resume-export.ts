@@ -180,7 +180,11 @@ export function buildResumePdfFileName(name: string | null | undefined): string 
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 
-  return normalized ? `${normalized}-resume.pdf` : "resume.pdf";
+  if (!normalized || normalized === "resume") {
+    return "resume.pdf";
+  }
+
+  return `${normalized}-resume.pdf`;
 }
 
 export function coerceResumeDataForExport(value: unknown): ResumeData {

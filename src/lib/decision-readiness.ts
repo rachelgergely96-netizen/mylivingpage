@@ -84,10 +84,10 @@ export function buildDecisionReadinessState(
     ),
     buildCheck(
       "resume_pdf_health",
-      "Resume PDF looks safe to export",
+      "Résumé PDF looks safe to export",
       estimatedPdfFriendly ? "ready" : "needs_attention",
       estimatedPdfFriendly
-        ? "The current content should stay focused enough for a clean Resume PDF."
+        ? "The current content should stay focused enough for a clean Résumé PDF."
         : "The page is getting dense. Tighten bullets or trim sections before relying on the exported PDF.",
     ),
     buildCheck(

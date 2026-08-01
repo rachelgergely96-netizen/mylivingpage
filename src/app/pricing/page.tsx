@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   alternates: { canonical: canonicalUrl },
   openGraph: {
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
     title: `Simple pricing: free | ${SITE_NAME}`,
     description: SITE_DESCRIPTION,
     url: canonicalUrl,

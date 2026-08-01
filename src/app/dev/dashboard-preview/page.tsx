@@ -48,7 +48,7 @@ const previewProof: PageProofSummary = {
   lastShareAt: "2026-07-22T19:30:00.000Z",
   latestViewAt: "2026-07-22T20:45:00.000Z",
   firstViewAfterLatestShareAt: "2026-07-22T20:02:00.000Z",
-  firstViewAfterLatestShareDeviceLabel: "Mobile",
+  firstViewAfterLatestShareDeviceLabel: "mobile",
   firstViewAfterLatestShareEngagedSeconds: 84,
   lastShareScenario: "recruiter_reply",
   lastShareVariantId: null,

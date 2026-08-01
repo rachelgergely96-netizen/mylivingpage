@@ -129,7 +129,9 @@ describe("/api/profile", () => {
       const response = await GET();
 
       expect(response.status).toBe(401);
-      await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+      await expect(response.json()).resolves.toEqual({
+        error: "Your session has expired. Sign in again to continue.",
+      });
     });
 
     it("returns 404 when the profile cannot be loaded", async () => {

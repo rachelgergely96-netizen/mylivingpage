@@ -10,7 +10,12 @@ const routeTrustLevel = "authenticated_user";
 export async function GET() {
   const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   const supabase = createServiceRoleSupabaseClient();
   const { data: profile, error } = await fetchProfileWithHostingAccess<{
@@ -76,7 +81,12 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   const body = (await request.json()) as Record<string, unknown>;
   const updates: Record<string, unknown> = {};

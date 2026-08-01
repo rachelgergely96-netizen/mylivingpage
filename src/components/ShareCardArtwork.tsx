@@ -517,7 +517,10 @@ export function ShareCardArtwork({
                 fontWeight: 700,
               }}
             >
-              {ctaHeadline ?? `See ${model.firstName}'s full living page`}
+              {ctaHeadline ??
+                (model.firstName
+                  ? `See ${model.firstName}'s full living page`
+                  : "See the full living page")}
             </div>
             <div
               style={{

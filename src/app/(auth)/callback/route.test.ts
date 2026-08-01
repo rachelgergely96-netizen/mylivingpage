@@ -82,6 +82,53 @@ describe("GET /callback", () => {
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
+  it("routes an expired email-confirmation link to the login form with a plain-language code", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired&next=%2Fcreate",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/login?error=confirm_link_expired&next=%2Fcreate",
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "auth.callback.failed",
+      expect.objectContaining({
+        error_code: "confirm_link_expired",
+        provider_error: "access_denied",
+        provider_error_code: "otp_expired",
+        next: "/create",
+      }),
+    );
+  });
+
+  it("routes a cancelled provider consent screen to the login form", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?error=access_denied&next=%2Fdashboard",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/login?error=signin_cancelled&next=%2Fdashboard",
+    );
+  });
+
+  it("never echoes unrecognized provider error params into the redirect", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?error=server_error&error_description=Totally+unexpected&next=%2Fdashboard",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/login?error=signin_failed&next=%2Fdashboard",
+    );
+  });
+
   it("preserves a returning-user welcome intent through the OAuth callback", async () => {
     const response = await GET(
       new NextRequest(
@@ -186,14 +233,14 @@ describe("GET /callback", () => {
     );
 
     expect(response.headers.get("location")).toBe(
-      "https://www.mylivingpage.com/login?error=google_signin_expired&next=%2Fdashboard",
+      "https://www.mylivingpage.com/login?error=signin_expired&next=%2Fdashboard",
     );
     expect(response.headers.get("cache-control")).toContain("no-store");
     expect(mocks.trackEvent).toHaveBeenCalledWith(
       null,
       "auth.callback.failed",
       expect.objectContaining({
-        error_code: "google_signin_expired",
+        error_code: "signin_expired",
         request_host: "mylivingpage.com",
         auth_origin: "https://www.mylivingpage.com",
         redirect_to: "https://www.mylivingpage.com/dashboard",

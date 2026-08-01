@@ -17,6 +17,7 @@ import {
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { usernameFromEmail } from "@/lib/usernames";
+import { getTheme } from "@/themes/registry";
 import { THEME_IDS } from "@/themes/types";
 
 const routeTrustLevel = "authenticated_user";
@@ -87,12 +88,18 @@ export async function POST(request: Request) {
     } = await authClient.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Your session has expired. Sign in again to continue." },
+        { status: 401 },
+      );
     }
 
     const parsedBody = await request.json().catch(() => null);
     if (!isPlainJsonObject(parsedBody)) {
-      return NextResponse.json({ error: "Invalid page payload." }, { status: 400 });
+      return NextResponse.json(
+        { error: "We could not read that save. Refresh the page and try again." },
+        { status: 400 },
+      );
     }
     const body = parsedBody as unknown as Partial<PublishBody>;
     if (!body.theme_id || !body.resume_data) {
@@ -120,7 +127,7 @@ export async function POST(request: Request) {
       (typeof body.raw_resume !== "string" ||
         body.raw_resume.length > MAX_RAW_RESUME_CHARACTERS)
     ) {
-      return NextResponse.json({ error: "Raw resume text is invalid." }, { status: 400 });
+      return NextResponse.json({ error: "Raw résumé text is invalid." }, { status: 400 });
     }
     if (body.page_config !== undefined) {
       const pageConfigError = validatePageConfigPayload(body.page_config);
@@ -166,9 +173,10 @@ export async function POST(request: Request) {
     const username = profile?.username ?? usernameFromEmail(user.email);
 
     if (!isThemeAllowed(body.theme_id, accountAccess.allowedThemeIds)) {
+      const themeName = getTheme(body.theme_id)?.name ?? "chosen";
       return NextResponse.json(
         {
-          error: `The "${body.theme_id}" theme is not available for this account.`,
+          error: `The ${themeName} theme is not included in your current plan. Choose another theme or upgrade to keep it.`,
         },
         { status: 403 },
       );
@@ -187,7 +195,7 @@ export async function POST(request: Request) {
         {
           error:
             accountAccess.variantLimit === 0
-              ? "This streamlined resume does not include targeted versions."
+              ? "This streamlined résumé does not include targeted versions."
               : `This account supports ${accountAccess.variantLimit} targeted version${accountAccess.variantLimit === 1 ? "" : "s"}.`,
         },
         { status: 403 },

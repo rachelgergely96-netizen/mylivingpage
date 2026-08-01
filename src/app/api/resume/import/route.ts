@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
   } catch {
     return NextResponse.json(
-      { error: "Resume import is temporarily unavailable. Please try again." },
+      { error: "Résumé import is temporarily unavailable. Please try again." },
       { status: 503 },
     );
   }
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     declaredContentLength > MAX_MULTIPART_BODY_BYTES
   ) {
     return NextResponse.json(
-      { error: `Resume files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
+      { error: `Résumé files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
       { status: 413 },
     );
   }
@@ -64,14 +64,14 @@ export async function POST(request: Request) {
   const fileValue = formData.get("file");
   const textValue = formData.get("text");
   let resumeText = "";
-  let sourceName = "Pasted resume";
+  let sourceName = "Pasted résumé";
   let sourceKind: "pdf" | "docx" | "text" | "pasted" = "pasted";
 
   try {
     if (typeof fileValue !== "string" && fileValue) {
       if (fileValue.size > MAX_RESUME_FILE_BYTES) {
         return NextResponse.json(
-          { error: `Resume files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
+          { error: `Résumé files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
           { status: 413 },
         );
       }
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message, code: error.code }, { status });
     }
     return NextResponse.json(
-      { error: "We could not read that resume. Try pasting its text instead." },
+      { error: "We could not read that résumé. Try pasting its text instead." },
       { status: 400 },
     );
   }
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
   const meaningfulCharacters = resumeText.match(/[\p{L}\p{N}]/gu)?.length ?? 0;
   if (meaningfulCharacters < 20) {
     return NextResponse.json(
-      { error: "Add more resume text before autofilling your page." },
+      { error: "Add more résumé text before autofilling your page." },
       { status: 400 },
     );
   }

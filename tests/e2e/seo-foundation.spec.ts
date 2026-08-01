@@ -21,8 +21,10 @@ test("robots.txt and sitemap.xml expose the SEO foundation routes", async ({ req
   expect(sitemapLine).toBeTruthy();
   expect(robotsText).toContain("Disallow: /dashboard");
   expect(robotsText).toContain("Disallow: /api");
+  expect(robotsText).toContain("Disallow: /callback");
 
   const origin = new URL(sitemapLine!.replace("Sitemap: ", "")).origin;
+  expect(hostLine).toBe(`Host: ${new URL(origin).hostname}`);
 
   const sitemapResponse = await request.get("/sitemap.xml");
   expect(sitemapResponse.ok()).toBeTruthy();
@@ -121,10 +123,27 @@ test("homepage, examples, and guide pages emit the expected JSON-LD types", asyn
   jsonLd = await getJsonLdText(page);
   expect(jsonLd).toContain('"@type":"CollectionPage"');
 
+  await page.goto("/guides");
+  jsonLd = await getJsonLdText(page);
+  expect(jsonLd).toContain('"@type":"CollectionPage"');
+
   await page.goto("/guides/resume-pdf-check");
   jsonLd = await getJsonLdText(page);
   expect(jsonLd).toContain('"@type":"Article"');
   expect(jsonLd).toContain('"headline":"Résumé PDF check: how to make sure your PDF reads cleanly"');
+});
+
+test("the marketing site serves a default social share image", async ({ page, request }) => {
+  const imageResponse = await request.get("/opengraph-image");
+  expect(imageResponse.ok()).toBeTruthy();
+  expect(imageResponse.headers()["content-type"]).toContain("image/png");
+
+  await page.goto("/");
+  const ogImageHref = await page
+    .locator('meta[property="og:image"]')
+    .first()
+    .getAttribute("content");
+  expect(ogImageHref).toContain("/opengraph-image");
 });
 
 test("guide articles link into the funnel with distinct CTA refs", async ({ page }) => {

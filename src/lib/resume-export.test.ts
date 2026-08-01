@@ -9,6 +9,7 @@ describe("resume export helpers", () => {
     expect(buildResumePdfFileName("Taylor Reed")).toBe("taylor-reed-resume.pdf");
     expect(buildResumePdfFileName("Jos\u00e9 \ud83d\ude80")).toBe("jose-resume.pdf");
     expect(buildResumePdfFileName("")).toBe("resume.pdf");
+    expect(buildResumePdfFileName("Resume")).toBe("resume.pdf");
   });
 
   it("coerces malformed stored page data into a safe resume shape", () => {

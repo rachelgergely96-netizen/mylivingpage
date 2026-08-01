@@ -1,12 +1,57 @@
+import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   buildResumePdfData,
   countPdfPages,
   formatExperienceHighlightsAsParagraph,
   formatSkillsGroupAsSentence,
+  renderFallbackResumePdf,
   renderResumePdf,
 } from "@/lib/pdf/ats-export";
 import type { ResumeData } from "@/types/resume";
+
+function extractPdfTextLines(buffer: Uint8Array): string[] {
+  const raw = Buffer.from(buffer);
+  const body = raw.toString("latin1");
+  const contentStreams: string[] = [];
+  const streamPattern = /stream\r?\n/g;
+  let streamMatch: RegExpExecArray | null;
+
+  while ((streamMatch = streamPattern.exec(body)) !== null) {
+    const start = streamMatch.index + streamMatch[0].length;
+    const end = body.indexOf("endstream", start);
+    if (end === -1) {
+      continue;
+    }
+
+    try {
+      contentStreams.push(inflateSync(raw.subarray(start, end)).toString("latin1"));
+    } catch {
+      // Not a compressed content stream (xref tables, metadata, ...).
+    }
+  }
+
+  const lines: string[] = [];
+  const textRunPattern = /\[((?:<[0-9a-fA-F]+>|-?\d+(?:\.\d+)?|\s)+)\]\s*TJ/g;
+
+  for (const stream of contentStreams) {
+    let runMatch: RegExpExecArray | null;
+    while ((runMatch = textRunPattern.exec(stream)) !== null) {
+      const text = (runMatch[1].match(/<[0-9a-fA-F]+>/g) ?? [])
+        .map((part) =>
+          part
+            .slice(1, -1)
+            .replace(/[0-9a-fA-F]{2}/g, (pair) => String.fromCharCode(parseInt(pair, 16))),
+        )
+        .join("");
+      if (text) {
+        lines.push(text);
+      }
+    }
+  }
+
+  return lines;
+}
 
 function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
   return {
@@ -100,6 +145,85 @@ describe("Resume PDF export data shaping", () => {
       }),
     ).toBe("Tools: SQL, Figma, Amplitude.");
   });
+
+  it(
+    "renders sections in canonical order with clean subtitles, one-line dates, and project links",
+    { timeout: 15_000 },
+    async () => {
+      const resume = buildResume({
+        experience: [
+          {
+            title: "Product Manager",
+            company: "Northwind",
+            dates: "January 2024 - Present",
+            highlights: ["Owned roadmap and analytics"],
+            url: "northwind.example.com",
+          },
+          {
+            title: "Contract Reviewer",
+            company: "",
+            dates: "2023",
+            highlights: ["Reviewed vendor agreements"],
+            url: "example.com/contract-work",
+          },
+        ],
+        projects: [
+          {
+            name: "Launch Hub",
+            description: "Internal launch tooling",
+            tech: ["React", "SQL"],
+            url: "https://launchhub.example.com",
+          },
+        ],
+      });
+
+      const lines = extractPdfTextLines(await renderResumePdf(resume));
+
+      const sectionOrder = ["EXPERIENCE", "PROJECTS", "SKILLS", "EDUCATION", "CERTIFICATIONS"].map(
+        (title) => lines.indexOf(title),
+      );
+      expect(sectionOrder).toEqual([...sectionOrder].sort((a, b) => a - b));
+      expect(sectionOrder.every((index) => index !== -1)).toBe(true);
+
+      // A month-range date stays on a single line in the date column.
+      expect(lines).toContain("January 2024 - Present");
+
+      // A URL-only experience subtitle renders without a dangling " | " separator.
+      expect(lines).toContain("example.com/contract-work");
+      expect(lines.some((line) => line.startsWith("| "))).toBe(false);
+
+      // Project URLs print alongside the description, like experience URLs.
+      expect(lines).toContain("Internal launch tooling | launchhub.example.com");
+    },
+  );
+
+  it(
+    "renders the fallback document with projects directly after experience and project links",
+    { timeout: 15_000 },
+    async () => {
+      const lines = extractPdfTextLines(
+        await renderFallbackResumePdf(
+          buildResume({
+            projects: [
+              {
+                name: "Launch Hub",
+                description: "Internal launch tooling",
+                tech: ["React", "SQL"],
+                url: "https://launchhub.example.com",
+              },
+            ],
+          }),
+        ),
+      );
+
+      const sectionOrder = ["EXPERIENCE", "PROJECTS", "SKILLS", "EDUCATION", "CERTIFICATIONS"].map(
+        (title) => lines.indexOf(title),
+      );
+      expect(sectionOrder).toEqual([...sectionOrder].sort((a, b) => a - b));
+      expect(sectionOrder.every((index) => index !== -1)).toBe(true);
+      expect(lines).toContain("Internal launch tooling | launchhub.example.com");
+    },
+  );
 
   it(
     "renders a very dense real-world resume cleanly without layout failure",

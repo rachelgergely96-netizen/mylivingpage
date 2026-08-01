@@ -82,6 +82,9 @@ export function ShareCardQr({
     ? buildModulePath(safeMatrix, addedQuietZone)
     : "";
   const resolvedSize = Number.isFinite(size) && size > 0 ? size : 1;
+  // Only announce the QR code when it actually rendered: an empty plate must
+  // stay hidden from assistive tech even when a title was provided.
+  const announceTitle = Boolean(title && safeMatrix);
 
   return (
     <div
@@ -103,10 +106,10 @@ export function ShareCardQr({
       }}
     >
       <svg
-        aria-hidden={title ? undefined : true}
-        aria-label={title}
+        aria-hidden={announceTitle ? undefined : true}
+        aria-label={announceTitle ? title : undefined}
         focusable="false"
-        role={title ? "img" : undefined}
+        role={announceTitle ? "img" : undefined}
         shapeRendering="crispEdges"
         viewBox={`0 0 ${viewBoxSide} ${viewBoxSide}`}
         xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +119,7 @@ export function ShareCardQr({
           width: "100%",
         }}
       >
-        {title ? <title>{title}</title> : null}
+        {announceTitle ? <title>{title}</title> : null}
         <rect width={viewBoxSide} height={viewBoxSide} fill="#FFFFFF" />
         {modulePath ? <path d={modulePath} fill={MODULE_COLOR} /> : null}
       </svg>

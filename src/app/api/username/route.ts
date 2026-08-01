@@ -18,7 +18,10 @@ export async function GET(request: Request) {
       route: "/api/username",
     });
     if (rateLimit.limited) {
-      return rateLimit.response;
+      return NextResponse.json(
+        { available: false, reason: "Too many checks just now. Wait a moment and try again." },
+        { status: 429 },
+      );
     }
   } catch {
     return NextResponse.json(

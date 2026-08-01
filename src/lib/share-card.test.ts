@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildQrMatrix,
   buildShareCardModel,
+  getFirstName,
   getShareCardTags,
   getShareCardVisual,
   SHARE_CARD_SIZE,
+  truncate,
 } from "@/lib/share-card";
 import { THEME_MAP, THEME_REGISTRY } from "@/themes/registry";
 import type { ResumeData } from "@/types/resume";
@@ -29,6 +31,30 @@ function buildResume(overrides: Partial<ResumeData> = {}): ResumeData {
     ...overrides,
   };
 }
+
+describe("truncate", () => {
+  it("keeps values inside the budget untouched", () => {
+    expect(truncate("Rachel", 16)).toBe("Rachel");
+  });
+
+  it("truncates with a single typographic ellipsis within the character budget", () => {
+    expect(truncate("abcdefghij", 5)).toBe("abcd…");
+    expect(truncate("abcdefghij", 5)).toHaveLength(5);
+    expect(truncate("Behavioral Systems Design", 12)).not.toContain("...");
+  });
+});
+
+describe("getFirstName", () => {
+  it("returns the first word of a usable name", () => {
+    expect(getFirstName("Rachel Gergely")).toBe("Rachel");
+  });
+
+  it("returns an empty string when no usable name exists", () => {
+    expect(getFirstName("   ")).toBe("");
+    expect(getFirstName(null)).toBe("");
+    expect(getFirstName(undefined)).toBe("");
+  });
+});
 
 describe("getShareCardTags", () => {
   it("keeps full tag phrases instead of truncating them with ellipses", () => {

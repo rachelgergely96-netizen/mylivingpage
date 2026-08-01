@@ -91,7 +91,7 @@ export default function DownloadResumeButton({
         aria-busy={generating || undefined}
         className={`${appearance === "site"
           ? "site-button site-button-secondary"
-          : "theme-surface-strong theme-link flex items-center gap-2 rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 disabled:hover:translate-y-0 sm:text-sm"
+          : "flex min-h-12 items-center gap-2 rounded-none border border-[var(--theme-accent-border)] bg-[var(--theme-accent-soft)] px-4 py-2.5 text-[13px] font-semibold text-[var(--theme-accent-bright)] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] disabled:hover:translate-y-0 sm:text-sm"
         } disabled:opacity-60 ${className ?? ""}`}
       >
         {generating ? (

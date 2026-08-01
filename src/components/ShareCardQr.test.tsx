@@ -55,6 +55,22 @@ describe("ShareCardQr", () => {
     }
   });
 
+  it("keeps the empty plate hidden from assistive tech even when a title is provided", () => {
+    const markup = renderToStaticMarkup(
+      <ShareCardQr
+        matrix={null}
+        size={92}
+        title="QR code for Rachel's Living Page"
+      />,
+    );
+
+    expect(markup).toContain('data-share-card-qr-state="empty"');
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).not.toContain("aria-label");
+    expect(markup).not.toContain('role="img"');
+    expect(markup).not.toContain("<title>");
+  });
+
   it("renders through the Open Graph image engine", async () => {
     const response = new ImageResponse(
       (

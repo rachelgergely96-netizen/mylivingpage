@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Resume downloads are temporarily unavailable. Please try again in a moment.",
+            "Résumé downloads are temporarily unavailable. Please try again in a moment.",
         },
         { status: 503 },
       );

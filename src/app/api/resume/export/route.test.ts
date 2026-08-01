@@ -432,7 +432,7 @@ describe("POST /api/resume/export", () => {
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
-      error: "Resume downloads are temporarily unavailable. Please try again in a moment.",
+      error: "Résumé downloads are temporarily unavailable. Please try again in a moment.",
     });
     expect(mocks.renderPdf).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith(

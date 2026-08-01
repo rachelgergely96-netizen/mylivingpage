@@ -274,10 +274,13 @@ export default async function PublicLivingPage({
               className="h-full overflow-y-auto scrollbar-hide pb-[calc(env(safe-area-inset-bottom,0px)+8.5rem)] lg:pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)]"
             >
               <LivingPageSectionRail sectionIds={livingPageSectionIds} />
+              {/* publicPath is the base path, not the variant-aware one: the
+                  panel only renders on ?v= views, and its link promises the
+                  full, unfiltered page rather than a reload of this view. */}
               {recruiterSkim ? (
                 <RecruiterSkimPanel
                   pageId={page.id}
-                  publicPath={variantAwarePath}
+                  publicPath={`/${username}`}
                   resumeData={variantResumeData}
                   variantLabel={recruiterSkim.variantLabel}
                   variantId={selectedVariant?.id ?? null}

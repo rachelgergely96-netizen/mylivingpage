@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCallbackAuthErrorCode } from "@/lib/auth/auth-error";
+import {
+  getCallbackAuthErrorCode,
+  getProviderCallbackErrorCode,
+} from "@/lib/auth/auth-error";
 import { getAppOrigin } from "@/lib/site";
 import {
   getClientIp,
@@ -36,6 +39,31 @@ export async function GET(request: NextRequest) {
   const redirectUrl = new URL(resolvedNext, appOrigin);
 
   if (!code) {
+    // Providers report failures (expired confirmation links, cancelled consent
+    // screens) as error params with no code — surface those on the login form.
+    const providerErrorCode = getProviderCallbackErrorCode({
+      error: requestUrl.searchParams.get("error"),
+      errorCode: requestUrl.searchParams.get("error_code"),
+    });
+    if (providerErrorCode) {
+      await trackEvent(null, "auth.callback.failed", {
+        error: requestUrl.searchParams.get("error_description") ?? requestUrl.searchParams.get("error"),
+        error_code: providerErrorCode,
+        provider_error: requestUrl.searchParams.get("error"),
+        provider_error_code: requestUrl.searchParams.get("error_code"),
+        next,
+        request_host: getRequestHostname(request.headers),
+        auth_origin: appOrigin.origin,
+        redirect_to: redirectUrl.toString(),
+      });
+      const providerErrorRedirect = new URL("/login", appOrigin);
+      providerErrorRedirect.searchParams.set("error", providerErrorCode);
+      providerErrorRedirect.searchParams.set("next", next);
+      const providerErrorResponse = NextResponse.redirect(providerErrorRedirect);
+      applyNoStoreHeaders(providerErrorResponse);
+      return providerErrorResponse;
+    }
+
     const missingCodeResponse = NextResponse.redirect(redirectUrl);
     applyNoStoreHeaders(missingCodeResponse);
     return missingCodeResponse;

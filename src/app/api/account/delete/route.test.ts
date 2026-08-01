@@ -65,7 +65,9 @@ describe("POST /api/account/delete", () => {
     const response = await POST(request());
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    await expect(response.json()).resolves.toEqual({
+      error: "Your session has expired. Sign in again to continue.",
+    });
     expect(mocks.deleteUserAccount).not.toHaveBeenCalled();
   });
 

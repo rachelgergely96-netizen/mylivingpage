@@ -7,7 +7,12 @@ const routeTrustLevel = "authenticated_user";
 export async function POST() {
   const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json(
+      { error: "Your session has expired. Sign in again to continue." },
+      { status: 401 },
+    );
+  }
 
   const supabase = createServiceRoleSupabaseClient();
 

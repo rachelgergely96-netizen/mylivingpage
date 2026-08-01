@@ -73,6 +73,9 @@ export function ShareCardArtwork({
         ...style,
       }}
     >
+      {treatment.backdropSheets.map((sheet, index) => (
+        <div key={`backdrop-${index}`} style={sheet} />
+      ))}
       {treatment.showGlowOrbs ? (
         <>
           <div

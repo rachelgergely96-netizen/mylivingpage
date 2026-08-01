@@ -132,12 +132,12 @@ describe("ShareCardArtwork", () => {
     const treatment = getShareCardFinish("holographic", visual);
 
     expect(treatment.outerBackground).toBe("#050507");
-    expect(treatment.panelBackground).toContain("rgba(18,22,30,0.72)");
+    expect(treatment.panelBackground).toContain("rgba(18,22,30,0.4)");
     expect(treatment.accent).toBe(visual.accent);
     expect(treatment.accentBright).toBe(visual.accentBright);
     expect(treatment.textMuted).toBe("rgba(232,237,248,0.86)");
-    expect(treatment.bodyScrim).toMatchObject({ width: "64%" });
-    expect(treatment.bodyScrim?.background).toContain("rgba(3,6,11,0.56)");
+    expect(treatment.bodyScrim).toMatchObject({ width: "60%" });
+    expect(treatment.bodyScrim?.background).toContain("rgba(3,6,11,0.48)");
     expect(treatment.chromeSurface).toBe("rgba(8,12,18,0.38)");
     expect(treatment.footerBackground).toContain("rgba(3,7,13,0.84)");
     expect(treatment.panelBoxShadow).toContain("inset 0 0 0 1px");

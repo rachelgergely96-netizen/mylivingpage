@@ -47,6 +47,12 @@ export interface ShareCardFinishTreatment {
   chromeSurface: string;
   /** Full-bleed material sheets rendered above the theme art, below content. */
   sheets: CSSProperties[];
+  /**
+   * Art on the outer plate BEHIND the panel. Transparency only reads when
+   * something visible shows through the glass — and because only the panel
+   * tilts, the backdrop also gives the 3D motion true parallax.
+   */
+  backdropSheets: CSSProperties[];
   /** Optional rotated specular highlight band (metal). */
   specular: CSSProperties | null;
   /** Optional smoked inner laminate that protects text legibility. */
@@ -130,6 +136,7 @@ function classicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
     chromeBorder: visual.border,
     chromeSurface: visual.surface,
     sheets: [],
+    backdropSheets: [],
     specular: null,
     bodyScrim: null,
     emblem: null,
@@ -196,6 +203,7 @@ function metalTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
         opacity: 1,
       },
     ],
+    backdropSheets: [],
     specular: {
       position: "absolute",
       top: "-20%",
@@ -236,8 +244,8 @@ function holographicTreatment(
     id: "holographic",
     outerBackground: "#050507",
     panelBackground:
-      "linear-gradient(145deg, rgba(18,22,30,0.72) 0%, rgba(6,9,14,0.78) 48%, rgba(10,13,19,0.74) 100%)",
-    panelBorder: "1px solid rgba(224,238,255,0.28)",
+      "linear-gradient(145deg, rgba(18,22,30,0.4) 0%, rgba(6,9,14,0.5) 48%, rgba(10,13,19,0.44) 100%)",
+    panelBorder: "1px solid rgba(224,238,255,0.36)",
     panelBoxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), inset 1px 0 0 rgba(198,238,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28), inset -1px 0 0 rgba(255,108,224,0.1), inset 0 0 0 1px rgba(214,232,255,0.06), 0 8px 18px rgba(0,0,0,0.28), 0 28px 64px rgba(0,0,0,0.42), 0 36px 80px ${rgba(accent, 0.1)}`,
     panelRadius: 18,
     skeletonOpacity: 0.4,
@@ -248,7 +256,54 @@ function holographicTreatment(
     accentBright: visual.accentBright,
     chromeBorder: "rgba(220,235,255,0.2)",
     chromeSurface: "rgba(8,12,18,0.38)",
+    backdropSheets: [
+      // Theme light pooled on the plate, upper right — half of it passes under
+      // the pane so the glass visibly transmits it.
+      {
+        position: "absolute",
+        top: -170,
+        right: -120,
+        width: 640,
+        height: 640,
+        borderRadius: "50%",
+        background: `radial-gradient(circle, ${rgba(accentBright, 0.5)} 0%, ${rgba(accent, 0.24)} 36%, rgba(0,0,0,0) 70%)`,
+      },
+      // A cooler pool lower left keeps the pane lit from both sides.
+      {
+        position: "absolute",
+        bottom: -220,
+        left: -140,
+        width: 600,
+        height: 600,
+        borderRadius: "50%",
+        background: `radial-gradient(circle, rgba(96,225,255,0.26) 0%, ${rgba(accent, 0.14)} 40%, rgba(0,0,0,0) 72%)`,
+        opacity: 0.8,
+      },
+      // A light shaft crossing the stage under the pane.
+      {
+        position: "absolute",
+        top: "-30%",
+        left: "30%",
+        width: "26%",
+        height: "160%",
+        transform: "rotate(24deg)",
+        transformOrigin: "center",
+        background:
+          "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0) 100%)",
+      },
+    ],
     sheets: [
+      // Refraction echo: the backdrop pool re-drawn slightly offset inside the
+      // pane, as if the glass bends the light passing through it.
+      {
+        position: "absolute",
+        top: -150,
+        right: -132,
+        width: 620,
+        height: 620,
+        borderRadius: "50%",
+        background: `radial-gradient(circle, ${rgba(accentBright, 0.12)} 0%, ${rgba(accent, 0.06)} 38%, rgba(0,0,0,0) 68%)`,
+      },
       // A thin nested rim reads as a refractive acrylic edge rather than a
       // machined metal bevel.
       {
@@ -343,9 +398,9 @@ function holographicTreatment(
       top: 0,
       bottom: 0,
       left: 0,
-      width: "64%",
+      width: "60%",
       background:
-        "linear-gradient(90deg, rgba(3,6,11,0.56) 0%, rgba(3,6,11,0.45) 52%, rgba(3,6,11,0.22) 76%, rgba(3,6,11,0) 100%)",
+        "linear-gradient(90deg, rgba(3,6,11,0.48) 0%, rgba(3,6,11,0.36) 52%, rgba(3,6,11,0.16) 76%, rgba(3,6,11,0) 100%)",
     },
     emblem: null,
     signatureSerial: "MLP GLASS",
@@ -362,7 +417,7 @@ function holographicTreatment(
       secondaryBackground: `linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(112,238,255,0.06) 38%, rgba(255,255,255,0.15) 50%, ${rgba(accent, 0.08)} 60%, rgba(255,110,220,0.045) 70%, rgba(0,0,0,0) 100%)`,
       secondaryWidth: "12%",
     },
-    nameTextShadow: "0 2px 18px rgba(0,0,0,0.46)",
+    nameTextShadow: "0 2px 10px rgba(0,0,0,0.62), 0 2px 26px rgba(0,0,0,0.4)",
   };
 }
 

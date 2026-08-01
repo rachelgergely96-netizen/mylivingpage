@@ -108,7 +108,7 @@ export default function ResumeImport({
         | null;
 
       if (!response.ok || !result || !("data" in result)) {
-        throw new Error(result && "error" in result ? result.error : "Resume import failed.");
+        throw new Error(result && "error" in result ? result.error : "Résumé import failed.");
       }
 
       setLastImport({
@@ -250,7 +250,7 @@ export default function ResumeImport({
               aria-invalid={errorField === "text" ? true : undefined}
               aria-describedby={errorField === "text" ? "resume-import-error" : undefined}
               placeholder="Paste the text from your résumé here…"
-              className="site-field min-h-32 flex-1 resize-y p-4 text-sm leading-6 disabled:cursor-not-allowed disabled:opacity-40"
+              className="site-field min-h-32 flex-1 resize-y p-4 text-base leading-6 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
             />
           </div>
         </div>
@@ -289,7 +289,8 @@ export default function ResumeImport({
             className="mt-4 border border-site-success bg-site-surface px-4 py-3"
           >
             <p className="text-sm font-medium text-site-success">
-              Autofilled {lastImport.detectedFields.length} areas from {lastImport.sourceName}.
+              Autofilled {lastImport.detectedFields.length}{" "}
+              {lastImport.detectedFields.length === 1 ? "area" : "areas"} from {lastImport.sourceName}.
             </p>
             {lastImport.detectedFields.length > 0 ? (
               <p className="mt-1 text-xs leading-5 text-site-secondary">

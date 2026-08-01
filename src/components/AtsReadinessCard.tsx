@@ -10,6 +10,8 @@ import type { ResumeData } from "@/types/resume";
 
 interface AtsReadinessCardProps {
   resumeData: ResumeData;
+  /** Hide the card's standalone header when a surrounding section already introduces it. */
+  showHeader?: boolean;
 }
 
 interface CompletedCheck {
@@ -258,7 +260,10 @@ function JobComparisonResult({
   );
 }
 
-export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) {
+export default function AtsReadinessCard({
+  resumeData,
+  showHeader = true,
+}: AtsReadinessCardProps) {
   const [targetTitle, setTargetTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [completedCheck, setCompletedCheck] = useState<CompletedCheck | null>(null);
@@ -371,26 +376,31 @@ export default function AtsReadinessCard({ resumeData }: AtsReadinessCardProps) 
   return (
     <section
       id="ats-readiness"
-      aria-labelledby="ats-readiness-title"
+      aria-labelledby={showHeader ? "ats-readiness-title" : undefined}
+      aria-label={showHeader ? undefined : "ATS and job check"}
       className="site-panel scroll-mt-24 p-4 sm:p-6 xl:scroll-mt-72"
     >
-      <div className="max-w-3xl">
-        <p className="site-eyebrow">ATS &amp; job check</p>
-        <h3
-          id="ats-readiness-title"
-          className="site-panel-title mt-2 text-2xl"
-        >
-          Check your résumé—and compare one specific job
-        </h3>
-        <p className="site-muted mt-3 text-sm leading-7">
-          Run a rules-based check for readable contact details, complete work history,
-          searchable content, and a text-based PDF. Add a job description to see which
-          important words already appear in your résumé.
-        </p>
-      </div>
+      {showHeader ? (
+        <div className="max-w-3xl">
+          <p className="site-eyebrow">ATS &amp; job check</p>
+          <h3
+            id="ats-readiness-title"
+            className="site-panel-title mt-2 text-2xl"
+          >
+            Check your résumé—and compare one specific job
+          </h3>
+          <p className="site-muted mt-3 text-sm leading-7">
+            Run a rules-based check for readable contact details, complete work history,
+            searchable content, and a text-based PDF. Add a job description to see which
+            important words already appear in your résumé.
+          </p>
+        </div>
+      ) : null}
 
       <fieldset
-        className="editor-signal-frame relative mt-5 overflow-hidden border border-site-border-strong bg-site-canvas-alt p-4 sm:p-6"
+        className={`editor-signal-frame relative overflow-hidden border border-site-border-strong bg-site-canvas-alt p-4 sm:p-6 ${
+          showHeader ? "mt-5" : ""
+        }`}
         data-ats-job-setup
       >
         <legend className="sr-only">Job comparison details</legend>

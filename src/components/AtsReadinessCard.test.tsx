@@ -19,4 +19,15 @@ describe("AtsReadinessCard", () => {
     expect(markup).toContain("Used only for this check and not stored");
     expect(markup).not.toContain("<details");
   });
+
+  it("drops the standalone header when embedded under a surrounding section intro", () => {
+    const markup = renderToStaticMarkup(
+      <AtsReadinessCard resumeData={DEMO_PAGES[0].data} showHeader={false} />,
+    );
+
+    expect(markup).not.toContain("Check your résumé—and compare one specific job");
+    expect(markup).toContain('aria-label="ATS and job check"');
+    expect(markup).toContain("Job context · Optional");
+    expect(markup).toContain("Run general ATS check");
+  });
 });

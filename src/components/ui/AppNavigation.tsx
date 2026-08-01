@@ -58,12 +58,27 @@ export default function AppNavigation({ showAdmin = false }: AppNavigationProps)
       }
     };
 
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        !mobileMenuRef.current?.contains(target) &&
+        !mobileToggleRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
+    };
+
     const firstControl = mobileMenuRef.current?.querySelector<HTMLElement>(
       "a[href], button:not([disabled])",
     );
     firstControl?.focus();
     document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+    };
   }, [open]);
 
   const renderLinks = (mobile: boolean) => (

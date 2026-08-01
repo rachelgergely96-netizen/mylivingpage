@@ -132,7 +132,9 @@ function StatCard({
           </p>
         </div>
         <span
-          className={`site-badge px-3 py-1 ${metricAccentClass(metric.status)}`}
+          className={`site-badge px-3 py-1 ${
+            metric.lowData ? "" : metricAccentClass(metric.status)
+          }`}
         >
           {metric.lowData ? "Low data" : STATUS_LABELS[metric.status]}
         </span>
@@ -160,7 +162,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
             Recent activity
           </p>
           <h2 className="site-panel-title mt-2 sm:text-2xl">
-            When people looked over {analytics.rangeLabel.toLowerCase()}
+            When people looked over the {analytics.rangeLabel.toLowerCase()}
           </h2>
           <p
             data-testid="analytics-trend-total"
@@ -175,7 +177,11 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
           ) : null}
         </div>
         <div
-          className={`site-badge self-start px-3 py-1.5 tabular-nums ${metricAccentClass(analytics.trend.comparison.status)}`}
+          className={`site-badge self-start px-3 py-1.5 tabular-nums ${
+            analytics.trend.comparison.lowData
+              ? ""
+              : metricAccentClass(analytics.trend.comparison.status)
+          }`}
         >
           {renderComparison(analytics.trend.comparison, formatInteger)}
         </div>
@@ -186,7 +192,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
           role="img"
           className="flex items-end gap-px border-b border-site-border sm:gap-1"
           style={{ height: 180 }}
-          aria-label={`Daily page views over ${analytics.rangeLabel.toLowerCase()}: ${formatPeopleLooked(analytics.trend.totalViews)} in total${
+          aria-label={`Daily page views over the ${analytics.rangeLabel.toLowerCase()}: ${formatPeopleLooked(analytics.trend.totalViews)} in total${
             peakDay.count > 0
               ? `; busiest day ${peakDay.label} with ${formatPeopleLooked(peakDay.count)}`
               : ""
@@ -492,7 +498,7 @@ export default function PageAnalyticsDashboard({
           value={analytics.overview.views.value}
           formatter={formatInteger}
           metric={analytics.overview.views}
-          helpText={`People who opened your page in the selected ${analytics.rangeLabel.toLowerCase()}.`}
+          helpText={`People who opened your page in the ${analytics.rangeLabel.toLowerCase()}.`}
           testId="analytics-stat-views"
         />
         <StatCard

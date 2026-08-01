@@ -146,7 +146,8 @@ export default function CreatePage() {
     searchParams.get("source") === "publish";
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
-  const { pendingDraft, saveDraft, clearDraft, dismissDraft } = useLocalDraft<CreateDraft>(createDraftKey);
+  const { pendingDraft, hydrated: draftHydrated, saveDraft, clearDraft, dismissDraft } =
+    useLocalDraft<CreateDraft>(createDraftKey);
 
   const isDirty = useMemo(() => {
     if (step === "success") {
@@ -343,6 +344,13 @@ export default function CreatePage() {
       return;
     }
 
+    // The draft key resolves only after the signed-in user loads, and the
+    // draft store hydrates one render later. Wait for both so the "draft not
+    // found" branch never fires before the real user-scoped draft was checked.
+    if (createDraftKey === null || !draftHydrated) {
+      return;
+    }
+
     legacyCheckoutReturnHandledRef.current = true;
 
     if (pendingDraft) {
@@ -359,7 +367,9 @@ export default function CreatePage() {
     router.replace("/create", { scroll: false });
   }, [
     applyDraft,
+    createDraftKey,
     dismissDraft,
+    draftHydrated,
     pendingDraft,
     returnedFromPublishCheckout,
     router,
@@ -670,7 +680,7 @@ export default function CreatePage() {
                 readOnly
                 value={resumeText}
                 aria-label="Saved résumé text reference"
-                className="site-field mt-3 min-h-48 p-4 text-xs leading-6"
+                className="site-field mt-3 min-h-48 p-4 text-base leading-6 sm:text-xs"
               />
               <button
                 type="button"
@@ -782,7 +792,7 @@ export default function CreatePage() {
               </h3>
               <p className="mt-2 text-sm leading-6 text-site-secondary">
                 {selectedPreviewVariant
-                  ? `You are previewing "${selectedPreviewVariant.label}". Targeted links will open this version first.`
+                  ? `You are previewing "${selectedPreviewVariant.label.trim() || "Untitled version"}". Targeted links will open this version first.`
                   : "You are previewing the base page. Add a targeted version above if you want a sharper send for a specific conversation or audience."}
               </p>
               {selectedPreviewVariant ? (
@@ -885,7 +895,10 @@ export default function CreatePage() {
             <div className="mt-5 border border-site-border bg-site-canvas-alt p-4">
               <p className="site-eyebrow text-site-muted">Your link</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <div className="min-w-0 flex-1 border border-site-border-strong bg-site-canvas px-3 py-2 text-sm text-site-action">
+                <div
+                  title={`mylivingpage.com/${predictedSlug}`}
+                  className="min-w-0 flex-1 truncate border border-site-border-strong bg-site-canvas px-3 py-2 text-sm text-site-action"
+                >
                   mylivingpage.com/{predictedSlug}
                 </div>
                 <button
@@ -913,7 +926,7 @@ export default function CreatePage() {
               <div className="border-t border-site-border py-4">
                 <p className="site-eyebrow">Page</p>
                 <h3 className="site-panel-title mt-2">Live now</h3>
-                <p className="mt-2 text-sm leading-6 text-site-text">
+                <p className="mt-2 break-words text-sm leading-6 text-site-text">
                   Your public page is live at mylivingpage.com/{predictedSlug}.
                 </p>
               </div>

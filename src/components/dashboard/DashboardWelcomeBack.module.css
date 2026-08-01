@@ -195,9 +195,9 @@
   gap: 0.7rem;
   color: var(--welcome-accent-bright);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 650;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   animation: welcome-copy-in 440ms 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -256,9 +256,9 @@
 .signalLabel {
   color: rgba(193, 210, 229, 0.48);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   font-weight: 650;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
@@ -279,6 +279,10 @@
   white-space: nowrap;
 }
 
+.signalPath {
+  font-family: var(--font-dm-mono), monospace;
+}
+
 .statusDot {
   width: 0.42rem;
   height: 0.42rem;
@@ -286,6 +290,11 @@
   background: var(--welcome-accent);
   box-shadow: 0 0 18px var(--welcome-accent);
   animation: welcome-status-lock 480ms 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.statusDotMuted {
+  background: var(--site-warning);
+  box-shadow: none;
 }
 
 .handoff {
@@ -296,23 +305,20 @@
 
 .handoffMeta {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
   color: rgba(193, 210, 229, 0.5);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   font-weight: 650;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .handoffMeta span:last-child {
-  overflow: hidden;
   color: color-mix(in srgb, var(--welcome-accent-bright) 78%, #fff);
   text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .handoffTrack {
@@ -357,6 +363,7 @@
 
 .continue {
   min-height: 3.25rem;
+  flex: 0 0 auto;
   border: 1px solid var(--welcome-accent);
   background: var(--welcome-accent);
   padding: 0.75rem 1.25rem;
@@ -379,9 +386,19 @@
 .escapeHint {
   color: rgba(193, 210, 229, 0.48);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.escapeHintKey {
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .escapeHintKey {
+    display: none;
+  }
 }
 
 .visual {
@@ -439,8 +456,8 @@
   gap: 1rem;
   color: rgba(207, 221, 238, 0.56);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 0.58rem;
-  letter-spacing: 0.13em;
+  font-size: 0.75rem;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
@@ -499,7 +516,7 @@
   flex: 0 0 auto;
   color: var(--welcome-accent-bright);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -765,6 +782,13 @@
   .root[data-state="revealing"] {
     clip-path: none;
     opacity: 0;
+  }
+
+  /* The fill animation is disabled above, so the bar would sit empty for the
+     whole hold — hide it and let the aria-live status line carry the
+     auto-advance message instead. */
+  .handoffTrack {
+    display: none;
   }
 }
 

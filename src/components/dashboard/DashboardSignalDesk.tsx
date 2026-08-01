@@ -400,7 +400,7 @@ export default function DashboardSignalDesk({
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span
-                                  className={`inline-flex items-center gap-2 border px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${
+                                  className={`inline-flex items-center gap-2 border px-2.5 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.1em] ${
                                     publicViewAvailable
                                       ? "site-status-success"
                                       : "site-status-warning text-site-warning"
@@ -428,7 +428,7 @@ export default function DashboardSignalDesk({
 
                             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs lg:text-right">
                               <div>
-                                <p className="site-eyebrow text-[9px] text-site-muted">
+                                <p className="site-eyebrow text-site-muted">
                                   Link
                                 </p>
                                 <p className="mt-1 font-mono text-site-action-hover">
@@ -436,13 +436,13 @@ export default function DashboardSignalDesk({
                                 </p>
                                 <Link
                                   href="/dashboard/settings"
-                                  className="mt-2 inline-flex min-h-7 items-center border-b border-site-border text-[10px] font-semibold text-site-muted transition-colors hover:border-site-action hover:text-site-text"
+                                  className="mt-2 inline-flex min-h-11 items-center border-b border-site-border text-xs font-semibold text-site-muted transition-colors hover:border-site-action hover:text-site-text"
                                 >
                                   Manage public URL
                                 </Link>
                               </div>
                               <div>
-                                <p className="site-eyebrow text-[9px] text-site-muted">
+                                <p className="site-eyebrow text-site-muted">
                                   Theme
                                 </p>
                                 <p className="mt-1 text-site-secondary">
@@ -457,7 +457,7 @@ export default function DashboardSignalDesk({
                               className="border-b border-site-border px-4 py-6 sm:px-5 sm:py-7 lg:border-b-0 lg:border-r"
                               data-dashboard-preview-column
                             >
-                              <p className="site-eyebrow text-[9px] text-site-muted">
+                              <p className="site-eyebrow text-site-muted">
                                 {publicViewAvailable
                                   ? "Your live page"
                                   : "Draft preview"}
@@ -504,7 +504,7 @@ export default function DashboardSignalDesk({
                             >
                               <div className="flex items-end justify-between gap-4">
                                 <div>
-                                  <p className="site-eyebrow text-[9px] text-site-muted">
+                                  <p className="site-eyebrow text-site-muted">
                                     Last 7 days
                                   </p>
                                   <p className="mt-1 text-xs text-site-secondary">
@@ -551,14 +551,14 @@ export default function DashboardSignalDesk({
                             >
                               <Link
                                 href={`/dashboard/edit/${page.id}/living-page`}
-                                className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                                className="site-button site-button-secondary px-3 py-2 sm:px-4"
                               >
                                 Edit page
                               </Link>
                               {publicViewAvailable ? (
                                 <Link
                                   href={livePath}
-                                  className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                                  className="site-button site-button-secondary px-3 py-2 sm:px-4"
                                 >
                                   View live
                                 </Link>
@@ -574,14 +574,14 @@ export default function DashboardSignalDesk({
                               ) : null}
                               <Link
                                 href={`/dashboard/edit/${page.id}/living-page#ats-readiness`}
-                                className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                                className="site-button site-button-secondary px-3 py-2 sm:px-4"
                               >
                                 ATS check
                               </Link>
                               {analyticsAvailable && primaryAction.kind !== "analytics" ? (
                                 <Link
                                   href={analyticsHref}
-                                  className="site-button site-button-secondary px-3 py-2 text-xs sm:px-4"
+                                  className="site-button site-button-secondary px-3 py-2 sm:px-4"
                                 >
                                   Activity
                                 </Link>

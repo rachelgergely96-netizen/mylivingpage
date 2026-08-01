@@ -3226,7 +3226,11 @@ a {
 
 .dashboard-signal-card {
   isolation: isolate;
-  animation: dashboard-signal-settle 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* `backwards`, not `both`: the `to` keyframe equals the natural state, and a
+     retained identity transform would make the card the containing block for
+     any position: fixed overlay opened from inside it (e.g. ConfirmDialog). */
+  animation: dashboard-signal-settle 360ms cubic-bezier(0.2, 0.8, 0.2, 1)
+    backwards;
 }
 
 .dashboard-signal-card::after {
@@ -3311,6 +3315,15 @@ a {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* Below xl the living-page editor pins its action dock to the bottom of the
+   viewport; lift the feedback trigger above it so it cannot cover Save. The
+   dock is display: none at xl and up, hence the breakpoint cap. */
+@media (max-width: 1279px) {
+  body:has([data-editor-mobile-dock]) .feedback-dock-anchor {
+    bottom: 5.75rem;
   }
 }
 

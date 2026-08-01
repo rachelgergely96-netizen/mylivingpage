@@ -11,6 +11,9 @@ const baseProps = {
   onClose: () => {},
 };
 
+// In the browser the dialog renders through createPortal(document.body); the
+// node test environment has no document, so renderToStaticMarkup exercises the
+// SSR fallback branch, which returns the same overlay markup inline.
 describe("ConfirmDialog", () => {
   it("renders nothing while closed", () => {
     expect(renderToStaticMarkup(<ConfirmDialog {...baseProps} open={false} />)).toBe("");

@@ -21,6 +21,7 @@ import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
@@ -73,6 +74,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [mobileWorkspaceView, setMobileWorkspaceView] = useState<"edit" | "preview">("edit");
   const [commandBarInView, setCommandBarInView] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [confirmingAvatarRemoval, setConfirmingAvatarRemoval] = useState(false);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const successTimerRef = useRef<number | null>(null);
@@ -434,8 +437,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   };
 
   const removeAvatar = async () => {
-    await fetch("/api/avatar", { method: "DELETE" });
-    setData((prev) => (prev ? { ...prev, avatar_url: null } : prev));
+    setRemovingAvatar(true);
+    try {
+      await fetch("/api/avatar", { method: "DELETE" });
+      setData((prev) => (prev ? { ...prev, avatar_url: null } : prev));
+      setConfirmingAvatarRemoval(false);
+    } finally {
+      setRemovingAvatar(false);
+    }
   };
 
   const selectedTheme = THEME_REGISTRY.find((theme) => theme.id === themeId);
@@ -576,9 +585,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             </button>
             {isDraft && page ? (
               <div className="col-span-2 min-w-0 lg:max-w-xs">
+                {/* While edits are unsaved, saving is the one primary action;
+                    publish steps back to secondary until the page is saved. */}
                 <PublishPageButton
                   pageId={page.id}
-                  emphasis="primary"
+                  emphasis={hasChanges ? "secondary" : "primary"}
                   label="Publish page"
                   onPublished={handlePublished}
                 />
@@ -706,7 +717,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       <div
         id="editor-workspace"
         data-editor-workspace
-        className="scroll-mt-72 xl:grid xl:scroll-mt-40 xl:grid-cols-[minmax(0,46rem)_minmax(24rem,1fr)] xl:items-start xl:gap-5"
+        className="scroll-mt-24 xl:grid xl:scroll-mt-40 xl:grid-cols-[minmax(0,46rem)_minmax(24rem,1fr)] xl:items-start xl:gap-5"
       >
         <section
           aria-labelledby="editor-content-title"
@@ -810,13 +821,25 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                             : "Upload photo"}
                       </button>
                       {data.avatar_url ? (
-                        <button
-                          type="button"
-                          onClick={removeAvatar}
-                          className="w-full text-left text-xs text-site-muted hover:text-site-danger"
-                        >
-                          Remove · use monogram
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingAvatarRemoval(true)}
+                            className="flex min-h-11 w-full items-center text-left text-xs text-site-muted transition-colors hover:text-site-danger"
+                          >
+                            Remove · use monogram
+                          </button>
+                          <ConfirmDialog
+                            open={confirmingAvatarRemoval}
+                            title="Remove this photo?"
+                            body="This deletes the uploaded photo right away. Your page shows your monogram instead."
+                            confirmLabel="Remove photo"
+                            destructive
+                            loading={removingAvatar}
+                            onConfirm={() => void removeAvatar()}
+                            onClose={() => setConfirmingAvatarRemoval(false)}
+                          />
+                        </>
                       ) : (
                         <p className="text-xs leading-5 text-site-muted">JPEG, PNG, or WebP · 2 MB max</p>
                       )}
@@ -880,7 +903,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   Review the PDF structure on its own, or paste one job description to make the word match visible.
                 </p>
               </div>
-              <AtsReadinessCard resumeData={data} />
+              <AtsReadinessCard resumeData={data} showHeader={false} />
               <p className="px-1 text-xs leading-5 text-site-muted">
                 The check uses the fields currently in this editor. Save your changes before relying
                 on the public PDF.
@@ -895,7 +918,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           className={`${mobileWorkspaceView === "preview" ? "block" : "hidden"} min-w-0 xl:sticky xl:top-72 xl:block`}
         >
           <section className="overflow-hidden rounded-none border border-site-border-strong bg-site-surface shadow-[var(--site-shadow-raised)]">
-            <div className="flex items-start justify-between gap-4 border-b border-site-border bg-site-surface-raised px-4 py-3">
+            {/* Below xl the mobile viewport is short, so the panel opens straight
+                on the status strip and the themed page itself. */}
+            <div className="hidden items-start justify-between gap-4 border-b border-site-border bg-site-surface-raised px-4 py-3 xl:flex">
               <div>
                 <p className="site-eyebrow">What they see</p>
                 <h2 id="editor-preview-title" className="mt-1 font-site text-lg font-semibold text-site-text">
@@ -967,6 +992,16 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               <path d="M8 11.25h.01" strokeLinecap="round" />
             </svg>
             <span className="min-w-0">{error}</span>
+          </p>
+        ) : null}
+        {success && !commandBarInView ? (
+          // Announced by the status region at the top of the page; this strip
+          // keeps the confirmation visible when saving from deep inside the form.
+          <p
+            aria-hidden="true"
+            className="site-alert-success col-span-full px-3 py-2 text-xs leading-5"
+          >
+            {success}
           </p>
         ) : null}
         <button

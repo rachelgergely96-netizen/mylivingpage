@@ -11,6 +11,7 @@ interface DraftBannerProps {
 
 export default function DraftBanner({ savedAt, onRestore, onDiscard }: DraftBannerProps) {
   const [confirmingRestore, setConfirmingRestore] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const timeAgo = getTimeAgo(savedAt);
 
   return (
@@ -26,7 +27,7 @@ export default function DraftBanner({ savedAt, onRestore, onDiscard }: DraftBann
         </button>
         <button
           type="button"
-          onClick={onDiscard}
+          onClick={() => setConfirmingDiscard(true)}
           className="site-button site-button-secondary px-3 py-2"
         >
           Discard
@@ -42,6 +43,18 @@ export default function DraftBanner({ savedAt, onRestore, onDiscard }: DraftBann
           onRestore();
         }}
         onClose={() => setConfirmingRestore(false)}
+      />
+      <ConfirmDialog
+        open={confirmingDiscard}
+        title="Discard this draft?"
+        body={`This permanently deletes the draft saved ${timeAgo}. It cannot be undone.`}
+        confirmLabel="Discard draft"
+        destructive
+        onConfirm={() => {
+          setConfirmingDiscard(false);
+          onDiscard();
+        }}
+        onClose={() => setConfirmingDiscard(false)}
       />
     </>
   );

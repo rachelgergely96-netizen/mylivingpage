@@ -360,12 +360,13 @@ export default function ThemePicker({
                     </div>
                     <p className="mt-3 font-site text-xl font-semibold">{theme.name}</p>
                     <p className="text-xs font-medium text-site-secondary">{theme.vibe}</p>
+                    {/* Signature themes describe themselves once — the
+                        experience blurb replaces the catalog description. */}
                     {theme.signatureExperience ? (
                       <p className="mt-2 text-xs leading-5 text-site-secondary">
                         {theme.signatureExperience.description}
                       </p>
-                    ) : null}
-                    {showDescription ? (
+                    ) : showDescription ? (
                       <p className="mt-2 text-xs leading-6 text-site-muted">{theme.description}</p>
                     ) : null}
                   </button>

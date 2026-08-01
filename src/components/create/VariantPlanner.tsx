@@ -125,7 +125,7 @@ export default function VariantPlanner({
             }`}
             aria-pressed={selectedVariantId === variant.id}
           >
-            {variant.label}
+            {variant.label.trim() || "Untitled version"}
           </button>
         ))}
       </div>
@@ -177,7 +177,7 @@ export default function VariantPlanner({
                   onChange={(event) =>
                     updateVariant(variant.id, { label: event.target.value })
                   }
-                  className="site-field px-4 py-3 text-sm"
+                  className="site-field px-4 py-3 text-base sm:text-sm"
                 />
               </label>
               <label className="space-y-2">
@@ -189,7 +189,7 @@ export default function VariantPlanner({
                   onChange={(event) =>
                     updateVariant(variant.id, { roleTitle: event.target.value })
                   }
-                  className="site-field px-4 py-3 text-sm"
+                  className="site-field px-4 py-3 text-base sm:text-sm"
                 />
               </label>
             </div>
@@ -204,7 +204,7 @@ export default function VariantPlanner({
                   onChange={(event) =>
                     updateVariant(variant.id, { headline: event.target.value || null })
                   }
-                  className="site-field px-4 py-3 text-sm"
+                  className="site-field px-4 py-3 text-base sm:text-sm"
                 />
               </label>
               <label className="space-y-2">
@@ -217,7 +217,7 @@ export default function VariantPlanner({
                     updateVariant(variant.id, { ctaEmphasis: event.target.value || null })
                   }
                   placeholder="Example: Open to staff product roles"
-                  className="site-field px-4 py-3 text-sm"
+                  className="site-field px-4 py-3 text-base sm:text-sm"
                 />
               </label>
             </div>
@@ -232,7 +232,7 @@ export default function VariantPlanner({
                   updateVariant(variant.id, { summary: event.target.value || null })
                 }
                 rows={4}
-                className="site-field min-h-32 px-4 py-3 text-sm leading-7"
+                className="site-field min-h-32 px-4 py-3 text-base leading-7 sm:text-sm"
               />
             </label>
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { DELETE_PAGE_CONFIRM_BODY } from "@/components/DeletePageButton";
 
 interface PageOwnerBarProps {
   pageId: string;
@@ -79,7 +80,7 @@ export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBar
               <ConfirmDialog
                 open={confirmOpen}
                 title="Delete this page?"
-                body="This permanently removes the page and its link. This cannot be undone."
+                body={DELETE_PAGE_CONFIRM_BODY}
                 confirmLabel="Delete page"
                 destructive
                 loading={deleting}

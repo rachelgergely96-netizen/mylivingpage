@@ -4,6 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
+/**
+ * Single source of truth for what deleting a page means, shared by every
+ * delete-page ConfirmDialog (dashboard rail here, PageOwnerBar on the public
+ * page) so owners get one consistent account of the consequences.
+ */
+export const DELETE_PAGE_CONFIRM_BODY =
+  "This permanently deletes the page and all of its archives. Your public link stops working and this cannot be undone.";
+
 export default function DeletePageButton({ pageId }: { pageId: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -41,7 +49,7 @@ export default function DeletePageButton({ pageId }: { pageId: string }) {
       <ConfirmDialog
         open={confirming}
         title="Delete this page?"
-        body="This permanently deletes the page and all of its archives. Your public link stops working."
+        body={DELETE_PAGE_CONFIRM_BODY}
         confirmLabel={deleting ? "Deleting…" : "Delete page"}
         destructive
         loading={deleting}

@@ -641,7 +641,7 @@ export default function SettingsPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               maxLength={100}
-              className="site-field h-12 min-w-0 flex-1 px-4 text-sm"
+              className="site-field h-12 min-w-0 flex-1 px-4 text-base sm:text-sm"
             />
             <button
               type="button"
@@ -659,7 +659,7 @@ export default function SettingsPage() {
           <label htmlFor="settings-username" className="mb-1.5 block text-sm font-semibold text-site-secondary">Username</label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="flex min-h-12 min-w-0 flex-1 items-center gap-0 rounded-none border border-site-border-strong bg-site-canvas-alt focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-site-focus">
-              <span className="pl-4 text-sm text-site-muted">mylivingpage.com/</span>
+              <span className="pl-4 text-base text-site-muted sm:text-sm">mylivingpage.com/</span>
               <input
                 id="settings-username"
                 type="text"
@@ -669,7 +669,7 @@ export default function SettingsPage() {
                   setUsernameAvail(null);
                 }}
                 maxLength={40}
-                className="h-12 min-w-0 flex-1 bg-transparent px-1 text-sm text-site-text focus:outline-none"
+                className="h-12 min-w-0 flex-1 bg-transparent px-1 text-base text-site-text focus:outline-none sm:text-sm"
               />
             </div>
             <button
@@ -700,7 +700,7 @@ export default function SettingsPage() {
             type="email"
             value={profile.email ?? ""}
             disabled
-            className="site-field h-12 w-full px-4 text-sm text-site-muted disabled:opacity-80"
+            className="site-field h-12 w-full px-4 text-base text-site-muted disabled:opacity-80 sm:text-sm"
           />
           <p className="mt-1 text-xs text-site-muted">Email changes are not yet supported.</p>
         </div>
@@ -722,7 +722,7 @@ export default function SettingsPage() {
                 required
                 aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "current" ? true : undefined}
                 aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "current" ? "password-form-error" : undefined}
-                className="site-field h-12 w-full px-4 text-sm"
+                className="site-field h-12 w-full px-4 text-base sm:text-sm"
               />
             </div>
             <div>
@@ -738,7 +738,7 @@ export default function SettingsPage() {
                 placeholder="Min 8 characters"
                 aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "new" ? true : undefined}
                 aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "new" ? "password-form-error" : undefined}
-                className="site-field h-12 w-full px-4 text-sm"
+                className="site-field h-12 w-full px-4 text-base sm:text-sm"
               />
             </div>
             <div>
@@ -754,7 +754,7 @@ export default function SettingsPage() {
                 placeholder="Repeat password"
                 aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "confirm" ? true : undefined}
                 aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "confirm" ? "password-form-error" : undefined}
-                className="site-field h-12 w-full px-4 text-sm"
+                className="site-field h-12 w-full px-4 text-base sm:text-sm"
               />
             </div>
             <button
@@ -873,7 +873,7 @@ export default function SettingsPage() {
                 setDeleteError(null);
               }}
               placeholder={profile.username}
-              className="site-field mb-4 h-12 w-full px-4 text-sm"
+              className="site-field mb-4 h-12 w-full px-4 text-base sm:text-sm"
             />
             {profile.hasPassword ? (
               <input
@@ -888,7 +888,7 @@ export default function SettingsPage() {
                 placeholder="Current password"
                 aria-invalid={deleteError ? true : undefined}
                 aria-describedby={deleteError ? "delete-account-error" : undefined}
-                className="site-field mb-4 h-12 w-full px-4 text-sm"
+                className="site-field mb-4 h-12 w-full px-4 text-base sm:text-sm"
               />
             ) : (
               <p className="mb-4 text-xs text-site-muted">

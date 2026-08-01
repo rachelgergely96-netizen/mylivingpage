@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 
 interface PublishPageButtonProps {
   pageId: string;
-  emphasis?: "primary";
+  emphasis?: "primary" | "secondary";
   label?: string;
   onPublished?: () => void;
 }
 
 export default function PublishPageButton({
   pageId,
+  emphasis = "primary",
   label = "Publish",
   onPublished,
 }: PublishPageButtonProps) {
@@ -68,7 +69,9 @@ export default function PublishPageButton({
         disabled={busy}
         aria-busy={busy || undefined}
         onClick={() => void publishPage()}
-        className="site-button site-button-primary w-full disabled:opacity-50 sm:w-auto"
+        className={`site-button ${
+          emphasis === "secondary" ? "site-button-secondary" : "site-button-primary"
+        } w-full disabled:opacity-50 sm:w-auto`}
       >
         <span className="grid">
           <span

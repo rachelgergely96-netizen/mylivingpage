@@ -1,6 +1,7 @@
 "use client";
 
 import React, { type ReactNode, useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -104,7 +105,7 @@ export default function ConfirmDialog({
     return null;
   }
 
-  return (
+  const overlay = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div
         ref={dialogRef}
@@ -163,4 +164,15 @@ export default function ConfirmDialog({
       </div>
     </div>
   );
+
+  // Portal to <body> so a transformed or animated ancestor (e.g. an entrance
+  // animation retaining a transform) can never become the containing block for
+  // the fixed overlay and push the dialog off-screen. The dialog only opens
+  // from client interactions, so the inline fallback exists purely for
+  // server/static renders where document is unavailable.
+  if (typeof document === "undefined") {
+    return overlay;
+  }
+
+  return createPortal(overlay, document.body);
 }

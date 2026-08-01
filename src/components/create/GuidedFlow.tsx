@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import DelimitedListInput from "@/components/create/DelimitedListInput";
 import type { ResumeData } from "@/types/resume";
 
@@ -62,7 +62,7 @@ const STEP_PROMPTS = [
 /* ── Helpers ────────────────────────────────────────────── */
 
 const inputClass =
-  "site-field px-4 py-3 text-sm";
+  "site-field px-4 py-3 text-base sm:text-sm";
 
 const labelClass = "mb-1.5 block text-sm font-semibold text-site-secondary";
 
@@ -82,6 +82,9 @@ export default function GuidedFlow({
   consolidatedReview = false,
 }: GuidedFlowProps) {
   const [step, setStep] = useState(0);
+  const stepPanelRef = useRef<HTMLElement | null>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const previousStepRef = useRef<number | null>(null);
   const entryIdPrefix = useId();
   const newEntryCounterRef = useRef(0);
   const createNewEntryId = (kind: string) => {
@@ -160,6 +163,23 @@ export default function GuidedFlow({
     if (step > 0) setStep(step - 1);
     else onBack();
   };
+
+  // Mirror the outer create-page step pattern: when the sub-step changes,
+  // bring the panel back into view and move focus to the new step heading.
+  useEffect(() => {
+    if (previousStepRef.current === null || previousStepRef.current === step) {
+      previousStepRef.current = step;
+      return;
+    }
+
+    previousStepRef.current = step;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    stepPanelRef.current?.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    stepHeadingRef.current?.focus({ preventScroll: true });
+  }, [step]);
 
   /* ── Progress dots ──────────────────────────────────── */
   const progressDots = (
@@ -350,7 +370,7 @@ export default function GuidedFlow({
               onChange={(e) => updateExp(i, { highlights: e.target.value.split("\n") })}
               placeholder={"Led migration to microservices\nReduced API latency by 40%"}
               rows={3}
-              className={`${inputClass} min-h-[80px] resize-y text-sm leading-6`}
+              className={`${inputClass} min-h-[80px] resize-y leading-6`}
             />
           </div>
         </div>
@@ -546,7 +566,7 @@ export default function GuidedFlow({
                   value={group.category}
                   onChange={(e) => updateSkill(i, { category: e.target.value })}
                   placeholder="Category (e.g. Languages, Tools)"
-                  className="site-field min-w-0 px-3 py-2 text-sm font-semibold"
+                  className="site-field min-w-0 px-3 py-2 text-base font-semibold sm:text-sm"
                 />
               </div>
               {skills.length > 1 && (
@@ -759,10 +779,12 @@ export default function GuidedFlow({
   }
 
   return (
-    <section className="site-panel p-4 sm:p-6 md:p-8">
+    <section ref={stepPanelRef} className="site-panel scroll-mt-24 p-4 sm:p-6 md:p-8">
       {progressDots}
       <p className="site-eyebrow">Details · part {step + 1} of {TOTAL_STEPS}</p>
-      <h2 className="site-section-title mt-2">{STEP_PROMPTS[step].heading}</h2>
+      <h2 tabIndex={-1} ref={stepHeadingRef} className="site-section-title mt-2 outline-none">
+        {STEP_PROMPTS[step].heading}
+      </h2>
       <p className="mb-6 mt-2 text-sm text-site-secondary">{STEP_PROMPTS[step].sub}</p>
 
       {stepRenderers[step]()}

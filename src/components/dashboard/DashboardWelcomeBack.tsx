@@ -272,6 +272,11 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     : snapshot.offlineAttemptAt
       ? "Offline"
       : "Private draft";
+  const eyebrow = snapshot.publicViewAvailable
+    ? "Welcome back · page reconnected"
+    : snapshot.offlineAttemptAt
+      ? "Welcome back · page offline"
+      : "Welcome back · draft saved";
   const welcomeStyle: WelcomeStyle = {
     "--welcome-accent": snapshot.accent,
     "--welcome-accent-bright": snapshot.accentBright,
@@ -329,7 +334,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
 
         <section className={styles.stage}>
           <div className={styles.copy}>
-            <p className={styles.eyebrow}>Welcome back · page reconnected</p>
+            <p className={styles.eyebrow}>{eyebrow}</p>
             <h2 id="dashboard-welcome-title" className={styles.title}>
               {copy.title}
             </h2>
@@ -341,14 +346,21 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
               <div className={styles.signalCell}>
                 <p className={styles.signalLabel}>Page status</p>
                 <p className={styles.signalValue}>
-                  <span className={styles.statusDot} aria-hidden="true" />
+                  <span
+                    className={
+                      snapshot.publicViewAvailable
+                        ? styles.statusDot
+                        : `${styles.statusDot} ${styles.statusDotMuted}`
+                    }
+                    aria-hidden="true"
+                  />
                   <span>{status}</span>
                 </p>
               </div>
               <div className={styles.signalCell}>
                 <p className={styles.signalLabel}>Current link</p>
                 <p className={styles.signalValue}>
-                  <span>{snapshot.livePath}</span>
+                  <span className={styles.signalPath}>{snapshot.livePath}</span>
                 </p>
               </div>
             </div>
@@ -382,7 +394,8 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
                 Open dashboard now
               </button>
               <span className={styles.escapeHint}>
-                No click needed · Esc skips
+                No click needed
+                <span className={styles.escapeHintKey}> · Esc skips</span>
               </span>
             </div>
           </div>

@@ -185,8 +185,11 @@ const FULL_VIEW_SELECT =
 const BASIC_VIEW_SELECT = "id, viewed_at, referrer, user_agent, viewer_ip, country";
 const BASIC_ANALYTICS_NOTICE =
   "Detailed reading and click insights are temporarily unavailable. Basic activity is still showing below, and the richer detail will come back automatically.";
+// Matches the dashboard's fallback description so the unavailable card reads
+// the same either way, and sticks to the surface's "activity"/"details"
+// vocabulary instead of "analytics" jargon.
 const UNAVAILABLE_ANALYTICS_NOTICE =
-  "Analytics are temporarily unavailable right now. Please try again soon.";
+  "Traffic data could not be loaded right now. Please try again soon.";
 const MIN_SAMPLE_FOR_PERCENT_INSIGHTS = 3;
 
 function startOfUtcDay(date: Date) {

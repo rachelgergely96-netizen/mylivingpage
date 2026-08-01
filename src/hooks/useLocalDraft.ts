@@ -104,6 +104,9 @@ export function removeDraftEnvelope(
 
 export function useLocalDraft<T>(key: string | null) {
   const [pendingDraft, setPendingDraft] = useState<DraftEnvelope<T> | null>(null);
+  // True once loadDraftEnvelope has actually run for the current non-null key,
+  // so callers can distinguish "no draft" from "draft not loaded yet".
+  const [hydrated, setHydrated] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -114,10 +117,12 @@ export function useLocalDraft<T>(key: string | null) {
 
     if (!key) {
       setPendingDraft(null);
+      setHydrated(false);
       return undefined;
     }
 
     setPendingDraft(loadDraftEnvelope<T>(localStorage, key));
+    setHydrated(true);
 
     return () => {
       if (timerRef.current) {
@@ -166,5 +171,5 @@ export function useLocalDraft<T>(key: string | null) {
     removeDraftEnvelope(localStorage, key);
   }, [key]);
 
-  return { pendingDraft, saveDraft, clearDraft, dismissDraft };
+  return { pendingDraft, hydrated, saveDraft, clearDraft, dismissDraft };
 }

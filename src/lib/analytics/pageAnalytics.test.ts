@@ -587,7 +587,7 @@ describe("page analytics aggregation", () => {
     });
 
     expect(analytics.state.availability).toBe("unavailable");
-    expect(analytics.state.notice).toContain("Analytics are temporarily unavailable");
+    expect(analytics.state.notice).toContain("Traffic data could not be loaded");
   });
 
   it("drops malformed legacy rows instead of crashing the basic fallback", async () => {

@@ -82,7 +82,7 @@ export default function FirstViewActivationHub({
   const [loopState, setLoopState] =
     useState<FirstViewLoopState>("repeat_share_prompt");
   const [proof, setProof] = useState<PageProofResponse | null>(null);
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [copyState, setCopyState] = useState<"idle" | "message" | "link" | "error">("idle");
   const [checkingProof, setCheckingProof] = useState(false);
   const [proofError, setProofError] = useState<string | null>(null);
   const [appOrigin, setAppOrigin] = useState(
@@ -156,7 +156,7 @@ export default function FirstViewActivationHub({
 
     try {
       await navigator.clipboard.writeText(value);
-      setCopyState("copied");
+      setCopyState(mode === "message_template" ? "message" : "link");
       setProofError(null);
       setLoopState("waiting_for_first_view");
       void trackShareIntent("page.share.copy_link", {
@@ -174,7 +174,7 @@ export default function FirstViewActivationHub({
       }
       copyTimerRef.current = window.setTimeout(() => {
         copyTimerRef.current = null;
-        setCopyState((current) => (current === "copied" ? "idle" : current));
+        setCopyState((current) => (current === "error" ? current : "idle"));
       }, 2400);
     } catch {
       setCopyState("error");
@@ -246,10 +246,10 @@ export default function FirstViewActivationHub({
 
   const repeatShareHeadline = proof?.firstViewAfterLatestShareAt
     ? "That worked. Send it again."
-    : "Who will you send this to?";
+    : "Start the proof loop";
   const repeatShareBody = proof?.firstViewAfterLatestShareAt
     ? `Someone looked after your last share${proof?.lastShareVariantLabel ? ` of "${proof.lastShareVariantLabel}"` : ""}. Keep the momentum going by sending the same page to one more person.`
-    : "Pick one real follow-up moment, copy the message, and send it now so the proof loop can start.";
+    : "Pick one real follow-up moment in the send panel below, copy the message, and send it now. You'll see here when someone looks.";
   const firstViewRelative = formatRelativeTime(proof?.firstViewAfterLatestShareAt ?? null);
   const firstViewDuration = formatDuration(
     proof?.firstViewAfterLatestShareEngagedSeconds ?? null,
@@ -443,7 +443,7 @@ export default function FirstViewActivationHub({
                   }`}
                   aria-pressed={selectedVariantId === variant.id}
                 >
-                  {variant.label}
+                  {variant.label.trim() || "Untitled version"}
                 </button>
               ))}
             </div>
@@ -484,7 +484,7 @@ export default function FirstViewActivationHub({
           </p>
           {selectedVariant ? (
             <p className="mt-2 text-sm text-site-action">
-              This link will open the &quot;{selectedVariant.label}&quot; version first.
+              This link will open the &quot;{selectedVariant.label.trim() || "Untitled version"}&quot; version first.
             </p>
           ) : null}
           <div className="mt-4 border border-site-border-strong bg-site-canvas p-4 text-sm leading-7 text-site-text">
@@ -496,14 +496,14 @@ export default function FirstViewActivationHub({
               onClick={() => void handleTrackedCopy("message_template")}
               className="site-button site-button-primary"
             >
-              {copyState === "copied" ? "Message copied" : "Copy message"}
+              {copyState === "message" ? "Message copied" : "Copy message"}
             </button>
             <button
               type="button"
               onClick={() => void handleTrackedCopy("link_only")}
               className="site-button site-button-secondary"
             >
-              Copy your link
+              {copyState === "link" ? "Link copied" : "Copy your link"}
             </button>
           </div>
           <p className="mt-3 text-sm leading-6 text-site-secondary">
@@ -511,11 +511,13 @@ export default function FirstViewActivationHub({
           </p>
           {copyState === "error" ? (
             <p role="alert" className="mt-3 text-sm text-site-danger">
-              Could not copy that message. Try again or copy the live URL manually.
+              Could not copy. Try again or copy the live URL manually.
             </p>
           ) : null}
-          {copyState === "copied" ? (
-            <p role="status" className="sr-only">Copied to clipboard.</p>
+          {copyState === "message" || copyState === "link" ? (
+            <p role="status" className="sr-only">
+              {copyState === "message" ? "Message copied to clipboard." : "Link copied to clipboard."}
+            </p>
           ) : null}
         </div>
       </section>

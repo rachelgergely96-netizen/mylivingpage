@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import CookieSettingsButton from "@/components/privacy/CookieSettingsButton";
+import { LandingStoryShareCard } from "@/components/marketing/LandingStoryShareCard";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
@@ -402,6 +403,13 @@ export default function LivingHomepagePrototype({
   const activeStoryMoment = STORY_MOMENTS[activeStoryIndex] ?? STORY_MOMENTS[0];
   const activeStyle = useMemo(() => getWorldStyle(activeWorld.id), [activeWorld.id]);
 
+  // The page/card chapters share one selection so the share card visibly
+  // follows the chosen page style — the theme-matching detail, demonstrated.
+  const [showcaseThemeId, setShowcaseThemeId] = useState<ThemeId>("velvet");
+  const showcaseWorld = WORLD_DIRECTIONS.find((world) => world.id === showcaseThemeId)
+    ?? WORLD_DIRECTIONS[0];
+  const showcaseStyle = useMemo(() => getWorldStyle(showcaseThemeId), [showcaseThemeId]);
+
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     const syncPreference = () => setReducedMotion(query.matches);
@@ -742,6 +750,191 @@ export default function LivingHomepagePrototype({
               Create my free page
             </Link>
           </aside>
+        </section>
+
+        <section
+          id="living-pages"
+          className={styles.pagesSection}
+          data-living-pages-chapter
+          data-reveal
+          aria-labelledby="living-pages-title"
+        >
+          <div className={styles.sectionHeading}>
+            <p className={styles.eyebrow}>
+              <span>The Living Page</span>{THEME_COUNT} styles · five collections
+            </p>
+            <h2 id="living-pages-title">A page with a world behind it.</h2>
+            <p>
+              Every style is a hand-built animated backdrop. Your details sit on clear,
+              legible plates in the same order—whatever look you choose.
+            </p>
+          </div>
+
+          <div className={styles.pagesGrid}>
+            <div className={`${styles.storyLivingOutput} ${styles.pagesStage}`} data-pages-stage style={showcaseStyle}>
+              <div className={styles.storyBrowserBar}>
+                <span>mylivingpage.com/avery</span>
+                <b>Live</b>
+              </div>
+              <div className={styles.pagesViewport}>
+                <ThemeCanvas
+                  themeId={showcaseThemeId}
+                  height="100%"
+                  className={`${styles.themeCanvasRoot} rounded-none`}
+                  interactive={false}
+                  animated
+                  mobileAmbientMotion={false}
+                  motionAware
+                  maxFps={24}
+                >
+                  <div
+                    className={styles.storyResumeViewport}
+                    role="region"
+                    aria-label={`Sample page in the ${THEME_MAP[showcaseThemeId].name} style`}
+                    tabIndex={0}
+                  >
+                    <ResumeLayout
+                      data={SIGNAL_FRAME_SAMPLE}
+                      compact
+                      headingLevel="h2"
+                      disableExternalLinks
+                      useExternalScrollRoot
+                    />
+                  </div>
+                </ThemeCanvas>
+              </div>
+              <div
+                className={styles.pagesStyleRow}
+                role="group"
+                aria-label="Choose a page style for this preview"
+              >
+                {WORLD_DIRECTIONS.map((world) => {
+                  const selected = world.id === showcaseThemeId;
+                  return (
+                    <button
+                      key={world.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setShowcaseThemeId(world.id)}
+                      className={selected ? styles.pagesStyleActive : undefined}
+                      style={getWorldStyle(world.id)}
+                      data-pages-style={world.id}
+                    >
+                      <span className={styles.pagesStyleSwatch} aria-hidden="true" />
+                      {THEME_MAP[world.id].name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <ul className={styles.chapterDetails} data-pages-details>
+              <li>
+                <span>01 · Alive</span>
+                <h3>A living backdrop</h3>
+                <p>
+                  The world moves as you scroll and holds still under reduced motion.
+                  Your words never move.
+                </p>
+              </li>
+              <li>
+                <span>02 · Complete</span>
+                <h3>Sections that carry proof</h3>
+                <p>
+                  Stats, proof blocks, testimonials, projects, and history—the same
+                  clean order in every style, so readers always find things.
+                </p>
+              </li>
+              <li>
+                <span>03 · Yours</span>
+                <h3>Signature experiences</h3>
+                <p>
+                  Atlas, Axiom, Atelier, Sakura, Solstice, and Nocturne go further,
+                  with bespoke layouts built around their worlds.
+                </p>
+              </li>
+              <li>
+                <span>04 · Legible</span>
+                <h3>Readable over anything</h3>
+                <p>
+                  A built-in reading guard keeps your name, dates, and results crisp
+                  on top of the art.
+                </p>
+              </li>
+            </ul>
+          </div>
+          <p className={styles.chapterFootnote}>
+            Previewing <strong>{showcaseWorld.label} · {THEME_MAP[showcaseThemeId].name}</strong>.{" "}
+            <Link href="/examples">Open full sample pages</Link>
+          </p>
+        </section>
+
+        <section
+          id="share-card"
+          className={styles.cardSection}
+          data-share-card-chapter
+          data-reveal
+          aria-labelledby="share-card-title"
+        >
+          <div className={styles.sectionHeading}>
+            <p className={styles.eyebrow}>
+              <span>The Share Card</span>Glass · scan · signal
+            </p>
+            <h2 id="share-card-title">A card people can hold—and scan.</h2>
+            <p>
+              Send it in a message, drop it in slides, or print it. The QR code opens
+              your full Living Page from any phone camera.
+            </p>
+          </div>
+
+          <div className={styles.cardGrid}>
+            <div className={styles.cardStage} data-card-stage>
+              <LandingStoryShareCard
+                themeId={showcaseThemeId}
+                headingLevel="h3"
+                qrLabel="Open the full living page"
+              />
+              <p className={styles.cardStageNote} aria-live="polite">
+                Matched to <strong>{THEME_MAP[showcaseThemeId].name}</strong>, the style
+                picked above. With a cursor, tilt it.
+              </p>
+            </div>
+
+            <ul className={styles.chapterDetails} data-card-details>
+              <li>
+                <span>01 · Tilt</span>
+                <h3>Holographic glass</h3>
+                <p>
+                  The glass finish bends light and color as the card tilts, and
+                  downloads as a clean PNG. Classic and Metal finishes included.
+                </p>
+              </li>
+              <li>
+                <span>02 · Scan</span>
+                <h3>A QR that opens your page</h3>
+                <p>
+                  One scan opens the full page—no typing, no attachment, always your
+                  current version.
+                </p>
+              </li>
+              <li>
+                <span>03 · Matched</span>
+                <h3>It follows your page style</h3>
+                <p>
+                  The card picks up your page&apos;s accent automatically, so everything
+                  you share looks like one identity.
+                </p>
+              </li>
+              <li>
+                <span>04 · Signal</span>
+                <h3>Know it landed</h3>
+                <p>
+                  Page views appear on your dashboard after you share, so your
+                  follow-ups have timing.
+                </p>
+              </li>
+            </ul>
+          </div>
         </section>
 
         <section id="search-ready" className={styles.visibilitySection} data-search-readiness data-reveal>

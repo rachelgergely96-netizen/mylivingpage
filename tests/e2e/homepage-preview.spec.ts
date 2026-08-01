@@ -50,7 +50,9 @@ test("production homepage makes the value and first action clear above the fold"
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
-  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(4_500);
+  // Budget grew deliberately when the Living Page and Share Card chapters
+  // were added; keep the page under ~5 desktop viewports.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(6_200);
 });
 
 test("the transformation opens on the web page and keeps one résumé source visible", async ({ page }) => {
@@ -253,7 +255,10 @@ test("theme controls are equal and support roving keyboard selection", async ({ 
   await expect(expressive).toHaveAttribute("aria-checked", "true");
   await expect(story.locator("[data-story-living-output]"))
     .toHaveAttribute("data-theme-id", "atelier");
-  await expect(page.locator('[data-theme-renderer-status="ready"]')).toHaveCount(1);
+  // The story stage keeps exactly one animated canvas; the Living Page
+  // chapter below owns the only other one on the page.
+  await expect(story.locator('[data-theme-renderer-status="ready"]')).toHaveCount(1);
+  await expect(page.locator('[data-theme-renderer-status="ready"]')).toHaveCount(2);
 });
 
 test("tablet and mobile layouts stay usable without horizontal overflow", async ({ page }) => {
@@ -322,4 +327,32 @@ test("homepage preview remains a noindex review mirror", async ({ page }) => {
   );
   await expect(page.locator("[data-action-first]")).toBeVisible();
   await expect(page.getByText("Homepage conversion prototype", { exact: true })).toBeVisible();
+});
+
+test("the page and card chapters share one style selection", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(productionHomepage);
+
+  const pagesChapter = page.locator("[data-living-pages-chapter]");
+  const cardChapter = page.locator("[data-share-card-chapter]");
+
+  await pagesChapter.scrollIntoViewIfNeeded();
+  await expect(
+    pagesChapter.getByRole("heading", { name: "A page with a world behind it." }),
+  ).toBeVisible();
+  await expect(pagesChapter.locator("[data-pages-style]")).toHaveCount(5);
+
+  const card = cardChapter.locator("[data-testid='story-share-card']");
+  await expect(card).toHaveAttribute("data-theme-id", "velvet");
+
+  await pagesChapter.locator("[data-pages-style='atlas']").click();
+  await expect(pagesChapter.locator("[data-pages-stage]")).toBeVisible();
+  await expect(card).toHaveAttribute("data-theme-id", "atlas");
+
+  await cardChapter.scrollIntoViewIfNeeded();
+  await expect(
+    cardChapter.getByRole("heading", { name: "A card people can hold—and scan." }),
+  ).toBeVisible();
+  await expect(cardChapter.locator("[data-share-card-glass-shell]")).toBeVisible();
+  await expect(cardChapter.locator("[data-card-stage]")).toContainText("Matched to");
 });

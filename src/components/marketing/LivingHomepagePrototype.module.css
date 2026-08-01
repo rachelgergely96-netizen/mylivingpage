@@ -2045,3 +2045,213 @@
     color: var(--world-accent-bright);
   }
 }
+
+/* ---- Living Page + Share Card chapters ---------------------------------- */
+
+.pagesSection,
+.cardSection {
+  margin: 0 auto;
+  max-width: 1500px;
+  padding: 104px 40px;
+  scroll-margin-top: 88px;
+}
+
+.cardSection {
+  padding-top: 0;
+}
+
+.pagesGrid,
+.cardGrid {
+  align-items: start;
+  display: grid;
+  gap: 40px;
+  grid-template-columns: minmax(0, 1.22fr) minmax(300px, 0.78fr);
+  margin-top: 48px;
+}
+
+.cardGrid {
+  align-items: center;
+  grid-template-columns: minmax(0, 1.12fr) minmax(300px, 0.88fr);
+}
+
+.pagesStage {
+  min-width: 0;
+}
+
+.pagesViewport {
+  height: 420px;
+  min-height: 0;
+}
+
+.pagesStyleRow {
+  background: #07101d;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+}
+
+.pagesStyleRow button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 560;
+  gap: 9px;
+  letter-spacing: 0.01em;
+  min-height: 44px;
+  padding: 0 16px;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.pagesStyleRow button:hover {
+  border-color: var(--world-accent-border);
+  color: #fff;
+}
+
+.pagesStyleRow button.pagesStyleActive {
+  background: var(--world-accent-soft);
+  border-color: var(--world-accent-border);
+  color: #fff;
+}
+
+.pagesStyleRow button:focus-visible {
+  outline: 2px solid var(--action-bright);
+  outline-offset: 3px;
+}
+
+.pagesStyleSwatch {
+  background: linear-gradient(135deg, var(--world-accent), var(--world-accent-bright));
+  border: 1px solid var(--world-accent-border);
+  display: block;
+  height: 13px;
+  width: 13px;
+}
+
+.chapterDetails {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chapterDetails li {
+  background: var(--canvas-alt);
+  border: 1px solid var(--border);
+  padding: 20px 22px 22px;
+}
+
+.chapterDetails li > span {
+  color: var(--action-bright);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chapterDetails h3 {
+  font-size: 20px;
+  font-weight: 620;
+  letter-spacing: -0.03em;
+  margin: 12px 0 0;
+}
+
+.chapterDetails p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 8px 0 0;
+}
+
+.chapterFootnote {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 22px 0 0;
+}
+
+.chapterFootnote strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.chapterFootnote a {
+  color: var(--action-bright);
+  display: inline-block;
+  padding: 12px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cardStage {
+  min-width: 0;
+}
+
+.cardStageNote {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 14px 4px 0;
+}
+
+.cardStageNote strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+@media (max-width: 980px) {
+  .pagesGrid,
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cardStage {
+    margin: 0 auto;
+    max-width: 640px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .pagesSection,
+  .cardSection {
+    padding: 78px 20px;
+    scroll-margin-top: 80px;
+  }
+
+  .cardSection {
+    padding-top: 0;
+  }
+
+  .pagesGrid,
+  .cardGrid {
+    gap: 24px;
+    margin-top: 32px;
+  }
+
+  .pagesViewport {
+    height: 320px;
+  }
+
+  .pagesStyleRow button {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0 10px;
+  }
+}
+
+.pagesStage .storyBrowserBar {
+  font-size: 10px;
+  min-height: 32px;
+}
+
+.pagesStage .storyBrowserBar b {
+  font-size: 10px;
+}

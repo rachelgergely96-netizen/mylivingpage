@@ -54,7 +54,7 @@
 .trustLine {
   margin-top: 0.75rem;
   color: var(--site-text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.5;
   text-align: right;
 }
@@ -131,13 +131,16 @@
 .sampleChoices button[data-active="true"] {
   background: var(--site-surface-selected);
   color: var(--site-text);
-  box-shadow: inset 3px 0 0 var(--site-action);
+  box-shadow: inset 2px 0 0 var(--site-action);
 }
 
 .momentTabs button > span {
   color: var(--site-action);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.7rem;
+  font-family: var(--font-dm-sans), sans-serif;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
 .momentTabs strong,
@@ -169,7 +172,7 @@
 .sampleChoices small {
   margin-top: 0.2rem;
   color: var(--site-text-muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
@@ -187,7 +190,7 @@
   border: 1px solid var(--site-border);
   border-top: 0;
   color: var(--site-text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 

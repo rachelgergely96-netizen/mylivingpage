@@ -130,9 +130,9 @@ export default function ExamplesExperience({
   ) => {
     let nextIndex = currentIndex;
 
-    if (event.key === "ArrowRight") {
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
       nextIndex = (currentIndex + 1) % sampleGroups.length;
-    } else if (event.key === "ArrowLeft") {
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       nextIndex = (currentIndex - 1 + sampleGroups.length) % sampleGroups.length;
     } else if (event.key === "Home") {
       nextIndex = 0;
@@ -211,6 +211,7 @@ export default function ExamplesExperience({
             <div
               className={styles.momentTabs}
               role="tablist"
+              aria-orientation="vertical"
               aria-label="Choose when you would share a Living Page"
             >
               {sampleGroups.map((group, index) => {

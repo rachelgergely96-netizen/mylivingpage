@@ -6,18 +6,25 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/legal-version";
+import { fetchLivingPageSitemapEntries } from "@/lib/seo/living-page-sitemap";
 import { getAbsoluteUrl } from "@/lib/site";
 
 const LEGAL_PATHS = getLegalNavItems("mylivingpage").map((item) => item.href);
+
+// Living Pages are published between deploys, so the sitemap cannot be baked
+// in at build time. Hourly revalidation keeps new pages discoverable without
+// querying on every crawler hit.
+export const revalidate = 3600;
 
 // The most recent policy revision, so legal lastModified tracks real version dates.
 const LEGAL_UPDATED_AT = [TERMS_VERSION, PRIVACY_VERSION, COOKIE_VERSION]
   .sort()
   .at(-1)!;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const marketingUpdated = new Date(MARKETING_UPDATED_AT);
   const legalUpdated = new Date(LEGAL_UPDATED_AT);
+  const livingPages = await fetchLivingPageSitemapEntries();
 
   return [
     { url: getAbsoluteUrl("/"), lastModified: marketingUpdated, changeFrequency: "weekly", priority: 1 },
@@ -35,6 +42,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: legalUpdated,
       changeFrequency: "yearly" as const,
       priority: 0.3,
+    })),
+    ...livingPages.map((page) => ({
+      url: page.url,
+      lastModified: page.lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
     })),
   ];
 }

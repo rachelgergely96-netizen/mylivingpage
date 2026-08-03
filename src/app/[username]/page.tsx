@@ -9,6 +9,7 @@ import PublicPageActionDock from "@/components/PublicPageActionDock";
 import LivingPageSectionRail from "@/components/public/LivingPageSectionRail";
 import RecruiterSkimPanel from "@/components/public/RecruiterSkimPanel";
 import ResumeLayout from "@/components/ResumeLayout";
+import JsonLd from "@/components/seo/JsonLd";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ViewTracker from "@/components/ViewTracker";
 import { getAccountAccessState } from "@/lib/account-access";
@@ -21,6 +22,7 @@ import {
   getPageVariant,
 } from "@/lib/page-variants";
 import { fetchPublicLivePage } from "@/lib/pages/fetchPublicLivePage";
+import { buildLivingPageJsonLd } from "@/lib/seo/living-page-json-ld";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { SITE_NAME, absoluteUrl } from "@/lib/site";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
@@ -245,6 +247,15 @@ export default async function PublicLivingPage({
 
   return (
     <main className="min-h-screen">
+      {/* Structured data always describes the canonical, unfiltered page —
+          variants filter the visible layout but not the person's identity. */}
+      <JsonLd
+        data={buildLivingPageJsonLd({
+          page,
+          resume: page.resume_data,
+          url: absoluteUrl(`/${username}`),
+        })}
+      />
       <ViewTracker
         pageId={page.id}
         variantId={selectedVariant?.id ?? null}

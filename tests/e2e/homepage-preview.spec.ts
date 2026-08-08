@@ -112,20 +112,20 @@ test("the transformation opens on the web page and keeps one résumé source vis
   }
 });
 
-test("homepage defines an editable three-step path and a clear stopping point", async ({ page }) => {
+test("homepage promises an editable review and a clear stopping point", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const workflow = page.locator("[data-default-workflow]");
-  const steps = workflow.locator("[data-workflow-step]");
-  await expect(workflow.getByRole("list", { name: "The simplest way to start" })).toBeVisible();
-  await expect(steps).toHaveCount(3);
-  expect(
-    await steps.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workflow-step"))),
-  ).toEqual(["upload", "review", "publish"]);
-  await expect(steps.nth(0)).toContainText("Bring your résumé");
-  await expect(steps.nth(1)).toContainText("Review your details");
-  await expect(steps.nth(1)).toContainText("Every field stays editable");
-  await expect(steps.nth(2)).toContainText("Publish your page");
+  await expect(workflow.getByRole("heading", { name: "From résumé to published page." })).toBeVisible();
+  await expect(workflow).toContainText("Import");
+  await expect(workflow).toContainText("Review");
+  await expect(workflow).toContainText("Publish");
+  await expect(workflow.locator("[data-editable-promise]")).toContainText(
+    "Every field stays editable",
+  );
+  await expect(workflow.locator("[data-editable-promise]")).toContainText(
+    "private until you publish",
+  );
 
   const shortcut = page.locator("[data-overwhelmed-shortcut]");
   await expect(shortcut).toContainText("First visit");
@@ -157,15 +157,9 @@ test("homepage explains readable content and the always-free promise without ove
   await expect(readableDetails).toContainText("What you know how to do");
   await expect(readableDetails).toContainText("Results");
   await expect(readableDetails).toContainText("What changed because of your work");
-  await expect(
-    searchReadiness.getByRole("heading", { name: "Export a clean PDF" }),
-  ).toBeVisible();
-  await expect(
-    searchReadiness.getByRole("heading", { name: "Keep the structure legible" }),
-  ).toBeVisible();
-  await expect(
-    searchReadiness.getByRole("heading", { name: "Update without a new link" }),
-  ).toBeVisible();
+  const outcomes = searchReadiness.locator("[data-readable-outcomes]");
+  await expect(outcomes).toContainText("Export a clean PDF");
+  await expect(outcomes).toContainText("without\n            changing the link");
   await expect(searchReadiness).toContainText(
     "does not invent experience, guarantee how hiring software will read or rank a résumé",
   );

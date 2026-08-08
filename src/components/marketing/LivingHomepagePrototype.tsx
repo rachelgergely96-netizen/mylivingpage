@@ -115,48 +115,6 @@ const STORY_MOMENTS: readonly StoryMoment[] = [
   },
 ] as const;
 
-const DEFAULT_WORKFLOW = [
-  {
-    stepId: "upload",
-    index: "01",
-    name: "Bring your résumé",
-    timing: "PDF or pasted text",
-    note: "Import what you already send employers.",
-  },
-  {
-    stepId: "review",
-    index: "02",
-    name: "Review your details",
-    timing: "Name · headline · results",
-    note: "Every field stays editable before you publish.",
-  },
-  {
-    stepId: "publish",
-    index: "03",
-    name: "Publish your page",
-    timing: "Private until you publish",
-    note: "Share one link. Update later without breaking it.",
-  },
-] as const;
-
-const SEARCH_BENEFITS = [
-  {
-    label: "Applications",
-    name: "Export a clean PDF",
-    note: "Selectable text and familiar sections help hiring software read your file.",
-  },
-  {
-    label: "Review",
-    name: "Keep the structure legible",
-    note: "Titles, skills, dates, and results stay as text—not buried in images.",
-  },
-  {
-    label: "Ongoing",
-    name: "Update without a new link",
-    note: "Publish once, then refresh the page as your work changes.",
-  },
-] as const;
-
 function ArrowIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -297,6 +255,10 @@ function StoryLivingOutput({ world }: { world: WorldDirection }) {
           themeId={world.id}
           height="100%"
           className={`${styles.themeCanvasRoot} rounded-none`}
+          // The canvas root is positioned by the host so its height is
+          // definite: a percentage height cannot resolve against a parent
+          // sized by flex, which collapsed the résumé layer inside it.
+          style={{ position: "absolute", inset: 0 }}
           interactive={false}
           animated
           mobileAmbientMotion={false}
@@ -707,40 +669,30 @@ export default function LivingHomepagePrototype({
           </div>
         </section>
 
-        <div className={styles.identityBand} aria-label="How your résumé becomes a web page">
-          <span>Import</span><i />
-          <span>Review</span><i />
-          <span>Publish</span><i />
-          <span>Share</span>
-        </div>
-
         <section id="how-it-works" className={styles.sourceSection} data-default-workflow data-reveal>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}><span>How it works</span>Three steps</p>
+            <p className={styles.eyebrow}><span>How it works</span>Import, check, publish</p>
             <h2>From résumé to published page.</h2>
             <p>
               Start with the résumé you already use—not a blank form.
             </p>
           </div>
 
-          <ol className={styles.outputJourney} aria-label="The simplest way to start">
-            {DEFAULT_WORKFLOW.map((step) => (
-              <li key={step.stepId} className={styles.outputStep} data-workflow-step={step.stepId}>
-                <span className={styles.stepIndex}>{step.index}</span>
-                <div>
-                  <span className={styles.stepTiming}>{step.timing}</span>
-                  <h3>{step.name}</h3>
-                  <p>{step.note}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <div className={styles.identityBand} aria-label="How your résumé becomes a web page">
+            <span>Import</span><i />
+            <span>Review</span><i />
+            <span>Publish</span><i />
+            <span>Share</span>
+          </div>
 
           <aside id="quick-start" className={styles.quickStart} data-overwhelmed-shortcut>
             <div>
               <p className={styles.quickStartLabel}>First visit</p>
               <h3>Import. Check. Publish.</h3>
               <p data-stopping-point><strong>You can stop there.</strong> Add more as your work grows.</p>
+              <p data-editable-promise>
+                Every field stays editable, and your page stays private until you publish it.
+              </p>
             </div>
             <Link
               href={`/signup?ref=${signupRefs.quickStart}&next=/create`}
@@ -750,9 +702,8 @@ export default function LivingHomepagePrototype({
               Create my free page
             </Link>
           </aside>
-        </section>
 
-        <section
+        <div
           id="living-pages"
           className={styles.pagesSection}
           data-living-pages-chapter
@@ -781,6 +732,7 @@ export default function LivingHomepagePrototype({
                   themeId={showcaseThemeId}
                   height="100%"
                   className={`${styles.themeCanvasRoot} rounded-none`}
+                  style={{ position: "absolute", inset: 0 }}
                   interactive={false}
                   animated
                   mobileAmbientMotion={false}
@@ -828,45 +780,18 @@ export default function LivingHomepagePrototype({
               </div>
             </div>
 
-            <ul className={styles.chapterDetails} data-pages-details>
-              <li>
-                <span>01 · Alive</span>
-                <h3>A living backdrop</h3>
-                <p>
-                  The world moves as you scroll and holds still under reduced motion.
-                  Your words never move.
-                </p>
-              </li>
-              <li>
-                <span>02 · Complete</span>
-                <h3>Sections that carry proof</h3>
-                <p>
-                  Stats, proof blocks, testimonials, projects, and history—the same
-                  clean order in every style, so readers always find things.
-                </p>
-              </li>
-              <li>
-                <span>03 · Yours</span>
-                <h3>Signature experiences</h3>
-                <p>
-                  Atlas, Axiom, Atelier, Sakura, Solstice, and Nocturne go further,
-                  with bespoke layouts built around their worlds.
-                </p>
-              </li>
-              <li>
-                <span>04 · Legible</span>
-                <h3>Readable over anything</h3>
-                <p>
-                  A built-in reading guard keeps your name, dates, and results crisp
-                  on top of the art.
-                </p>
-              </li>
-            </ul>
+            <div className={styles.chapterClaim} data-pages-details>
+              <p>
+                Hand-built worlds that move as you scroll and hold still under reduced
+                motion. Your words stay put, in the same clean order, on every style.
+              </p>
+            </div>
           </div>
           <p className={styles.chapterFootnote}>
             Previewing <strong>{showcaseWorld.label} · {THEME_MAP[showcaseThemeId].name}</strong>.{" "}
             <Link href="/examples">Open full sample pages</Link>
           </p>
+        </div>
         </section>
 
         <section
@@ -890,54 +815,26 @@ export default function LivingHomepagePrototype({
           <div className={styles.cardGrid}>
             <div className={styles.cardStage} data-card-stage>
               <LandingStoryShareCard
+                data={SIGNAL_FRAME_SAMPLE}
                 themeId={showcaseThemeId}
                 headingLevel="h3"
                 qrLabel="Open the full living page"
               />
               <p className={styles.cardStageNote} aria-live="polite">
                 Matched to <strong>{THEME_MAP[showcaseThemeId].name}</strong>, the style
-                picked above. With a cursor, tilt it.
+                picked above.<span className={styles.pointerOnly}> With a cursor, tilt it.</span>
               </p>
             </div>
 
-            <ul className={styles.chapterDetails} data-card-details>
-              <li>
-                <span>01 · Tilt</span>
-                <h3>Holographic glass</h3>
-                <p>
-                  The glass finish bends light and color as the card tilts, and
-                  downloads as a clean PNG. Classic and Metal finishes included.
-                </p>
-              </li>
-              <li>
-                <span>02 · Scan</span>
-                <h3>A QR that opens your page</h3>
-                <p>
-                  One scan opens the full page—no typing, no attachment, always your
-                  current version.
-                </p>
-              </li>
-              <li>
-                <span>03 · Matched</span>
-                <h3>It follows your page style</h3>
-                <p>
-                  The card picks up your page&apos;s accent automatically, so everything
-                  you share looks like one identity.
-                </p>
-              </li>
-              <li>
-                <span>04 · Signal</span>
-                <h3>Know it landed</h3>
-                <p>
-                  Page views appear on your dashboard after you share, so your
-                  follow-ups have timing.
-                </p>
-              </li>
-            </ul>
+            <div className={styles.chapterClaim} data-card-details>
+              <p>
+                It takes on the style you picked above, so everything you send reads as one
+                identity. Page views land on your dashboard, so follow-ups have timing.
+              </p>
+            </div>
           </div>
-        </section>
 
-        <section id="search-ready" className={styles.visibilitySection} data-search-readiness data-reveal>
+        <div id="search-ready" className={styles.visibilitySection} data-search-readiness data-reveal>
           <div className={styles.visibilityIntro}>
             <p className={styles.eyebrow}><span>Easy to read</span>People and hiring tools</p>
             <h2>Your style can change. Your details stay clear.</h2>
@@ -958,15 +855,11 @@ export default function LivingHomepagePrototype({
             <span><small>Results</small><strong>What changed because of your work</strong></span>
           </div>
 
-          <div className={styles.visibilityBenefits}>
-            {SEARCH_BENEFITS.map((benefit, index) => (
-              <article key={benefit.name}>
-                <span>{String(index + 1).padStart(2, "0")} · {benefit.label}</span>
-                <h3>{benefit.name}</h3>
-                <p>{benefit.note}</p>
-              </article>
-            ))}
-          </div>
+
+          <p className={styles.searchCarryOver} data-readable-outcomes>
+            Export a clean PDF whenever a file is asked for, and update your page without
+            changing the link you already shared.
+          </p>
 
           <div className={styles.searchNote}>
             <strong>Your real experience comes first.</strong>
@@ -988,6 +881,7 @@ export default function LivingHomepagePrototype({
               card. No subscription. No trial. No hidden fees.
             </p>
           </div>
+        </div>
         </section>
 
         <section id="closing-cta" className={styles.finalCta} data-reveal>

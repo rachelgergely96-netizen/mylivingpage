@@ -20,6 +20,33 @@ import type { ThemeId, ThemeMotionContext, ThemeRenderer } from "@/themes/types"
 // session on the bloom buffer; unsupported browsers use a separable fallback.
 let canvasFilterSupported: boolean | null = null;
 
+// The film-grain tile is deterministic, so every canvas can share one. The
+// theme picker mounts all 59 previews at once; building a tile per instance
+// meant 59 × 16k pixels of identical noise and 59 retained offscreen canvases.
+let sharedNoiseTile: HTMLCanvasElement | null = null;
+
+function getSharedNoiseTile(): HTMLCanvasElement | null {
+  if (sharedNoiseTile) return sharedNoiseTile;
+  const tile = document.createElement("canvas");
+  tile.width = 128;
+  tile.height = 128;
+  const noiseContext = tile.getContext("2d");
+  if (!noiseContext) return null;
+  const image = noiseContext.createImageData(128, 128);
+  const data = image.data;
+  const random = createSeededRandom(0x9e3779b9);
+  for (let i = 0; i < data.length; i += 4) {
+    const value = Math.floor(random() * 255);
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+    data[i + 3] = 255;
+  }
+  noiseContext.putImageData(image, 0, 0);
+  sharedNoiseTile = tile;
+  return sharedNoiseTile;
+}
+
 type ThemeCanvasStyle = React.CSSProperties & {
   "--theme-accent": string;
   "--theme-accent-bright": string;
@@ -230,6 +257,7 @@ export default function ThemeCanvas({
     let blurBuffer: HTMLCanvasElement | null = null;
     let blurContext: CanvasRenderingContext2D | null = null;
     let noiseTile: HTMLCanvasElement | null = null;
+    let noisePattern: CanvasPattern | null = null;
     const ensureHdBuffers = () => {
       const bw = Math.max(1, Math.floor(canvas.width / 4));
       const bh = Math.max(1, Math.floor(canvas.height / 4));
@@ -259,23 +287,7 @@ export default function ThemeCanvas({
         blurBuffer.height = bh;
       }
       if (!noiseTile) {
-        noiseTile = document.createElement("canvas");
-        noiseTile.width = 128;
-        noiseTile.height = 128;
-        const noiseContext = noiseTile.getContext("2d");
-        if (noiseContext) {
-          const image = noiseContext.createImageData(128, 128);
-          const data = image.data;
-          const random = createSeededRandom(0x9e3779b9);
-          for (let i = 0; i < data.length; i += 4) {
-            const value = Math.floor(random() * 255);
-            data[i] = value;
-            data[i + 1] = value;
-            data[i + 2] = value;
-            data[i + 3] = 255;
-          }
-          noiseContext.putImageData(image, 0, 0);
-        }
+        noiseTile = getSharedNoiseTile();
       }
     };
     const applyHdPost = (elapsed: number, bloomEnabled: boolean) => {
@@ -335,7 +347,12 @@ export default function ThemeCanvas({
         context.restore();
       }
       if (noiseTile) {
-        const pattern = context.createPattern(noiseTile, "repeat");
+        // The tile never changes, so the pattern is built once per context
+        // rather than reallocated on every painted frame.
+        if (!noisePattern) {
+          noisePattern = context.createPattern(noiseTile, "repeat");
+        }
+        const pattern = noisePattern;
         if (pattern) {
           const anim = reducedMotionRef.current ? 0 : 1;
           const ox = (Math.floor(elapsed * 53) % 128) * anim;

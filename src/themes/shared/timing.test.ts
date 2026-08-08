@@ -31,7 +31,21 @@ describe("frameScaleFromDelta", () => {
   it("does not advance state for static paints and caps long gaps", () => {
     expect(frameScaleFromDelta(0)).toBe(0);
     expect(frameScaleFromDelta(Number.NaN)).toBe(0);
-    expect(frameScaleFromDelta(2)).toBeCloseTo(3);
+    // A backgrounded tab resumes with a multi-second gap; it advances by the
+    // 100ms clamp (6 baseline frames) rather than jumping the whole gap.
+    expect(frameScaleFromDelta(2)).toBeCloseTo(6);
+  });
+
+  it("clamps above the slowest configured frame cap so no time is lost", () => {
+    // A maxFps={24} canvas presents on every third vsync of a 60Hz panel
+    // (~50ms). If the clamp sat at or below that interval, a single dropped
+    // tick would silently discard elapsed time and run the world slow.
+    const slowestCapSeconds = 3 / 60;
+    const scaleAtCap = frameScaleFromDelta(slowestCapSeconds);
+    const scaleAtDroppedTick = frameScaleFromDelta(slowestCapSeconds * 2);
+
+    expect(scaleAtCap).toBeCloseTo(3);
+    expect(scaleAtDroppedTick).toBeCloseTo(6);
   });
 
   it("keeps a 30fps cap stable across floating-point timestamps", () => {

@@ -106,6 +106,9 @@ export default function TiltCard({
   const handleEnter = () => {
     const el = getTarget();
     if (!el || !canTilt()) return;
+    // Re-entering within the leave animation would otherwise let the pending
+    // reset strip will-change mid-tilt, unpromoting the layer as it moves.
+    window.clearTimeout(resetTimerRef.current);
     el.dataset.tiltActive = "true";
     el.style.willChange = "transform";
     el.style.transition = "transform 140ms ease-out";

@@ -1817,9 +1817,12 @@
     max-width: 240px;
   }
 
+  /* Five 68px minimums plus gaps exceed a 390px phone, so the fifth style
+     was clipped mid-word at the section edge with no scroll affordance.
+     Letting the columns shrink keeps all five reachable without scrolling. */
   .galleryOptions {
-    grid-template-columns: repeat(5, minmax(68px, 1fr));
-    overflow-x: auto;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
     padding-bottom: 3px;
   }
 
@@ -1828,6 +1831,8 @@
     flex-direction: column;
     justify-content: center;
     min-height: 52px;
+    overflow: hidden;
+    padding-inline: 4px;
     text-align: center;
   }
 

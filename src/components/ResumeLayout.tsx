@@ -115,7 +115,7 @@ export default function ResumeLayout({
               data-resume-headline
               data-motion-kind="headline"
               data-attention-rank="secondary"
-              className={`${headlineSize} resume-theme-accent mt-2 uppercase tracking-[0.2em]`}
+              className={`${headlineSize} resume-theme-accent mt-2 uppercase`}
             >
               {data.headline}
             </p>
@@ -154,7 +154,7 @@ export default function ResumeLayout({
                       aria-label="LinkedIn profile"
                       data-analytics-target-key="linkedin"
                       data-analytics-target-label="LinkedIn"
-                      className="resume-theme-link pointer-events-auto flex items-center justify-center rounded-none p-1 transition-colors"
+                      className="resume-theme-link pointer-events-auto flex min-h-9 min-w-9 items-center justify-center rounded-none p-1 transition-colors"
                     >
                       <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                     </a>
@@ -264,7 +264,7 @@ export default function ResumeLayout({
                 >
                   {stat.value}
                 </div>
-                <div className="resume-theme-subtle mt-0.5 text-[8px] uppercase leading-tight tracking-[0.14em] sm:mt-1 sm:text-[9px]">{stat.label}</div>
+                <div className="resume-theme-subtle mt-0.5 text-[10px] uppercase leading-tight sm:mt-1">{stat.label}</div>
               </article>
             ))}
           </section>
@@ -284,12 +284,12 @@ export default function ResumeLayout({
               <h2
                 data-motion-kind="section-title"
                 data-attention-role="section-title"
-                className="resume-theme-section-title resume-theme-accent text-[10px] uppercase tracking-[0.24em]"
+                className="resume-theme-section-title resume-theme-accent text-[10px] uppercase"
               >
                 Proof
               </h2>
               {!compact ? (
-                <span className="resume-theme-subtle text-[10px] uppercase tracking-[0.14em]">
+                <span className="resume-theme-subtle text-[10px] uppercase">
                   Proof over claims
                 </span>
               ) : null}
@@ -313,7 +313,10 @@ export default function ResumeLayout({
                     className="resume-theme-card-accent rounded-none border p-3 sm:p-4"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="resume-theme-pill rounded-none border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.14em]">
+                      <span
+                        data-pill-variant="label"
+                        className="resume-theme-pill rounded-none border px-2.5 py-0.5 text-[10px] uppercase"
+                      >
                         {formatProofTypeLabel(proof.type)}
                       </span>
                       {proof.source_label ? (
@@ -369,7 +372,7 @@ export default function ResumeLayout({
               data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
-              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
+              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase"
             >
               Testimonials
             </h2>
@@ -408,7 +411,7 @@ export default function ResumeLayout({
               data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
-              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
+              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase"
             >
               Experience
             </h2>
@@ -486,7 +489,7 @@ export default function ResumeLayout({
               data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
-              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
+              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase"
             >
               Projects
             </h2>
@@ -580,7 +583,7 @@ export default function ResumeLayout({
               data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
-              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
+              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase"
             >
               Education
             </h2>
@@ -615,7 +618,7 @@ export default function ResumeLayout({
               data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
-              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
+              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase"
             >
               Skills
             </h2>
@@ -623,7 +626,7 @@ export default function ResumeLayout({
               {skills.map((group) => (
                 <div key={group.category}>
                   {skills.length > 1 ? (
-                    <p className="resume-theme-subtle mb-1.5 text-[10px] font-medium uppercase tracking-[0.16em]">{group.category}</p>
+                    <p className="resume-theme-subtle mb-1.5 text-[10px] font-medium uppercase">{group.category}</p>
                   ) : null}
                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {group.items.map((skill) => (
@@ -654,7 +657,7 @@ export default function ResumeLayout({
               data-section-heading
               data-motion-kind="section-title"
               data-attention-role="section-title"
-              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase tracking-[0.24em]"
+              className="resume-theme-section-title resume-theme-accent mb-2 text-[10px] uppercase"
             >
               Certifications
             </h2>

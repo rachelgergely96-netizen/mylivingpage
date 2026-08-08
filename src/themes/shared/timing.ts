@@ -1,5 +1,9 @@
 const BASELINE_FRAME_SECONDS = 1 / 60;
-const MAX_FRAME_SECONDS = 0.05;
+// Guards against the multi-second jump after a backgrounded tab resumes, so it
+// has to sit clear of every configured cap: a maxFps={24} canvas presents on
+// every third vsync (~50ms), and clamping at that interval meant any dropped
+// tick silently discarded real elapsed time and ran the world slow.
+const MAX_FRAME_SECONDS = 0.1;
 const FRAME_TIMESTAMP_EPSILON_MS = 0.01;
 
 /**

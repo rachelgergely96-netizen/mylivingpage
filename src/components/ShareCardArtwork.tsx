@@ -33,6 +33,8 @@ export interface ShareCardArtworkProps {
 
 export function ShareCardArtwork({
   animatedShine = false,
+  // The DOM path inherits the app's loaded face through the variable; the
+  // Satori/OG path cannot resolve var() and passes the family name instead.
   bodyFontFamily = "var(--font-dm-sans), sans-serif",
   className,
   ctaBody = "Scan to explore work, experience, and more.",

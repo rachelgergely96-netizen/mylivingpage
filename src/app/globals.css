@@ -1079,10 +1079,12 @@ a {
   );
 }
 
+/* Cards clip their overflow, so the folio quote mark has to hang inside the
+   box: a negative offset put most of the glyph outside the plate. */
 [data-theme-detail="night-editorial"] [data-motion-kind="testimonial"]::before {
   content: "\201C";
   position: absolute;
-  top: -0.25rem;
+  top: 0.1rem;
   right: 0.45rem;
   color: var(--theme-accent-soft);
   font-family: var(--font-dm-sans), sans-serif;
@@ -1227,6 +1229,12 @@ a {
   font-weight: 500;
 }
 
+/* Skill and tech tags are sentence-case and want tight tracking; the
+   uppercase proof labels need the micro-label treatment instead. */
+.resume-theme-pill[data-pill-variant="label"] {
+  letter-spacing: 0.12em;
+}
+
 [data-skill-list] .resume-theme-subtle {
   letter-spacing: 0.12em;
   font-weight: 600;
@@ -1244,18 +1252,26 @@ a {
 /* Section titles and their right-side annotations are the only type that
    sits on raw canvas, so each gets a local caption band — an editorial
    strip rather than a boxed plate. Skill-category labels stay out: they
-   already sit above a pill cluster that reads as its own plate field. */
-[data-theme-detail]:not([data-theme-experience]) .resume-theme-section-title {
+   already sit above a pill cluster that reads as its own plate field.
+
+   The band is made of the same material as the plates (surface-strong).
+   The theme's own `scrim` token is a radial-gradient, not a color, so it
+   cannot feed color-mix() — reaching for it silently invalidates the whole
+   declaration and the band disappears. */
+[data-theme-detail]:not([data-theme-experience])
+  .resume-theme[data-resume-density="full"]
+  .resume-theme-section-title {
   margin-left: -0.4rem;
   padding: 0.3rem 0.75rem 0.3rem 0.4rem;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--theme-scrim) 82%, transparent),
+    color-mix(in srgb, var(--theme-surface-strong) 82%, transparent),
     transparent 82%
   );
 }
 
 [data-theme-detail]:not([data-theme-experience])
+  .resume-theme[data-resume-density="full"]
   [data-section-heading]
   > .resume-theme-subtle {
   letter-spacing: 0.12em;
@@ -1263,7 +1279,7 @@ a {
   padding: 0.3rem 0.4rem 0.3rem 0.75rem;
   background: linear-gradient(
     270deg,
-    color-mix(in srgb, var(--theme-scrim) 82%, transparent),
+    color-mix(in srgb, var(--theme-surface-strong) 82%, transparent),
     transparent 82%
   );
 }
@@ -1343,6 +1359,15 @@ a {
   background: var(--theme-accent);
 }
 
+/* One motif per surface: several profiles decorate every card with an
+   ::after corner or crop mark, which would sit on the stat cell alongside
+   its origin tick. The readout keeps the tick. */
+[data-theme-detail]:not([data-theme-experience])
+  .resume-theme-impact-strip
+  .resume-theme-card::after {
+  content: none;
+}
+
 /* The strip carries one strong beat at its origin; siblings stay quiet. */
 [data-theme-detail]:not([data-theme-experience])
   .resume-theme-impact-strip
@@ -1386,7 +1411,8 @@ a {
   padding-left: 0.4rem;
 }
 
-[data-theme-detail="precision"] .resume-theme-pill {
+[data-theme-detail="precision"]:not([data-theme-experience])
+  .resume-theme-pill {
   position: relative;
   border-color: var(--theme-border);
   background:
@@ -1429,7 +1455,8 @@ a {
       no-repeat;
 }
 
-[data-theme-detail="cartography"] .resume-theme-pill {
+[data-theme-detail="cartography"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-left: 3px solid var(--theme-accent);
   background: linear-gradient(
       90deg,
@@ -1493,7 +1520,8 @@ a {
   );
 }
 
-[data-theme-detail="cinema"] .resume-theme-pill {
+[data-theme-detail="cinema"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-width: 1px 0;
   border-color: var(--theme-accent-border);
   background: color-mix(in srgb, var(--theme-surface-strong) 72%, transparent);
@@ -1543,7 +1571,8 @@ a {
   content: none;
 }
 
-[data-theme-detail="night-editorial"] .resume-theme-pill {
+[data-theme-detail="night-editorial"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-width: 0 0 1px 0;
   border-bottom-color: var(--theme-accent-border);
   background: transparent;
@@ -1587,7 +1616,8 @@ a {
   background: var(--theme-accent);
 }
 
-[data-theme-detail="material"] .resume-theme-pill {
+[data-theme-detail="material"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-color: var(--theme-border);
   background: var(--theme-surface-strong);
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--theme-accent) 22%, transparent);
@@ -1643,7 +1673,8 @@ a {
   );
 }
 
-[data-theme-detail="botanical"] .resume-theme-pill {
+[data-theme-detail="botanical"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-color: transparent;
   background: linear-gradient(
       112deg,
@@ -1695,7 +1726,16 @@ a {
   transform: translate(4px, 4px);
 }
 
-[data-theme-detail="couture"] .resume-theme-pill {
+/* The double hem is two lines with a gap. The shared stub paints a solid
+   fill, which would close that gap into one bar, so couture keeps the
+   content box empty and lets its two borders read separately. */
+[data-theme-detail="couture"]:not([data-theme-experience])
+  .resume-theme-section-title::after {
+  background: transparent;
+}
+
+[data-theme-detail="couture"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-color: var(--theme-border);
   background: color-mix(in srgb, var(--theme-surface-strong) 72%, transparent);
   box-shadow: inset 0 0 0 2px
@@ -1755,7 +1795,8 @@ a {
     linear-gradient(var(--theme-accent) 0 0) right center / 1px 7px no-repeat;
 }
 
-[data-theme-detail="print-studio"] .resume-theme-pill {
+[data-theme-detail="print-studio"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-color: var(--theme-accent-border);
   background: var(--theme-surface-strong);
   box-shadow:
@@ -1802,7 +1843,8 @@ a {
   );
 }
 
-[data-theme-detail="ornamental"] .resume-theme-pill {
+[data-theme-detail="ornamental"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-color: var(--theme-accent-border);
   background: linear-gradient(
       90deg,
@@ -1870,7 +1912,8 @@ a {
       no-repeat;
 }
 
-[data-theme-detail="celestial"] .resume-theme-pill {
+[data-theme-detail="celestial"]:not([data-theme-experience])
+  .resume-theme-pill {
   border-color: var(--theme-accent-border);
   background: linear-gradient(
       135deg,
@@ -4538,6 +4581,10 @@ a {
   .share-card-metal-shine {
     animation: none !important;
     transition: none !important;
+    /* Nothing can animate on these paths, so holding six promoted compositor
+       layers per card is pure memory cost — heaviest exactly where it hurts,
+       on phones and for readers who asked for less motion. */
+    will-change: auto !important;
   }
 
   .share-card-metal-shine {

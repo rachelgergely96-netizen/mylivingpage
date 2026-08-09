@@ -241,6 +241,9 @@ function StoryLivingOutput({ world }: { world: WorldDirection }) {
       data-theme-id={world.id}
       data-truth-destination
     >
+      <div className={styles.storyLivingTitle}>
+        <h3>Your Living Page</h3>
+      </div>
       <div className={styles.storyBrowserBar}>
         <span>mylivingpage.com/avery</span>
         <b>Live</b>
@@ -426,12 +429,6 @@ export default function LivingHomepagePrototype({
     return () => observer.disconnect();
   }, []);
 
-  const selectMoment = (momentId: StoryMomentId) => {
-    if (momentId === storyMomentId) return;
-    setStoryMomentId(momentId);
-    setMotionKey((current) => current + 1);
-  };
-
   const selectWorld = (
     world: WorldDirection,
     index: number,
@@ -440,6 +437,9 @@ export default function LivingHomepagePrototype({
   ) => {
     setActiveThemeId(world.id);
     setStoryMomentId("referral");
+    // With the output tabs gone, a style change is what re-runs the facts
+    // travelling from the résumé to the page: same facts, new world.
+    setMotionKey((current) => current + 1);
     if (moveFocus) {
       window.requestAnimationFrame(() => controls.current[index]?.focus());
     }
@@ -547,44 +547,11 @@ export default function LivingHomepagePrototype({
               data-live-product-story
               aria-labelledby="live-product-story-title"
             >
-              <div className={styles.storyHeader}>
-                <div>
-                  <p>Live demo</p>
-                  <h2 id="live-product-story-title">
-                    See one résumé become a Living Page.
-                  </h2>
-                </div>
-                <span>Sample data</span>
+              <div className={styles.storyHeaderQuiet}>
+                <h2 id="live-product-story-title">
+                  See one résumé become a Living Page.
+                </h2>
               </div>
-
-              <div
-                className={styles.storyMomentTabs}
-                role="group"
-                aria-label="Choose what the résumé becomes"
-              >
-                {STORY_MOMENTS.map((moment, index) => {
-                  const selected = moment.id === storyMomentId;
-                  return (
-                    <button
-                      key={moment.id}
-                      id={`prototype-story-moment-${moment.id}`}
-                      type="button"
-                      aria-pressed={selected}
-                      aria-controls="prototype-story-output"
-                      className={selected ? styles.storyMomentActive : undefined}
-                      onClick={() => selectMoment(moment.id)}
-                      data-story-moment={moment.id}
-                    >
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      {moment.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className={styles.storyMobileSummary} data-story-mobile-summary>
-                Pick an output. Your facts stay the same.
-              </p>
 
               <div className={styles.storyStage} data-story-stage data-transformation-stage>
                 <StorySourceResume />
@@ -593,17 +560,9 @@ export default function LivingHomepagePrototype({
                   id="prototype-story-output"
                   className={styles.storyOutputFrame}
                   role="region"
-                  aria-labelledby={`prototype-story-moment-${storyMomentId}`}
+                  aria-label="Your Living Page"
                   data-story-output-region={storyMomentId}
                 >
-                  <div className={styles.storyOutputMeta}>
-                    <div>
-                      <span>Becomes</span>
-                      <h3>{activeStoryMoment.output}</h3>
-                      {activeStoryMoment.flavor ? <small>{activeStoryMoment.flavor}</small> : null}
-                    </div>
-                    <span>{String(activeStoryIndex + 1).padStart(2, "0")}</span>
-                  </div>
                   <div key={`${storyMomentId}-${motionKey}`} className={styles.storyActiveOutput}>
                     <StoryOutput moment={storyMomentId} world={activeWorld} />
                   </div>
@@ -663,6 +622,32 @@ export default function LivingHomepagePrototype({
                 >
                   <strong>{activeWorld.label} · {THEME_MAP[activeWorld.id].name}</strong>
                   <span>{activeWorld.promise}</span>
+                </div>
+              </div>
+
+              {/* The PDF and the card are included, not alternatives to the
+                  page: they read as a quiet strip rather than competing for
+                  the stage the product occupies. */}
+              <div className={styles.alsoIncluded} data-also-included>
+                <p className={styles.alsoIncludedLabel}>Also included free</p>
+                <div className={styles.alsoIncludedItems}>
+                  <div className={styles.alsoIncludedItem}>
+                    <span className={styles.alsoIncludedMark} aria-hidden="true">PDF</span>
+                    <div>
+                      <strong>A clean résumé PDF</strong>
+                      <small>Selectable text, for when a file is asked for.</small>
+                    </div>
+                  </div>
+                  <div className={styles.alsoIncludedItem}>
+                    <span className={styles.alsoIncludedMark} aria-hidden="true">QR</span>
+                    <div>
+                      <strong>A share card with a QR code</strong>
+                      <small>
+                        Opens your page from any phone camera.{" "}
+                        <a href="#share-card">See the card</a>
+                      </small>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>

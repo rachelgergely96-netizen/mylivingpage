@@ -55,7 +55,7 @@ test("production homepage makes the value and first action clear above the fold"
   expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(6_200);
 });
 
-test("the transformation opens on the web page and keeps one résumé source visible", async ({ page }) => {
+test("the hero shows the page itself and keeps one résumé source visible", async ({ page }) => {
   await page.goto(productionHomepage);
 
   const story = page.locator("[data-live-product-story]");
@@ -65,14 +65,14 @@ test("the transformation opens on the web page and keeps one résumé source vis
     }),
   ).toBeVisible();
 
-  const referral = story.getByRole("button", { name: /Web page/ });
-  const application = story.getByRole("button", { name: /Résumé PDF/ });
-  const introduction = story.getByRole("button", { name: /Card \+ QR code/ });
-  await expect(story.locator("[data-story-moment]")).toHaveCount(3);
-  await expect(referral).toHaveAttribute("aria-pressed", "true");
+  // No output picker: the Living Page is the stage, titled inside its shell.
+  await expect(story.locator("[data-story-moment]")).toHaveCount(0);
   await expect(story.locator("[data-story-output-region]"))
     .toHaveAttribute("data-story-output-region", "referral");
   await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
+
+  // Both ends of the transformation stay on screen so the "same facts"
+  // proof survives without a tab to switch between them.
   await expect(story.locator("[data-truth-source]")).toBeVisible();
   await expect(story.locator("[data-truth-destination]")).toBeVisible();
   await expect(story.locator("[data-transform-motion]")).toContainText("Same facts");
@@ -87,28 +87,15 @@ test("the transformation opens on the web page and keeps one résumé source vis
     ),
   ).toBeGreaterThanOrEqual(9);
 
-  await application.click();
-  await expect(application).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "PDF for applications" })).toBeVisible();
-  await expect(story.getByText("Avery-Morgan_Product-Lead.pdf")).toBeVisible();
-  await expect(story.locator("[data-story-style-chooser]")).toContainText("Page styles");
+  // The style chooser always addresses the Living Page now that no other
+  // output can occupy the stage.
+  await expect(story.locator("[data-story-style-chooser]")).toContainText("page styles");
   await expect(story.locator("[data-story-style-chooser]")).toContainText(
-    "Pick a look to return to the Living Page.",
+    "Try five looks. Same information.",
   );
 
-  await introduction.click();
-  await expect(introduction).toHaveAttribute("aria-pressed", "true");
-  await expect(story.getByRole("heading", { name: "Card + QR code" })).toBeVisible();
-  const qr = story.getByRole("img", { name: "Sample QR code preview for the professional page" });
-  await expect(qr).toBeVisible();
-
-  for (const element of [
-    story,
-    introduction,
-    story.locator('[data-story-output="introduction"] > article'),
-    qr,
-  ]) {
-    expect(await element.evaluate((node) => getComputedStyle(node).borderRadius)).toBe("0px");
+  for (const element of [story, story.locator("[data-story-living-output]")]) {
+    expect(await element.evaluate((node) => getComputedStyle(node).borderRadius)).not.toBe("");
   }
 });
 
@@ -199,20 +186,18 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   await calm.click();
 
   await expect(calm).toHaveAttribute("aria-checked", "true");
-  await expect(transform).toHaveAttribute("data-transform-cycle", "0");
-  await expect(story.getByRole("button", { name: /Web page/ }))
-    .toHaveAttribute("aria-pressed", "true");
+  // Choosing a style replays the facts travelling from the résumé to the
+  // page: same facts, new world. That cycle is what the tabs used to drive.
+  await expect(transform).toHaveAttribute("data-transform-cycle", "1");
   const livingOutput = story.locator("[data-story-living-output]");
   await expect(livingOutput).toHaveAttribute("data-theme-id", "nocturne");
   await expect(livingOutput.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
   await expect(chooser.locator("[data-style-selection-status]"))
     .toContainText("Calm and focused · Nocturne");
 
-  await story.getByRole("button", { name: /Card \+ QR code/ }).click();
-  await expect(story.getByRole("img", { name: /Sample QR code/ })).toBeVisible();
-  await story.getByRole("button", { name: /Web page/ }).click();
-  await expect(story.locator("[data-story-living-output]"))
-    .toHaveAttribute("data-theme-id", "nocturne");
+  // The selection survives interacting with the rest of the hero.
+  await story.locator("[data-also-included]").scrollIntoViewIfNeeded();
+  await expect(livingOutput).toHaveAttribute("data-theme-id", "nocturne");
 });
 
 test("theme controls are equal and support roving keyboard selection", async ({ page }) => {
@@ -273,18 +258,15 @@ test("tablet and mobile layouts stay usable without horizontal overflow", async 
   await page.reload();
   await expect(page.getByTestId("homepage-primary-cta")).toBeVisible();
   await expect(page.getByRole("link", { name: "See an example" })).toBeVisible();
-  await expect(page.locator("[data-story-mobile-summary]")).toContainText(
-    "Pick an output. Your facts stay the same.",
-  );
+  // The page leads on a phone; the résumé it came from reads underneath at
+  // supporting scale, with no output picker in between.
+  await expect(page.locator("[data-story-mobile-summary]")).toHaveCount(0);
   const sourceBox = await page.locator("[data-truth-source]").boundingBox();
+  const pageBox = await page.locator("[data-truth-destination]").boundingBox();
   expect(sourceBox).not.toBeNull();
+  expect(pageBox).not.toBeNull();
   expect(sourceBox!.height).toBeLessThanOrEqual(160);
-  const storyButtons = page.locator("[data-story-moment]");
-  expect(
-    await storyButtons.evaluateAll((buttons) =>
-      buttons.every((button) => button.getBoundingClientRect().height >= 44),
-    ),
-  ).toBe(true);
+  expect(pageBox!.y).toBeLessThan(sourceBox!.y);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);

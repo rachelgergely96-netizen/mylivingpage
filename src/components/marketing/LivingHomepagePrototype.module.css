@@ -2464,3 +2464,106 @@
 .pagesStage .storyBrowserBar b {
   font-size: 10px;
 }
+
+/* ── Grok hero proposal (branch prototype, not shipped) ─────────────────
+   The apparatus comes off: no output tabs, no "Becomes / 01" meta row. The
+   page is titled inside its own shell, and the PDF and card become an
+   included strip rather than alternatives competing for the stage. */
+.storyHeaderQuiet {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 18px;
+}
+
+.storyHeaderQuiet h2 {
+  font-size: 17px;
+  font-weight: 630;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.storyLivingTitle {
+  align-items: baseline;
+  border-bottom: 1px solid var(--world-accent-border);
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.storyLivingTitle h3 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.alsoIncluded {
+  border-top: 1px solid var(--border);
+  padding: 16px 18px 18px;
+}
+
+.alsoIncludedLabel {
+  color: var(--text-muted);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.alsoIncludedItems {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.alsoIncludedItem {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.alsoIncludedMark {
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  display: flex;
+  flex: none;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  height: 34px;
+  justify-content: center;
+  letter-spacing: 0.06em;
+  width: 34px;
+}
+
+.alsoIncludedItem strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 640;
+}
+
+.alsoIncludedItem small {
+  color: var(--text-muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.alsoIncludedItem a {
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 760px) {
+  .alsoIncludedItems {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The in-shell title takes height the viewport used to have, so the output
+   grows to keep the same amount of page visible as the shipped version. */
+.storyLivingOutput {
+  min-height: clamp(444px, 52vh, 546px);
+}

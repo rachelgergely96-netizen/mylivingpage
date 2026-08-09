@@ -52,23 +52,27 @@ test("landing page communicates the Living Page outcome and one honest start act
   await expect(footer.getByRole("button", { name: "Cookie settings" })).toBeVisible();
 });
 
-test("interactive homepage story keeps the Living Page primary while offering three outputs", async ({ page }) => {
+test("the homepage hero shows the Living Page itself, with the other outputs included", async ({ page }) => {
   await page.goto("/");
 
   const story = page.locator("[data-live-product-story]");
-  const livingPage = story.getByRole("button", { name: /Web page/ });
-  const application = story.getByRole("button", { name: /Résumé PDF/ });
-  const introduction = story.getByRole("button", { name: /Card \+ QR code/ });
 
-  await expect(livingPage).toHaveAttribute("aria-pressed", "true");
+  // The hero is the page, not a picker: there is no output-switching UI.
+  await expect(story.locator("[data-story-moment]")).toHaveCount(0);
   await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
   await expect(story.locator("[data-story-living-output]")).toHaveAttribute("data-theme-id", "atlas");
   await expect(story.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
 
-  await application.click();
-  await expect(story.getByRole("heading", { name: "PDF for applications" })).toBeVisible();
-  await introduction.click();
-  await expect(story.getByRole("heading", { name: "Card + QR code" })).toBeVisible();
+  // The PDF and the share card are stated as included rather than as
+  // alternatives competing with the page for the stage.
+  const alsoIncluded = story.locator("[data-also-included]");
+  await expect(alsoIncluded).toContainText("Also included free");
+  await expect(alsoIncluded).toContainText("A clean résumé PDF");
+  await expect(alsoIncluded).toContainText("A share card with a QR code");
+  await expect(alsoIncluded.getByRole("link", { name: "See the card" })).toHaveAttribute(
+    "href",
+    "#share-card",
+  );
 });
 
 test("reduced-motion visitors retain the complete content and static transformation", async ({ page }) => {

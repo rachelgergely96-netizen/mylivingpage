@@ -714,7 +714,9 @@ export default function LivingHomepagePrototype({
             <p className={styles.eyebrow}>
               <span>The Living Page</span>{THEME_COUNT} styles · five collections
             </p>
-            <h2 id="living-pages-title">A page with a world behind it.</h2>
+            <h3 id="living-pages-title" className={styles.chapterMovement}>
+              A page with a world behind it.
+            </h3>
             <p>
               Every style is a hand-built animated backdrop. Your details sit on clear,
               legible plates in the same order—whatever look you choose.
@@ -803,9 +805,17 @@ export default function LivingHomepagePrototype({
         >
           <div className={styles.sectionHeading}>
             <p className={styles.eyebrow}>
-              <span>The Share Card</span>Glass · scan · signal
+              <span>What you send</span>Card · PDF · readable text
             </p>
-            <h2 id="share-card-title">A card people can hold—and scan.</h2>
+            <h2 id="share-card-title">What lands with a recruiter.</h2>
+            <p>
+              A card they can hold, a PDF when a file is asked for, and details that stay
+              readable for the people and the software doing the reading.
+            </p>
+          </div>
+
+          <div className={styles.sectionHeading}>
+            <h3 className={styles.chapterMovement}>A card people can hold—and scan.</h3>
             <p>
               Send it in a message, drop it in slides, or print it. The QR code opens
               your full Living Page from any phone camera.
@@ -837,7 +847,9 @@ export default function LivingHomepagePrototype({
         <div id="search-ready" className={styles.visibilitySection} data-search-readiness data-reveal>
           <div className={styles.visibilityIntro}>
             <p className={styles.eyebrow}><span>Easy to read</span>People and hiring tools</p>
-            <h2>Your style can change. Your details stay clear.</h2>
+            <h3 className={styles.chapterMovement}>
+              Your style can change. Your details stay clear.
+            </h3>
             <p>
               Job titles, dates, skills, and results stay as readable text for recruiters,
               hiring software (ATS), search, and AI tools.
@@ -870,6 +882,10 @@ export default function LivingHomepagePrototype({
             </p>
           </div>
 
+        </div>
+        </section>
+
+        <section id="closing-cta" className={styles.finalCta} data-reveal>
           <div className={styles.freePromise} data-free-promise>
             <div>
               <span>Always free</span>
@@ -881,10 +897,7 @@ export default function LivingHomepagePrototype({
               card. No subscription. No trial. No hidden fees.
             </p>
           </div>
-        </div>
-        </section>
 
-        <section id="closing-cta" className={styles.finalCta} data-reveal>
           <p className={styles.eyebrow}><span>Ready when you are</span>Start free</p>
           <h2>Publish a Living Page from the résumé you already have.</h2>
           <p>Create a private draft, review every field, and go live when it feels right.</p>
@@ -899,7 +912,7 @@ export default function LivingHomepagePrototype({
             </Link>
             <Link href="/examples" className={styles.secondaryButton}>Explore examples</Link>
           </div>
-          <small>No credit card. No subscription. Private until you publish.</small>
+          <small>Private until you publish.</small>
         </section>
       </main>
 

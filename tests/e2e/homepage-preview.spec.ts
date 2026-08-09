@@ -164,7 +164,9 @@ test("homepage explains readable content and the always-free promise without ove
     "does not invent experience, guarantee how hiring software will read or rank a résumé",
   );
 
-  const freePromise = searchReadiness.locator("[data-free-promise]");
+  // The cost objection now sits immediately before the final ask rather than
+  // at the end of the chapter about what a recruiter receives.
+  const freePromise = page.locator("[data-free-promise]");
   await expect(
     freePromise.getByRole("heading", { name: "Everything on this page is free." }),
   ).toBeVisible();

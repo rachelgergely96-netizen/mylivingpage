@@ -1,21 +1,10 @@
 import type {
   PageConfig,
   PageVariant,
-  PageVariantSectionId,
   ResumeData,
 } from "@/types/resume";
 
 export const MAX_PAGE_VARIANTS = 3;
-export const PAGE_VARIANT_SECTION_IDS: PageVariantSectionId[] = [
-  "summary",
-  "stats",
-  "experience",
-  "projects",
-  "skills",
-  "education",
-  "certifications",
-];
-
 export interface RecruiterSkimModel {
   variantLabel: string;
   collapsedChips: string[];
@@ -48,21 +37,6 @@ function toStringArray(value: unknown) {
     .filter((entry, index, collection) => entry.length > 0 && collection.indexOf(entry) === index);
 }
 
-function toSectionOrder(value: unknown) {
-  const sections = toStringArray(value).filter((entry): entry is PageVariantSectionId =>
-    PAGE_VARIANT_SECTION_IDS.includes(entry as PageVariantSectionId),
-  );
-
-  if (!sections.length) {
-    return [...PAGE_VARIANT_SECTION_IDS];
-  }
-
-  return [
-    ...sections,
-    ...PAGE_VARIANT_SECTION_IDS.filter((section) => !sections.includes(section)),
-  ];
-}
-
 export function slugifyVariantLabel(value: string) {
   const slug = value
     .toLowerCase()
@@ -91,7 +65,6 @@ export function createPageVariant(baseData: ResumeData, label = "Targeted versio
     summary: baseData.summary || null,
     featuredStatLabels: baseData.stats.slice(0, 3).map((stat) => stat.label),
     featuredProjectNames: baseData.projects.slice(0, 1).map((project) => project.name),
-    sectionOrder: [...PAGE_VARIANT_SECTION_IDS],
     ctaEmphasis: null,
   };
 }
@@ -117,7 +90,6 @@ export function sanitizePageVariant(value: unknown): PageVariant | null {
     summary: toOptionalText(value.summary),
     featuredStatLabels: toStringArray(value.featuredStatLabels),
     featuredProjectNames: toStringArray(value.featuredProjectNames),
-    sectionOrder: toSectionOrder(value.sectionOrder),
     ctaEmphasis: toOptionalText(value.ctaEmphasis),
   };
 }

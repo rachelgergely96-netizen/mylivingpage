@@ -315,15 +315,6 @@ export function buildStarterVariant(
     summary: compactText(data.summary) || null,
     featuredStatLabels: data.stats.slice(0, 2).map((stat) => stat.label),
     featuredProjectNames: data.projects.slice(0, 1).map((project) => project.name),
-    sectionOrder: [
-      "summary",
-      "stats",
-      "projects",
-      "experience",
-      "skills",
-      "education",
-      "certifications",
-    ],
     ctaEmphasis: audience?.ctaEmphasis ?? null,
   };
 }

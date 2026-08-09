@@ -104,15 +104,6 @@ export interface ResumeData {
   testimonials?: TestimonialRecord[];
 }
 
-export type PageVariantSectionId =
-  | "summary"
-  | "stats"
-  | "experience"
-  | "projects"
-  | "skills"
-  | "education"
-  | "certifications";
-
 export interface PageVariant {
   id: string;
   slug: string;
@@ -122,7 +113,6 @@ export interface PageVariant {
   summary: string | null;
   featuredStatLabels: string[];
   featuredProjectNames: string[];
-  sectionOrder: PageVariantSectionId[];
   ctaEmphasis: string | null;
 }
 

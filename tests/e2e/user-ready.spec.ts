@@ -365,15 +365,6 @@ test.describe.serial("authenticated user journeys", () => {
         "Staff product leader helping teams simplify complex launches and scale internal platforms.",
       featuredStatLabels: ["Builds Shipped"],
       featuredProjectNames: ["Pipeline Pulse"],
-      sectionOrder: [
-        "summary",
-        "stats",
-        "experience",
-        "projects",
-        "skills",
-        "education",
-        "certifications",
-      ],
       ctaEmphasis: "Open to staff product leadership roles",
     };
     await setPageConfigForPage(livePage.id, {

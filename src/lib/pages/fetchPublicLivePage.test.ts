@@ -71,6 +71,10 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
           or() {
             return this;
           },
+          in(field: string, values: unknown[]) {
+            filters[field] = values;
+            return this;
+          },
           order() {
             return this;
           },
@@ -86,10 +90,14 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
             };
           },
           async maybeSingle() {
-            if (
-              filters.owner_id === scenario.profile?.id &&
-              filters.visibility === "public"
-            ) {
+            // The owner-scoped branch now matches both live visibilities
+            // ("public" and "link") via .in(), so the filter is an array.
+            const visibilityFilter = filters.visibility;
+            const matchesLiveVisibility = Array.isArray(visibilityFilter)
+              ? visibilityFilter.includes("public")
+              : visibilityFilter === "public";
+
+            if (filters.owner_id === scenario.profile?.id && matchesLiveVisibility) {
               return { data: scenario.publicPage ?? null, error: null };
             }
 

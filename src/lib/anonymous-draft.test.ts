@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   ANONYMOUS_CREATE_DRAFT_KEY,
+  ANONYMOUS_CREATE_DRAFT_TTL_MS,
   claimAnonymousCreateDraft,
   discardAnonymousCreateDraft,
   readAnonymousCreateDraft,
@@ -76,6 +77,46 @@ describe("anonymous create draft", () => {
   it("does nothing when there is no pre-signup draft", () => {
     expect(claimAnonymousCreateDraft(USER_KEY)).toBe(false);
     expect(window.localStorage.getItem(USER_KEY)).toBeNull();
+  });
+
+  it("refuses a stale draft rather than handing it to whoever signs in next", () => {
+    // No account exists when this is written, so the key cannot be scoped to
+    // one. On a shared machine the age check is what stops the next person
+    // inheriting the last visitor's résumé.
+    window.localStorage.setItem(
+      ANONYMOUS_CREATE_DRAFT_KEY,
+      JSON.stringify({
+        data: { resumeText: "someone else's résumé" },
+        savedAt: Date.now() - ANONYMOUS_CREATE_DRAFT_TTL_MS - 1000,
+      }),
+    );
+
+    expect(claimAnonymousCreateDraft(USER_KEY)).toBe(false);
+    expect(window.localStorage.getItem(USER_KEY)).toBeNull();
+    // And it is cleared, so it cannot be inherited later either.
+    expect(readAnonymousCreateDraft()).toBeNull();
+  });
+
+  it("claims a draft still inside the window", () => {
+    window.localStorage.setItem(
+      ANONYMOUS_CREATE_DRAFT_KEY,
+      JSON.stringify({
+        data: { resumeText: "still mine" },
+        savedAt: Date.now() - 60_000,
+      }),
+    );
+
+    expect(claimAnonymousCreateDraft(USER_KEY)).toBe(true);
+  });
+
+  it("discards a draft with a nonsense timestamp", () => {
+    window.localStorage.setItem(
+      ANONYMOUS_CREATE_DRAFT_KEY,
+      JSON.stringify({ data: { resumeText: "x" }, savedAt: "not-a-number" }),
+    );
+
+    expect(claimAnonymousCreateDraft(USER_KEY)).toBe(false);
+    expect(readAnonymousCreateDraft()).toBeNull();
   });
 
   it("discards on request", () => {

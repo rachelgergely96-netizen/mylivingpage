@@ -2,6 +2,11 @@
 
 Audit date: 2026-08-10. Baseline: `main` @ `0e54e76`, clean tree.
 
+> **Execution update — 2026-08-10.** All five stages are implemented on branch
+> `user-functionality-plan-3`. See [Execution record](#execution-record) at the end for
+> what shipped, where the implementation departed from this plan and why, and what remains
+> for Rachel or ops.
+
 Plans 1 and 2 were engineering plans — security, architecture, dead code, CI, perf. This
 one asks a different question: **what can a user actually do, and where does the product
 stop short of its own promise?** Findings are ordered by user impact, not by effort.
@@ -501,3 +506,95 @@ Two operational prerequisites, neither of them optional:
 - Theme and share-card art direction.
 - The three known screenshot artifacts — homepage-blank-below-hero, fixed-chrome overlap,
   truncated mobile rail. Verified non-bugs; do not re-investigate.
+
+---
+
+## Execution record
+
+Branch `user-functionality-plan-3`, twelve commits off `main` @ `0e54e76`. Typecheck, ESLint
+(`--max-warnings=0`), 975 unit tests, the client-security and Signal Frame checks, a
+production build, and 24 Playwright specs all pass.
+
+Two reviews by Grok ran against the work. Both found real defects; the fixes are recorded
+below rather than folded silently into the feature commits.
+
+### What shipped
+
+| Plan item | Commit | Note |
+| --- | --- | --- |
+| 1.1 Notifications | `fbaaf22`, `6f40a5c` | Engagement-triggered, per-owner cap, digest cron |
+| 1.2 Variants in the editor | `9f02fb3` | Planner moved out of `create/` unchanged |
+| 1.3 ATS engine | `4061b51` | Saved roles + proposal accept/decline |
+| 1.4 Testimonials | `2c569b5` | Display switch, render gate unchanged |
+| 2.1 / 2.2 Visibility | `0ec603c`, `2eed702` | Public / Link only / Offline |
+| 2.3 PDF preview | `d49ec0d` | New `/api/resume/preview` |
+| 2.4 Contact action | `df0cf1d` | Reuses existing analytics target key |
+| 3.1 Autosave | `f5b5e63` | 2.5s debounce, e2e-verified |
+| 3.2 Import provenance | `1e4dc78` | Value shown beside its source line |
+| 3.3 Pre-signup preview | `64cd786` | Paste-only, client-side |
+| 4.1 / 4.2 Performance | `43121d9` | Bounded dashboard reads, one query removed |
+
+### Where the implementation departed from this plan
+
+**Link-only does not use `visibility = 'link'`.** The plan assumed that enum value was free.
+It is not: `pages_link_requires_share_token_chk` requires a `share_token_hash` alongside it, a
+trigger raises without one, and a token-matching RPC reads it back. Writing `'link'` would
+have failed at the database in production while passing every test that never touched the
+constraint. Indexability is now its own column, `search_indexable`, so link-only pages stay
+`visibility = 'public'` and every existing RLS and storage policy is untouched. Caught in
+review (`2eed702`).
+
+**`page_config.ats` stores targeting, not `AtsReviewSnapshot`.** The snapshot type carries
+`candidateResumeData` and `approvedResumeData`, so persisting it literally would copy the
+whole résumé into `page_config` two or three times against a 256 KB ceiling. The review is
+deterministic and cheap to recompute, so only what the owner typed and chose is stored.
+Legacy snapshots are read for their single job description, which becomes the first saved
+role.
+
+**Notifications fire from engagement, with no artificial delay.** The plan proposed a ~2
+minute delay so engagement could land before sending. Triggering from the engagement beacon
+itself makes that unnecessary — the dwell data already exists at that point.
+
+**The testimonial render gate did not change.** The plan had the migration risk backwards; see
+1.4 above. Loosening the gate would have published quotes owners had deliberately hidden.
+
+### Fixed after review
+
+Six on the notification system (`6f40a5c`): scroll depth alone qualified a view, and a page
+whose content fits the viewport reports 100% depth on load — so the scanner filter had a hole
+the size of every short page. Also: a claimed row was never released on provider failure; the
+digest could double-send on a retried cron; Resend was awaited with no timeout inside a public
+beacon; there was no per-owner ceiling against forged engagement; and GET unsubscribe muted on
+sight, which link scanners would trip.
+
+Four on stages 2–3 (`2eed702`): the visibility collision above, a draft restore that read
+"absent" as "empty" and wiped saved versions and target roles, an ATS write-back that
+clobbered role edits made during a check, and a PDF preview that could reattach a render
+finished after the résumé changed.
+
+Two on stages 4–5 (`b0f3fa8`): the dashboard row cap I added to fix 4.2 introduced its own
+reporting bugs — a shared 2000-row budget let one busy page starve a quieter one of its rows
+entirely, undercounted any page with more views in the window than the cap, and truncated the
+scan that finds the first view after a share. Bounding by time per page, with an exact
+last-viewed lookup, keeps the speed win without the truncation. And the pre-signup draft key
+cannot be account-scoped — no account exists yet — so on a shared machine the next person to
+sign in would have inherited the previous visitor's résumé; it now expires after two hours.
+
+### Still outstanding
+
+**Ops, before notifications can send:**
+- `RESEND_API_KEY`, `NOTIFICATION_FROM_EMAIL`, `CRON_SECRET` in Vercel Production. Without the
+  key the pipeline runs end to end and skips delivery, so preview and CI never mail anyone.
+- SPF/DKIM/DMARC for the sending domain, ideally a dedicated subdomain, coordinated with the
+  Supabase Auth sender already on `mylivingpage.com`.
+- Apply `20260810120000_view_notifications.sql` and `20260810130000_page_search_indexable.sql`.
+
+**Rachel's call:**
+- Where `/try` belongs in the homepage and nav. It is currently reachable from the sitemap and
+  a link on `/signup` only — placement is art direction, and the homepage was deliberately cut
+  to four chapters in `850c02f`.
+- Whether the privacy policy needs a notifications clause before the first email sends.
+
+**Known gap, not addressed:** the résumé parser does not handle title, company, and dates on a
+single line — a common layout. 3.2 makes the gap visible rather than closing it; the section
+is simply absent from "What we read" instead of being silently wrong.

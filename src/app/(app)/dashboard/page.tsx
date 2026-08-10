@@ -25,11 +25,10 @@ export const metadata: Metadata = {
 
 /**
  * How far back the dashboard reads raw rows. Comfortably wider than the 7-day
- * proof window so "last viewed" stays meaningful on a quiet page, and bounded
- * so a busy one cannot make the page slow.
+ * proof window, and bounded so load time tracks recent activity rather than
+ * everything the account has ever accumulated.
  */
 const DASHBOARD_ACTIVITY_WINDOW_DAYS = 90;
-const DASHBOARD_ACTIVITY_ROW_LIMIT = 2000;
 
 interface DashboardPageViewRow {
   page_id: string;
@@ -96,23 +95,42 @@ export default async function DashboardPage({
   });
   const list = (pages ?? []) as PageRecord[];
   const pageIds = list.map((page) => page.id);
-  // The proof card reports a 7-day window and the most recent view; it never
-  // reads further back than that. Unbounded, these queries pulled every view
-  // ever recorded and reduced them in JS, so dashboard load time grew with how
-  // well the page was doing — slowest for exactly the people it is working for.
+  // Unbounded, these queries pulled every view ever recorded and reduced them
+  // in JS, so dashboard load time grew with how well the page was doing —
+  // slowest for exactly the people it is working for.
+  //
+  // Bounded by time rather than by a row cap, and per page rather than across
+  // all of them. A shared row cap would let one busy page starve a quieter one
+  // of its rows entirely, and would silently undercount a page with more views
+  // in the window than the cap allows.
   const activityWindowStart = new Date(
     Date.now() - DASHBOARD_ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
-  const [pageViewsResult, eventsResult] = pageIds.length
-    ? await Promise.all([
+  const [pageViewResults, latestViewResults, eventsResult] = await Promise.all([
+    Promise.all(
+      pageIds.map((pageId) =>
         supabase
           .from("page_views")
           .select("page_id, viewed_at, user_agent, engaged_seconds")
-          .in("page_id", pageIds)
+          .eq("page_id", pageId)
           .gte("viewed_at", activityWindowStart)
-          .order("viewed_at", { ascending: false })
-          .limit(DASHBOARD_ACTIVITY_ROW_LIMIT),
+          .order("viewed_at", { ascending: false }),
+      ),
+    ),
+    // "Last viewed" must stay exact for a page whose most recent visit predates
+    // the window, so it is read directly rather than inferred from the rows above.
+    Promise.all(
+      pageIds.map((pageId) =>
         supabase
+          .from("page_views")
+          .select("page_id, viewed_at, user_agent, engaged_seconds")
+          .eq("page_id", pageId)
+          .order("viewed_at", { ascending: false })
+          .limit(1),
+      ),
+    ),
+    pageIds.length
+      ? supabase
           .from("events")
           .select("event_name, created_at, metadata")
           .eq("user_id", user?.id ?? "")
@@ -122,10 +140,21 @@ export default async function DashboardPage({
           ])
           .gte("created_at", activityWindowStart)
           .order("created_at", { ascending: false })
-          .limit(DASHBOARD_ACTIVITY_ROW_LIMIT),
-      ])
-    : [{ data: [] }, { data: [] }];
-  const pageViews = (pageViewsResult.data ?? []) as DashboardPageViewRow[];
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const windowedViews = pageViewResults.flatMap(
+    (result) => (result.data ?? []) as DashboardPageViewRow[],
+  );
+  const seenViewKeys = new Set(
+    windowedViews.map((view) => `${view.page_id}:${view.viewed_at}`),
+  );
+  const pageViews = [
+    ...windowedViews,
+    ...latestViewResults
+      .flatMap((result) => (result.data ?? []) as DashboardPageViewRow[])
+      .filter((view) => !seenViewKeys.has(`${view.page_id}:${view.viewed_at}`)),
+  ];
   const events = (eventsResult.data ?? []) as DashboardEventRow[];
   const proofByPageId = new Map(
     pageIds.map((pageId) => [

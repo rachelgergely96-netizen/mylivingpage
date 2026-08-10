@@ -19,6 +19,17 @@ import {
  */
 export const ANONYMOUS_CREATE_DRAFT_KEY = "mlp-draft-create-anonymous";
 
+/**
+ * How long a pre-signup draft stays claimable.
+ *
+ * The key cannot be account-scoped — there is no account yet — so on a shared
+ * machine the next person to sign in would otherwise inherit whatever the last
+ * visitor pasted. The try → sign up → create path takes minutes, including an
+ * email confirmation, so a short window covers the real flow while keeping the
+ * exposure narrow. Anything older is discarded rather than claimed.
+ */
+export const ANONYMOUS_CREATE_DRAFT_TTL_MS = 2 * 60 * 60 * 1000;
+
 export function saveAnonymousCreateDraft<T>(data: T): void {
   if (typeof window === "undefined") {
     return;
@@ -60,6 +71,12 @@ export function claimAnonymousCreateDraft<T>(userScopedKey: string): boolean {
 
   const anonymous = readAnonymousCreateDraft<T>();
   if (!anonymous) {
+    return false;
+  }
+
+  const age = Date.now() - (anonymous.savedAt ?? 0);
+  if (!Number.isFinite(age) || age < 0 || age > ANONYMOUS_CREATE_DRAFT_TTL_MS) {
+    discardAnonymousCreateDraft();
     return false;
   }
 

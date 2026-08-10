@@ -184,8 +184,8 @@ export default function TryYourResume() {
               Create a free account and this becomes your page
             </h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-site-secondary">
-              Publishing is free and does not need a card. You will land back in the editor
-              with everything you just pasted already filled in.
+              Publishing is free and does not need a card. When you land in the editor it
+              will offer to restore what you just pasted, so nothing here is retyped.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
@@ -201,7 +201,8 @@ export default function TryYourResume() {
             </div>
             {saved ? (
               <p role="status" className="mt-3 text-xs text-site-success">
-                Saved to this browser. It will be waiting for you after you sign in.
+                Kept in this browser for the next couple of hours. The editor will offer to
+                restore it once you sign in.
               </p>
             ) : null}
           </section>

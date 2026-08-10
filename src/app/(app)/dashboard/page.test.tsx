@@ -183,15 +183,24 @@ function makeServiceRoleClient(overrides?: {
         return {
           select() {
             return {
-              in() {
+              // Reads are per page now: `.eq(page_id)` then either a windowed
+              // `.gte(...).order(...)` or a bare `.order(...).limit(1)` for the
+              // exact most recent view.
+              eq(_field: string, pageId: string) {
+                const rowsForPage = pageViews.filter(
+                  (view) => view.page_id === pageId,
+                );
                 return {
                   gte() {
                     return {
-                      order() {
-                        return {
-                          limit: vi.fn().mockResolvedValue({ data: pageViews }),
-                        };
-                      },
+                      order: vi.fn().mockResolvedValue({ data: rowsForPage }),
+                    };
+                  },
+                  order() {
+                    return {
+                      limit: vi.fn().mockResolvedValue({
+                        data: rowsForPage.slice(0, 1),
+                      }),
                     };
                   },
                 };
@@ -211,11 +220,7 @@ function makeServiceRoleClient(overrides?: {
                     return {
                       gte() {
                         return {
-                          order() {
-                            return {
-                              limit: vi.fn().mockResolvedValue({ data: events }),
-                            };
-                          },
+                          order: vi.fn().mockResolvedValue({ data: events }),
                         };
                       },
                     };

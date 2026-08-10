@@ -160,11 +160,43 @@ export type AtsIssueCategory =
 
 export type AtsIssueSeverity = "info" | "warning" | "critical";
 
+/**
+ * Per-evaluation input to the review engine. Holds one job description because
+ * one evaluation compares against one role.
+ */
 export interface AtsTargeting {
   primaryTitle: string;
   titleVariants: string[];
   jobDescription: string;
   lastExtractedKeywords: string[];
+}
+
+/**
+ * A role the owner saved to check against. Job seekers run many applications at
+ * once, so the persisted shape is a list — the single `jobDescription` above is
+ * what one comparison uses, not what the account remembers.
+ */
+export interface AtsTargetRole {
+  id: string;
+  title: string;
+  jobDescription: string;
+  savedAt: string;
+}
+
+/**
+ * What `page_config.ats` stores.
+ *
+ * Deliberately not the full `AtsReviewSnapshot`: that carries
+ * `candidateResumeData` and `approvedResumeData`, so persisting it would copy
+ * the entire résumé into page_config on every save, two or three times over,
+ * against a 256 KB ceiling. The review is deterministic and cheap to recompute
+ * from the résumé plus the active role, so only the part that cannot be
+ * recomputed — what the owner typed and chose — is stored.
+ */
+export interface AtsPersistedTargeting {
+  savedRoles: AtsTargetRole[];
+  activeRoleId: string | null;
+  lastReviewedAt: string | null;
 }
 
 export interface AtsIssue {
@@ -286,7 +318,7 @@ export interface AtsSuggestionFeedback {
 }
 
 export interface PageConfig {
-  ats?: AtsReviewSnapshot | null;
+  ats?: AtsPersistedTargeting | null;
   variants?: PageVariant[] | null;
   decision_readiness?: DecisionReadinessState | null;
   job_search_profile?: JobSeekerProfile | null;

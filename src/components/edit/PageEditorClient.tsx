@@ -26,6 +26,8 @@ import VariantPlanner from "@/components/VariantPlanner";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
+import { sanitizeAtsTargeting } from "@/lib/ats-target-roles";
+import { mergeResumePatch } from "@/lib/ats-review";
 import {
   applyPageVariant,
   buildVariantHref,
@@ -34,12 +36,18 @@ import {
 } from "@/lib/page-variants";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
-import type { PageRecord, PageVariant, ResumeData } from "@/types/resume";
+import type {
+  AtsPersistedTargeting,
+  PageRecord,
+  PageVariant,
+  ResumeData,
+} from "@/types/resume";
 
 interface EditDraft {
   data: ResumeData;
   themeId: ThemeId;
   variants?: PageVariant[];
+  atsTargeting?: AtsPersistedTargeting;
 }
 
 interface PageEditorClientProps {
@@ -79,6 +87,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
   const [variants, setVariants] = useState<PageVariant[]>([]);
   const [previewVariantId, setPreviewVariantId] = useState<string | null>(null);
+  const [atsTargeting, setAtsTargeting] = useState<AtsPersistedTargeting>(() =>
+    sanitizeAtsTargeting(null),
+  );
   const [publicSlug, setPublicSlug] = useState("");
   const [savedSnapshot, setSavedSnapshot] = useState("");
   const [mobileWorkspaceView, setMobileWorkspaceView] = useState<"edit" | "preview">("edit");
@@ -111,8 +122,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       return false;
     }
 
-    return JSON.stringify({ data, themeId, variants }) !== savedSnapshot;
-  }, [data, savedSnapshot, themeId, variants]);
+    return (
+      JSON.stringify({ data, themeId, variants, atsTargeting }) !== savedSnapshot
+    );
+  }, [atsTargeting, data, savedSnapshot, themeId, variants]);
   const readiness = useMemo(
     () => (data ? buildDecisionReadinessState(data) : null),
     [data],
@@ -179,9 +192,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
   useEffect(() => {
     latestEditorSnapshotRef.current = data
-      ? JSON.stringify({ data, themeId, variants })
+      ? JSON.stringify({ data, themeId, variants, atsTargeting })
       : "";
-  }, [data, themeId, variants]);
+  }, [atsTargeting, data, themeId, variants]);
 
   useUnsavedChanges(hasChanges);
 
@@ -264,8 +277,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       data,
       themeId,
       variants,
+      atsTargeting,
     });
-  }, [data, hasChanges, saveDraft, themeId, variants]);
+  }, [atsTargeting, data, hasChanges, saveDraft, themeId, variants]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) {
@@ -276,6 +290,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     setData(draft.data);
     setThemeId(draft.themeId);
     setVariants(sanitizePageVariants(draft.variants ?? []));
+    setAtsTargeting(sanitizeAtsTargeting(draft.atsTargeting ?? null));
     dismissDraft();
   }, [dismissDraft, pendingDraft]);
 
@@ -296,17 +311,20 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         const row = (await response.json()) as PageRecord;
         const livingData = normalizeLegacyResumeData({ ...row.resume_data });
         const storedVariants = getPageVariants(row.page_config);
+        const storedTargeting = sanitizeAtsTargeting(row.page_config?.ats ?? null);
 
         setPage(row);
         setData(livingData);
         setThemeId(row.theme_id as ThemeId);
         setVariants(storedVariants);
+        setAtsTargeting(storedTargeting);
         setPublicSlug(row.slug);
         setSavedSnapshot(
           JSON.stringify({
             data: livingData,
             themeId: row.theme_id,
             variants: storedVariants,
+            atsTargeting: storedTargeting,
           }),
         );
 
@@ -355,6 +373,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       nextData: ResumeData,
       nextThemeId = themeId,
       nextVariants = variants,
+      nextAtsTargeting = atsTargeting,
     ) => {
       if (!page || saving) {
         return false;
@@ -368,6 +387,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         data: nextData,
         themeId: nextThemeId,
         variants: nextVariants,
+        atsTargeting: nextAtsTargeting,
       });
 
       try {
@@ -380,6 +400,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           page_config: {
             ...(page.page_config ?? {}),
             variants: nextVariants,
+            ats: nextAtsTargeting,
           },
           updated_at: new Date().toISOString(),
         };
@@ -416,7 +437,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         setSaving(false);
       }
     },
-    [clearDraft, page, saving, themeId, variants],
+    [atsTargeting, clearDraft, page, saving, themeId, variants],
   );
 
   const handleSave = useCallback(async () => {
@@ -424,8 +445,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       return;
     }
 
-    await persistPage(data, themeId, variants);
-  }, [data, hasChanges, page, persistPage, saving, themeId, variants]);
+    await persistPage(data, themeId, variants, atsTargeting);
+  }, [atsTargeting, data, hasChanges, page, persistPage, saving, themeId, variants]);
 
   const handlePublished = useCallback(() => {
     setPage((prev) =>
@@ -1063,7 +1084,15 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   Review the PDF structure on its own, or paste one job description to make the word match visible.
                 </p>
               </div>
-              <AtsReadinessCard resumeData={data} showHeader={false} />
+              <AtsReadinessCard
+                resumeData={data}
+                showHeader={false}
+                targeting={atsTargeting}
+                onTargetingChange={setAtsTargeting}
+                onApplyProposal={(patch) =>
+                  setData((prev) => (prev ? mergeResumePatch(prev, patch) : prev))
+                }
+              />
               <p className="px-1 text-xs leading-5 text-site-muted">
                 The check uses the fields currently in this editor. Save your changes before relying
                 on the public PDF.

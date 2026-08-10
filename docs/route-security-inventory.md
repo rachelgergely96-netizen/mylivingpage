@@ -10,11 +10,11 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/auth/google` | `GET` | `public_read` | Auth | Low | OAuth start only, sanitized internal redirect target, no-store headers |
 | `/api/auth/track-login` | `POST` | `authenticated_user` | Auth | Low | Authenticated user session |
 | `/api/avatar` | `POST`, `DELETE` | `authenticated_user` | Profile | Medium | Authenticated user session, file validation |
+| `/api/cron/weekly-digest` | `GET` | `signed_webhook` | Notifications | Medium | `CRON_SECRET` bearer compared in constant time, per-run send cap, `last_digest_sent_at` stamped on every terminal outcome |
 | `/api/events` | `POST` | `authenticated_user` | Product Analytics | Low | Authenticated user session |
 | `/api/errors` | `POST` | `public_write` | Observability | Medium | Shared IP rate limit, bounded sanitized payload, structured server log only |
 | `/api/feedback` | `POST` | `authenticated_user` | Product | Low | Authenticated user session |
 | `/api/generate/parse` | `POST` | `authenticated_user` | Create Flow | Low | Authenticated user session, permanently disabled response, no provider call |
-| `/api/cron/weekly-digest` | `GET` | `signed_webhook` | Notifications | Medium | `CRON_SECRET` bearer compared in constant time, per-run send cap, `last_digest_sent_at` stamped on every terminal outcome |
 | `/api/legal/accept` | `POST` | `authenticated_user` | Legal/Auth | Low | Authenticated user session |
 | `/api/notifications/preferences` | `GET`, `PATCH` | `authenticated_user` | Notifications | Low | Authenticated user session, boolean-only field allowlist, `unsubscribe_token` never returned |
 | `/api/notifications/unsubscribe` | `GET`, `POST` | `public_write` | Notifications | Low | UUID-shaped bearer token as sole credential, token column revoked from browser roles, mutes only (never enables), no-store |
@@ -26,7 +26,7 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/profile` | `GET`, `PATCH` | `authenticated_user` | Profile | Medium | Authenticated user session |
 | `/api/resume/export` | `POST` | `public_read` | Public ATS Export | High | Shared rate limit (fails closed with `503` on limiter error), page-bound request, server-fetched saved page data |
 | `/api/resume/import` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit (fails closed with `503`), multipart body-size cap, file/text validation |
-| `/api/resume/readiness` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit, bounded request text, deterministic checks only, no persistence |
+| `/api/resume/readiness` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit, bounded request text, deterministic checks only, saved target roles persisted via page_config |
 | `/api/stripe/checkout` | `POST` | `authenticated_user` | Billing | Low | Authenticated user session, permanently disabled response, no checkout creation |
 | `/api/stripe/portal` | `POST` | `authenticated_user` | Billing | Medium | Authenticated user session |
 | `/api/username` | `GET`, `PATCH` | `GET public_read`, `PATCH authenticated_user` | Username/Pages | Medium | Shared rate limit on `GET`, authenticated user on `PATCH` |

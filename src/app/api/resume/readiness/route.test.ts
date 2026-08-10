@@ -253,7 +253,14 @@ describe("POST /api/resume/readiness", () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ readiness });
+    // The route now also returns the rule-based rewrites the editor can offer
+    // for acceptance; their content is ats-review's own contract.
+    const payload = (await response.json()) as {
+      readiness: unknown;
+      proposals: unknown;
+    };
+    expect(payload.readiness).toEqual(readiness);
+    expect(Array.isArray(payload.proposals)).toBe(true);
     expect(mocks.coerceResumeDataForExport).toHaveBeenCalledWith(rawResume);
     expect(mocks.checkResumeExport).toHaveBeenCalledWith(normalizedResume);
     expect(mocks.evaluateAtsReadiness).toHaveBeenCalledWith({
@@ -301,7 +308,14 @@ describe("POST /api/resume/readiness", () => {
     const response = await POST(createRequest());
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ readiness });
+    // The route now also returns the rule-based rewrites the editor can offer
+    // for acceptance; their content is ats-review's own contract.
+    const payload = (await response.json()) as {
+      readiness: unknown;
+      proposals: unknown;
+    };
+    expect(payload.readiness).toEqual(readiness);
+    expect(Array.isArray(payload.proposals)).toBe(true);
     expect(mocks.evaluateAtsReadiness).toHaveBeenCalledWith({
       data: buildResumeData(),
       exportCheck,

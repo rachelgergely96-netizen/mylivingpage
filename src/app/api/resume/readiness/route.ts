@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { evaluateAtsReadiness } from "@/lib/ats-readiness";
+import { createRuleBasedAtsReview } from "@/lib/ats-review";
 import { checkResumeExport } from "@/lib/pdf/ResumePDFDocument";
 import { coerceResumeDataForExport } from "@/lib/resume-export";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -149,7 +150,30 @@ export async function POST(request: Request) {
       ...(jobDescription ? { jobDescription } : {}),
     });
 
-    return NextResponse.json({ readiness });
+    // The rule-based review produces concrete before/after rewrites the owner
+    // can accept. It reuses the export check computed above rather than
+    // rendering the PDF a second time.
+    const review = createRuleBasedAtsReview({
+      data: normalizedData,
+      exportCheck,
+      targeting: {
+        ...(targetTitle ? { primaryTitle: targetTitle } : {}),
+        ...(jobDescription ? { jobDescription } : {}),
+      },
+    });
+
+    return NextResponse.json({
+      readiness,
+      proposals: review.proposals.map((proposal) => ({
+        id: proposal.id,
+        group: proposal.group,
+        title: proposal.title,
+        reason: proposal.reason,
+        beforeText: proposal.beforeText,
+        afterText: proposal.afterText,
+        applyData: proposal.applyData,
+      })),
+    });
   } catch {
     return NextResponse.json(
       { error: "Unable to check ATS readiness." },

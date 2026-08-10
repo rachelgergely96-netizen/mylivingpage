@@ -6,12 +6,42 @@ import {
   type AtsReadinessCheck,
   type AtsReadinessResult,
 } from "@/lib/ats-readiness";
-import type { ResumeData } from "@/types/resume";
+import {
+  createTargetRole,
+  getActiveTargetRole,
+  removeTargetRole,
+  selectTargetRole,
+  upsertTargetRole,
+  MAX_SAVED_TARGET_ROLES,
+} from "@/lib/ats-target-roles";
+import type {
+  AtsPersistedTargeting,
+  AtsTargetRole,
+  ResumeData,
+} from "@/types/resume";
+
+export interface AtsProposal {
+  id: string;
+  group: string;
+  title: string;
+  reason: string;
+  beforeText: string;
+  afterText: string;
+  applyData: Partial<ResumeData>;
+}
 
 interface AtsReadinessCardProps {
   resumeData: ResumeData;
   /** Hide the card's standalone header when a surrounding section already introduces it. */
   showHeader?: boolean;
+  /**
+   * Saved target roles. Supplied by the editor, which persists them; omitted in
+   * the create flow, where the card stays a one-off check.
+   */
+  targeting?: AtsPersistedTargeting;
+  onTargetingChange?: (targeting: AtsPersistedTargeting) => void;
+  /** Applies an accepted rewrite to the résumé being edited. */
+  onApplyProposal?: (patch: Partial<ResumeData>) => void;
 }
 
 interface CompletedCheck {
@@ -263,13 +293,22 @@ function JobComparisonResult({
 export default function AtsReadinessCard({
   resumeData,
   showHeader = true,
+  targeting,
+  onTargetingChange,
+  onApplyProposal,
 }: AtsReadinessCardProps) {
-  const [targetTitle, setTargetTitle] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  const activeRole = targeting ? getActiveTargetRole(targeting) : null;
+  const [targetTitle, setTargetTitle] = useState(activeRole?.title ?? "");
+  const [jobDescription, setJobDescription] = useState(
+    activeRole?.jobDescription ?? "",
+  );
   const [completedCheck, setCompletedCheck] = useState<CompletedCheck | null>(null);
+  const [proposals, setProposals] = useState<AtsProposal[]>([]);
+  const [dismissedProposalIds, setDismissedProposalIds] = useState<string[]>([]);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLDivElement | null>(null);
+  const rolesSupported = Boolean(targeting && onTargetingChange);
 
   const fingerprint = useMemo(
     () => buildAtsReadinessFingerprint(resumeData),
@@ -301,6 +340,7 @@ export default function AtsReadinessCard({
     setChecking(true);
     setError("");
     setCompletedCheck(null);
+    setProposals([]);
 
     try {
       const response = await fetch("/api/resume/readiness", {
@@ -315,6 +355,7 @@ export default function AtsReadinessCard({
       const body = (await response.json().catch(() => null)) as {
         error?: string;
         readiness?: AtsReadinessResult;
+        proposals?: AtsProposal[];
       } | null;
 
       if (!response.ok || !body?.readiness) {
@@ -336,6 +377,12 @@ export default function AtsReadinessCard({
         fingerprint: requestedFingerprint,
         readiness: body.readiness,
       });
+      setProposals(Array.isArray(body.proposals) ? body.proposals : []);
+      setDismissedProposalIds([]);
+
+      if (targeting && onTargetingChange) {
+        onTargetingChange({ ...targeting, lastReviewedAt: new Date().toISOString() });
+      }
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -346,6 +393,50 @@ export default function AtsReadinessCard({
       setChecking(false);
     }
   };
+
+  const applyRole = (role: AtsTargetRole | null) => {
+    if (!targeting || !onTargetingChange) return;
+    onTargetingChange(selectTargetRole(targeting, role?.id ?? null));
+    setTargetTitle(role?.title ?? "");
+    setJobDescription(role?.jobDescription ?? "");
+  };
+
+  const saveCurrentRole = () => {
+    if (!targeting || !onTargetingChange) return;
+
+    const title = targetTitle.trim();
+    const description = jobDescription.trim();
+    if (!title && !description) return;
+
+    // Editing while a saved role is selected updates that role rather than
+    // stacking a near-duplicate beside it.
+    const existing = getActiveTargetRole(targeting);
+    const role = existing
+      ? { ...existing, title: title || existing.title, jobDescription: description }
+      : createTargetRole({ title: title || "Saved role", jobDescription: description });
+
+    onTargetingChange(upsertTargetRole(targeting, role));
+  };
+
+  const deleteRole = (roleId: string) => {
+    if (!targeting || !onTargetingChange) return;
+    const next = removeTargetRole(targeting, roleId);
+    onTargetingChange(next);
+    if (targeting.activeRoleId === roleId) {
+      const fallback = getActiveTargetRole(next);
+      setTargetTitle(fallback?.title ?? "");
+      setJobDescription(fallback?.jobDescription ?? "");
+    }
+  };
+
+  const visibleProposals = proposals.filter(
+    (proposal) => !dismissedProposalIds.includes(proposal.id),
+  );
+  const canSaveRole =
+    rolesSupported &&
+    Boolean(targetTitle.trim() || jobDescription.trim()) &&
+    (targeting!.savedRoles.length < MAX_SAVED_TARGET_ROLES ||
+      Boolean(getActiveTargetRole(targeting!)));
 
   const statusContent = readiness ? STATUS_CONTENT[readiness.status] : null;
   const generalImprovements = readiness?.improvements.filter(
@@ -432,6 +523,69 @@ export default function AtsReadinessCard({
             </span>
           </div>
 
+          {rolesSupported ? (
+            <div className="mt-5 border-t border-site-border pt-4">
+              <p className="site-eyebrow">Saved roles</p>
+              <p className="mt-1.5 text-xs leading-5 text-site-muted">
+                Keep the roles you are applying for and check the same résumé against each
+                one, without pasting the posting again.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyRole(null)}
+                  aria-pressed={targeting!.activeRoleId === null}
+                  className={`site-button px-3 py-1.5 text-xs ${
+                    targeting!.activeRoleId === null
+                      ? "border-site-action bg-site-selected text-site-text"
+                      : "site-button-secondary"
+                  }`}
+                >
+                  General check
+                </button>
+                {targeting!.savedRoles.map((role) => {
+                  const active = targeting!.activeRoleId === role.id;
+                  return (
+                    <span
+                      key={role.id}
+                      className={`inline-flex items-center border text-xs ${
+                        active
+                          ? "border-site-action bg-site-selected"
+                          : "border-site-border bg-site-canvas-alt"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => applyRole(role)}
+                        aria-pressed={active}
+                        className="max-w-48 truncate px-3 py-1.5 text-site-text"
+                      >
+                        {role.title || "Saved role"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteRole(role.id)}
+                        aria-label={`Remove saved role ${role.title || "Saved role"}`}
+                        className="border-l border-site-border px-2 py-1.5 text-site-muted transition-colors hover:text-site-danger"
+                      >
+                        <svg
+                          className="h-3 w-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-5 grid gap-4">
             <label className="grid gap-2 text-sm font-semibold text-site-secondary">
               <span className="flex items-baseline justify-between gap-3">
@@ -464,8 +618,9 @@ export default function AtsReadinessCard({
             </label>
             <div className="flex flex-col gap-2 border-l-2 border-site-action px-3 sm:flex-row sm:items-start sm:justify-between">
               <p id="ats-job-description-help" className="text-xs leading-5 text-site-secondary">
-                Used only for this check and not stored. The comparison looks for exact terms;
-                it does not send your résumé or the posting to an AI service.
+                {rolesSupported
+                  ? "Saved roles are stored with your page so you do not have to paste the posting again. The comparison looks for exact terms; it does not send your résumé or the posting to an AI service."
+                  : "Used only for this check and not stored. The comparison looks for exact terms; it does not send your résumé or the posting to an AI service."}
               </p>
               <p
                 id="ats-job-description-count"
@@ -482,6 +637,16 @@ export default function AtsReadinessCard({
                 ? "The result will separate your overall ATS readiness from the job-word comparison."
                 : "You are running the general résumé structure and PDF check."}
             </p>
+            {rolesSupported ? (
+              <button
+                type="button"
+                disabled={!canSaveRole}
+                onClick={saveCurrentRole}
+                className="site-button site-button-secondary disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
+              >
+                {getActiveTargetRole(targeting!) ? "Update saved role" : "Save this role"}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={checking}
@@ -557,6 +722,70 @@ export default function AtsReadinessCard({
           }`}
           data-ats-readiness-results
         >
+          {onApplyProposal && visibleProposals.length > 0 && resultIsCurrent ? (
+            <section
+              aria-labelledby="ats-proposals-title"
+              data-ats-proposals
+              className="border border-site-action bg-[color-mix(in_srgb,var(--site-action)_6%,var(--site-surface))] p-4 sm:p-5"
+            >
+              <p className="site-eyebrow">Suggested rewrites</p>
+              <h4 id="ats-proposals-title" className="site-panel-title mt-2">
+                {visibleProposals.length} change{visibleProposals.length === 1 ? "" : "s"} you
+                can accept
+              </h4>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-site-secondary">
+                Each one edits the fields in this editor. Accepting is not saving — review the
+                result and save when you are happy with it.
+              </p>
+              <ul className="mt-4 space-y-3">
+                {visibleProposals.map((proposal) => (
+                  <li
+                    key={proposal.id}
+                    className="border border-site-border bg-site-surface p-4"
+                  >
+                    <p className="text-sm font-semibold text-site-text">{proposal.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-site-muted">{proposal.reason}</p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className="border-l-2 border-site-border bg-site-canvas-alt p-3">
+                        <p className="site-eyebrow text-site-muted">Now</p>
+                        <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-5 text-site-secondary">
+                          {proposal.beforeText || "—"}
+                        </p>
+                      </div>
+                      <div className="border-l-2 border-site-action bg-site-canvas-alt p-3">
+                        <p className="site-eyebrow text-site-action-hover">After</p>
+                        <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-5 text-site-text">
+                          {proposal.afterText || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApplyProposal(proposal.applyData);
+                          setDismissedProposalIds((ids) => [...ids, proposal.id]);
+                        }}
+                        className="site-button site-button-primary px-3 py-1.5 text-xs"
+                      >
+                        Accept this change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDismissedProposalIds((ids) => [...ids, proposal.id])
+                        }
+                        className="site-button site-button-secondary px-3 py-1.5 text-xs"
+                      >
+                        Not this one
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           <div
             role="status"
             aria-live="polite"

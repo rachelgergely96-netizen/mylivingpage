@@ -55,6 +55,13 @@ interface PageEditorClientProps {
   pageId: string;
 }
 
+/**
+ * Quiet period before an edit is persisted. Long enough that typing a sentence
+ * is one save rather than several, short enough that closing the laptop mid-
+ * thought does not cost the paragraph.
+ */
+const AUTOSAVE_DELAY_MS = 2500;
+
 function normalizeLegacyResumeData(data: ResumeData) {
   const next = { ...data };
 
@@ -108,6 +115,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   // a ref keeps the copy handler stable without going stale.
   const livePathRef = useRef("/");
   const latestEditorSnapshotRef = useRef("");
+  // The last snapshot autosave tried to persist, successfully or not. Retrying
+  // only once the content changes again is what stops a failing save from
+  // looping against the server every few seconds.
+  const lastAutosaveAttemptRef = useRef<string | null>(null);
+  const autosaveTimerRef = useRef<number | null>(null);
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({
       plan: "spark",
@@ -209,6 +221,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       }
       if (variantCopyTimerRef.current !== null) {
         window.clearTimeout(variantCopyTimerRef.current);
+      }
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current);
       }
     },
     [],
@@ -375,6 +390,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       nextThemeId = themeId,
       nextVariants = variants,
       nextAtsTargeting = atsTargeting,
+      options?: { auto?: boolean },
     ) => {
       if (!page || saving) {
         return false;
@@ -421,7 +437,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
           clearDraft();
         }
         setSuccess(
-          hasNewerEdits ? "Saved. Newer edits are still unsaved." : "Saved.",
+          hasNewerEdits
+            ? "Saved. Newer edits are still unsaved."
+            : options?.auto
+              ? "Saved automatically."
+              : "Saved.",
         );
         if (successTimerRef.current !== null) {
           window.clearTimeout(successTimerRef.current);
@@ -446,8 +466,55 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       return;
     }
 
+    if (autosaveTimerRef.current !== null) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    lastAutosaveAttemptRef.current = null;
+
     await persistPage(data, themeId, variants, atsTargeting);
   }, [atsTargeting, data, hasChanges, page, persistPage, saving, themeId, variants]);
+
+  // Autosave. The editor is thirteen sections long and previously only ever
+  // saved on an explicit click, so work survived a refresh on the same browser
+  // (via the local draft) and nothing else.
+  useEffect(() => {
+    if (!editorReady || !hasChanges || saving || !data || !page) {
+      return;
+    }
+
+    const snapshot = JSON.stringify({ data, themeId, variants, atsTargeting });
+    if (lastAutosaveAttemptRef.current === snapshot) {
+      return;
+    }
+
+    if (autosaveTimerRef.current !== null) {
+      window.clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      autosaveTimerRef.current = null;
+      lastAutosaveAttemptRef.current = snapshot;
+      void persistPage(data, themeId, variants, atsTargeting, { auto: true });
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => {
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    atsTargeting,
+    data,
+    editorReady,
+    hasChanges,
+    page,
+    persistPage,
+    saving,
+    themeId,
+    variants,
+  ]);
 
   const handlePublished = useCallback(() => {
     setPage((prev) =>
@@ -666,7 +733,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                         : "bg-site-success"
                   }`}
                 />
-                {saving ? "Saving changes" : hasChanges ? "Unsaved changes" : "All changes saved"}
+                {saving
+                  ? "Saving changes"
+                  : hasChanges
+                    ? "Saving shortly…"
+                    : "All changes saved"}
               </span>
               {isDraft ? (
                 <span className="inline-flex items-center border border-site-border px-2.5 py-1 text-xs font-medium text-site-secondary">
@@ -742,7 +813,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                     id="editor-copy-guidance"
                     className="col-span-2 text-xs leading-5 text-site-muted lg:basis-full lg:text-right"
                   >
-                    Save your changes to copy the live link.
+                    Your changes are saving now — the live link follows in a moment.
                   </p>
                 ) : (
                   <p id="editor-copy-guidance" className="sr-only">
@@ -852,7 +923,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               </h2>
             </div>
             <p className="hidden max-w-xs text-right text-xs leading-5 text-site-muted sm:block">
-              Every edit appears in the preview before it reaches your live page.
+              Every edit appears in the preview, and saves on its own a moment later.
             </p>
           </div>
 

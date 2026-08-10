@@ -220,7 +220,7 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   expect(previewBox!.x).toBeGreaterThan(contentBox!.x + contentBox!.width);
 
   await headline.fill("Principal Platform Engineer");
-  await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Saving shortly…", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeDisabled();
   await expect(page.locator("[data-editor-preview-status]")).toHaveText("Unsaved view");
   await expect(preview.getByText("Principal Platform Engineer", { exact: true })).toBeVisible();
@@ -262,7 +262,26 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
     page.getByText("Saved. Newer edits are still unsaved.", { exact: true }),
   ).toBeVisible();
   await expect(headline).toHaveValue("Distinguished Platform Engineer");
-  await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Saving shortly…", { exact: true })).toBeVisible();
+});
+
+test("the editor saves on its own after edits stop", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/dev/editor-preview");
+
+  const headline = page.getByLabel("Headline");
+  await expect(headline).toBeVisible();
+
+  await headline.fill("Autosaved Platform Engineer");
+  await expect(page.getByText("Saving shortly…", { exact: true })).toBeVisible();
+
+  // No save is clicked. The debounce alone must carry the edit to the server
+  // and settle the status back to clean.
+  await expect(page.getByText("Saved automatically.", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText("All changes saved", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-editor-preview-status]")).toHaveText("Live signal");
 });
 
 test("mobile editor switches cleanly between editing and preview", async ({ page }) => {

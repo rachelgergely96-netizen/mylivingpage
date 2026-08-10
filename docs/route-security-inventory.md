@@ -14,7 +14,10 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/errors` | `POST` | `public_write` | Observability | Medium | Shared IP rate limit, bounded sanitized payload, structured server log only |
 | `/api/feedback` | `POST` | `authenticated_user` | Product | Low | Authenticated user session |
 | `/api/generate/parse` | `POST` | `authenticated_user` | Create Flow | Low | Authenticated user session, permanently disabled response, no provider call |
+| `/api/cron/weekly-digest` | `GET` | `signed_webhook` | Notifications | Medium | `CRON_SECRET` bearer compared in constant time, per-run send cap, `last_digest_sent_at` stamped on every terminal outcome |
 | `/api/legal/accept` | `POST` | `authenticated_user` | Legal/Auth | Low | Authenticated user session |
+| `/api/notifications/preferences` | `GET`, `PATCH` | `authenticated_user` | Notifications | Low | Authenticated user session, boolean-only field allowlist, `unsubscribe_token` never returned |
+| `/api/notifications/unsubscribe` | `GET`, `POST` | `public_write` | Notifications | Low | UUID-shaped bearer token as sole credential, token column revoked from browser roles, mutes only (never enables), no-store |
 | `/api/pages/[pageId]` | `GET`, `PATCH`, `DELETE` | `authenticated_user` | Pages | High | Authenticated user session, page ownership check |
 | `/api/pages/[pageId]/proof` | `GET` | `authenticated_user` | Pages | Medium | Authenticated user session, page ownership check, service-role read scoped to owned page |
 | `/api/pages/engagement` | `POST` | `public_write` | Public Analytics | Medium | Shared rate limit, normalized payload, existing page-view check |

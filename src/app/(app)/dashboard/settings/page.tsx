@@ -8,6 +8,7 @@ import {
   getAccountAccessState,
   type AccountAccessState,
 } from "@/lib/account-access";
+import NotificationSettings from "@/components/dashboard/NotificationSettings";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -788,6 +789,8 @@ export default function SettingsPage() {
           </form>
         </section>
       )}
+
+      <NotificationSettings />
 
       {/* Universal free access with transitional subscription management. */}
       <section className="site-panel mb-5 p-5 sm:p-7">

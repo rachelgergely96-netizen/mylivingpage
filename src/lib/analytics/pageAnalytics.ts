@@ -440,7 +440,7 @@ function buildMetric(
   };
 }
 
-function parseReferrerLabel(referrer: string | null) {
+export function parseReferrerLabel(referrer: string | null) {
   if (!referrer) {
     return "Direct";
   }

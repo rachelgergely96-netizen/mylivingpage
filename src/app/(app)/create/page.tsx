@@ -918,7 +918,8 @@ export default function CreatePage() {
                 <p role="status" className="sr-only">Link copied to clipboard.</p>
               ) : null}
               <p className="mt-3 text-sm leading-6 text-site-secondary">
-                When someone opens this, you&apos;ll know.
+                When someone reads this, we&apos;ll email you — once per person, and only
+                once they actually read it.
               </p>
             </div>
 

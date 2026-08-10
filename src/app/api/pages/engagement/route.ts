@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { normalizeEngagementPayload } from "@/lib/analytics/publicTracking";
+import { dispatchViewNotification } from "@/lib/notifications/dispatch";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
@@ -122,6 +123,12 @@ export async function POST(request: Request) {
         throw new Error(insertError.message);
       }
     }
+
+    // Notifications are decided here rather than at view-insert time: dwell is
+    // what separates a person from a headless link scanner, and dwell only
+    // exists once engagement reports. Awaited so the serverless invocation is
+    // not frozen mid-send, but never allowed to fail the beacon.
+    await dispatchViewNotification(supabase, payload.pageViewId).catch(() => undefined);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

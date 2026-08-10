@@ -17,6 +17,7 @@ import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
+import { claimAnonymousCreateDraft } from "@/lib/anonymous-draft";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import {
   buildStarterVariant,
@@ -146,6 +147,16 @@ export default function CreatePage() {
     searchParams.get("source") === "publish";
 
   const createDraftKey = currentUserId ? `mlp-draft-create-${currentUserId}` : null;
+  // Work pasted on /try before signing up lives under an anonymous key. Claim it
+  // onto this account's key before useLocalDraft reads, so it surfaces as an
+  // ordinary restorable draft. Runs during render rather than in an effect
+  // because the hook loads from storage on the same commit the key appears.
+  const claimedAnonymousDraftRef = useRef(false);
+  if (createDraftKey && !claimedAnonymousDraftRef.current) {
+    claimedAnonymousDraftRef.current = true;
+    claimAnonymousCreateDraft<CreateDraft>(createDraftKey);
+  }
+
   const { pendingDraft, hydrated: draftHydrated, saveDraft, clearDraft, dismissDraft } =
     useLocalDraft<CreateDraft>(createDraftKey);
 

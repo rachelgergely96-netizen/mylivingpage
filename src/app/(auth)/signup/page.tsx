@@ -327,6 +327,15 @@ export default function SignupPage() {
             Sign in
           </Link>
         </p>
+        <p className="mt-2 text-sm text-site-secondary">
+          Want to see it first?{" "}
+          <Link
+            href="/try"
+            className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
+          >
+            Paste your résumé and look at the page
+          </Link>
+        </p>
       </div>
     </main>
   );

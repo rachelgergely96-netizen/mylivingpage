@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import ContactOwnerButton from "@/components/ContactOwnerButton";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
 import ShareCardDownload from "@/components/ShareCardDownload";
 import type { ResumeData } from "@/types/resume";
@@ -79,6 +80,14 @@ export default function PublicPageActionDock({
             </button>
           </div>
         ) : null}
+
+        {/* The owner already has their own address; only a visitor needs this. */}
+        {isOwner ? null : (
+          <ContactOwnerButton
+            resumeData={resumeData}
+            className="w-full justify-center shadow-[var(--site-shadow-raised)]"
+          />
+        )}
 
         <DownloadResumeButton
           data={resumeData}

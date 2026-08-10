@@ -47,14 +47,13 @@ export async function GET(request: Request) {
 
   const now = new Date();
   const supabase = createServiceRoleSupabaseClient();
+  const eligibilityCutoff = digestEligibilityCutoff(now).toISOString();
 
   const { data: candidates, error: candidatesError } = await supabase
     .from("notification_preferences")
     .select("user_id, unsubscribe_token, last_digest_sent_at")
     .eq("weekly_digest_email", true)
-    .or(
-      `last_digest_sent_at.is.null,last_digest_sent_at.lt.${digestEligibilityCutoff(now).toISOString()}`,
-    )
+    .or(`last_digest_sent_at.is.null,last_digest_sent_at.lt.${eligibilityCutoff}`)
     .limit(MAX_DIGESTS_PER_RUN);
 
   if (candidatesError) {
@@ -70,6 +69,23 @@ export async function GET(request: Request) {
 
   for (const candidate of candidates ?? []) {
     try {
+      // Claim before sending. A retried or overlapping cron run would otherwise
+      // re-select the same recipients and mail them twice; the conditional
+      // update lets exactly one run win each recipient.
+      const { data: claimed } = await supabase
+        .from("notification_preferences")
+        .update({ last_digest_sent_at: now.toISOString() })
+        .eq("user_id", candidate.user_id)
+        .or(
+          `last_digest_sent_at.is.null,last_digest_sent_at.lt.${eligibilityCutoff}`,
+        )
+        .select("user_id");
+
+      if (!claimed || claimed.length === 0) {
+        skipped += 1;
+        continue;
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("email, full_name, username")
@@ -125,13 +141,9 @@ export async function GET(request: Request) {
         unsubscribeUrl,
       });
 
-      // Stamp on any terminal outcome so a provider outage cannot turn the next
-      // run into a retry storm against the same recipients.
-      await supabase
-        .from("notification_preferences")
-        .update({ last_digest_sent_at: now.toISOString() })
-        .eq("user_id", candidate.user_id);
-
+      // The claim above already stamped `last_digest_sent_at`, so a provider
+      // outage costs one skipped weekly digest rather than a retry storm
+      // against the same recipients on the next run.
       if (result.status === "sent") {
         sent += 1;
       } else {

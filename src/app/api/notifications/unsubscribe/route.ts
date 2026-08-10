@@ -38,22 +38,12 @@ async function muteAllEmails(token: string): Promise<boolean> {
   }
 }
 
-function resultPage(ok: boolean): Response {
-  const settingsUrl = absoluteUrl("/dashboard/settings#notifications");
-  const body = ok
-    ? `<h1>You're unsubscribed</h1>
-       <p>You won't get page-view emails from MyLivingPage anymore.</p>
-       <p>Your page and its analytics are untouched — you can still see every view in your dashboard, and turn individual emails back on whenever you want.</p>
-       <p><a href="${settingsUrl}">Notification settings</a></p>`
-    : `<h1>That link didn't work</h1>
-       <p>This unsubscribe link is no longer valid. You can change every email setting directly in your dashboard.</p>
-       <p><a href="${settingsUrl}">Notification settings</a></p>`;
-
+function htmlPage(title: string, body: string, status: number): Response {
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8" />
      <meta name="viewport" content="width=device-width,initial-scale=1" />
      <meta name="robots" content="noindex" />
-     <title>${ok ? "Unsubscribed" : "Link expired"} · MyLivingPage</title>
+     <title>${title} · MyLivingPage</title>
      <style>
        body{margin:0;padding:48px 24px;background:#f6f6f4;color:#1a1a1a;
             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
@@ -61,9 +51,11 @@ function resultPage(ok: boolean): Response {
        h1{font-size:1.4rem;margin:0 0 16px;}
        p{font-size:0.95rem;line-height:1.65;margin:0 0 12px;color:#4a4a45;}
        a{color:#1a1a1a;}
+       button{margin-top:8px;background:#1a1a1a;color:#fff;border:0;padding:11px 18px;
+              font-size:0.9rem;font-weight:600;cursor:pointer;}
      </style></head><body><main>${body}</main></body></html>`,
     {
-      status: ok ? 200 : 400,
+      status,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store",
@@ -72,15 +64,69 @@ function resultPage(ok: boolean): Response {
   );
 }
 
+function settingsLink() {
+  return absoluteUrl("/dashboard/settings#notifications");
+}
+
+/**
+ * GET only *offers* to unsubscribe; it never mutates.
+ *
+ * The same corporate link scanners this feature exists to ignore on the view
+ * path also prefetch links in email bodies. A GET that muted on sight would let
+ * them silently unsubscribe owners who never clicked anything.
+ */
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get("token") ?? "";
-  return resultPage(await muteAllEmails(token));
+
+  if (!UUID_PATTERN.test(token)) {
+    return htmlPage(
+      "Link expired",
+      `<h1>That link didn't work</h1>
+       <p>This unsubscribe link is no longer valid. You can change every email setting directly in your dashboard.</p>
+       <p><a href="${settingsLink()}">Notification settings</a></p>`,
+      400,
+    );
+  }
+
+  const action = `/api/notifications/unsubscribe?token=${encodeURIComponent(token)}`;
+  return htmlPage(
+    "Unsubscribe",
+    `<h1>Turn off page-view emails?</h1>
+     <p>You'll stop getting emails when someone opens your page, when someone comes back, and the weekly summary.</p>
+     <p>Your page and its analytics are untouched — every view stays visible in your dashboard.</p>
+     <form method="post" action="${action}">
+       <button type="submit">Turn off these emails</button>
+     </form>
+     <p style="margin-top:20px;"><a href="${settingsLink()}">Choose individually instead</a></p>`,
+    200,
+  );
 }
 
 export async function POST(request: Request) {
   const token = new URL(request.url).searchParams.get("token") ?? "";
   const ok = await muteAllEmails(token);
 
-  // One-click clients do not render a body; they only read the status.
-  return NextResponse.json({ ok }, { status: ok ? 200 : 400 });
+  // RFC 8058 one-click clients read only the status code; a person arriving via
+  // the confirmation form above needs the page.
+  const wantsHtml = (request.headers.get("accept") ?? "").includes("text/html");
+  if (!wantsHtml) {
+    return NextResponse.json({ ok }, { status: ok ? 200 : 400 });
+  }
+
+  return ok
+    ? htmlPage(
+        "Unsubscribed",
+        `<h1>You're unsubscribed</h1>
+         <p>You won't get page-view emails from MyLivingPage anymore.</p>
+         <p>Your page and its analytics are untouched — you can turn individual emails back on whenever you want.</p>
+         <p><a href="${settingsLink()}">Notification settings</a></p>`,
+        200,
+      )
+    : htmlPage(
+        "Link expired",
+        `<h1>That link didn't work</h1>
+         <p>This unsubscribe link is no longer valid. You can change every email setting directly in your dashboard.</p>
+         <p><a href="${settingsLink()}">Notification settings</a></p>`,
+        400,
+      );
 }

@@ -40,6 +40,8 @@ export async function fetchLivingPageSitemapEntries(): Promise<
       .from("pages")
       .select("owner_id, user_id, updated_at")
       .eq("status", "live")
+      // Load-bearing for the "link only" state: those pages are live and
+      // reachable but must never be offered to search engines.
       .or("visibility.eq.public,visibility.is.null");
 
     if (pagesError || !pages?.length) {

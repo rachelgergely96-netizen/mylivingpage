@@ -15,6 +15,7 @@ import ViewTracker from "@/components/ViewTracker";
 import { getAccountAccessState } from "@/lib/account-access";
 import { isPubliclyAvailablePage } from "@/lib/hosting-state";
 import { getLivingPageSectionIds } from "@/lib/living-page-sections";
+import { isPubliclyReachablePage, isSearchIndexablePage } from "@/lib/page-visibility";
 import {
   applyPageVariant,
   buildRecruiterSkimModel,
@@ -46,6 +47,17 @@ interface PublicPageProps {
   searchParams: Promise<{ v?: string; s?: string; sl?: string }>;
 }
 
+/**
+ * The "this page is offline" state, for a URL that is legitimately reserved.
+ *
+ * This used to be gated on `publicHostingAllowed` — i.e. on a lapsed
+ * subscription — which every access path now grants unconditionally, so the
+ * screen had become unreachable. It is now driven by the owner's own
+ * visibility choice, which is what the copy always described.
+ *
+ * A username with no page, or a page that was never published, still 404s:
+ * only a URL its owner deliberately took down earns the offline screen.
+ */
 async function fetchOfflinePageContext(
   username: string,
   supabase: ReturnType<typeof createServiceRoleSupabaseClient>,
@@ -66,27 +78,15 @@ async function fetchOfflinePageContext(
     return null;
   }
 
-  const access = getAccountAccessState({
-    plan: profile.plan ?? null,
-    billing_cohort: profile.billing_cohort ?? null,
-    hosting_trial_started_at: profile.hosting_trial_started_at ?? null,
-    stripe_subscription_status: profile.stripe_subscription_status ?? null,
-    stripe_trial_ends_at: profile.stripe_trial_ends_at ?? null,
-  });
-
-  if (access.publicHostingAllowed) {
-    return null;
-  }
-
   const { data: page } = await supabase
     .from("pages")
-    .select("id, resume_data, published_at, user_id, owner_id")
+    .select("id, resume_data, published_at, status, visibility, user_id, owner_id")
     .or(`owner_id.eq.${profile.id},user_id.eq.${profile.id}`)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!page || !page.published_at) {
+  if (!page || !page.published_at || isPubliclyReachablePage(page)) {
     return null;
   }
 
@@ -98,7 +98,6 @@ async function fetchOfflinePageContext(
       user_id?: string | null;
       owner_id?: string | null;
     },
-    access,
     ownerId: profile.id,
   };
 }
@@ -127,12 +126,18 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
   const description = resume.summary || `${resume.name}'s professional profile on ${SITE_NAME}.`;
   const url = absoluteUrl(`/${username}`);
 
+  // "Link only" pages stay openable but ask search engines to stand down. The
+  // sitemap already withholds them; this covers the crawler that finds the URL
+  // some other way.
+  const indexable = isSearchIndexablePage(page);
+
   return {
     title: pageTitle,
     description,
     alternates: {
       canonical: url,
     },
+    ...(indexable ? {} : { robots: { index: false, follow: false } }),
     openGraph: {
       title,
       description,
@@ -184,13 +189,13 @@ export default async function PublicLivingPage({
           </h1>
           {isOfflineOwner ? (
             <p className="site-muted mt-4 text-base leading-7">
-              Your link was live before and can be reactivated anytime. Turn hosting back on
-              from your settings when you are ready to share it again.
+              You set this page to offline. Everything you wrote is still here — put it back
+              online from your settings whenever you are ready to share it again.
             </p>
           ) : (
             <p className="site-muted mt-4 text-base leading-7">
-              {pageName}&rsquo;s link was live before and can be reactivated anytime. The owner
-              can turn hosting back on from their MyLivingPage settings.
+              {pageName}&rsquo;s link was live before and can come back anytime. Only they can
+              put it back online.
             </p>
           )}
           <div className="site-callout mt-6 p-4 text-sm leading-6">
@@ -198,8 +203,11 @@ export default async function PublicLivingPage({
           </div>
           <div className="mt-8">
             {isOfflineOwner ? (
-              <Link href="/dashboard/settings" className="site-button site-button-primary">
-                Turn hosting back on
+              <Link
+                href="/dashboard/settings#visibility"
+                className="site-button site-button-primary"
+              >
+                Put your page back online
               </Link>
             ) : (
               <Link href="/" className="site-nav-link gap-1.5">
@@ -248,14 +256,18 @@ export default async function PublicLivingPage({
   return (
     <main className="min-h-screen">
       {/* Structured data always describes the canonical, unfiltered page —
-          variants filter the visible layout but not the person's identity. */}
-      <JsonLd
-        data={buildLivingPageJsonLd({
-          page,
-          resume: page.resume_data,
-          url: absoluteUrl(`/${username}`),
-        })}
-      />
+          variants filter the visible layout but not the person's identity.
+          Withheld entirely on "link only" pages: publishing a machine-readable
+          Person record is the opposite of what that state is asking for. */}
+      {isSearchIndexablePage(page) ? (
+        <JsonLd
+          data={buildLivingPageJsonLd({
+            page,
+            resume: page.resume_data,
+            url: absoluteUrl(`/${username}`),
+          })}
+        />
+      ) : null}
       <ViewTracker
         pageId={page.id}
         variantId={selectedVariant?.id ?? null}

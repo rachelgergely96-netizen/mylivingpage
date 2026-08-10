@@ -4,6 +4,7 @@ import {
   type AccountAccessInput,
   type AccountAccessState,
 } from "@/lib/account-access";
+import { isPubliclyReachablePage } from "@/lib/page-visibility";
 
 interface HostingManagedPage {
   id: string;
@@ -13,17 +14,18 @@ interface HostingManagedPage {
   visibility?: string | null;
 }
 
+/**
+ * Reachable at its public URL. "Link only" counts: it is live and openable,
+ * it is simply not offered to search engines. See `page-visibility.ts` for the
+ * indexability question, which is now separate.
+ */
 export function isPubliclyAvailablePage(
   page:
     | Pick<HostingManagedPage, "status" | "visibility">
     | null
     | undefined,
 ) {
-  return Boolean(
-    page &&
-      page.status === "live" &&
-      (page.visibility === "public" || page.visibility == null),
-  );
+  return isPubliclyReachablePage(page);
 }
 
 export async function syncPageHostingState<

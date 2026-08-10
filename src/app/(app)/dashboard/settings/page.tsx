@@ -9,7 +9,12 @@ import {
   type AccountAccessState,
 } from "@/lib/account-access";
 import NotificationSettings from "@/components/dashboard/NotificationSettings";
+import PageVisibilityControl from "@/components/dashboard/PageVisibilityControl";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
+import {
+  getPageVisibilityState,
+  isPubliclyReachablePage,
+} from "@/lib/page-visibility";
 import { PRO_PLAN_PRICE, STARTER_PLAN_PRICE } from "@/lib/billing";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { normalizeUsernameSlug, validateUsernameSlug } from "@/lib/usernames";
@@ -51,21 +56,9 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-function isLivePublicPage(
-  page:
-    | {
-        status: string | null;
-        visibility: string | null;
-      }
-    | null
-    | undefined,
-) {
-  return Boolean(
-    page &&
-      (page.visibility === "public" ||
-        (page.visibility == null && page.status === "live")),
-  );
-}
+// Live means reachable at its URL. "Link only" is live; it is simply withheld
+// from search engines. See lib/page-visibility.ts.
+const isLivePublicPage = isPubliclyReachablePage;
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -789,6 +782,14 @@ export default function SettingsPage() {
           </form>
         </section>
       )}
+
+      {profile.latestPage ? (
+        <PageVisibilityControl
+          pageId={profile.latestPage.id}
+          slug={profile.username}
+          initialState={getPageVisibilityState(profile.latestPage)}
+        />
+      ) : null}
 
       <NotificationSettings />
 

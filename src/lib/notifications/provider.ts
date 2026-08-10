@@ -15,6 +15,13 @@ import { SITE_NAME } from "@/lib/site";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const DEFAULT_FROM = `${SITE_NAME} <notifications@mylivingpage.com>`;
 
+/**
+ * Dispatch is awaited inside `/api/pages/engagement`, so a hung provider would
+ * hold a public beacon's serverless invocation open. Fail fast instead; the
+ * caller releases its claim and a later beacon retries.
+ */
+const SEND_TIMEOUT_MS = 5000;
+
 export type EmailDeliveryStatus = "sent" | "skipped" | "failed";
 
 export interface EmailDeliveryResult {
@@ -73,6 +80,7 @@ export async function sendTransactionalEmail(
         text: email.text,
         ...(Object.keys(headers).length > 0 ? { headers } : {}),
       }),
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
 
     if (!response.ok) {

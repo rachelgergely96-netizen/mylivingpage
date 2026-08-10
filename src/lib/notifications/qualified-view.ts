@@ -14,6 +14,15 @@
 export const QUALIFIED_VIEW_ENGAGED_SECONDS = 10;
 export const QUALIFIED_VIEW_SCROLL_DEPTH_PCT = 25;
 
+/**
+ * Scroll depth alone proves nothing. `ViewTracker.updateScrollDepth` computes
+ * `(scrollTop + clientHeight) / scrollHeight`, so a page whose content fits the
+ * viewport reports 100% on load, before anyone has done anything — which is
+ * exactly the shape a scanner produces. Depth therefore only counts alongside a
+ * floor of real dwell.
+ */
+export const QUALIFIED_VIEW_SCROLL_MIN_SECONDS = 4;
+
 export interface QualifiedViewSignals {
   engagedSeconds: number | null | undefined;
   maxScrollDepthPct: number | null | undefined;
@@ -34,7 +43,10 @@ export function isQualifiedView(signals: QualifiedViewSignals): boolean {
   }
 
   const scrollDepth = signals.maxScrollDepthPct ?? 0;
-  return scrollDepth > QUALIFIED_VIEW_SCROLL_DEPTH_PCT;
+  return (
+    scrollDepth > QUALIFIED_VIEW_SCROLL_DEPTH_PCT &&
+    engagedSeconds >= QUALIFIED_VIEW_SCROLL_MIN_SECONDS
+  );
 }
 
 /** Human phrasing for the notification body, e.g. "40 seconds, mostly on Proof". */

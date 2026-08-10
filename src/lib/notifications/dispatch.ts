@@ -3,7 +3,10 @@ import { isAnalyticsSectionId } from "@/lib/analytics/constants";
 import { parseReferrerLabel } from "@/lib/analytics/pageAnalytics";
 import { LIVING_PAGE_SECTION_LABELS } from "@/lib/living-page-sections";
 import { ensureNotificationPreferences } from "@/lib/notifications/preferences";
-import { sendTransactionalEmail } from "@/lib/notifications/provider";
+import {
+  isEmailDeliveryConfigured,
+  sendTransactionalEmail,
+} from "@/lib/notifications/provider";
 import {
   buildFirstViewEmail,
   buildRepeatVisitorEmail,
@@ -19,8 +22,31 @@ export type ViewNotificationOutcome =
   | "not_qualified"
   | "already_notified"
   | "muted"
+  | "throttled"
   | "no_recipient"
   | "unavailable";
+
+/** Ceiling on view notifications per page per hour. */
+export const MAX_NOTIFICATIONS_PER_PAGE_PER_HOUR = 8;
+
+async function hasReachedHourlyNotificationCap(
+  supabase: SupabaseClient,
+  pageId: string,
+): Promise<boolean> {
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from("page_views")
+    .select("id", { count: "exact", head: true })
+    .eq("page_id", pageId)
+    .gte("notified_at", since);
+
+  if (error) {
+    // Fail closed: an unreadable counter must not become an open tap.
+    return true;
+  }
+
+  return (count ?? 0) >= MAX_NOTIFICATIONS_PER_PAGE_PER_HOUR;
+}
 
 interface PageViewNotificationRow {
   id: string;
@@ -134,6 +160,26 @@ export async function dispatchViewNotification(
       return "muted";
     }
 
+    // Engagement payloads are client-supplied, so a forged beacon against a
+    // known page-view id can manufacture a "qualified" read. IP rate limits and
+    // the 24h view dedupe bound how many view rows an attacker can create; this
+    // caps what any of them can turn into mail, so a page owner's inbox cannot
+    // be used to harass them.
+    if (await hasReachedHourlyNotificationCap(supabase, page.id)) {
+      await trackEvent(ownerId, "page.notification.throttled", {
+        page_id: page.id,
+        page_view_id: view.id,
+        kind,
+      });
+      return "throttled";
+    }
+
+    // Claiming commits us to sending, so bail before the claim when no delivery
+    // can happen at all — otherwise the row is burned with nothing sent.
+    if (!isEmailDeliveryConfigured()) {
+      return "unavailable";
+    }
+
     const { data: profileRow } = await supabase
       .from("profiles")
       .select("email, full_name, username")
@@ -203,6 +249,17 @@ export async function dispatchViewNotification(
       text: email.text,
       unsubscribeUrl,
     });
+
+    // A provider outage must not silently eat the notification: release the
+    // claim so a later beacon for the same view can retry. Re-sending needs the
+    // send to have succeeded *and* its response to have failed, which is far
+    // rarer than a transient outage.
+    if (result.status !== "sent") {
+      await supabase
+        .from("page_views")
+        .update({ notified_at: null, notification_kind: null })
+        .eq("id", view.id);
+    }
 
     await trackEvent(ownerId, `page.notification.${kind}`, {
       page_id: page.id,

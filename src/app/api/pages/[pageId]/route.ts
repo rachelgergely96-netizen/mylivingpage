@@ -6,6 +6,10 @@ import {
   isEditorPreviewEnabled,
 } from "@/lib/editor-preview";
 import { sanitizePageVariants } from "@/lib/page-variants";
+import {
+  PAGE_VISIBILITY_STATES,
+  PAGE_VISIBILITY_WRITES,
+} from "@/lib/page-visibility";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { MAX_FREE_ARCHIVES, isThemeAllowed } from "@/lib/plans";
 import {
@@ -130,14 +134,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
     }
   }
 
-  const publishesPage = body.status === "live" && body.visibility === "public";
-  const unpublishesPage = body.status === "draft" && body.visibility === "private";
+  // Publication state is only ever written as one of the three whole states an
+  // owner can choose; no caller may compose an arbitrary status/visibility pair.
   const changesPublicationState = "status" in body || "visibility" in body;
-  if (changesPublicationState && !publishesPage && !unpublishesPage) {
+  const requestedVisibilityState = PAGE_VISIBILITY_STATES.find((state) => {
+    const write = PAGE_VISIBILITY_WRITES[state];
+    return body.status === write.status && body.visibility === write.visibility;
+  });
+  if (changesPublicationState && !requestedVisibilityState) {
     return NextResponse.json(
       {
         error:
-          "Publication state must be either live and public, or draft and private.",
+          "Publication state must be live and public, live and link, or draft and private.",
       },
       { status: 400 },
     );
@@ -206,10 +214,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
     if (key in body) updates[key] = body[key];
   }
 
-  if (publishesPage || unpublishesPage) {
-    updates.status = body.status;
-    updates.visibility = body.visibility;
-    updates.published_at = publishesPage ? new Date().toISOString() : page.published_at;
+  if (requestedVisibilityState) {
+    const write = PAGE_VISIBILITY_WRITES[requestedVisibilityState];
+    updates.status = write.status;
+    updates.visibility = write.visibility;
+    // published_at marks when the page first went live and is preserved when it
+    // goes offline, so a page can come back without looking newly created.
+    updates.published_at =
+      requestedVisibilityState === "offline"
+        ? page.published_at
+        : (page.published_at ?? new Date().toISOString());
   }
 
   if (Object.keys(updates).length === 0) {

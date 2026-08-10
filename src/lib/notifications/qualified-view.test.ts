@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   QUALIFIED_VIEW_ENGAGED_SECONDS,
+  QUALIFIED_VIEW_SCROLL_MIN_SECONDS,
   describeViewQuality,
   isQualifiedView,
 } from "@/lib/notifications/qualified-view";
@@ -36,14 +37,34 @@ describe("isQualifiedView", () => {
     ).toBe(true);
   });
 
-  it("qualifies a reader who scrolled without dwelling long", () => {
+  it("qualifies a reader who scrolled and stayed past the floor", () => {
     expect(
       isQualifiedView({
-        engagedSeconds: 2,
+        engagedSeconds: QUALIFIED_VIEW_SCROLL_MIN_SECONDS,
         maxScrollDepthPct: 60,
         hadOutboundClick: false,
       }),
     ).toBe(true);
+  });
+
+  it("rejects full scroll depth with no dwell — a short page reports 100% on load", () => {
+    expect(
+      isQualifiedView({
+        engagedSeconds: 0,
+        maxScrollDepthPct: 100,
+        hadOutboundClick: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects deep scroll below the dwell floor", () => {
+    expect(
+      isQualifiedView({
+        engagedSeconds: QUALIFIED_VIEW_SCROLL_MIN_SECONDS - 1,
+        maxScrollDepthPct: 90,
+        hadOutboundClick: false,
+      }),
+    ).toBe(false);
   });
 
   it("qualifies an outbound click immediately — no scanner clicks a contact link", () => {

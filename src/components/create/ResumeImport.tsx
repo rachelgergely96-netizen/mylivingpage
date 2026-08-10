@@ -31,6 +31,15 @@ const FIELD_LABELS: Record<ResumeImportField, string> = {
   certifications: "certifications",
 };
 
+const MAX_READBACK_CHARACTERS = 180;
+
+function truncate(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > MAX_READBACK_CHARACTERS
+    ? `${trimmed.slice(0, MAX_READBACK_CHARACTERS)}…`
+    : trimmed;
+}
+
 function validateFile(file: File) {
   if (file.size > MAX_RESUME_FILE_BYTES) {
     return `Résumé files must be ${MAX_RESUME_FILE_LABEL} or smaller.`;
@@ -56,6 +65,7 @@ export default function ResumeImport({
   const [lastImport, setLastImport] = useState<{
     sourceName: string;
     detectedFields: ResumeImportField[];
+    fieldSources: ParsedResumeImport["fieldSources"];
     warnings: string[];
   } | null>(null);
 
@@ -114,6 +124,7 @@ export default function ResumeImport({
       setLastImport({
         sourceName: result.sourceName,
         detectedFields: result.detectedFields,
+        fieldSources: result.fieldSources ?? {},
         warnings: result.warnings,
       });
       onImported(result);
@@ -128,6 +139,15 @@ export default function ResumeImport({
       setImporting(false);
     }
   };
+
+  const readSummary = lastImport
+    ? lastImport.detectedFields
+        .map((field) => ({ field, source: lastImport.fieldSources?.[field] }))
+        .filter(
+          (entry): entry is { field: ResumeImportField; source: NonNullable<typeof entry.source> } =>
+            Boolean(entry.source?.value),
+        )
+    : [];
 
   return (
     <section className="site-panel overflow-hidden">
@@ -296,6 +316,39 @@ export default function ResumeImport({
               <p className="mt-1 text-xs leading-5 text-site-secondary">
                 Found {lastImport.detectedFields.map((field) => FIELD_LABELS[field]).join(", ")}.
               </p>
+            ) : null}
+
+            {/* The parse is a heuristic and the first thing anyone sees. Showing
+                what was read next to the line it came from turns a misread into
+                something visible here, rather than a hunt through the form. */}
+            {readSummary.length > 0 ? (
+              <div className="mt-3 border-t border-site-border pt-3">
+                <p className="site-eyebrow text-site-muted">What we read</p>
+                <dl className="mt-2 space-y-2">
+                  {readSummary.map(({ field, source }) => (
+                    <div
+                      key={field}
+                      className="grid gap-0.5 border-l-2 border-site-border pl-3"
+                    >
+                      <dt className="text-xs font-semibold capitalize text-site-text">
+                        {FIELD_LABELS[field]}
+                      </dt>
+                      <dd className="text-xs leading-5 text-site-secondary">
+                        <span className="break-words">{truncate(source.value)}</span>
+                        {source.sourceLine.trim() &&
+                        source.sourceLine.trim() !== source.value.trim() ? (
+                          <span className="mt-0.5 block break-words font-mono text-[0.7rem] leading-4 text-site-muted">
+                            from: {truncate(source.sourceLine)}
+                          </span>
+                        ) : null}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-2.5 text-xs leading-5 text-site-muted">
+                  Anything wrong here is fixable below — nothing is published yet.
+                </p>
+              </div>
             ) : null}
             {lastImport.warnings.map((warning) => (
               <p key={warning} className="mt-1 text-xs leading-5 text-site-warning">

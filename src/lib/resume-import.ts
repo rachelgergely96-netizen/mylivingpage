@@ -14,9 +14,25 @@ export type ResumeImportField =
   | "projects"
   | "certifications";
 
+/**
+ * Where a detected value came from in the uploaded text.
+ *
+ * The parser is heuristic — two-column PDFs, unusual date formats, and non-US
+ * conventions all mislead it. Recording the source line lets the import step
+ * show its work, so a misread is something the person can see and correct
+ * rather than hunt for across a six-step form.
+ */
+export interface ResumeImportFieldSource {
+  /** What was read out, shown back to the person. */
+  value: string;
+  /** The line(s) of their résumé it was read from. */
+  sourceLine: string;
+}
+
 export interface ParsedResumeImport {
   data: ResumeData;
   detectedFields: ResumeImportField[];
+  fieldSources: Partial<Record<ResumeImportField, ResumeImportFieldSource>>;
   warnings: string[];
 }
 
@@ -516,6 +532,91 @@ function getDetectedFields(data: ResumeData): ResumeImportField[] {
   return fields;
 }
 
+function firstMeaningfulLine(lines: string[] | undefined): string {
+  return lines?.map(cleanBullet).find(Boolean) ?? "";
+}
+
+function buildFieldSources(input: {
+  data: ResumeData;
+  detectedFields: ResumeImportField[];
+  nameLine: string;
+  contactLine: string;
+  sections: Record<SectionKey, string[]>;
+}): Partial<Record<ResumeImportField, ResumeImportFieldSource>> {
+  const { data, sections } = input;
+  const sources: Partial<Record<ResumeImportField, ResumeImportFieldSource>> = {};
+
+  const record = (field: ResumeImportField, value: string, sourceLine: string) => {
+    if (!input.detectedFields.includes(field) || !value) {
+      return;
+    }
+    sources[field] = { value, sourceLine: sourceLine || value };
+  };
+
+  record("name", data.name, input.nameLine);
+  record("headline", data.headline, data.headline);
+  record("location", data.location, input.contactLine);
+  record(
+    "contact",
+    [data.email, data.linkedin, data.github, data.website]
+      .filter(Boolean)
+      .join(" · "),
+    input.contactLine,
+  );
+  record("summary", data.summary, firstMeaningfulLine(sections.summary));
+
+  const firstExperience = data.experience[0];
+  if (firstExperience) {
+    record(
+      "experience",
+      [firstExperience.title, firstExperience.company, firstExperience.dates]
+        .filter(Boolean)
+        .join(" · "),
+      firstMeaningfulLine(sections.experience),
+    );
+  }
+
+  const firstEducation = data.education[0];
+  if (firstEducation) {
+    record(
+      "education",
+      [firstEducation.degree, firstEducation.school, firstEducation.year]
+        .filter(Boolean)
+        .join(" · "),
+      firstMeaningfulLine(sections.education),
+    );
+  }
+
+  const firstSkillGroup = data.skills[0];
+  if (firstSkillGroup) {
+    record(
+      "skills",
+      firstSkillGroup.items.slice(0, 8).join(", "),
+      firstMeaningfulLine(sections.skills),
+    );
+  }
+
+  const firstProject = data.projects[0];
+  if (firstProject) {
+    record(
+      "projects",
+      [firstProject.name, firstProject.description].filter(Boolean).join(" — "),
+      firstMeaningfulLine(sections.projects),
+    );
+  }
+
+  const firstCertification = data.certifications[0];
+  if (firstCertification) {
+    record(
+      "certifications",
+      [firstCertification.name, firstCertification.issuer].filter(Boolean).join(" · "),
+      firstMeaningfulLine(sections.certifications),
+    );
+  }
+
+  return sources;
+}
+
 export function parseResumeText(text: string): ParsedResumeImport {
   const normalizedText = text.slice(0, MAX_RESUME_TEXT_CHARACTERS);
   const lines = normalizeLines(normalizedText);
@@ -556,6 +657,13 @@ export function parseResumeText(text: string): ParsedResumeImport {
     "";
 
   const detectedFields = getDetectedFields(data);
+  const fieldSources = buildFieldSources({
+    data,
+    detectedFields,
+    nameLine: nameIndex >= 0 ? (preamble[nameIndex] ?? "") : "",
+    contactLine: preamble.find(looksLikeContact) ?? "",
+    sections,
+  });
   const warnings: string[] = [];
   if (!data.name) {
     warnings.push("We could not confidently identify your name. Add it in the first step.");
@@ -567,5 +675,5 @@ export function parseResumeText(text: string): ParsedResumeImport {
     warnings.push("Only a few fields were detected. Review the imported text and fill any gaps.");
   }
 
-  return { data, detectedFields, warnings };
+  return { data, detectedFields, fieldSources, warnings };
 }

@@ -129,3 +129,53 @@ Hiring dashboard | https://example.com/projects/hiring-dashboard
     );
   });
 });
+
+describe("fieldSources", () => {
+  it("reports the line each detected value was read from", () => {
+    const result = parseResumeText(SAMPLE_RESUME);
+
+    expect(result.fieldSources.name).toEqual({
+      value: "Taylor Reed",
+      sourceLine: "Taylor Reed",
+    });
+    expect(result.fieldSources.contact?.value).toContain("taylor@example.com");
+    expect(result.fieldSources.location?.sourceLine).toContain("Brooklyn, NY");
+    expect(result.fieldSources.experience?.value).toContain("Acme Systems");
+    expect(result.fieldSources.education?.value).toContain("Cornell University");
+    expect(result.fieldSources.skills?.value).toContain("Roadmapping");
+  });
+
+  it("reports a source for every detected field and nothing else", () => {
+    const result = parseResumeText(SAMPLE_RESUME);
+
+    for (const field of result.detectedFields) {
+      expect(result.fieldSources[field]?.value).toBeTruthy();
+    }
+
+    for (const key of Object.keys(result.fieldSources)) {
+      expect(result.detectedFields).toContain(key);
+    }
+  });
+
+  it("stays silent about a section the parser could not read", () => {
+    // Title, company, and dates on a single line is a common layout this
+    // parser does not handle. The import step must then show no experience
+    // rather than something invented — a visible gap is correctable.
+    const result = parseResumeText(
+      [
+        "Dana Whitfield",
+        "Senior Product Manager | dana@example.com",
+        "",
+        "EXPERIENCE",
+        "Senior Product Manager, Northwind Systems  2021 - Present",
+      ].join("\n"),
+    );
+
+    expect(result.detectedFields).not.toContain("experience");
+    expect(result.fieldSources.experience).toBeUndefined();
+  });
+
+  it("returns no sources for text it could not read", () => {
+    expect(parseResumeText("").fieldSources).toEqual({});
+  });
+});

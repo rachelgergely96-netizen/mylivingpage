@@ -161,7 +161,6 @@ export default async function PublicLivingPage({
 }: PublicPageProps) {
   noStore();
   const [{ username }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const supabase = createServiceRoleSupabaseClient();
   const page = await getPublicPage(username);
   const publicPageAvailable = isPubliclyAvailablePage(page);
 
@@ -235,24 +234,12 @@ export default async function PublicLivingPage({
     variantId: selectedVariant?.id ?? null,
   });
   const variantAwareUrl = absoluteUrl(variantAwarePath as `/${string}`);
-  const { data: ownerProfile } = await fetchProfileWithHostingAccess<{
-    plan?: string | null;
-    username?: string | null;
-    stripe_subscription_status?: string | null;
-    stripe_trial_ends_at?: string | null;
-  }>({
-    supabase,
-    select: "plan, username",
-    matchField: "username",
-    matchValue: username,
-  });
-  const ownerAccess = getAccountAccessState({
-    plan: ownerProfile?.plan ?? null,
-    billing_cohort: ownerProfile?.billing_cohort ?? null,
-    hosting_trial_started_at: ownerProfile?.hosting_trial_started_at ?? null,
-    stripe_subscription_status: ownerProfile?.stripe_subscription_status ?? null,
-    stripe_trial_ends_at: ownerProfile?.stripe_trial_ends_at ?? null,
-  });
+  // The owner's feature access used to be fetched here on every public view,
+  // purely to decide the share-card and analytics affordances. Every
+  // getAccountAccessState path now grants both unconditionally, so this was a
+  // blocking round trip per recruiter visit that could only ever return the
+  // same answer. Resolved from the shared constant instead.
+  const ownerAccess = getAccountAccessState({ plan: null });
   const livingPageSectionIds = getLivingPageSectionIds(variantResumeData);
 
   return (

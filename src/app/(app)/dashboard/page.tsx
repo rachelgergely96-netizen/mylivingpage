@@ -23,6 +23,14 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
+/**
+ * How far back the dashboard reads raw rows. Comfortably wider than the 7-day
+ * proof window so "last viewed" stays meaningful on a quiet page, and bounded
+ * so a busy one cannot make the page slow.
+ */
+const DASHBOARD_ACTIVITY_WINDOW_DAYS = 90;
+const DASHBOARD_ACTIVITY_ROW_LIMIT = 2000;
+
 interface DashboardPageViewRow {
   page_id: string;
   viewed_at: string;
@@ -88,13 +96,22 @@ export default async function DashboardPage({
   });
   const list = (pages ?? []) as PageRecord[];
   const pageIds = list.map((page) => page.id);
+  // The proof card reports a 7-day window and the most recent view; it never
+  // reads further back than that. Unbounded, these queries pulled every view
+  // ever recorded and reduced them in JS, so dashboard load time grew with how
+  // well the page was doing — slowest for exactly the people it is working for.
+  const activityWindowStart = new Date(
+    Date.now() - DASHBOARD_ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const [pageViewsResult, eventsResult] = pageIds.length
     ? await Promise.all([
         supabase
           .from("page_views")
           .select("page_id, viewed_at, user_agent, engaged_seconds")
           .in("page_id", pageIds)
-          .order("viewed_at", { ascending: false }),
+          .gte("viewed_at", activityWindowStart)
+          .order("viewed_at", { ascending: false })
+          .limit(DASHBOARD_ACTIVITY_ROW_LIMIT),
         supabase
           .from("events")
           .select("event_name, created_at, metadata")
@@ -103,7 +120,9 @@ export default async function DashboardPage({
             ...SHARE_INTENT_EVENT_NAMES,
             "page.offline_view_attempted",
           ])
-          .order("created_at", { ascending: false }),
+          .gte("created_at", activityWindowStart)
+          .order("created_at", { ascending: false })
+          .limit(DASHBOARD_ACTIVITY_ROW_LIMIT),
       ])
     : [{ data: [] }, { data: [] }];
   const pageViews = (pageViewsResult.data ?? []) as DashboardPageViewRow[];

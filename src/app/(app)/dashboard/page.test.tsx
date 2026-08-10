@@ -185,9 +185,15 @@ function makeServiceRoleClient(overrides?: {
             return {
               in() {
                 return {
-                  order: vi.fn().mockResolvedValue({
-                    data: pageViews,
-                  }),
+                  gte() {
+                    return {
+                      order() {
+                        return {
+                          limit: vi.fn().mockResolvedValue({ data: pageViews }),
+                        };
+                      },
+                    };
+                  },
                 };
               },
             };
@@ -203,9 +209,15 @@ function makeServiceRoleClient(overrides?: {
                 return {
                   in() {
                     return {
-                      order: vi.fn().mockResolvedValue({
-                        data: events,
-                      }),
+                      gte() {
+                        return {
+                          order() {
+                            return {
+                              limit: vi.fn().mockResolvedValue({ data: events }),
+                            };
+                          },
+                        };
+                      },
                     };
                   },
                 };

@@ -19,6 +19,7 @@ import EditorSectionNav, {
 import PublishPageButton from "@/components/PublishPageButton";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
+import ResumePdfPreview from "@/components/resume/ResumePdfPreview";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -1093,6 +1094,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   setData((prev) => (prev ? mergeResumePatch(prev, patch) : prev))
                 }
               />
+              <ResumePdfPreview resumeData={data} />
               <p className="px-1 text-xs leading-5 text-site-muted">
                 The check uses the fields currently in this editor. Save your changes before relying
                 on the public PDF.

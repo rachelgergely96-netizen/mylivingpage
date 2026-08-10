@@ -26,6 +26,7 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/profile` | `GET`, `PATCH` | `authenticated_user` | Profile | Medium | Authenticated user session |
 | `/api/resume/export` | `POST` | `public_read` | Public ATS Export | High | Shared rate limit (fails closed with `503` on limiter error), page-bound request, server-fetched saved page data |
 | `/api/resume/import` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit (fails closed with `503`), multipart body-size cap, file/text validation |
+| `/api/resume/preview` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit (fails closed with `503`), body-size cap, resume payload validation, inline no-store response |
 | `/api/resume/readiness` | `POST` | `authenticated_user` | Resume Builder | Medium | Authenticated user session, user rate limit, bounded request text, deterministic checks only, saved target roles persisted via page_config |
 | `/api/stripe/checkout` | `POST` | `authenticated_user` | Billing | Low | Authenticated user session, permanently disabled response, no checkout creation |
 | `/api/stripe/portal` | `POST` | `authenticated_user` | Billing | Medium | Authenticated user session |

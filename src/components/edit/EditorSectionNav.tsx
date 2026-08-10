@@ -15,6 +15,7 @@ export const LIVING_PAGE_EDITOR_SECTIONS = [
   { id: "editor-section-testimonials", label: "Voices" },
   { id: "editor-section-certifications", label: "Credentials" },
   { id: "editor-section-design", label: "Design" },
+  { id: "editor-section-versions", label: "Versions" },
   { id: "editor-section-ats", label: "ATS check" },
 ] as const;
 

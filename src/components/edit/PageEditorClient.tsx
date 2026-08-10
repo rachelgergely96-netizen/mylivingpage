@@ -22,16 +22,24 @@ import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import VariantPlanner from "@/components/VariantPlanner";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
+import {
+  applyPageVariant,
+  buildVariantHref,
+  getPageVariants,
+  sanitizePageVariants,
+} from "@/lib/page-variants";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
-import type { PageRecord, ResumeData } from "@/types/resume";
+import type { PageRecord, PageVariant, ResumeData } from "@/types/resume";
 
 interface EditDraft {
   data: ResumeData;
   themeId: ThemeId;
+  variants?: PageVariant[];
 }
 
 interface PageEditorClientProps {
@@ -69,6 +77,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [page, setPage] = useState<PageRecord | null>(null);
   const [data, setData] = useState<ResumeData | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
+  const [variants, setVariants] = useState<PageVariant[]>([]);
+  const [previewVariantId, setPreviewVariantId] = useState<string | null>(null);
   const [publicSlug, setPublicSlug] = useState("");
   const [savedSnapshot, setSavedSnapshot] = useState("");
   const [mobileWorkspaceView, setMobileWorkspaceView] = useState<"edit" | "preview">("edit");
@@ -77,9 +87,14 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const [confirmingAvatarRemoval, setConfirmingAvatarRemoval] = useState(false);
   const [removingAvatar, setRemovingAvatar] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
+  const [copiedVariantId, setCopiedVariantId] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const successTimerRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
+  const variantCopyTimerRef = useRef<number | null>(null);
+  // The live path is derived below from state this callback must not depend on;
+  // a ref keeps the copy handler stable without going stale.
+  const livePathRef = useRef("/");
   const latestEditorSnapshotRef = useRef("");
   const [accountAccess, setAccountAccess] = useState(() =>
     getAccountAccessState({
@@ -96,8 +111,8 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       return false;
     }
 
-    return JSON.stringify({ data, themeId }) !== savedSnapshot;
-  }, [data, savedSnapshot, themeId]);
+    return JSON.stringify({ data, themeId, variants }) !== savedSnapshot;
+  }, [data, savedSnapshot, themeId, variants]);
   const readiness = useMemo(
     () => (data ? buildDecisionReadinessState(data) : null),
     [data],
@@ -164,9 +179,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
   useEffect(() => {
     latestEditorSnapshotRef.current = data
-      ? JSON.stringify({ data, themeId })
+      ? JSON.stringify({ data, themeId, variants })
       : "";
-  }, [data, themeId]);
+  }, [data, themeId, variants]);
 
   useUnsavedChanges(hasChanges);
 
@@ -178,6 +193,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       if (copyTimerRef.current !== null) {
         window.clearTimeout(copyTimerRef.current);
       }
+      if (variantCopyTimerRef.current !== null) {
+        window.clearTimeout(variantCopyTimerRef.current);
+      }
     },
     [],
   );
@@ -185,6 +203,19 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   useEffect(() => {
     if (hasChanges) setCopyStatus("idle");
   }, [hasChanges]);
+
+  useEffect(() => {
+    if (
+      previewVariantId &&
+      !variants.some((variant) => variant.id === previewVariantId)
+    ) {
+      setPreviewVariantId(null);
+    }
+  }, [previewVariantId, variants]);
+
+  useEffect(() => {
+    livePathRef.current = `/${publicSlug || page?.slug || "your-username"}`;
+  }, [page?.slug, publicSlug]);
 
   // The mobile dock's save button appears only once the command bar (and its
   // primary save) has scrolled out of view, so two dominant save actions are
@@ -232,8 +263,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     saveDraft({
       data,
       themeId,
+      variants,
     });
-  }, [data, hasChanges, saveDraft, themeId]);
+  }, [data, hasChanges, saveDraft, themeId, variants]);
 
   const restoreDraft = useCallback(() => {
     if (!pendingDraft) {
@@ -243,6 +275,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     const draft = pendingDraft.data;
     setData(draft.data);
     setThemeId(draft.themeId);
+    setVariants(sanitizePageVariants(draft.variants ?? []));
     dismissDraft();
   }, [dismissDraft, pendingDraft]);
 
@@ -262,12 +295,20 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
 
         const row = (await response.json()) as PageRecord;
         const livingData = normalizeLegacyResumeData({ ...row.resume_data });
+        const storedVariants = getPageVariants(row.page_config);
 
         setPage(row);
         setData(livingData);
         setThemeId(row.theme_id as ThemeId);
+        setVariants(storedVariants);
         setPublicSlug(row.slug);
-        setSavedSnapshot(JSON.stringify({ data: livingData, themeId: row.theme_id }));
+        setSavedSnapshot(
+          JSON.stringify({
+            data: livingData,
+            themeId: row.theme_id,
+            variants: storedVariants,
+          }),
+        );
 
         const profileResponse = await fetch("/api/profile");
         if (profileResponse.ok) {
@@ -310,7 +351,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   }, [accountAccess.allowedThemeIds, themeId]);
 
   const persistPage = useCallback(
-    async (nextData: ResumeData, nextThemeId = themeId) => {
+    async (
+      nextData: ResumeData,
+      nextThemeId = themeId,
+      nextVariants = variants,
+    ) => {
       if (!page || saving) {
         return false;
       }
@@ -322,12 +367,20 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       const submittedSnapshot = JSON.stringify({
         data: nextData,
         themeId: nextThemeId,
+        variants: nextVariants,
       });
 
       try {
         const payload: Record<string, unknown> = {
           resume_data: nextData,
           theme_id: nextThemeId,
+          // Merge rather than replace: page_config also carries the ATS review,
+          // decision readiness, and the job-search profile, none of which this
+          // editor owns.
+          page_config: {
+            ...(page.page_config ?? {}),
+            variants: nextVariants,
+          },
           updated_at: new Date().toISOString(),
         };
         const saveResponse = await fetch(`/api/pages/${page.id}`, {
@@ -363,7 +416,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
         setSaving(false);
       }
     },
-    [clearDraft, page, saving, themeId],
+    [clearDraft, page, saving, themeId, variants],
   );
 
   const handleSave = useCallback(async () => {
@@ -371,14 +424,56 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       return;
     }
 
-    await persistPage(data, themeId);
-  }, [data, hasChanges, page, persistPage, saving, themeId]);
+    await persistPage(data, themeId, variants);
+  }, [data, hasChanges, page, persistPage, saving, themeId, variants]);
 
   const handlePublished = useCallback(() => {
     setPage((prev) =>
       prev ? { ...prev, status: "live" as const, visibility: "public" as const } : prev,
     );
   }, []);
+
+  const copyVariantLink = useCallback(
+    async (variantId: string) => {
+      if (hasChanges || !page) return;
+
+      const href = buildVariantHref(livePathRef.current as `/${string}`, {
+        variantId,
+      });
+      try {
+        await navigator.clipboard.writeText(
+          `${window.location.origin.replace(/\/$/, "")}${href}`,
+        );
+        setCopiedVariantId(variantId);
+        void fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventName: "page.share.copy_link",
+            metadata: {
+              page_id: page.id,
+              surface: "living_page_editor",
+              mode: "variant",
+              variant_id: variantId,
+              share_path: href,
+            },
+          }),
+          keepalive: true,
+        }).catch(() => undefined);
+
+        if (variantCopyTimerRef.current !== null) {
+          window.clearTimeout(variantCopyTimerRef.current);
+        }
+        variantCopyTimerRef.current = window.setTimeout(() => {
+          setCopiedVariantId(null);
+          variantCopyTimerRef.current = null;
+        }, 2400);
+      } catch {
+        setCopiedVariantId(null);
+      }
+    },
+    [hasChanges, page],
+  );
 
   const handleCopyLiveLink = useCallback(async () => {
     if (hasChanges || !page || copyStatus === "copied") return;
@@ -446,6 +541,10 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
       setRemovingAvatar(false);
     }
   };
+
+  const previewVariant =
+    variants.find((variant) => variant.id === previewVariantId) ?? null;
+  const previewData = data ? applyPageVariant(data, previewVariant) : null;
 
   const selectedTheme = THEME_REGISTRY.find((theme) => theme.id === themeId);
   const nextReadinessCheck = readiness?.checks.find(
@@ -886,6 +985,67 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
             </section>
 
             <section
+              id="editor-section-versions"
+              data-editor-section="versions"
+              aria-labelledby="editor-versions-title"
+              className="site-panel scroll-mt-24 p-4 sm:p-6 xl:scroll-mt-72"
+            >
+              <div className="mb-5 border-b border-site-border pb-4">
+                <p className="site-eyebrow">
+                  <span className="mr-2 font-mono text-site-muted">13</span>
+                  Versions
+                </p>
+                <h2 id="editor-versions-title" className="site-panel-title mt-1.5">
+                  Sharpen the same page for a specific conversation
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-site-secondary">
+                  Each version gets its own share link, and analytics reports which one people
+                  opened.
+                </p>
+              </div>
+              <VariantPlanner
+                baseData={data}
+                variants={variants}
+                selectedVariantId={previewVariantId}
+                onSelectVariant={setPreviewVariantId}
+                onChange={(next) => setVariants(sanitizePageVariants(next))}
+                maxVariants={Math.max(accountAccess.variantLimit, variants.length)}
+              />
+              {variants.length > 0 && !isDraft ? (
+                <ul className="mt-5 space-y-2 border-t border-site-border pt-4">
+                  {variants.map((variant) => {
+                    const href = buildVariantHref(livePath as `/${string}`, {
+                      variantId: variant.id,
+                    });
+                    return (
+                      <li
+                        key={variant.id}
+                        className="flex flex-wrap items-center justify-between gap-2 text-xs"
+                      >
+                        <span className="min-w-0 truncate font-mono text-site-muted">
+                          mylivingpage.com{href}
+                        </span>
+                        <button
+                          type="button"
+                          aria-disabled={hasChanges || undefined}
+                          onClick={() => void copyVariantLink(variant.id)}
+                          className="site-button site-button-secondary px-3 py-1.5 text-xs aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                        >
+                          {copiedVariantId === variant.id ? "Copied" : "Copy link"}
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {hasChanges ? (
+                    <li className="text-xs leading-5 text-site-muted">
+                      Save your changes before sharing a version link.
+                    </li>
+                  ) : null}
+                </ul>
+              ) : null}
+            </section>
+
+            <section
               id="editor-section-ats"
               data-editor-section="ats"
               aria-labelledby="editor-tools-title"
@@ -958,7 +1118,11 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
               motionAware
             >
               <div className="h-full">
-                <ResumeLayout data={data} headingLevel="h2" disableExternalLinks />
+                <ResumeLayout
+                  data={previewData ?? data}
+                  headingLevel="h2"
+                  disableExternalLinks
+                />
               </div>
             </ThemeCanvas>
           </section>

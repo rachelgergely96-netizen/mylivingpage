@@ -8,7 +8,7 @@ import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
 import JobSeekerStarterKit from "@/components/create/JobSeekerStarterKit";
 import ResumeImport from "@/components/create/ResumeImport";
-import VariantPlanner from "@/components/create/VariantPlanner";
+import VariantPlanner from "@/components/VariantPlanner";
 import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";

@@ -37,14 +37,15 @@ export async function fetchPublicLivePage(
     return null;
   }
 
-  // "Link only" pages are live and reachable; they are withheld from the
-  // sitemap and marked noindex instead, not hidden from their own URL.
+  // "Link only" pages are still visibility='public'; they carry
+  // search_indexable = false and are withheld from the sitemap and marked
+  // noindex, not hidden from their own URL.
   const { data: publicPage } = await supabase
     .from("pages")
     .select("*")
     .eq("owner_id", profile.id)
     .eq("status", "live")
-    .in("visibility", ["public", "link"])
+    .eq("visibility", "public")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -70,7 +71,7 @@ export async function fetchPublicLivePage(
     .select("*")
     .eq("user_id", profile.id)
     .eq("status", "live")
-    .or("visibility.eq.public,visibility.eq.link,visibility.is.null")
+    .or("visibility.eq.public,visibility.is.null")
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

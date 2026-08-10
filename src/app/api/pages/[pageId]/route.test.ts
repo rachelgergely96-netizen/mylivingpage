@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { PAGE_VISIBILITY_WRITES } from "@/lib/page-visibility";
 
 const mocks = vi.hoisted(() => ({
   authGetUser: vi.fn(),
@@ -137,10 +138,7 @@ describe("PATCH /api/pages/[pageId] visibility transitions", () => {
       }),
     );
 
-    const response = await patchPage({
-      status: "live",
-      visibility: "public",
-    });
+    const response = await patchPage({ ...PAGE_VISIBILITY_WRITES.public });
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
@@ -148,6 +146,7 @@ describe("PATCH /api/pages/[pageId] visibility transitions", () => {
     expect(pageUpdate).toHaveBeenCalledWith({
       status: "live",
       visibility: "public",
+      search_indexable: true,
       published_at: "2026-07-15T15:30:00.000Z",
     });
   });
@@ -171,10 +170,7 @@ describe("PATCH /api/pages/[pageId] visibility transitions", () => {
       }),
     );
 
-    const response = await patchPage({
-      status: "draft",
-      visibility: "private",
-    });
+    const response = await patchPage({ ...PAGE_VISIBILITY_WRITES.offline });
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
@@ -182,6 +178,40 @@ describe("PATCH /api/pages/[pageId] visibility transitions", () => {
     expect(pageUpdate).toHaveBeenCalledWith({
       status: "draft",
       visibility: "private",
+      search_indexable: false,
+      // Preserved, so a page that comes back does not look newly created.
+      published_at: "2026-06-01T12:00:00.000Z",
+    });
+  });
+
+  it("lets the owner go link-only without touching the token-share enum value", async () => {
+    const pageUpdate = vi.fn();
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient({
+        page: {
+          id: "page-1",
+          owner_id: "user-1",
+          user_id: "user-1",
+          status: "live",
+          visibility: "public",
+          published_at: "2026-06-01T12:00:00.000Z",
+          resume_data: { name: "Rachel Gergely" },
+          theme_id: "cosmic",
+          slug: "rachel",
+        },
+        onPageUpdate: pageUpdate,
+      }),
+    );
+
+    const response = await patchPage({ ...PAGE_VISIBILITY_WRITES.link });
+
+    expect(response.status).toBe(200);
+    // visibility='link' is reserved by pages_link_requires_share_token_chk for
+    // token sharing; link-only must stay public and drop indexability instead.
+    expect(pageUpdate).toHaveBeenCalledWith({
+      status: "live",
+      visibility: "public",
+      search_indexable: false,
       published_at: "2026-06-01T12:00:00.000Z",
     });
   });
@@ -196,6 +226,19 @@ describe("PATCH /api/pages/[pageId] visibility transitions", () => {
     [
       "draft status paired with public visibility",
       { status: "draft", visibility: "public", theme_id: "matrix" },
+    ],
+    [
+      "the reserved token-share visibility",
+      {
+        status: "live",
+        visibility: "link",
+        search_indexable: false,
+        theme_id: "matrix",
+      },
+    ],
+    [
+      "a live public page asking to be unindexed without the whole state",
+      { search_indexable: false, theme_id: "matrix" },
     ],
   ])("rejects %s without applying any other updates", async (_label, body) => {
     const pageUpdate = vi.fn();

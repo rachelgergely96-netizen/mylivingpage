@@ -5,6 +5,7 @@ import {
   EDITOR_LAYOUT_PREVIEW_PAGE_ID,
   isEditorPreviewEnabled,
 } from "@/lib/editor-preview";
+import { sanitizeAtsTargeting } from "@/lib/ats-target-roles";
 import { sanitizePageVariants } from "@/lib/page-variants";
 import {
   PAGE_VISIBILITY_STATES,
@@ -136,16 +137,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
 
   // Publication state is only ever written as one of the three whole states an
   // owner can choose; no caller may compose an arbitrary status/visibility pair.
-  const changesPublicationState = "status" in body || "visibility" in body;
+  const changesPublicationState =
+    "status" in body || "visibility" in body || "search_indexable" in body;
   const requestedVisibilityState = PAGE_VISIBILITY_STATES.find((state) => {
     const write = PAGE_VISIBILITY_WRITES[state];
-    return body.status === write.status && body.visibility === write.visibility;
+    return (
+      body.status === write.status &&
+      body.visibility === write.visibility &&
+      body.search_indexable === write.search_indexable
+    );
   });
   if (changesPublicationState && !requestedVisibilityState) {
     return NextResponse.json(
       {
         error:
-          "Publication state must be live and public, live and link, or draft and private.",
+          "Publication state must be one of: public, link only, or offline.",
       },
       { status: 400 },
     );
@@ -204,6 +210,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
           body.page_config.variants ?? [],
           accountAccess.variantLimit,
         ),
+        // Bound the stored targeting server-side too, so the row can never hold
+        // a shape the editor would have to defend against on every read.
+        ats: sanitizeAtsTargeting(body.page_config.ats ?? null),
       };
     }
   }
@@ -218,6 +227,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
     const write = PAGE_VISIBILITY_WRITES[requestedVisibilityState];
     updates.status = write.status;
     updates.visibility = write.visibility;
+    updates.search_indexable = write.search_indexable;
     // published_at marks when the page first went live and is preserved when it
     // goes offline, so a page can come back without looking newly created.
     updates.published_at =

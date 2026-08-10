@@ -6,6 +6,13 @@
  * unreachable while the need it served — taking your page down without
  * deleting it — had no control at all. Same machinery, owner intent instead of
  * subscription status.
+ *
+ * "Link only" is expressed with `search_indexable`, not `visibility = 'link'`.
+ * That enum value already means a page shared through a secret token: it is
+ * required to carry a `share_token_hash` by `pages_link_requires_share_token_chk`
+ * and is read back by a token-matching RPC. Indexability is a separate axis, so
+ * link-only pages stay `visibility = 'public'` and every existing RLS and
+ * storage policy keeps working untouched.
  */
 
 export type PageVisibilityState = "public" | "link" | "offline";
@@ -13,6 +20,7 @@ export type PageVisibilityState = "public" | "link" | "offline";
 export interface PageVisibilityRecord {
   status?: string | null;
   visibility?: string | null;
+  search_indexable?: boolean | null;
 }
 
 export const PAGE_VISIBILITY_STATES: PageVisibilityState[] = [
@@ -42,14 +50,20 @@ export const PAGE_VISIBILITY_COPY: Record<
   },
 };
 
-/** The database pair each state writes. */
+export interface PageVisibilityWrite {
+  status: "live" | "draft";
+  visibility: "public" | "private";
+  search_indexable: boolean;
+}
+
+/** The database columns each state writes. */
 export const PAGE_VISIBILITY_WRITES: Record<
   PageVisibilityState,
-  { status: "live" | "draft"; visibility: "public" | "link" | "private" }
+  PageVisibilityWrite
 > = {
-  public: { status: "live", visibility: "public" },
-  link: { status: "live", visibility: "link" },
-  offline: { status: "draft", visibility: "private" },
+  public: { status: "live", visibility: "public", search_indexable: true },
+  link: { status: "live", visibility: "public", search_indexable: false },
+  offline: { status: "draft", visibility: "private", search_indexable: false },
 };
 
 export function isPageVisibilityState(
@@ -63,7 +77,8 @@ export function isPageVisibilityState(
 
 /**
  * Rows written before `visibility` existed carry a null with `status = 'live'`;
- * those pages were publicly listed, so they read as public.
+ * those pages were publicly listed, so they read as public. Likewise a null
+ * `search_indexable` predates the column and means "indexable".
  */
 export function getPageVisibilityState(
   page: PageVisibilityRecord | null | undefined,
@@ -72,15 +87,11 @@ export function getPageVisibilityState(
     return "offline";
   }
 
-  if (page.visibility === "link") {
-    return "link";
+  if (page.visibility !== "public" && page.visibility != null) {
+    return "offline";
   }
 
-  if (page.visibility === "public" || page.visibility == null) {
-    return "public";
-  }
-
-  return "offline";
+  return page.search_indexable === false ? "link" : "public";
 }
 
 /** Reachable at its public URL — both live states, not offline. */

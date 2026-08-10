@@ -40,9 +40,11 @@ export async function fetchLivingPageSitemapEntries(): Promise<
       .from("pages")
       .select("owner_id, user_id, updated_at")
       .eq("status", "live")
+      .or("visibility.eq.public,visibility.is.null")
       // Load-bearing for the "link only" state: those pages are live and
-      // reachable but must never be offered to search engines.
-      .or("visibility.eq.public,visibility.is.null");
+      // reachable but must never be offered to search engines. `is.null`
+      // covers rows written before the column existed, which are indexable.
+      .or("search_indexable.is.null,search_indexable.eq.true");
 
     if (pagesError || !pages?.length) {
       return [];

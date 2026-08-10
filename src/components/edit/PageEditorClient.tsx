@@ -305,8 +305,15 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     const draft = pendingDraft.data;
     setData(draft.data);
     setThemeId(draft.themeId);
-    setVariants(sanitizePageVariants(draft.variants ?? []));
-    setAtsTargeting(sanitizeAtsTargeting(draft.atsTargeting ?? null));
+    // A draft stored before these fields existed carries neither. Restoring it
+    // must not read "absent" as "empty" and wipe saved versions or target roles
+    // that the draft simply predates.
+    if (draft.variants) {
+      setVariants(sanitizePageVariants(draft.variants));
+    }
+    if (draft.atsTargeting) {
+      setAtsTargeting(sanitizeAtsTargeting(draft.atsTargeting));
+    }
     dismissDraft();
   }, [dismissDraft, pendingDraft]);
 

@@ -309,6 +309,11 @@ export default function AtsReadinessCard({
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const rolesSupported = Boolean(targeting && onTargetingChange);
+  const latestTargetingRef = useRef(targeting);
+
+  useEffect(() => {
+    latestTargetingRef.current = targeting;
+  }, [targeting]);
 
   const fingerprint = useMemo(
     () => buildAtsReadinessFingerprint(resumeData),
@@ -380,8 +385,15 @@ export default function AtsReadinessCard({
       setProposals(Array.isArray(body.proposals) ? body.proposals : []);
       setDismissedProposalIds([]);
 
-      if (targeting && onTargetingChange) {
-        onTargetingChange({ ...targeting, lastReviewedAt: new Date().toISOString() });
+      // `targeting` here is the value captured when the request started. Roles
+      // can be saved or removed while a check runs, so stamp through the ref
+      // rather than writing a pre-await snapshot back over newer edits.
+      const latestTargeting = latestTargetingRef.current;
+      if (latestTargeting && onTargetingChange) {
+        onTargetingChange({
+          ...latestTargeting,
+          lastReviewedAt: new Date().toISOString(),
+        });
       }
     } catch (requestError) {
       setError(

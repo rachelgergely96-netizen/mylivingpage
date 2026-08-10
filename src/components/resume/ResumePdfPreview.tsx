@@ -24,6 +24,9 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  // Bumped whenever the résumé changes or a new render starts, so a response
+  // that arrives after its request went stale is dropped rather than shown.
+  const renderGenerationRef = useRef(0);
 
   const releaseObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -37,6 +40,7 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
   // A stale PDF next to edited fields is worse than no PDF: it quietly
   // misrepresents what a recruiter would get.
   useEffect(() => {
+    renderGenerationRef.current += 1;
     releaseObjectUrl();
     setPreviewUrl(null);
     setPageCount(null);
@@ -47,6 +51,8 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
 
     setLoading(true);
     setError(null);
+    renderGenerationRef.current += 1;
+    const generation = renderGenerationRef.current;
 
     try {
       const response = await fetch("/api/resume/preview", {
@@ -67,19 +73,28 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
       const headerCount = Number(response.headers.get("X-Resume-Page-Count"));
       const blob = await response.blob();
 
+      if (generation !== renderGenerationRef.current) {
+        return;
+      }
+
       releaseObjectUrl();
       const url = URL.createObjectURL(blob);
       objectUrlRef.current = url;
       setPreviewUrl(url);
       setPageCount(Number.isFinite(headerCount) && headerCount > 0 ? headerCount : null);
     } catch (previewError) {
+      if (generation !== renderGenerationRef.current) {
+        return;
+      }
       setError(
         previewError instanceof Error
           ? previewError.message
           : "Unable to render the résumé preview right now.",
       );
     } finally {
-      setLoading(false);
+      if (generation === renderGenerationRef.current) {
+        setLoading(false);
+      }
     }
   }, [loading, releaseObjectUrl, resumeData]);
 

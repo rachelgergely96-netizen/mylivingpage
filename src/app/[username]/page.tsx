@@ -80,7 +80,9 @@ async function fetchOfflinePageContext(
 
   const { data: page } = await supabase
     .from("pages")
-    .select("id, resume_data, published_at, status, visibility, user_id, owner_id")
+    .select(
+      "id, resume_data, published_at, status, visibility, search_indexable, user_id, owner_id",
+    )
     .or(`owner_id.eq.${profile.id},user_id.eq.${profile.id}`)
     .order("updated_at", { ascending: false })
     .limit(1)

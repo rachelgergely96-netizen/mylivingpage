@@ -14,15 +14,37 @@ describe("getPageVisibilityState", () => {
     );
   });
 
-  it("reads a live link-only page as link", () => {
-    expect(getPageVisibilityState({ status: "live", visibility: "link" })).toBe(
-      "link",
-    );
+  it("reads a live page withheld from search as link-only", () => {
+    expect(
+      getPageVisibilityState({
+        status: "live",
+        visibility: "public",
+        search_indexable: false,
+      }),
+    ).toBe("link");
   });
 
   it("reads rows written before the visibility column as public", () => {
     expect(getPageVisibilityState({ status: "live", visibility: null })).toBe(
       "public",
+    );
+  });
+
+  it("reads rows written before search_indexable existed as public", () => {
+    expect(
+      getPageVisibilityState({
+        status: "live",
+        visibility: "public",
+        search_indexable: null,
+      }),
+    ).toBe("public");
+  });
+
+  it("never produces link-only from visibility='link', which means token sharing", () => {
+    // pages_link_requires_share_token_chk owns that enum value; our link-only
+    // state must not collide with it.
+    expect(getPageVisibilityState({ status: "live", visibility: "link" })).toBe(
+      "offline",
     );
   });
 
@@ -49,13 +71,13 @@ describe("getPageVisibilityState", () => {
 
 describe("reachability versus indexability", () => {
   it("keeps link-only pages reachable but not indexable — the whole point of the state", () => {
-    const page = { status: "live", visibility: "link" };
+    const page = { status: "live", visibility: "public", search_indexable: false };
     expect(isPubliclyReachablePage(page)).toBe(true);
     expect(isSearchIndexablePage(page)).toBe(false);
   });
 
   it("keeps public pages both reachable and indexable", () => {
-    const page = { status: "live", visibility: "public" };
+    const page = { status: "live", visibility: "public", search_indexable: true };
     expect(isPubliclyReachablePage(page)).toBe(true);
     expect(isSearchIndexablePage(page)).toBe(true);
   });
@@ -67,8 +89,14 @@ describe("reachability versus indexability", () => {
   });
 });
 
-describe("write pairs", () => {
-  it("round-trips every state through its stored status/visibility pair", () => {
+describe("write triples", () => {
+  it("never writes visibility='link', which the schema reserves for token sharing", () => {
+    for (const write of Object.values(PAGE_VISIBILITY_WRITES)) {
+      expect(write.visibility).not.toBe("link");
+    }
+  });
+
+  it("round-trips every state through its stored columns", () => {
     for (const [state, write] of Object.entries(PAGE_VISIBILITY_WRITES)) {
       expect(getPageVisibilityState(write)).toBe(state);
     }

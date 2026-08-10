@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { PAGE_VISIBILITY_WRITES } from "@/lib/page-visibility";
 
 interface PublishPageButtonProps {
   pageId: string;
@@ -34,10 +35,7 @@ export default function PublishPageButton({
       const response = await fetch(`/api/pages/${pageId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "live",
-          visibility: "public",
-        }),
+        body: JSON.stringify(PAGE_VISIBILITY_WRITES.public),
       });
       const payload = (await response.json().catch(() => null)) as
         | { error?: string }

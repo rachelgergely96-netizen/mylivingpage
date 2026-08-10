@@ -572,7 +572,7 @@ Four on stages 2–3 (`2eed702`): the visibility collision above, a draft restor
 clobbered role edits made during a check, and a PDF preview that could reattach a render
 finished after the résumé changed.
 
-Two on stages 4–5 (`b0f3fa8`): the dashboard row cap I added to fix 4.2 introduced its own
+Two on stages 4–5 (`55b7d69`): the dashboard row cap I added to fix 4.2 introduced its own
 reporting bugs — a shared 2000-row budget let one busy page starve a quieter one of its rows
 entirely, undercounted any page with more views in the window than the cap, and truncated the
 scan that finds the first view after a share. Bounding by time per page, with an exact

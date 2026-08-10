@@ -15,6 +15,18 @@ export interface ProofItem {
   source_label: string | null;
 }
 
+/**
+ * Display state, not verification state.
+ *
+ * This once described a request-and-approve workflow that had no mechanism
+ * behind it: no request was ever sent, nothing was ever confirmed with the
+ * person quoted, and the owner marked their own quotes approved. The editor now
+ * offers a plain "show this on my page" switch.
+ *
+ * The stored values are unchanged so existing pages show exactly what they
+ * showed before. "requested" is legacy-only — it still reads as hidden, and
+ * nothing writes it any more.
+ */
 export type TestimonialStatus = "draft" | "requested" | "approved";
 
 export interface TestimonialRecord {

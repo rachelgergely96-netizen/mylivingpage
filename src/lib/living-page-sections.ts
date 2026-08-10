@@ -28,6 +28,12 @@ function hasRenderableProof(data: ResumeData): boolean {
   );
 }
 
+/**
+ * `status === "approved"` is the stored encoding of "show this on my page" (see
+ * TestimonialStatus). Kept as the gate deliberately: loosening it would publish
+ * every quote an owner had previously chosen to keep hidden, without them
+ * touching anything.
+ */
 function hasRenderableTestimonial(data: ResumeData): boolean {
   return Boolean(
     data.testimonials?.some(

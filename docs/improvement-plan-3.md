@@ -181,17 +181,22 @@ Reduce testimonials to a plain quote + attribution field. Concretely:
 - Remove the `status` / `requested_at` / `approved_at` controls and the "Collect and approve
   quotes here" framing from the editor
   ([ResumeEditorFields.tsx:795-930](../src/components/resume/ResumeEditorFields.tsx#L795)).
-- `hasRenderableTestimonial` currently gates on `status === "approved"`
-  ([living-page-sections.ts:31-40](../src/lib/living-page-sections.ts#L31)) — change the gate
-  to "has a name and a quote," or **every existing testimonial not marked approved silently
-  disappears from live pages on deploy.** Check the production data before shipping.
-- Keep `status` in the type as optional and ignore it on read (the sanitizer in
-  `security/page-write.ts:215` already tolerates unknown/nullable fields, so stored values can
-  stay). No migration needed.
-- Consider a light "shared with permission" affirmation at entry — it costs one checkbox and
-  puts the responsibility where it belongs without pretending to verify.
+- **Keep `status === "approved"` as the render gate**
+  ([living-page-sections.ts:31-40](../src/lib/living-page-sections.ts#L31)), and re-frame it
+  in the UI as a plain "show this on my page" switch.
 
-This unblocks 1.4 from the email work entirely; it can ship in Stage 2.
+  An earlier draft of this plan had the migration risk backwards. Loosening the gate to
+  "has a name and a quote" does not hide anything — it **publishes every quote an owner had
+  deliberately kept as draft or requested**, without them touching a thing. Keeping the gate
+  and re-labelling the control means zero behaviour change for existing pages and no
+  production data check needed.
+- New testimonials default to shown: adding a quote in the editor *is* the act of choosing to
+  publish it. The old `draft` default belonged to the workflow being removed.
+- `requested` becomes legacy-only — still reads as hidden, nothing writes it.
+- Say plainly at the point of entry that nothing is verified with the person quoted, so the
+  responsibility sits where it belongs.
+
+This unblocks 1.4 from the email work entirely; it ships in Stage 2.
 
 ---
 

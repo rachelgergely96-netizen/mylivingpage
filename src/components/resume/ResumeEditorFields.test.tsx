@@ -115,7 +115,10 @@ describe("ResumeEditorFields", () => {
     );
     expect(markup).toContain("Headline · target role");
     expect(markup).toContain("Opening summary");
-    expect(markup).toContain("Visibility &amp; request tracking");
+    // Testimonials offer a display switch, not an approval workflow.
+    expect(markup).toContain("Show this quote on my page");
+    expect(markup).not.toContain("Visibility &amp; request tracking");
+    expect(markup).not.toContain("Requested · hidden");
 
     expect(markup).toContain("sm:grid-cols-[7rem_minmax(0,1fr)]");
     expect(

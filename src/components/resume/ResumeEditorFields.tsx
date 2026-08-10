@@ -792,7 +792,8 @@ export default function ResumeEditorFields({
             Let a trusted collaborator describe the value of working with you in their own words.
           </p>
           <p className="text-sm leading-6 text-site-secondary">
-            Collect and approve quotes here. Only approved testimonials appear on the public page.
+            Add the quote and who said it. Only share words you have their permission to
+            publish — nothing here is verified with them for you.
           </p>
           {testimonials.map((testimonial, index) => (
             <div
@@ -859,80 +860,46 @@ export default function ResumeEditorFields({
                     updateField("testimonials", next);
                   }}
                   rows={3}
-                  aria-label="What should appear on the page once approved?"
+                  aria-label="Quote shown on the page"
                   placeholder="A specific observation about the value of working with you."
                   className={textAreaClass}
                 />
               </LabeledControl>
-              <details className="border border-site-border bg-site-surface px-3 py-2.5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-site-secondary">
-                  Visibility &amp; request tracking
-                  <span className="font-mono text-xs text-site-action-hover">
-                    {testimonial.status}
-                  </span>
-                </summary>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <LabeledControl label="Relationship">
-                    <input
-                      type="text"
-                      value={testimonial.relationship ?? ""}
-                      onChange={(event) => {
-                        const next = [...testimonials];
-                        next[index] = { ...next[index], relationship: event.target.value || null };
-                        updateField("testimonials", next);
-                      }}
-                      aria-label="Relationship"
-                      placeholder="Former manager"
-                      className={inputClass}
-                    />
-                  </LabeledControl>
-                  <LabeledControl label="Public status">
-                    <select
-                      aria-label="Testimonial status"
-                      value={testimonial.status}
-                      onChange={(event) => {
-                        const next = [...testimonials];
-                        next[index] = {
-                          ...next[index],
-                          status: event.target.value as typeof testimonial.status,
-                        };
-                        updateField("testimonials", next);
-                      }}
-                      className={inputClass}
-                    >
-                      <option value="draft">Draft · hidden</option>
-                      <option value="requested">Requested · hidden</option>
-                      <option value="approved">Approved · public</option>
-                    </select>
-                  </LabeledControl>
-                  <LabeledControl label="Requested on">
-                    <input
-                      aria-label="Testimonial request date"
-                      type="date"
-                      value={testimonial.requested_at ?? ""}
-                      onChange={(event) => {
-                        const next = [...testimonials];
-                        next[index] = { ...next[index], requested_at: event.target.value || null };
-                        updateField("testimonials", next);
-                      }}
-                      className={inputClass}
-                    />
-                  </LabeledControl>
-                  <LabeledControl label="Approved on">
-                    <input
-                      aria-label="Testimonial approval date"
-                      type="date"
-                      value={testimonial.approved_at ?? ""}
-                      onChange={(event) => {
-                        const next = [...testimonials];
-                        next[index] = { ...next[index], approved_at: event.target.value || null };
-                        updateField("testimonials", next);
-                      }}
-                      className={inputClass}
-                    />
-                  </LabeledControl>
-                </div>
-              </details>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <LabeledControl label="Relationship">
+                  <input
+                    type="text"
+                    value={testimonial.relationship ?? ""}
+                    onChange={(event) => {
+                      const next = [...testimonials];
+                      next[index] = { ...next[index], relationship: event.target.value || null };
+                      updateField("testimonials", next);
+                    }}
+                    aria-label="Relationship"
+                    placeholder="Former manager"
+                    className={inputClass}
+                  />
+                </LabeledControl>
+                {/* A plain display switch, not an approval. The stored values stay
+                    "approved"/"draft" so existing pages show exactly what they
+                    showed before this screen stopped implying verification. */}
+                <label className="flex items-center gap-2.5 self-end pb-1 text-sm text-site-text">
+                  <input
+                    type="checkbox"
+                    checked={testimonial.status === "approved"}
+                    onChange={(event) => {
+                      const next = [...testimonials];
+                      next[index] = {
+                        ...next[index],
+                        status: event.target.checked ? "approved" : "draft",
+                      };
+                      updateField("testimonials", next);
+                    }}
+                    className="h-4 w-4 accent-[color:var(--site-action)]"
+                  />
+                  Show this quote on my page
+                </label>
+              </div>
             </div>
           ))}
           <button

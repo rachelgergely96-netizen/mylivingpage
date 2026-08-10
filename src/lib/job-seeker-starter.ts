@@ -218,7 +218,10 @@ export function createEmptyTestimonialRecord(): TestimonialRecord {
     company: "",
     relationship: null,
     quote: "",
-    status: "draft",
+    // Shown by default: adding a quote in the editor is the act of choosing to
+    // publish it. The old "draft" default belonged to a request-and-approve
+    // workflow that never existed.
+    status: "approved",
     requested_at: null,
     approved_at: null,
   };

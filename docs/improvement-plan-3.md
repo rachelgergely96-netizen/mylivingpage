@@ -2,10 +2,16 @@
 
 Audit date: 2026-08-10. Baseline: `main` @ `0e54e76`, clean tree.
 
-> **Execution update — 2026-08-10.** All five stages are implemented on branch
-> `user-functionality-plan-3`. See [Execution record](#execution-record) at the end for
-> what shipped, where the implementation departed from this plan and why, and what remains
-> for Rachel or ops.
+> **Execution update — 2026-08-10.** All five stages are implemented and merged to `main`.
+> See [Execution record](#execution-record) at the end for what shipped, where the
+> implementation departed from this plan and why, and what remains for Rachel.
+>
+> **Revised — 2026-08-11 (Rachel's call): no email.** The whole notification system was
+> removed. Item 1.1 is now answered in the product rather than the inbox: the page activity
+> screen lists every open — when it happened, where it came from, how long they stayed, how
+> far they read, and whether they had been before. The "Read" versus "Opened" distinction
+> that made the email trustworthy is what makes the list trustworthy, so
+> `read-quality.ts` survived the removal and moved into analytics.
 
 Plans 1 and 2 were engineering plans — security, architecture, dead code, CI, perf. This
 one asks a different question: **what can a user actually do, and where does the product
@@ -613,12 +619,11 @@ A self-review and a final adversarial pass caught seven more, all shipped in `fd
 
 ### Still outstanding
 
-**Ops, before notifications can send:**
-- `RESEND_API_KEY`, `NOTIFICATION_FROM_EMAIL`, `CRON_SECRET` in Vercel Production. Without the
-  key the pipeline runs end to end and skips delivery, so preview and CI never mail anyone.
-- SPF/DKIM/DMARC for the sending domain, ideally a dedicated subdomain, coordinated with the
-  Supabase Auth sender already on `mylivingpage.com`.
-- Apply `20260810120000_view_notifications.sql` and `20260810130000_page_search_indexable.sql`.
+**Ops:**
+- Apply `20260810130000_page_search_indexable.sql` before the deploy that reads it.
+  (`20260810120000_view_notifications.sql` was removed with the email system. If it was
+  already applied, the leftover `notification_preferences` table and the two `page_views`
+  notification columns are unused and safe to drop whenever convenient.)
 
 **Rachel's call:**
 - Where `/try` belongs in the homepage and nav. It is currently reachable from the sitemap and

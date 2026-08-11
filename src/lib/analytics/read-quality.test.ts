@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  QUALIFIED_VIEW_ENGAGED_SECONDS,
-  QUALIFIED_VIEW_SCROLL_MIN_SECONDS,
+  READ_ENGAGED_SECONDS,
+  READ_SCROLL_MIN_SECONDS,
   describeViewQuality,
-  isQualifiedView,
-} from "@/lib/notifications/qualified-view";
+  looksLikeRealRead,
+} from "@/lib/analytics/read-quality";
 
-describe("isQualifiedView", () => {
+describe("looksLikeRealRead", () => {
   it("rejects the headless link-scanner shape: executes, never dwells", () => {
     expect(
-      isQualifiedView({
+      looksLikeRealRead({
         engagedSeconds: 0,
         maxScrollDepthPct: 0,
         hadOutboundClick: false,
@@ -19,8 +19,8 @@ describe("isQualifiedView", () => {
 
   it("rejects a brief bounce below the dwell threshold", () => {
     expect(
-      isQualifiedView({
-        engagedSeconds: QUALIFIED_VIEW_ENGAGED_SECONDS - 1,
+      looksLikeRealRead({
+        engagedSeconds: READ_ENGAGED_SECONDS - 1,
         maxScrollDepthPct: 10,
         hadOutboundClick: false,
       }),
@@ -29,8 +29,8 @@ describe("isQualifiedView", () => {
 
   it("qualifies at the dwell threshold", () => {
     expect(
-      isQualifiedView({
-        engagedSeconds: QUALIFIED_VIEW_ENGAGED_SECONDS,
+      looksLikeRealRead({
+        engagedSeconds: READ_ENGAGED_SECONDS,
         maxScrollDepthPct: 0,
         hadOutboundClick: false,
       }),
@@ -39,8 +39,8 @@ describe("isQualifiedView", () => {
 
   it("qualifies a reader who scrolled and stayed past the floor", () => {
     expect(
-      isQualifiedView({
-        engagedSeconds: QUALIFIED_VIEW_SCROLL_MIN_SECONDS,
+      looksLikeRealRead({
+        engagedSeconds: READ_SCROLL_MIN_SECONDS,
         maxScrollDepthPct: 60,
         hadOutboundClick: false,
       }),
@@ -49,7 +49,7 @@ describe("isQualifiedView", () => {
 
   it("rejects full scroll depth with no dwell — a short page reports 100% on load", () => {
     expect(
-      isQualifiedView({
+      looksLikeRealRead({
         engagedSeconds: 0,
         maxScrollDepthPct: 100,
         hadOutboundClick: false,
@@ -59,8 +59,8 @@ describe("isQualifiedView", () => {
 
   it("rejects deep scroll below the dwell floor", () => {
     expect(
-      isQualifiedView({
-        engagedSeconds: QUALIFIED_VIEW_SCROLL_MIN_SECONDS - 1,
+      looksLikeRealRead({
+        engagedSeconds: READ_SCROLL_MIN_SECONDS - 1,
         maxScrollDepthPct: 90,
         hadOutboundClick: false,
       }),
@@ -69,7 +69,7 @@ describe("isQualifiedView", () => {
 
   it("qualifies an outbound click immediately — no scanner clicks a contact link", () => {
     expect(
-      isQualifiedView({
+      looksLikeRealRead({
         engagedSeconds: 0,
         maxScrollDepthPct: 0,
         hadOutboundClick: true,
@@ -79,7 +79,7 @@ describe("isQualifiedView", () => {
 
   it("treats missing signals as not qualified", () => {
     expect(
-      isQualifiedView({
+      looksLikeRealRead({
         engagedSeconds: null,
         maxScrollDepthPct: null,
         hadOutboundClick: null,

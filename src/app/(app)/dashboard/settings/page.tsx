@@ -8,7 +8,6 @@ import {
   getAccountAccessState,
   type AccountAccessState,
 } from "@/lib/account-access";
-import NotificationSettings from "@/components/dashboard/NotificationSettings";
 import PageVisibilityControl from "@/components/dashboard/PageVisibilityControl";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import {
@@ -791,8 +790,6 @@ export default function SettingsPage() {
           initialState={getPageVisibilityState(profile.latestPage)}
         />
       ) : null}
-
-      <NotificationSettings />
 
       {/* Universal free access with transitional subscription management. */}
       <section className="site-panel mb-5 p-5 sm:p-7">

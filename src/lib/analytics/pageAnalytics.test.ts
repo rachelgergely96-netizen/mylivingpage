@@ -3,6 +3,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildPageAnalyticsDashboard,
   fetchPageAnalyticsDashboard,
+  type PageAnalyticsViewRow,
 } from "@/lib/analytics/pageAnalytics";
 import type {
   AnalyticsSectionId,
@@ -640,5 +641,104 @@ describe("page analytics aggregation", () => {
     expect(analytics.state.availability).toBe("basic");
     expect(analytics.overview.views.value).toBe(1);
     expect(analytics.acquisition.topReferrers[0]?.label).toBe("Direct");
+  });
+});
+
+describe("recentViews", () => {
+  function view(overrides: Partial<PageAnalyticsViewRow> & { id: string; viewed_at: string }) {
+    return {
+      referrer: null,
+      user_agent: null,
+      viewer_ip: null,
+      country: null,
+      engaged_seconds: null,
+      max_scroll_depth_pct: null,
+      primary_section: null,
+      had_outbound_click: null,
+      ...overrides,
+    } as PageAnalyticsViewRow;
+  }
+
+  const now = new Date("2026-08-11T12:00:00.000Z");
+
+  function build(views: PageAnalyticsViewRow[]) {
+    return buildPageAnalyticsDashboard({
+      rangeKey: "30d",
+      allTimeViews: views.length,
+      views,
+      interactions: [],
+      now,
+    });
+  }
+
+  it("lists opens newest first", () => {
+    const result = build([
+      view({ id: "older", viewed_at: "2026-08-09T10:00:00.000Z" }),
+      view({ id: "newer", viewed_at: "2026-08-10T10:00:00.000Z" }),
+    ]);
+
+    expect(result.recentViews.map((entry) => entry.id)).toEqual(["newer", "older"]);
+  });
+
+  it("separates a genuine read from a bare load", () => {
+    const result = build([
+      view({
+        id: "read",
+        viewed_at: "2026-08-10T10:00:00.000Z",
+        engaged_seconds: 45,
+      }),
+      view({
+        id: "scanner",
+        viewed_at: "2026-08-10T09:00:00.000Z",
+        engaged_seconds: 0,
+        max_scroll_depth_pct: 100,
+      }),
+    ]);
+
+    const byId = new Map(result.recentViews.map((entry) => [entry.id, entry]));
+    expect(byId.get("read")?.looksLikeRead).toBe(true);
+    // A page that fits the viewport reports 100% depth on load, so depth alone
+    // must not read as a person.
+    expect(byId.get("scanner")?.looksLikeRead).toBe(false);
+  });
+
+  it("marks only the later visit from the same person as returning", () => {
+    const result = build([
+      view({ id: "first", viewed_at: "2026-08-08T10:00:00.000Z", viewer_ip: "a" }),
+      view({ id: "second", viewed_at: "2026-08-10T10:00:00.000Z", viewer_ip: "a" }),
+      view({ id: "other", viewed_at: "2026-08-10T11:00:00.000Z", viewer_ip: "b" }),
+    ]);
+
+    const byId = new Map(result.recentViews.map((entry) => [entry.id, entry]));
+    expect(byId.get("first")?.isReturning).toBe(false);
+    expect(byId.get("second")?.isReturning).toBe(true);
+    expect(byId.get("other")?.isReturning).toBe(false);
+  });
+
+  it("describes where the view came from and what was read", () => {
+    const result = build([
+      view({
+        id: "detail",
+        viewed_at: "2026-08-10T10:00:00.000Z",
+        referrer: "https://www.linkedin.com/feed",
+        country: "US",
+        engaged_seconds: 40,
+        primary_section: "proof",
+        had_outbound_click: true,
+      }),
+    ]);
+
+    expect(result.recentViews[0]).toMatchObject({
+      referrerLabel: "linkedin.com",
+      countryLabel: "US",
+      engagedSeconds: 40,
+      primarySectionLabel: "Proof",
+      hadOutboundClick: true,
+      looksLikeRead: true,
+    });
+  });
+
+  it("returns nothing when the page has never been opened", () => {
+    expect(build([]).recentViews).toEqual([]);
   });
 });

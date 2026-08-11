@@ -44,24 +44,22 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 - Treat `https://www.mylivingpage.com` as the canonical production auth origin. OAuth starts from apex should still complete, but the callback should resolve on `www`.
 - Enable Cloudflare Turnstile in Supabase Auth CAPTCHA settings when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set in the app env.
 
-## Email Notifications
+## Page Activity
 
-- Owners are emailed when someone genuinely reads their page, when a visitor
-  returns, and weekly. Delivery needs `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`;
-  without the key the pipeline runs end to end and skips sending, so local, CI, and
-  preview never mail real people.
-- `NOTIFICATION_FROM_EMAIL` must be on a domain with SPF, DKIM, and DMARC configured.
-  Prefer a dedicated subdomain so a new sender's reputation cannot affect the Supabase
-  Auth mail already sent from `mylivingpage.com`.
-- The weekly digest runs from `vercel.json` crons and requires `CRON_SECRET`.
+- Owners see every open on their page's activity screen: when it happened, where it
+  came from, how long the visitor stayed, how far they read, and whether they had
+  been before. There is no email delivery; activity is read in the app.
+- Views are recorded once per visitor per page per 24 hours, and a signed-in owner
+  viewing their own page is never counted.
+- Each open is labelled "Read" or "Opened". See `src/lib/analytics/read-quality.ts`
+  — corporate mail scanners open links in transit, and counting those as reads
+  would tell someone their application was looked at when it was not.
 
 ## Migration Ordering
 
 Migrations are applied by hand, so apply them **before** deploying the code that
 reads the columns they add:
 
-- `20260810120000_view_notifications.sql` — notification preferences and per-view
-  notification state. Missing, notifications silently no-op.
 - `20260810130000_page_search_indexable.sql` — the `search_indexable` column behind
   "Link only". Missing, publishing and the visibility control fail. The sitemap falls
   back to its unfiltered query rather than emptying itself.

@@ -13,6 +13,8 @@ import {
   formatAnalyticsSectionLabel,
   formatAnalyticsTargetLabel,
 } from "@/lib/analytics/publicTracking";
+import { looksLikeRealRead } from "@/lib/analytics/read-quality";
+import { LIVING_PAGE_SECTION_LABELS } from "@/lib/living-page-sections";
 
 export type AnalyticsComparisonStatus = "up" | "down" | "flat" | "new";
 export type PageAnalyticsAvailability = "full" | "basic" | "unavailable";
@@ -133,7 +135,28 @@ export interface PageAnalyticsDashboardData {
     }>;
     avgScrollDepthPct: number | null;
   };
+  /**
+   * The individual opens, newest first — the answer to "has anyone looked at
+   * it yet?", which totals and daily bars cannot give.
+   */
+  recentViews: RecentPageView[];
   insights: string[];
+}
+
+export interface RecentPageView {
+  id: string;
+  viewedAt: string;
+  referrerLabel: string;
+  deviceLabel: string;
+  countryLabel: string | null;
+  engagedSeconds: number | null;
+  maxScrollDepthPct: number | null;
+  primarySectionLabel: string | null;
+  hadOutboundClick: boolean;
+  /** Dwell, scrolling, or a click — not just a load. See read-quality.ts. */
+  looksLikeRead: boolean;
+  /** This visitor had opened the page before. */
+  isReturning: boolean;
 }
 
 interface BuildPageAnalyticsDashboardInput {
@@ -707,6 +730,48 @@ function buildFollowUpSignals({
   };
 }
 
+const MAX_RECENT_VIEWS = 25;
+
+function buildRecentViews(rows: PageAnalyticsViewRow[]): RecentPageView[] {
+  const sorted = [...rows].sort((left, right) =>
+    right.viewed_at.localeCompare(left.viewed_at),
+  );
+
+  // A visitor is "returning" relative to their own earlier visits, so count
+  // forwards through history rather than through this newest-first slice.
+  const seenVisitors = new Set<string>();
+  const returningViewIds = new Set<string>();
+  for (const row of [...sorted].reverse()) {
+    if (!row.viewer_ip) {
+      continue;
+    }
+    if (seenVisitors.has(row.viewer_ip)) {
+      returningViewIds.add(row.id);
+    }
+    seenVisitors.add(row.viewer_ip);
+  }
+
+  return sorted.slice(0, MAX_RECENT_VIEWS).map((row) => ({
+    id: row.id,
+    viewedAt: row.viewed_at,
+    referrerLabel: parseReferrerLabel(row.referrer),
+    deviceLabel: detectDeviceLabel(row.user_agent),
+    countryLabel: row.country?.trim() || null,
+    engagedSeconds: row.engaged_seconds,
+    maxScrollDepthPct: row.max_scroll_depth_pct,
+    primarySectionLabel: row.primary_section
+      ? (LIVING_PAGE_SECTION_LABELS[row.primary_section] ?? null)
+      : null,
+    hadOutboundClick: Boolean(row.had_outbound_click),
+    looksLikeRead: looksLikeRealRead({
+      engagedSeconds: row.engaged_seconds,
+      maxScrollDepthPct: row.max_scroll_depth_pct,
+      hadOutboundClick: row.had_outbound_click,
+    }),
+    isReturning: returningViewIds.has(row.id),
+  }));
+}
+
 export function buildPageAnalyticsDashboard({
   rangeKey,
   allTimeViews,
@@ -866,6 +931,7 @@ export function buildPageAnalyticsDashboard({
     rangeDays,
     rangeLabel,
     allTimeViews,
+    recentViews: buildRecentViews(currentRows),
     state: {
       availability: "full",
       notice: null,

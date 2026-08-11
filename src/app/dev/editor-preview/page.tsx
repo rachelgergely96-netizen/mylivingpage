@@ -17,10 +17,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function EditorLayoutPreviewPage() {
+interface EditorLayoutPreviewPageProps {
+  searchParams: Promise<{ autosave?: string }>;
+}
+
+export default async function EditorLayoutPreviewPage({
+  searchParams,
+}: EditorLayoutPreviewPageProps) {
   if (!isEditorPreviewEnabled()) {
     notFound();
   }
+
+  // Specs that assert the transient "saving shortly" / "saving" / "saved"
+  // sequence need the debounce out of the way, or a slow run lets autosave
+  // land mid-assertion.
+  const { autosave } = await searchParams;
+  const autosaveEnabled = autosave !== "off";
 
   return (
     <div className="site-shell" data-site-ui>
@@ -34,7 +46,10 @@ export default function EditorLayoutPreviewPage() {
           </span>
         </div>
       </header>
-      <PageEditorClient pageId={EDITOR_LAYOUT_PREVIEW_PAGE_ID} />
+      <PageEditorClient
+        pageId={EDITOR_LAYOUT_PREVIEW_PAGE_ID}
+        autosaveEnabled={autosaveEnabled}
+      />
     </div>
   );
 }

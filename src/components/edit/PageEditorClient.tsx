@@ -54,6 +54,8 @@ interface EditDraft {
 
 interface PageEditorClientProps {
   pageId: string;
+  /** Test harness only; always on in the real editor. */
+  autosaveEnabled?: boolean;
 }
 
 /**
@@ -84,7 +86,10 @@ function normalizeLegacyResumeData(data: ResumeData) {
   return next;
 }
 
-export default function PageEditorClient({ pageId }: PageEditorClientProps) {
+export default function PageEditorClient({
+  pageId,
+  autosaveEnabled = true,
+}: PageEditorClientProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -487,7 +492,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   // saved on an explicit click, so work survived a refresh on the same browser
   // (via the local draft) and nothing else.
   useEffect(() => {
-    if (!editorReady || !hasChanges || saving || !data || !page) {
+    if (!autosaveEnabled || !editorReady || !hasChanges || saving || !data || !page) {
       return;
     }
 
@@ -514,6 +519,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     };
   }, [
     atsTargeting,
+    autosaveEnabled,
     data,
     editorReady,
     hasChanges,
@@ -758,7 +764,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                 {saving
                   ? "Saving changes"
                   : hasChanges
-                    ? "Saving shortly…"
+                    ? autosaveEnabled
+                      ? "Saving shortly…"
+                      : "Unsaved changes"
                     : "All changes saved"}
               </span>
               {isDraft ? (

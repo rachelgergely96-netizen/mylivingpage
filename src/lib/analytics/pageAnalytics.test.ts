@@ -742,3 +742,33 @@ describe("recentViews", () => {
     expect(build([]).recentViews).toEqual([]);
   });
 });
+
+describe("recentViews caps", () => {
+  it("caps the list but keeps the true total available for the UI to disclose", () => {
+    const views = Array.from({ length: 40 }, (_, index) => ({
+      id: `view-${index}`,
+      viewed_at: new Date(Date.UTC(2026, 7, 10, 0, index)).toISOString(),
+      referrer: null,
+      user_agent: null,
+      viewer_ip: `ip-${index}`,
+      country: null,
+      engaged_seconds: null,
+      max_scroll_depth_pct: null,
+      primary_section: null,
+      had_outbound_click: null,
+    })) as PageAnalyticsViewRow[];
+
+    const result = buildPageAnalyticsDashboard({
+      rangeKey: "30d",
+      allTimeViews: 40,
+      views,
+      interactions: [],
+      now: new Date("2026-08-11T12:00:00.000Z"),
+    });
+
+    expect(result.recentViews).toHaveLength(25);
+    expect(result.trend.totalViews).toBe(40);
+    // Newest first, so the cap drops the oldest rather than the most useful.
+    expect(result.recentViews[0].id).toBe("view-39");
+  });
+});

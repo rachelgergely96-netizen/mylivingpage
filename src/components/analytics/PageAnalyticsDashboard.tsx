@@ -350,27 +350,44 @@ function TopBar({
  * seeker actually has after sending a link is "has anyone looked at it yet, and
  * did they really read it?" Nothing in the product answered that until now.
  */
-function RecentViews({ views }: { views: PageAnalyticsDashboardData["recentViews"] }) {
+function RecentViews({ analytics }: { analytics: PageAnalyticsDashboardData }) {
+  const views = analytics.recentViews;
+  const totalInRange = analytics.trend.totalViews;
+
   if (views.length === 0) {
+    // "Nobody has ever opened it" and "nobody opened it this week" are very
+    // different messages to receive after sending your page out.
+    const neverOpened = analytics.allTimeViews === 0;
+
     return (
       <div className="site-panel p-4 sm:p-6" data-analytics-recent-views>
-        <p className="site-eyebrow">Every open</p>
-        <h2 className="site-panel-title mt-2 text-xl">Nobody has opened it yet</h2>
+        <p className="site-eyebrow">Opens</p>
+        <h2 className="site-panel-title mt-2 text-xl">
+          {neverOpened
+            ? "Nobody has opened it yet"
+            : `No opens in the ${analytics.rangeLabel.toLowerCase()}`}
+        </h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-site-secondary">
-          When someone opens your page, it appears here within a minute or two — when it
-          happened, where they came from, and how much of the page they read.
+          {neverOpened
+            ? "When someone opens your page, it appears here within a minute or two — when it happened, where they came from, and how much of the page they read."
+            : "Your page has been opened before, just not in this range. Widen the range above to see earlier activity."}
         </p>
       </div>
     );
   }
 
+  const capped = totalInRange > views.length;
+
   return (
     <div className="site-panel p-4 sm:p-6" data-analytics-recent-views>
-      <p className="site-eyebrow">Every open</p>
+      <p className="site-eyebrow">Opens</p>
       <h2 className="site-panel-title mt-2 text-xl">Who opened your page, and when</h2>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-site-secondary">
-        Newest first. Views are counted once per visitor per day, so a single person
-        refreshing does not show up repeatedly.
+        {capped
+          ? `The ${views.length} most recent of ${formatInteger(totalInRange)} opens in the ${analytics.rangeLabel.toLowerCase()}.`
+          : "Newest first."}{" "}
+        A visitor is counted at most once every 24 hours, so one person refreshing does not
+        appear repeatedly.
       </p>
 
       <ul className="mt-4 divide-y divide-site-border border-t border-site-border">
@@ -415,7 +432,9 @@ function RecentViews({ views }: { views: PageAnalyticsDashboardData["recentViews
       <p className="mt-4 text-xs leading-5 text-site-muted">
         &ldquo;Read&rdquo; means they stayed, scrolled, or followed one of your links.
         &ldquo;Opened&rdquo; can be a real quick look, or an email system checking the link
-        before it reaches the person you sent it to.
+        before it reaches the person you sent it to. &ldquo;Came back&rdquo; compares visits
+        inside this range only, and people sharing an office network can look like one
+        visitor.
       </p>
     </div>
   );
@@ -619,7 +638,7 @@ export default function PageAnalyticsDashboard({
         />
       )}
 
-      <RecentViews views={analytics.recentViews} />
+      <RecentViews analytics={analytics} />
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="site-panel p-4 sm:p-6">

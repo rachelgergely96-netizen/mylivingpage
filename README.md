@@ -46,11 +46,14 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 
 ## Page Activity
 
-- Owners see every open on their page's activity screen: when it happened, where it
-  came from, how long the visitor stayed, how far they read, and whether they had
-  been before. There is no email delivery; activity is read in the app.
-- Views are recorded once per visitor per page per 24 hours, and a signed-in owner
-  viewing their own page is never counted.
+- Owners see their page's opens on the activity screen: when each happened, where it
+  came from, how long the visitor stayed, how far they read, and whether they had been
+  before. There is no email delivery; activity is read in the app. The list shows the
+  25 most recent opens in the selected range and says so when it is capped.
+- Views are recorded at most once per visitor per page per rolling 24 hours, and a
+  signed-in owner viewing their own page is never counted.
+- "Came back" compares visits within the selected range, and visitors sharing a network
+  can read as one person — the same limitation as the unique-visitor count.
 - Each open is labelled "Read" or "Opened". See `src/lib/analytics/read-quality.ts`
   — corporate mail scanners open links in transit, and counting those as reads
   would tell someone their application was looked at when it was not.

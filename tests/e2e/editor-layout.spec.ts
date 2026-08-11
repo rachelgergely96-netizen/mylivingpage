@@ -192,7 +192,9 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/dev/editor-preview");
+  // Autosave paused: this spec asserts the transient unsaved/saving/saved
+  // sequence, which a debounce firing mid-assertion would race.
+  await page.goto("/dev/editor-preview?autosave=off");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
     origin: new URL(page.url()).origin,
   });
@@ -220,7 +222,7 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   expect(previewBox!.x).toBeGreaterThan(contentBox!.x + contentBox!.width);
 
   await headline.fill("Principal Platform Engineer");
-  await expect(page.getByText("Saving shortly…", { exact: true })).toBeVisible();
+  await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeDisabled();
   await expect(page.locator("[data-editor-preview-status]")).toHaveText("Unsaved view");
   await expect(preview.getByText("Principal Platform Engineer", { exact: true })).toBeVisible();
@@ -262,7 +264,7 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
     page.getByText("Saved. Newer edits are still unsaved.", { exact: true }),
   ).toBeVisible();
   await expect(headline).toHaveValue("Distinguished Platform Engineer");
-  await expect(page.getByText("Saving shortly…", { exact: true })).toBeVisible();
+  await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
 });
 
 test("the editor saves on its own after edits stop", async ({ page }) => {

@@ -35,6 +35,7 @@ interface Profile {
     id: string;
     status: string | null;
     visibility: string | null;
+    search_indexable: boolean | null;
     published_at: string | null;
   } | null;
   created_at: string;
@@ -812,7 +813,9 @@ export default function SettingsPage() {
         </p>
         <div className="site-callout mt-4 px-4 py-3 text-sm">
           {livePageActive
-            ? "Your public page is currently live."
+            ? getPageVisibilityState(profile.latestPage) === "link"
+              ? "Your page is live and hidden from search."
+              : "Your public page is currently live."
             : "Your page is not live yet. Publish it whenever you are ready."}
         </div>
         {accountAccess.hasPaidSubscription ? (

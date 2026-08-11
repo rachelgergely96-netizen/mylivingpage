@@ -2,19 +2,29 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PAGE_VISIBILITY_WRITES } from "@/lib/page-visibility";
+import {
+  PAGE_VISIBILITY_WRITES,
+  type PageVisibilityState,
+} from "@/lib/page-visibility";
 
 interface PublishPageButtonProps {
   pageId: string;
   emphasis?: "primary" | "secondary";
   label?: string;
-  onPublished?: () => void;
+  /**
+   * Which live state to restore. A page that was link-only before going
+   * offline must not come back searchable just because it was republished —
+   * that is the one thing the person who chose link-only was avoiding.
+   */
+  publishAs?: Extract<PageVisibilityState, "public" | "link">;
+  onPublished?: (state: Extract<PageVisibilityState, "public" | "link">) => void;
 }
 
 export default function PublishPageButton({
   pageId,
   emphasis = "primary",
   label = "Publish",
+  publishAs = "public",
   onPublished,
 }: PublishPageButtonProps) {
   const router = useRouter();
@@ -35,7 +45,7 @@ export default function PublishPageButton({
       const response = await fetch(`/api/pages/${pageId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(PAGE_VISIBILITY_WRITES.public),
+        body: JSON.stringify(PAGE_VISIBILITY_WRITES[publishAs]),
       });
       const payload = (await response.json().catch(() => null)) as
         | { error?: string }
@@ -45,7 +55,7 @@ export default function PublishPageButton({
         throw new Error(payload?.error ?? "Unable to publish this page.");
       }
 
-      onPublished?.();
+      onPublished?.(publishAs);
       startTransition(() => {
         router.refresh();
       });

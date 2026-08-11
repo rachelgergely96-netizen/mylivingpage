@@ -116,9 +116,12 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
       notFound();
     }
 
+    // Offline is withheld from the sitemap, but a crawler that already knows
+    // the URL would otherwise index the interstitial itself.
     return {
       title: "Page offline",
       description: "Living digital pages for professionals.",
+      robots: { index: false, follow: false },
     };
   }
 

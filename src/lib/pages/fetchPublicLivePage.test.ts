@@ -90,8 +90,9 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
             };
           },
           async maybeSingle() {
-            // The owner-scoped branch now matches both live visibilities
-            // ("public" and "link") via .in(), so the filter is an array.
+            // Link-only pages are visibility='public' with search_indexable
+            // false, so this branch still filters on "public" alone. The array
+            // shape is tolerated in case the query ever uses .in() again.
             const visibilityFilter = filters.visibility;
             const matchesLiveVisibility = Array.isArray(visibilityFilter)
               ? visibilityFilter.includes("public")

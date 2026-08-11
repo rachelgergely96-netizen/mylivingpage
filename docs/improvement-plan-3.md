@@ -580,6 +580,37 @@ last-viewed lookup, keeps the speed win without the truncation. And the pre-sign
 cannot be account-scoped — no account exists yet — so on a shared machine the next person to
 sign in would have inherited the previous visitor's résumé; it now expires after two hours.
 
+### Fixed in the pre-merge pass
+
+A self-review and a final adversarial pass caught seven more, all shipped in `fd501fe` and
+`d8f27a2`:
+
+- The public page still printed "· Approved &lt;date&gt;" beside each testimonial — the exact
+  verification claim the product had stopped making, left on the one surface that matters,
+  with the editor control to change it already removed.
+- Offline pages were not `noindex`, so taking a page down could leave "This page is offline
+  right now" indexed under the owner's name.
+- Republishing from the editor always came back fully public, even for a page that had been
+  link-only before it went offline — the one thing that state exists to prevent. It now
+  restores what it was.
+- `/api/profile` did not select `search_indexable`, so the settings visibility control read
+  every link-only page as Public and choosing Public was a silent no-op.
+- `notification_preferences` is now revoked from browser roles outright rather than losing a
+  single column, with a `check:database-security` assertion to hold it there.
+- The sitemap falls back to its unfiltered query when `search_indexable` is missing, so a
+  deploy landing ahead of its migration cannot silently empty it.
+- Dispatch stopped fetching up to 256 KB of `page_config` on every qualified view.
+
+### Known and accepted
+
+- **Multi-tab editing is last-write-wins on `page_config`.** Pre-existing, but a 2.5s autosave
+  makes it easier to hit than a manual save did. Optimistic concurrency on the page row is the
+  real fix and is out of scope here.
+- **A signed-out owner can notify themselves.** The owner exclusion needs a session, so
+  checking your own link in incognito reads as a visitor.
+- **`/api/pages/publish` full-replaces `page_config`.** The create flow is blocked at one page
+  per account, so it is an edge path, but it does not merge.
+
 ### Still outstanding
 
 **Ops, before notifications can send:**

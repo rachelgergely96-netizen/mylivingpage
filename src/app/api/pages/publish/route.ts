@@ -244,6 +244,10 @@ export async function POST(request: Request) {
       slug: username,
       status: "live",
       visibility: "public",
+      // Explicit: this upserts over an existing row, which may have been left
+      // unindexable when it went offline. Publishing from the create flow means
+      // a public page, not a silently link-only one.
+      search_indexable: true,
       title: body.title?.trim() || "My Living Page",
       theme_id: body.theme_id,
       resume_data: body.resume_data,

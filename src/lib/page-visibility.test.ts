@@ -103,6 +103,47 @@ describe("write triples", () => {
   });
 });
 
+describe("republishing a page that went offline", () => {
+  // Coming back online must not quietly make a page searchable again — being
+  // unlisted is the whole reason someone chose link-only before taking it down.
+  function republishState(page: {
+    status?: string | null;
+    visibility?: string | null;
+    search_indexable?: boolean | null;
+  }): "public" | "link" {
+    return page.search_indexable === false ? "link" : "public";
+  }
+
+  it("restores link-only for a page that was hidden from search", () => {
+    const offlineWasLinkOnly = {
+      status: "draft",
+      visibility: "private",
+      search_indexable: false,
+    };
+
+    const restored = PAGE_VISIBILITY_WRITES[republishState(offlineWasLinkOnly)];
+    expect(getPageVisibilityState(restored)).toBe("link");
+    expect(isSearchIndexablePage(restored)).toBe(false);
+  });
+
+  it("restores public for a page that was public", () => {
+    const offlineWasPublic = {
+      status: "draft",
+      visibility: "private",
+      search_indexable: true,
+    };
+
+    const restored = PAGE_VISIBILITY_WRITES[republishState(offlineWasPublic)];
+    expect(getPageVisibilityState(restored)).toBe("public");
+  });
+
+  it("treats a row predating the column as public", () => {
+    const legacyOffline = { status: "draft", visibility: "private" };
+
+    expect(republishState(legacyOffline)).toBe("public");
+  });
+});
+
 describe("isPageVisibilityState", () => {
   it("accepts the three states and rejects stored column values", () => {
     expect(isPageVisibilityState("public")).toBe(true);

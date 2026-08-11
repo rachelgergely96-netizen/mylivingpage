@@ -28,6 +28,7 @@ import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import { sanitizeAtsTargeting } from "@/lib/ats-target-roles";
+import { PAGE_VISIBILITY_WRITES } from "@/lib/page-visibility";
 import { mergeResumePatch } from "@/lib/ats-review";
 import {
   applyPageVariant,
@@ -523,11 +524,22 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
     variants,
   ]);
 
-  const handlePublished = useCallback(() => {
-    setPage((prev) =>
-      prev ? { ...prev, status: "live" as const, visibility: "public" as const } : prev,
-    );
-  }, []);
+  const handlePublished = useCallback(
+    (state: "public" | "link") => {
+      const write = PAGE_VISIBILITY_WRITES[state];
+      setPage((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: write.status,
+              visibility: write.visibility,
+              search_indexable: write.search_indexable,
+            }
+          : prev,
+      );
+    },
+    [],
+  );
 
   const copyVariantLink = useCallback(
     async (variantId: string) => {
@@ -652,6 +664,9 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
   const livePath = `/${publicSlug || page?.slug || "your-username"}`;
   // Records without a status column keep the live-page actions they always had.
   const isDraft = Boolean(page?.status && page.status !== "live");
+  // A page that was link-only before it went offline comes back link-only.
+  const republishAs: "public" | "link" =
+    page?.search_indexable === false ? "link" : "public";
   const themePickerCollection =
     accountAccess.allowedThemeIds && !accountAccess.allowedThemeIds.includes(themeId)
       ? THEME_REGISTRY.find((theme) => theme.id === accountAccess.allowedThemeIds?.[0])
@@ -790,10 +805,13 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   pageId={page.id}
                   emphasis={hasChanges ? "secondary" : "primary"}
                   label="Publish page"
+                  publishAs={republishAs}
                   onPublished={handlePublished}
                 />
                 <p className="mt-1.5 text-xs leading-5 text-site-muted">
-                  Publishing makes mylivingpage.com/{publicSlug || page.slug} public.
+                  {republishAs === "link"
+                    ? `Publishing puts mylivingpage.com/${publicSlug || page.slug} back online, still hidden from search.`
+                    : `Publishing makes mylivingpage.com/${publicSlug || page.slug} public.`}
                 </p>
               </div>
             ) : (
@@ -1138,7 +1156,7 @@ export default function PageEditorClient({ pageId }: PageEditorClientProps) {
                   })}
                   {hasChanges ? (
                     <li className="text-xs leading-5 text-site-muted">
-                      Save your changes before sharing a version link.
+                      Your changes are saving now — version links follow in a moment.
                     </li>
                   ) : null}
                 </ul>

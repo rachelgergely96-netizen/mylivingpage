@@ -583,7 +583,7 @@ sign in would have inherited the previous visitor's résumé; it now expires aft
 ### Fixed in the pre-merge pass
 
 A self-review and a final adversarial pass caught seven more, all shipped in `fd501fe` and
-`d8f27a2`:
+`6f76d22`:
 
 - The public page still printed "· Approved &lt;date&gt;" beside each testimonial — the exact
   verification claim the product had stopped making, left on the one surface that matters,

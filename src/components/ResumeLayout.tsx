@@ -393,7 +393,6 @@ export default function ResumeLayout({
                   <p className="mt-3 text-xs font-medium">{testimonial.name}</p>
                   <p className="resume-theme-subtle mt-1 text-[11px]">
                     {[testimonial.role, testimonial.company].filter(Boolean).join(" · ")}
-                    {testimonial.approved_at ? ` · Approved ${testimonial.approved_at}` : ""}
                   </p>
                 </article>
               ))}

@@ -45,34 +45,23 @@ create index if not exists idx_page_views_unnotified
   on public.page_views(page_id, viewed_at)
   where notified_at is null;
 
+-- Per-page hourly notification ceiling counts recently notified rows.
+create index if not exists idx_page_views_notified_at
+  on public.page_views(page_id, notified_at)
+  where notified_at is not null;
+
 -- Digest window scan.
 create index if not exists idx_page_views_page_id_viewed_at
   on public.page_views(page_id, viewed_at desc);
 
+-- Server-owned table, following the same shape as public.events: reached only
+-- through the service role, never from a browser. `unsubscribe_token` is a
+-- bearer secret that mutes email for whoever holds it, so no browser role may
+-- read this table at all — a column-level revoke would understate that.
 alter table public.notification_preferences enable row level security;
 
-drop policy if exists "Users read own notification preferences" on public.notification_preferences;
-create policy "Users read own notification preferences"
-  on public.notification_preferences
-  for select
-  using (user_id = auth.uid());
-
-drop policy if exists "Users update own notification preferences" on public.notification_preferences;
-create policy "Users update own notification preferences"
-  on public.notification_preferences
-  for update
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
-
-drop policy if exists "Users insert own notification preferences" on public.notification_preferences;
-create policy "Users insert own notification preferences"
-  on public.notification_preferences
-  for insert
-  with check (user_id = auth.uid());
-
--- The unsubscribe token is a bearer secret delivered in email; browser roles
--- must never be able to read it back out of the table.
-revoke select (unsubscribe_token) on public.notification_preferences from anon, authenticated;
+revoke all on public.notification_preferences from anon, authenticated;
+grant select, insert, update on public.notification_preferences to service_role;
 
 create or replace function public.touch_notification_preferences_updated_at()
 returns trigger

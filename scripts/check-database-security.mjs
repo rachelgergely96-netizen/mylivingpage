@@ -76,6 +76,18 @@ const checks = [
     `,
   },
   {
+    // unsubscribe_token is a bearer secret: holding it mutes a user's email.
+    label: "browser roles cannot reach notification preferences",
+    query: `
+      select not has_table_privilege('anon', 'public.notification_preferences', 'select')
+         and not has_table_privilege('authenticated', 'public.notification_preferences', 'select')
+         and not has_table_privilege('anon', 'public.notification_preferences', 'update')
+         and not has_table_privilege('authenticated', 'public.notification_preferences', 'update')
+         and has_table_privilege('service_role', 'public.notification_preferences', 'select')
+         and has_table_privilege('service_role', 'public.notification_preferences', 'update') as ok
+    `,
+  },
+  {
     label: "permissive insert policies are absent",
     query: `
       select not exists (

@@ -44,6 +44,7 @@ test("robots.txt and sitemap.xml expose the SEO foundation routes", async ({ req
     `${origin}/privacy`,
     `${origin}/security`,
     `${origin}/terms`,
+    `${origin}/try`,
   ]);
   expect(sitemapText).not.toContain("/ray-smith");
 });

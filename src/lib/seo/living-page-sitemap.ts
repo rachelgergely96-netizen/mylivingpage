@@ -36,15 +36,30 @@ export async function fetchLivingPageSitemapEntries(): Promise<
   try {
     const supabase = createServiceRoleSupabaseClient();
 
-    const { data: pages, error: pagesError } = await supabase
-      .from("pages")
-      .select("owner_id, user_id, updated_at")
-      .eq("status", "live")
-      .or("visibility.eq.public,visibility.is.null")
+    const selectLivePages = (withIndexableFilter: boolean) => {
+      const query = supabase
+        .from("pages")
+        .select("owner_id, user_id, updated_at")
+        .eq("status", "live")
+        .or("visibility.eq.public,visibility.is.null");
+
       // Load-bearing for the "link only" state: those pages are live and
       // reachable but must never be offered to search engines. `is.null`
       // covers rows written before the column existed, which are indexable.
-      .or("search_indexable.is.null,search_indexable.eq.true");
+      return withIndexableFilter
+        ? query.or("search_indexable.is.null,search_indexable.eq.true")
+        : query;
+    };
+
+    let { data: pages, error: pagesError } = await selectLivePages(true);
+
+    // If this deploy landed ahead of its migration, the column does not exist
+    // yet and the filtered query errors. Falling back keeps the sitemap serving
+    // its real entries rather than silently emptying — no link-only page can
+    // exist yet either, so nothing leaks by retrying without the filter.
+    if (pagesError) {
+      ({ data: pages, error: pagesError } = await selectLivePages(false));
+    }
 
     if (pagesError || !pages?.length) {
       return [];

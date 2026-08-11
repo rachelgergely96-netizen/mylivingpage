@@ -332,6 +332,8 @@ export interface PageRecord {
   slug: string;
   status?: "draft" | "live" | "archived";
   visibility?: "private" | "link" | "public";
+  /** False on "link only" pages: live and reachable, withheld from search. */
+  search_indexable?: boolean | null;
   title?: string;
   theme_id: string;
   resume_data: ResumeData;

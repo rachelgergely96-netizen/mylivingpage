@@ -45,7 +45,9 @@ export async function GET() {
   const hasPassword = providers?.includes("email") ?? !!user.email;
   const { data: latestPage, error: latestPageError } = await supabase
     .from("pages")
-    .select("id, status, visibility, published_at, owner_id, user_id")
+    .select(
+      "id, status, visibility, search_indexable, published_at, owner_id, user_id",
+    )
     .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
     .order("updated_at", { ascending: false })
     .limit(1)

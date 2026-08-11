@@ -112,7 +112,9 @@ export async function dispatchViewNotification(
 
     const { data: pageRow } = await supabase
       .from("pages")
-      .select("id, slug, owner_id, user_id, page_config")
+      // Deliberately not page_config: it can carry 256 KB of résumé variants and
+      // targeting, and nothing here reads it.
+      .select("id, slug, owner_id, user_id")
       .eq("id", view.page_id)
       .maybeSingle();
 
@@ -121,7 +123,6 @@ export async function dispatchViewNotification(
       slug: string;
       owner_id: string | null;
       user_id: string | null;
-      page_config: Record<string, unknown> | null;
     } | null;
 
     const ownerId = page?.owner_id ?? page?.user_id ?? null;

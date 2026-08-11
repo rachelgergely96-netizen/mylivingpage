@@ -17,7 +17,7 @@ This file is the repo's route trust source of truth. Update it whenever a route,
 | `/api/generate/parse` | `POST` | `authenticated_user` | Create Flow | Low | Authenticated user session, permanently disabled response, no provider call |
 | `/api/legal/accept` | `POST` | `authenticated_user` | Legal/Auth | Low | Authenticated user session |
 | `/api/notifications/preferences` | `GET`, `PATCH` | `authenticated_user` | Notifications | Low | Authenticated user session, boolean-only field allowlist, `unsubscribe_token` never returned |
-| `/api/notifications/unsubscribe` | `GET`, `POST` | `public_write` | Notifications | Low | UUID-shaped bearer token as sole credential, token column revoked from browser roles, mutes only (never enables), no-store |
+| `/api/notifications/unsubscribe` | `GET`, `POST` | `public_write` | Notifications | Low | UUID-shaped bearer token as sole credential, table unreachable from browser roles, GET only offers and POST mutes, never enables, no-store |
 | `/api/pages/[pageId]` | `GET`, `PATCH`, `DELETE` | `authenticated_user` | Pages | High | Authenticated user session, page ownership check |
 | `/api/pages/[pageId]/proof` | `GET` | `authenticated_user` | Pages | Medium | Authenticated user session, page ownership check, service-role read scoped to owned page |
 | `/api/pages/engagement` | `POST` | `public_write` | Public Analytics | Medium | Shared rate limit, normalized payload, existing page-view check |

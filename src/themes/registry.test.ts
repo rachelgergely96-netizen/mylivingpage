@@ -5,7 +5,6 @@ import {
   THEME_IDS,
   THEME_MATERIAL_PROFILE_IDS,
   THEME_READING_MODE_IDS,
-  THEME_SIGNATURE_EXPERIENCE_IDS,
   type ThemeId,
 } from "@/themes/types";
 
@@ -133,31 +132,6 @@ describe("theme registry", () => {
     ]);
   });
 
-  it("assigns the six signature experiences to their authored themes", () => {
-    const experienceThemes = THEME_REGISTRY.filter(
-      (theme) => theme.signatureExperience,
-    );
-
-    expect(
-      experienceThemes.map((theme) => [
-        theme.id,
-        theme.signatureExperience?.id,
-      ]),
-    ).toEqual([
-      ["sakura", "bloom-composition"],
-      ["atlas", "achievement-atlas"],
-      ["atelier", "editorial-feature"],
-      ["solstice", "solar-briefing"],
-      ["axiom", "proof-museum"],
-      ["nocturne", "midnight-edition"],
-    ]);
-    expect(
-      new Set(
-        experienceThemes.map((theme) => theme.signatureExperience?.id),
-      ),
-    ).toEqual(new Set(THEME_SIGNATURE_EXPERIENCE_IDS));
-  });
-
   it("assigns every theme its own authored accent family", () => {
     const paletteKeys = THEME_REGISTRY.map(({ presentation }) =>
       JSON.stringify([
@@ -171,7 +145,7 @@ describe("theme registry", () => {
     expect(new Set(paletteKeys).size).toBe(THEME_IDS.length);
   });
 
-  it("assigns every theme an authored content profile", () => {
+  it("assigns every theme an authored identity motif", () => {
     const validProfiles = new Set(THEME_CONTENT_PROFILE_IDS);
 
     for (const theme of THEME_REGISTRY) {
@@ -183,7 +157,7 @@ describe("theme registry", () => {
     );
   });
 
-  it("assigns every content profile an explicit reading mode", () => {
+  it("assigns every identity motif an explicit contrast lineage", () => {
     const validModes = new Set(THEME_READING_MODE_IDS);
 
     for (const theme of THEME_REGISTRY) {
@@ -195,7 +169,7 @@ describe("theme registry", () => {
     );
   });
 
-  it("assigns every content language a complete material system", () => {
+  it("assigns every identity motif a complete background material system", () => {
     const validProfiles = new Set(THEME_MATERIAL_PROFILE_IDS);
     const expectedByContentProfile = {
       precision: "engraved",
@@ -234,7 +208,7 @@ describe("theme registry", () => {
     );
   });
 
-  it("derives non-signature surfaces from each theme background", () => {
+  it("derives non-signature artwork surfaces from each theme background", () => {
     for (const theme of THEME_REGISTRY.filter(({ signature }) => !signature)) {
       const channels = backgroundChannels(theme.background);
 
@@ -243,7 +217,7 @@ describe("theme registry", () => {
     }
   });
 
-  it("gives non-signature themes directional content-safe scrims", () => {
+  it("keeps non-signature artwork scrim metadata deterministic", () => {
     for (const theme of THEME_REGISTRY.filter(({ signature }) => !signature)) {
       const channels = backgroundChannels(theme.background);
 
@@ -253,7 +227,7 @@ describe("theme registry", () => {
     }
   });
 
-  it("keeps every semantic text and surface token above the readability floor", () => {
+  it("keeps share-card and preview tokens above their contrast floor", () => {
     for (const theme of THEME_REGISTRY) {
       expect(rgbaAlpha(theme.presentation.textMuted), `${theme.id} muted text`).toBeGreaterThanOrEqual(0.82);
       expect(rgbaAlpha(theme.presentation.textSubtle), `${theme.id} subtle text`).toBeGreaterThanOrEqual(0.68);
@@ -267,7 +241,7 @@ describe("theme registry", () => {
     }
   });
 
-  it("preserves the established signature presentation overrides", () => {
+  it("preserves the established signature artwork overrides", () => {
     for (const [id, presentation] of Object.entries(
       SIGNATURE_PRESENTATION_OVERRIDES,
     )) {
@@ -275,7 +249,7 @@ describe("theme registry", () => {
     }
   });
 
-  it("keeps signature surfaces theme-specific while applying the shared contrast floor", () => {
+  it("keeps signature artwork surfaces theme-specific", () => {
     expect(THEME_MAP.aurora.presentation.surface).toBe("rgba(7, 9, 20, 0.76)");
     expect(THEME_MAP.atlas.presentation.surface).toBe("rgba(4, 15, 25, 0.76)");
     expect(THEME_MAP.velvet.presentation.surface).toBe("rgba(30, 7, 18, 0.76)");

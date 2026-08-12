@@ -7,6 +7,8 @@ export interface ResolvedThemeMotion {
   activeSectionIndex: number;
   sectionCount: number;
   sectionProgress: number;
+  sectionImpulse: number;
+  sectionDirection: -1 | 0 | 1;
   /** Continuous position through the ordered page story, normalized to [0, 1]. */
   storyProgress: number;
   hasFocus: boolean;
@@ -79,6 +81,16 @@ export function resolveThemeMotion(
     activeSectionIndex,
     sectionCount,
     sectionProgress,
+    sectionImpulse: reducedMotion
+      ? 0
+      : finiteClamp(motion?.sectionImpulse, 0, 1),
+    sectionDirection: reducedMotion
+      ? 0
+      : motion?.sectionDirection === 1
+        ? 1
+        : motion?.sectionDirection === -1
+          ? -1
+          : 0,
     storyProgress,
     hasFocus,
     focusStrength: finiteClamp(
@@ -105,6 +117,8 @@ export function clearTransientThemeMotion(motion: ThemeMotionContext): void {
   motion.pointerVelocityY = 0;
   motion.pointerSpeed = 0;
   motion.interactionImpulse = 0;
+  motion.sectionImpulse = 0;
+  motion.sectionDirection = 0;
 }
 
 export function decayTransientThemeMotion(
@@ -117,8 +131,46 @@ export function decayTransientThemeMotion(
   motion.pointerVelocityY *= Math.exp(-delta / 0.14);
   motion.pointerSpeed *= Math.exp(-delta / 0.14);
   motion.interactionImpulse *= Math.exp(-delta / 0.32);
+  // A section arrival outlives the click/hover impulse slightly. This creates
+  // a calm follow-through instead of making every world snap to its new pose.
+  motion.sectionImpulse *= Math.exp(-delta / 0.46);
   if (Math.abs(motion.scrollVelocity) < 0.005) {
     motion.scrollVelocity = 0;
     motion.scrollDirection = 0;
   }
+  if (motion.sectionImpulse < 0.005) {
+    motion.sectionImpulse = 0;
+    motion.sectionDirection = 0;
+  }
+}
+
+/**
+ * Converts a section arrival into one small, universal camera cue. Renderers
+ * still own their imagery and intrinsic motion; this only gives every world a
+ * shared directional settle when the reader reaches a new chapter.
+ */
+export function applySectionMotionToPointer(
+  pointerX: number,
+  pointerY: number,
+  motion: Readonly<ThemeMotionContext> | undefined,
+): { x: number; y: number } {
+  const pageMotion = resolveThemeMotion(motion);
+  const pulse = pageMotion.sectionImpulse;
+  if (pulse <= 0) {
+    return {
+      x: finiteClamp(pointerX, 0, 1, 0.5),
+      y: finiteClamp(pointerY, 0, 1, 0.5),
+    };
+  }
+
+  const lateralDirection = pageMotion.activeSectionIndex % 2 === 0 ? 1 : -1;
+  return {
+    x: finiteClamp(pointerX + lateralDirection * pulse * 0.014, 0, 1, 0.5),
+    y: finiteClamp(
+      pointerY + pageMotion.sectionDirection * pulse * 0.018,
+      0,
+      1,
+      0.5,
+    ),
+  };
 }

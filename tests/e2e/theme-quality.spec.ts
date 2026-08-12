@@ -11,45 +11,16 @@ const CATALOG_THEME_IDS = THEME_REGISTRY.filter(
 const SIGNATURE_THEME_IDS = THEME_REGISTRY.filter(
   (theme) => theme.signature,
 ).map((theme) => theme.id);
-const MATERIAL_THEME_IDS = THEME_REGISTRY.map((theme) => theme.id);
-const SIGNATURE_EXPERIENCE_THEMES = [
-  {
-    themeId: "atlas",
-    experienceId: "achievement-atlas",
-    markerSelector: '[data-motion-kind="experience"]',
-    markerText: "Waypoint",
-  },
-  {
-    themeId: "axiom",
-    experienceId: "proof-museum",
-    markerSelector: '[data-motion-kind="project"]',
-    markerText: "Exhibit",
-  },
-  {
-    themeId: "atelier",
-    experienceId: "editorial-feature",
-    markerSelector: '[data-motion-kind="experience"]',
-    markerText: "PLATE",
-  },
-  {
-    themeId: "sakura",
-    experienceId: "bloom-composition",
-    markerSelector: '[data-motion-kind="experience"]',
-    markerText: "STEM",
-  },
-  {
-    themeId: "solstice",
-    experienceId: "solar-briefing",
-    markerSelector: '[data-motion-kind="proof"]',
-    markerText: "FLARE",
-  },
-  {
-    themeId: "nocturne",
-    experienceId: "midnight-edition",
-    markerSelector: '[data-motion-kind="experience"]',
-    markerText: "ENTRY",
-  },
+const ALL_THEME_IDS = THEME_REGISTRY.map((theme) => theme.id);
+const FORMER_FORMAT_THEME_IDS = [
+  "atlas",
+  "axiom",
+  "atelier",
+  "sakura",
+  "solstice",
+  "nocturne",
 ] as const;
+const LEGACY_FORMAT_LABEL_PATTERN = /Waypoint|Exhibit|PLATE|STEM|FLARE|ENTRY/i;
 
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
@@ -108,8 +79,8 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
       "ready",
     );
     await expect(livingPage).toHaveAttribute(
-      "data-theme-material",
-      THEME_MAP[themeId].materialProfile,
+      "data-theme-format",
+      "uniform",
     );
     await expect(shareCard).toHaveAttribute("data-theme-id", themeId);
     await expect(shareCard).toHaveAttribute(
@@ -137,28 +108,146 @@ test("paired prototypes keep the Living Page palette and canonical share-card sk
   }
 });
 
-test("all theme materials keep readable plates stationary across desktop and mobile", async ({
+test("all themes share one stationary foreground system across desktop and mobile", async ({
   page,
 }) => {
   test.setTimeout(300_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/dev/theme-lab");
   const select = page.getByLabel("Catalog theme");
+  let canonicalForeground: {
+    accent: string;
+    profileHeight: number;
+    profileWidth: number;
+    stageBackground: string;
+    stagePadding: string;
+    stageWidth: number;
+    text: string;
+    nameType: string;
+    headlineType: string;
+    sectionType: string;
+    experienceDisplay: string;
+    experienceGrid: string;
+    experienceWidths: number[];
+    proofGrid: string;
+  } | null = null;
 
-  for (const themeId of MATERIAL_THEME_IDS) {
+  for (const themeId of ALL_THEME_IDS) {
     await select.selectOption(themeId);
-    const theme = THEME_MAP[themeId];
     const livingPage = page.locator(
       `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
     );
     await expect(livingPage).toHaveAttribute(
-      "data-theme-material",
-      theme.materialProfile,
+      "data-theme-format",
+      "uniform",
     );
     await expect(livingPage).toHaveAttribute(
       "data-theme-renderer-status",
       "ready",
     );
+    const photo = livingPage.locator(".resume-theme-avatar");
+    await expect(photo).toBeVisible();
+    await expect
+      .poll(() =>
+        photo.evaluate(
+          (element) => {
+            const image = element as HTMLImageElement;
+            return image.complete && image.naturalWidth > 0;
+          },
+        ),
+      )
+      .toBe(true);
+
+    const foreground = await livingPage.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      const stage = element.querySelector<HTMLElement>(".resume-theme-content");
+      const profile = element.querySelector<HTMLImageElement>(
+        ".resume-theme-avatar",
+      );
+      const name = element.querySelector<HTMLElement>("[data-resume-name]");
+      const headline = element.querySelector<HTMLElement>("[data-resume-headline]");
+      const sectionTitle = element.querySelector<HTMLElement>(
+        ".resume-theme-section-title",
+      );
+      const experienceList = element.querySelector<HTMLElement>(
+        "[data-experience-list]",
+      );
+      const proofGrid = element.querySelector<HTMLElement>("[data-proof-grid]");
+      const experienceEntries = Array.from(
+        element.querySelectorAll<HTMLElement>(".resume-theme-experience-entry"),
+      ).slice(0, 2);
+      const stageBounds = stage?.getBoundingClientRect();
+      const profileBounds = profile?.getBoundingClientRect();
+      const stageStyle = stage ? window.getComputedStyle(stage) : null;
+      const experienceStyle = experienceList
+        ? window.getComputedStyle(experienceList)
+        : null;
+      const typeSignature = (node: HTMLElement | null) => {
+        if (!node) return "";
+        const nodeStyle = window.getComputedStyle(node);
+        return [
+          nodeStyle.fontSize,
+          nodeStyle.fontWeight,
+          nodeStyle.lineHeight,
+          nodeStyle.letterSpacing,
+        ].join("|");
+      };
+      return {
+        accent: style.getPropertyValue("--theme-accent").trim(),
+        experienceDisplay: experienceStyle?.display ?? "",
+        experienceGrid: experienceStyle?.gridTemplateColumns ?? "",
+        experienceWidths: experienceEntries.map((entry) =>
+          Math.round(entry.getBoundingClientRect().width * 100) / 100,
+        ),
+        headlineType: typeSignature(headline),
+        nameType: typeSignature(name),
+        profileHeight: profileBounds?.height ?? 0,
+        profileWidth: profileBounds?.width ?? 0,
+        proofGrid: proofGrid
+          ? window.getComputedStyle(proofGrid).gridTemplateColumns
+          : "",
+        sectionType: typeSignature(sectionTitle),
+        stageBackground: stage ? window.getComputedStyle(stage).backgroundImage : "",
+        stagePadding: stageStyle
+          ? [
+              stageStyle.paddingTop,
+              stageStyle.paddingRight,
+              stageStyle.paddingBottom,
+              stageStyle.paddingLeft,
+            ].join("|")
+          : "",
+        stageWidth: stageBounds?.width ?? 0,
+        text: style.getPropertyValue("--theme-text").trim(),
+      };
+    });
+    expect(foreground.profileWidth, `${themeId} profile width`).toBe(80);
+    expect(foreground.profileHeight, `${themeId} profile height`).toBe(80);
+    if (canonicalForeground === null) {
+      canonicalForeground = foreground;
+    } else {
+      const exactKeys = [
+        "accent",
+        "experienceDisplay",
+        "experienceGrid",
+        "experienceWidths",
+        "headlineType",
+        "nameType",
+        "proofGrid",
+        "sectionType",
+        "stageBackground",
+        "stagePadding",
+        "text",
+      ] as const;
+      for (const key of exactKeys) {
+        expect(foreground[key], `${themeId} uniform ${key}`).toEqual(
+          canonicalForeground[key],
+        );
+      }
+      expect(
+        Math.abs(foreground.stageWidth - canonicalForeground.stageWidth),
+        `${themeId} uniform stage width`,
+      ).toBeLessThanOrEqual(1);
+    }
 
     const card = livingPage.locator(".resume-theme-card").first();
     const restingStyle = await card.evaluate((element) => {
@@ -171,53 +260,43 @@ test("all theme materials keep readable plates stationary across desktop and mob
       };
     });
     expect(restingStyle.borderRadius).toBe("0px");
-    expect(restingStyle.outlineStyle).toBe("solid");
-    expect(restingStyle.outlineWidth).toBe("1px");
-    if (
-      theme.readingMode === "glass" &&
-      theme.materialProfile === "refractive"
-    ) {
-      expect(restingStyle.backdrop).toContain("blur(14px)");
-    } else if (
-      theme.readingMode === "glass" &&
-      theme.materialProfile === "organic-glass"
-    ) {
-      expect(restingStyle.backdrop).toContain("blur(12px)");
-    } else {
-      expect(restingStyle.backdrop).toBe("none");
-    }
+    expect(restingStyle.outlineStyle).toBe("none");
+    expect(restingStyle.outlineWidth).toBe("0px");
+    expect(restingStyle.backdrop).toBe("none");
 
     await card.hover();
-    const hoverState = await card.evaluate((element) => {
-      const transform = window.getComputedStyle(element).transform;
-      const boxShadow = window.getComputedStyle(element).boxShadow;
-      if (transform === "none") return { boxShadow, x: 0, y: 0 };
-      const matrix = new DOMMatrixReadOnly(transform);
-      return { boxShadow, x: matrix.m41, y: matrix.m42 };
-    });
-    expect(Math.abs(hoverState.x)).toBeLessThan(0.001);
-    expect(Math.abs(hoverState.y)).toBeLessThan(0.001);
-    expect(hoverState.boxShadow).toContain("inset");
+    const readCardState = () =>
+      card.evaluate((element) => {
+        const computed = window.getComputedStyle(element);
+        if (computed.transform === "none") {
+          return { boxShadow: computed.boxShadow, x: 0, y: 0 };
+        }
+        const matrix = new DOMMatrixReadOnly(computed.transform);
+        return { boxShadow: computed.boxShadow, x: matrix.m41, y: matrix.m42 };
+      });
+    await expect.poll(readCardState).toEqual({ boxShadow: "none", x: 0, y: 0 });
 
-    const focusTranslation = await card.evaluate((element) => {
+    await page.mouse.move(1, 1);
+    await card.evaluate((element) => {
       element.tabIndex = 0;
       element.focus();
-      const transform = window.getComputedStyle(element).transform;
-      if (transform === "none") return { x: 0, y: 0 };
-      const matrix = new DOMMatrixReadOnly(transform);
-      return { x: matrix.m41, y: matrix.m42 };
     });
-    expect(Math.abs(focusTranslation.x)).toBeLessThan(0.001);
-    expect(Math.abs(focusTranslation.y)).toBeLessThan(0.001);
+    await expect.poll(readCardState).toEqual({ boxShadow: "none", x: 0, y: 0 });
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const themeId of MATERIAL_THEME_IDS) {
+  for (const themeId of ALL_THEME_IDS) {
     await select.selectOption(themeId);
     const livingPage = page.locator(
       `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
     );
     await livingPage.scrollIntoViewIfNeeded();
+    const profileBounds = await livingPage
+      .locator(".resume-theme-avatar")
+      .first()
+      .boundingBox();
+    expect(profileBounds?.width, `${themeId} mobile profile width`).toBe(64);
+    expect(profileBounds?.height, `${themeId} mobile profile height`).toBe(64);
     expect(
       await livingPage.evaluate(
         (element) => element.scrollWidth - element.clientWidth,
@@ -226,7 +305,7 @@ test("all theme materials keep readable plates stationary across desktop and mob
   }
 });
 
-test("the six signature experiences keep one narrative order while presenting distinct authored formats", async ({
+test("legacy format markers stay absent from the shared narrative order", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -234,20 +313,21 @@ test("the six signature experiences keep one narrative order while presenting di
   const select = page.getByLabel("Catalog theme");
   let canonicalSectionOrder: string[] | null = null;
 
-  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
-    await select.selectOption(signature.themeId);
+  for (const themeId of FORMER_FORMAT_THEME_IDS) {
+    await select.selectOption(themeId);
     const livingPage = page.locator(
-      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
     );
 
     await expect(livingPage).toHaveAttribute(
-      "data-theme-experience",
-      signature.experienceId,
+      "data-theme-format",
+      "uniform",
     );
     await expect(livingPage).toHaveAttribute(
       "data-theme-renderer-status",
       "ready",
     );
+    expect(await livingPage.getAttribute("data-theme-experience")).toBeNull();
 
     const sectionOrder = await livingPage
       .locator("[data-motion-section]")
@@ -262,17 +342,21 @@ test("the six signature experiences keep one narrative order while presenting di
       expect(sectionOrder).toEqual(canonicalSectionOrder);
     }
 
-    const markerContent = await livingPage
-      .locator(signature.markerSelector)
-      .first()
-      .evaluate((element) =>
-        window.getComputedStyle(element, "::before").content.replaceAll('"', ""),
+    const generatedContent = await livingPage
+      .locator("[data-motion-kind]")
+      .evaluateAll((elements) =>
+        elements
+          .flatMap((element) => [
+            window.getComputedStyle(element, "::before").content,
+            window.getComputedStyle(element, "::after").content,
+          ])
+          .join(" "),
       );
-    expect(markerContent).toContain(signature.markerText);
+    expect(generatedContent).not.toMatch(LEGACY_FORMAT_LABEL_PATTERN);
   }
 });
 
-test("the six signature experiences use compact laptop scale and mobile flow", async ({
+test("former signature themes use the shared laptop scale and mobile flow", async ({
   page,
 }) => {
   const laptopViewports = [
@@ -288,10 +372,10 @@ test("the six signature experiences use compact laptop scale and mobile flow", a
   for (const viewport of laptopViewports) {
     await page.setViewportSize(viewport);
 
-    for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
-      await select.selectOption(signature.themeId);
+    for (const themeId of FORMER_FORMAT_THEME_IDS) {
+      await select.selectOption(themeId);
       const livingPage = page.locator(
-        `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+        `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
       );
       await expect(livingPage).toHaveAttribute(
         "data-theme-renderer-status",
@@ -319,21 +403,21 @@ test("the six signature experiences use compact laptop scale and mobile flow", a
       expect(scale.viewportHeight).toBeGreaterThan(0);
       expect(
         scale.headerHeight / scale.viewportHeight,
-        `${signature.themeId} masthead share at ${viewport.width}x${viewport.height}`,
+        `${themeId} masthead share at ${viewport.width}x${viewport.height}`,
       ).toBeLessThan(0.8);
       expect(
         scale.nameFontSize,
-        `${signature.themeId} name scale at ${viewport.width}x${viewport.height}`,
+        `${themeId} name scale at ${viewport.width}x${viewport.height}`,
       ).toBeLessThanOrEqual(112);
     }
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
 
-  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
-    await select.selectOption(signature.themeId);
+  for (const themeId of FORMER_FORMAT_THEME_IDS) {
+    await select.selectOption(themeId);
     const livingPage = page.locator(
-      `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
     );
     await expect(livingPage).toHaveAttribute(
       "data-theme-renderer-status",
@@ -345,11 +429,11 @@ test("the six signature experiences use compact laptop scale and mobile flow", a
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     );
-    expect(overflow, `${signature.themeId} mobile overflow`).toBe(0);
+    expect(overflow, `${themeId} mobile overflow`).toBe(0);
   }
 });
 
-test("the six signature experiences express different hierarchy without moving content plates", async ({
+test("former signature themes use the same hierarchy without moving content rows", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -358,7 +442,7 @@ test("the six signature experiences express different hierarchy without moving c
 
   await select.selectOption("atlas");
   const atlas = page.locator(
-    '[data-theme-lab-canvas] [data-theme-experience="achievement-atlas"]',
+    '[data-theme-lab-canvas] [data-theme-id="atlas"]',
   );
   const atlasExperience = atlas.locator("[data-experience-list]");
   const atlasProof = atlas.locator("[data-proof-grid]");
@@ -368,16 +452,19 @@ test("the six signature experiences express different hierarchy without moving c
 
   await select.selectOption("axiom");
   const axiom = page.locator(
-    '[data-theme-lab-canvas] [data-theme-experience="proof-museum"]',
+    '[data-theme-lab-canvas] [data-theme-id="axiom"]',
   );
   const axiomProofs = axiom.locator('[data-motion-kind="proof"]');
-  expect((await axiomProofs.nth(0).boundingBox())?.width ?? 0).toBeGreaterThan(
-    (await axiomProofs.nth(1).boundingBox())?.width ?? 0,
-  );
+  expect(
+    Math.abs(
+      ((await axiomProofs.nth(0).boundingBox())?.width ?? 0) -
+        ((await axiomProofs.nth(1).boundingBox())?.width ?? 0),
+    ),
+  ).toBeLessThanOrEqual(1);
 
   await select.selectOption("atelier");
   const atelier = page.locator(
-    '[data-theme-lab-canvas] [data-theme-experience="editorial-feature"]',
+    '[data-theme-lab-canvas] [data-theme-id="atelier"]',
   );
   const atelierType = await atelier.evaluate((element) => {
     const summary = element.querySelector<HTMLElement>(
@@ -399,16 +486,19 @@ test("the six signature experiences express different hierarchy without moving c
 
   await select.selectOption("sakura");
   const sakura = page.locator(
-    '[data-theme-lab-canvas] [data-theme-experience="bloom-composition"]',
+    '[data-theme-lab-canvas] [data-theme-id="sakura"]',
   );
   const sakuraProofs = sakura.locator('[data-motion-kind="proof"]');
-  expect((await sakuraProofs.nth(0).boundingBox())?.width ?? 0).toBeGreaterThan(
-    (await sakuraProofs.nth(1).boundingBox())?.width ?? 0,
-  );
+  expect(
+    Math.abs(
+      ((await sakuraProofs.nth(0).boundingBox())?.width ?? 0) -
+        ((await sakuraProofs.nth(1).boundingBox())?.width ?? 0),
+    ),
+  ).toBeLessThanOrEqual(1);
 
   await select.selectOption("solstice");
   const solstice = page.locator(
-    '[data-theme-lab-canvas] [data-theme-experience="solar-briefing"]',
+    '[data-theme-lab-canvas] [data-theme-id="solstice"]',
   );
   const solsticeMetricType = await solstice.evaluate((element) => {
     const primary = element.querySelector<HTMLElement>(
@@ -426,13 +516,13 @@ test("the six signature experiences express different hierarchy without moving c
       ),
     };
   });
-  expect(solsticeMetricType.primary).toBeGreaterThan(
-    solsticeMetricType.secondary,
-  );
+  expect(
+    Math.abs(solsticeMetricType.primary - solsticeMetricType.secondary),
+  ).toBeLessThanOrEqual(0.1);
 
   await select.selectOption("nocturne");
   const nocturne = page.locator(
-    '[data-theme-lab-canvas] [data-theme-experience="midnight-edition"]',
+    '[data-theme-lab-canvas] [data-theme-id="nocturne"]',
   );
   const nocturneType = await nocturne.evaluate((element) => {
     const testimonial = element.querySelector<HTMLElement>(
@@ -450,15 +540,17 @@ test("the six signature experiences express different hierarchy without moving c
       ),
     };
   });
-  expect(nocturneType.testimonial).toBeGreaterThan(nocturneType.experience);
+  expect(
+    Math.abs(nocturneType.testimonial - nocturneType.experience),
+  ).toBeLessThanOrEqual(0.1);
 
-  for (const signature of SIGNATURE_EXPERIENCE_THEMES) {
-    await select.selectOption(signature.themeId);
+  for (const themeId of FORMER_FORMAT_THEME_IDS) {
+    await select.selectOption(themeId);
     const plate = page
       .locator(
-        `[data-theme-lab-canvas] [data-theme-id="${signature.themeId}"]`,
+        `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
       )
-      .locator(signature.markerSelector)
+      .locator('[data-motion-kind="experience"]')
       .first();
     await plate.hover();
     const translation = await plate.evaluate((element) => {
@@ -519,8 +611,9 @@ test("all themes use one narrative font across Living Pages and share cards", as
 
       return {
         body: primaryFont(".resume-theme"),
+        headline: primaryFont("[data-resume-headline]"),
         name: primaryFont("[data-resume-name]"),
-        monogram: primaryFont(".resume-theme-monogram"),
+        sectionTitle: primaryFont(".resume-theme-section-title"),
         summary: primaryFont("[data-resume-summary]"),
         functional: primaryFont(".resume-theme .font-mono"),
       };
@@ -538,7 +631,10 @@ test("all themes use one narrative font across Living Pages and share cards", as
       expectedFonts.narrative,
     );
     expect(livingFonts.name, `${theme.id} name font`).toBe(livingFonts.body);
-    expect(livingFonts.monogram, `${theme.id} monogram font`).toBe(
+    expect(livingFonts.headline, `${theme.id} headline font`).toBe(
+      livingFonts.body,
+    );
+    expect(livingFonts.sectionTitle, `${theme.id} section font`).toBe(
       livingFonts.body,
     );
     expect(livingFonts.summary, `${theme.id} summary font`).toBe(
@@ -551,7 +647,7 @@ test("all themes use one narrative font across Living Pages and share cards", as
   }
 });
 
-test("all themes apply their reading guard to identity, summaries, and cards", async ({
+test("all themes apply the same reading stage to identity, summaries, and cards", async ({
   page,
 }) => {
   test.setTimeout(180_000);
@@ -565,11 +661,14 @@ test("all themes apply their reading guard to identity, summaries, and cards", a
       `[data-theme-lab-canvas] [data-theme-id="${theme.id}"]`,
     );
     await expect(livingPage).toHaveAttribute(
-      "data-theme-reading",
-      theme.readingMode,
+      "data-theme-format",
+      "uniform",
     );
 
     const guard = await livingPage.evaluate((element) => {
+      const stage = element.querySelector<HTMLElement>(
+        ".resume-theme-content",
+      );
       const masthead = element.querySelector<HTMLElement>(
         ".resume-theme-masthead",
       );
@@ -577,13 +676,14 @@ test("all themes apply their reading guard to identity, summaries, and cards", a
         ".resume-theme-summary",
       );
       const card = element.querySelector<HTMLElement>(
-        '[data-motion-kind="experience"]',
+        ".resume-theme-card",
       );
       const stats = element.querySelector<HTMLElement>("[data-resume-stats]");
       const statsCard = stats?.querySelector<HTMLElement>(".resume-theme-card");
       const muted = element.querySelector<HTMLElement>(".resume-theme-muted");
       const read = (node: HTMLElement | null | undefined) =>
         node ? window.getComputedStyle(node) : null;
+      const stageStyle = read(stage);
       const mastheadStyle = read(masthead);
       const summaryStyle = read(summary);
       const cardStyle = read(card);
@@ -628,21 +728,20 @@ test("all themes apply their reading guard to identity, summaries, and cards", a
           colorAlpha(statsCardStyle?.backgroundColor),
           colorAlpha(statsCardStyle?.backgroundImage),
         ),
+        stageBackground: stageStyle?.backgroundImage ?? "none",
+        stageRadius: stageStyle?.borderRadius ?? "",
         summaryBackground: summaryStyle?.backgroundImage ?? "none",
         summaryRadius: summaryStyle?.borderRadius ?? "",
       };
     });
 
-    expect(guard.mastheadBackground, `${theme.id} masthead guard`).not.toBe(
-      "none",
-    );
-    expect(guard.summaryBackground, `${theme.id} summary guard`).not.toBe(
-      "none",
-    );
+    expect(guard.stageBackground, `${theme.id} reading stage`).not.toBe("none");
+    expect(guard.mastheadBackground, `${theme.id} masthead material`).toBe("none");
+    expect(guard.summaryBackground, `${theme.id} summary material`).toBe("none");
     expect(
       Math.max(guard.cardBaseAlpha, guard.cardGradientTailAlpha),
       `${theme.id} card guard`,
-    ).toBeGreaterThanOrEqual(0.76);
+    ).toBeGreaterThanOrEqual(0.02);
     expect(
       guard.mutedAlpha,
       `${theme.id} muted text alpha`,
@@ -650,16 +749,11 @@ test("all themes apply their reading guard to identity, summaries, and cards", a
     expect(
       guard.statsGuardAlpha,
       `${theme.id} stats guard`,
-    ).toBeGreaterThanOrEqual(0.76);
+    ).toBeGreaterThanOrEqual(0.02);
+    expect(guard.stageRadius, `${theme.id} stage geometry`).toBe("0px");
     expect(guard.mastheadRadius, `${theme.id} masthead geometry`).toBe("0px");
     expect(guard.summaryRadius, `${theme.id} summary geometry`).toBe("0px");
-    if (theme.readingMode === "glass") {
-      expect(guard.cardBackdrop, `${theme.id} glass separation`).not.toBe(
-        "none",
-      );
-    } else {
-      expect(guard.cardBackdrop, `${theme.id} solid separation`).toBe("none");
-    }
+    expect(guard.cardBackdrop, `${theme.id} solid separation`).toBe("none");
   }
 });
 
@@ -949,8 +1043,8 @@ test("every catalog theme renders a detailed deterministic frame", async ({
     );
     await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
     await expect(theme).toHaveAttribute(
-      "data-theme-detail",
-      THEME_MAP[themeId].contentProfile,
+      "data-theme-format",
+      "uniform",
     );
 
     const detail = await theme.locator("canvas").evaluate((element) => {
@@ -1136,7 +1230,7 @@ test("every theme stays renderer-ready through an animated pointer sweep", async
   );
 });
 
-test("signature themes expose authored content profiles and deterministic detail", async ({
+test("signature background worlds keep uniform content and deterministic detail", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -1150,8 +1244,8 @@ test("signature themes expose authored content profiles and deterministic detail
     );
     await expect(theme).toHaveAttribute("data-theme-renderer-status", "ready");
     await expect(theme).toHaveAttribute(
-      "data-theme-detail",
-      THEME_MAP[themeId].contentProfile,
+      "data-theme-format",
+      "uniform",
     );
 
     const canvas = theme.locator("canvas");

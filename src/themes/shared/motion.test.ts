@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   calculateScrollMotion,
   calculateScrollVelocity,
+  canTriggerSectionPulse,
   createInitialThemeMotionContext,
   getMotionSectionId,
 } from "@/hooks/useLivingMotionBridge";
 import {
+  applySectionMotionToPointer,
   clearTransientThemeMotion,
   decayTransientThemeMotion,
   finiteClamp,
@@ -25,6 +27,8 @@ describe("Living Page motion model", () => {
       focusX: 0.5,
       focusY: 0.5,
       interactionImpulse: 0,
+      sectionImpulse: 0,
+      sectionDirection: 0,
       reducedMotion: false,
     });
     expect(Object.values(motion).filter((value) => typeof value === "number").every(Number.isFinite)).toBe(true);
@@ -101,6 +105,13 @@ describe("Living Page motion model", () => {
     expect(calculateScrollVelocity(100, 0, 0, 500)).toBe(0);
   });
 
+  it("rate-limits section pulses so boundary jitter cannot retrigger the camera", () => {
+    expect(canTriggerSectionPulse(1_000, Number.NEGATIVE_INFINITY)).toBe(true);
+    expect(canTriggerSectionPulse(1_219, 1_000)).toBe(false);
+    expect(canTriggerSectionPulse(1_220, 1_000)).toBe(true);
+    expect(canTriggerSectionPulse(Number.NaN, 1_000)).toBe(false);
+  });
+
   it("sanitizes renderer input and neutralizes transients for reduced motion", () => {
     const motion = createInitialThemeMotionContext();
     motion.scrollProgress = Number.NaN;
@@ -167,12 +178,16 @@ describe("Living Page motion model", () => {
     motion.pointerVelocityY = -1;
     motion.pointerSpeed = 2.2;
     motion.interactionImpulse = 1;
+    motion.sectionImpulse = 1;
+    motion.sectionDirection = 1;
 
     decayTransientThemeMotion(motion, 0.1);
     expect(motion.scrollVelocity).toBeGreaterThan(0);
     expect(motion.scrollVelocity).toBeLessThan(2);
     expect(motion.interactionImpulse).toBeGreaterThan(0);
     expect(motion.interactionImpulse).toBeLessThan(1);
+    expect(motion.sectionImpulse).toBeGreaterThan(0);
+    expect(motion.sectionImpulse).toBeLessThan(1);
 
     clearTransientThemeMotion(motion);
     expect(motion).toMatchObject({
@@ -182,6 +197,34 @@ describe("Living Page motion model", () => {
       pointerVelocityY: 0,
       pointerSpeed: 0,
       interactionImpulse: 0,
+      sectionImpulse: 0,
+      sectionDirection: 0,
+    });
+  });
+
+  it("adds a bounded directional settle for section arrivals", () => {
+    const motion = createInitialThemeMotionContext();
+    motion.sectionCount = 4;
+    motion.activeSectionIndex = 1;
+    motion.sectionImpulse = 1;
+    motion.sectionDirection = 1;
+
+    expect(applySectionMotionToPointer(0.5, 0.5, motion)).toEqual({
+      x: 0.486,
+      y: 0.518,
+    });
+    expect(
+      applySectionMotionToPointer(0, 1, {
+        ...motion,
+        activeSectionIndex: 2,
+        sectionDirection: -1,
+      }),
+    ).toEqual({ x: 0.014, y: 0.982 });
+
+    motion.reducedMotion = true;
+    expect(applySectionMotionToPointer(0.5, 0.5, motion)).toEqual({
+      x: 0.5,
+      y: 0.5,
     });
   });
 

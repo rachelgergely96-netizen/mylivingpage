@@ -9,6 +9,7 @@ import { THEME_MAP } from "@/themes/registry";
 import { createSeededRandom } from "@/themes/shared/random";
 import { getLoadedRenderer, loadRenderer } from "@/themes/loadRenderer";
 import {
+  applySectionMotionToPointer,
   clearTransientThemeMotion,
   decayTransientThemeMotion,
 } from "@/themes/shared/motion";
@@ -59,6 +60,28 @@ type ThemeCanvasStyle = React.CSSProperties & {
   "--theme-surface-strong": string;
   "--theme-border": string;
 };
+
+/**
+ * Living Page foregrounds intentionally use one presentation system. Theme
+ * metadata still belongs to the renderer, picker, and share card, while the
+ * resume itself remains visually identical when a user changes backgrounds.
+ */
+const UNIFORM_LIVING_PAGE_STYLE: ThemeCanvasStyle = {
+  "--theme-accent": "#9db8e8",
+  "--theme-accent-bright": "#e9f0ff",
+  "--theme-accent-soft": "rgba(157, 184, 232, 0.12)",
+  "--theme-accent-border": "rgba(174, 197, 238, 0.26)",
+  "--theme-text": "#f7f9fc",
+  "--theme-text-muted": "rgba(237, 242, 250, 0.84)",
+  "--theme-text-subtle": "rgba(221, 230, 243, 0.68)",
+  "--theme-surface": "rgba(10, 13, 20, 0.82)",
+  "--theme-surface-strong": "rgba(8, 11, 17, 0.95)",
+  "--theme-border": "rgba(222, 231, 244, 0.14)",
+  fontFamily: "var(--font-dm-sans), sans-serif",
+};
+
+const UNIFORM_LIVING_PAGE_SCRIM =
+  "linear-gradient(180deg, rgba(3, 5, 9, 0.1) 0%, rgba(3, 5, 9, 0.02) 24%, rgba(3, 5, 9, 0.02) 76%, rgba(3, 5, 9, 0.14) 100%)";
 
 interface ThemeCanvasProps {
   themeId: ThemeId;
@@ -113,22 +136,7 @@ export default function ThemeCanvas({
   const motionRef = useRef<ThemeMotionContext>(createInitialThemeMotionContext());
   const theme = useMemo(() => THEME_MAP[themeId] ?? THEME_MAP.cosmic, [themeId]);
   const resolvedThemeId = theme.id;
-  const themeStyle = useMemo<ThemeCanvasStyle>(() => {
-    const presentation = theme.presentation;
-    return {
-      "--theme-accent": presentation.accent,
-      "--theme-accent-bright": presentation.accentBright,
-      "--theme-accent-soft": presentation.accentSoft,
-      "--theme-accent-border": presentation.accentBorder,
-      "--theme-text": presentation.text,
-      "--theme-text-muted": presentation.textMuted,
-      "--theme-text-subtle": presentation.textSubtle,
-      "--theme-surface": presentation.surface,
-      "--theme-surface-strong": presentation.surfaceStrong,
-      "--theme-border": presentation.border,
-      fontFamily: "var(--font-dm-sans), sans-serif",
-    };
-  }, [theme]);
+  const themeStyle = UNIFORM_LIVING_PAGE_STYLE;
 
   useLivingMotionBridge({ containerRef, motionRef, enabled: motionAware });
 
@@ -148,8 +156,8 @@ export default function ThemeCanvas({
     const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
     const getAmbientPointer = (elapsed: number) => ({
-      x: clamp(0.5 + Math.sin(elapsed * 0.18) * 0.12 + Math.cos(elapsed * 0.07) * 0.04, 0.24, 0.76),
-      y: clamp(0.5 + Math.cos(elapsed * 0.15) * 0.09 + Math.sin(elapsed * 0.11) * 0.05, 0.28, 0.72),
+      x: clamp(0.5 + Math.sin(elapsed * 0.18) * 0.15 + Math.cos(elapsed * 0.07) * 0.05, 0.2, 0.8),
+      y: clamp(0.5 + Math.cos(elapsed * 0.15) * 0.115 + Math.sin(elapsed * 0.11) * 0.06, 0.24, 0.76),
     });
 
     const pointerCoarseQuery =
@@ -439,14 +447,19 @@ export default function ThemeCanvas({
         motionAware ? motionRef.current : undefined,
         stepSeconds,
       );
+      const presentationPointer = applySectionMotionToPointer(
+        sampler.pointer.x,
+        sampler.pointer.y,
+        smoothedMotion,
+      );
       try {
         renderer(
           context,
           canvas.width,
           canvas.height,
           elapsed,
-          sampler.pointer.x,
-          sampler.pointer.y,
+          presentationPointer.x,
+          presentationPointer.y,
           deltaSeconds,
           smoothedMotion,
         );
@@ -541,6 +554,17 @@ export default function ThemeCanvas({
     const handleTouchEnd = () => {
       touchActiveRef.current = false;
       ambientResumeAtRef.current = performance.now() + TOUCH_IDLE_MS;
+    };
+    const handleMouseLeave = () => {
+      mouseRef.current = { x: 0.5, y: 0.5 };
+      lastPointerSample = {
+        x: 0.5,
+        y: 0.5,
+        at: performance.now(),
+      };
+      if (!runningRef.current) {
+        renderFrame(elapsedRef.current);
+      }
     };
     const handleVisibility = () => {
       if (document.hidden || !visibleRef.current) {
@@ -681,6 +705,7 @@ export default function ThemeCanvas({
 
     if (interactive && container) {
       container.addEventListener("mousemove", handleMove);
+      container.addEventListener("mouseleave", handleMouseLeave);
       container.addEventListener("touchstart", handleTouchStart, { passive: true });
       container.addEventListener("touchmove", handleTouch, { passive: true });
       container.addEventListener("touchend", handleTouchEnd, { passive: true });
@@ -702,6 +727,7 @@ export default function ThemeCanvas({
       intersectionObserver?.disconnect();
       if (interactive && container) {
         container.removeEventListener("mousemove", handleMove);
+        container.removeEventListener("mouseleave", handleMouseLeave);
         container.removeEventListener("touchstart", handleTouchStart);
         container.removeEventListener("touchmove", handleTouch);
         container.removeEventListener("touchend", handleTouchEnd);
@@ -716,10 +742,7 @@ export default function ThemeCanvas({
       data-living-output
       data-theme-id={theme.id}
       data-theme-collection={theme.collection}
-      data-theme-detail={theme.contentProfile}
-      data-theme-experience={theme.signatureExperience?.id}
-      data-theme-material={theme.materialProfile}
-      data-theme-reading={theme.readingMode}
+      data-theme-format="uniform"
       data-theme-renderer-status="loading"
       data-motion-aware={motionAware ? "true" : undefined}
       className={className}
@@ -727,8 +750,8 @@ export default function ThemeCanvas({
         position: "relative",
         overflow: "hidden",
         borderRadius: "var(--site-radius, 0px)",
-        ...themeStyle,
         ...style,
+        ...themeStyle,
       }}
     >
       <canvas
@@ -750,7 +773,7 @@ export default function ThemeCanvas({
               position: "absolute",
               inset: 0,
               zIndex: 1,
-              background: theme.presentation.scrim,
+              background: UNIFORM_LIVING_PAGE_SCRIM,
             }}
           />
           <div

@@ -28,6 +28,8 @@ describe("ThemePicker", () => {
     expect(markup.match(/data-theme-preview-static=/g)).toHaveLength(2);
     expect(markup).toContain("role=\"radiogroup\"");
     expect(markup.match(/aria-checked="true"/g)).toHaveLength(1);
+    expect(markup).toContain("data-theme-preview-selected=\"true\"");
+    expect(markup).toContain("class=\"theme-picker-preview\"");
   });
 
   it("can open on the selected theme collection instead of the full catalog", () => {

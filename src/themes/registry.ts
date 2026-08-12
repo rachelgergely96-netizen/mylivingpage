@@ -70,9 +70,9 @@ const THEME_COLLECTIONS = {
   rosaline: "editorial-luxe",
 } as const satisfies Record<ThemeId, ThemeCollectionId>;
 
-// A compact set of authored layout languages keeps the resume presentation
-// varied without branching or duplicating its semantic HTML. Every new theme
-// must deliberately choose one before it can compile.
+// Identity motifs keep picker and share-card artwork recognizable while the
+// Living Page foreground remains uniform. Every theme deliberately chooses one
+// so generated artwork and catalog tooling retain a stable visual vocabulary.
 const THEME_CONTENT_PROFILES = {
   cosmic: "celestial",
   fluid: "material",
@@ -149,10 +149,9 @@ const THEME_READING_MODES = {
 } as const satisfies Record<ThemeContentProfileId, ThemeReadingMode>;
 
 /**
- * Material behavior follows the authored content language so all themes gain
- * dimensional surfaces without a 59-entry visual override table. Reading mode
- * remains authoritative: solid profiles never become translucent just because
- * they share the organic material language.
+ * Background material behavior follows the identity motif so shared world
+ * polish gains dimensional depth without a 59-entry override table. These
+ * values never branch the uniform Living Page foreground.
  */
 const THEME_MATERIAL_PROFILES = {
   precision: "engraved",
@@ -507,15 +506,9 @@ const THEME_DEFINITIONS: Array<
   {
     id: "sakura",
     signature: true,
-    signatureExperience: {
-      id: "bloom-composition",
-      name: "Bloom Composition",
-      description:
-        "A composed career arrangement where proof, roles, and growth branch from one deliberate stem.",
-    },
     name: "Sakura",
     description:
-      "A composed career arrangement of translucent botanical plates, branching chapters, and drifting petals.",
+      "Translucent cherry branches breathe across a moonlit field while layered petals drift through soft rose light.",
     vibe: "Composed & Growing",
     background: "#0F0A0D",
   },
@@ -556,7 +549,7 @@ const THEME_DEFINITIONS: Array<
     bespokeWorld: true,
     name: "Luxe",
     description:
-      "One monumental fold of liquid gold moves through black lacquer, its mirror ridge following the page story.",
+      "One monumental fold of liquid gold moves through black lacquer as its mirror ridge follows a slow arc of light.",
     vibe: "Prestigious & Confident",
     background: "#0A0808",
   },
@@ -643,15 +636,9 @@ const THEME_DEFINITIONS: Array<
   {
     id: "atlas",
     signature: true,
-    signatureExperience: {
-      id: "achievement-atlas",
-      name: "Achievement Atlas",
-      description:
-        "A career journey where roles, results, and proof become connected waypoints.",
-    },
     name: "Atlas",
     description:
-      "A navigable career route with milestone stations, mission coordinates, and connected proof.",
+      "A luminous navigational globe turns through connected routes, coordinate marks, and deep ocean light.",
     vibe: "Journey-led & Strategic",
     background: "#03070B",
   },
@@ -684,7 +671,7 @@ const THEME_DEFINITIONS: Array<
     signature: true,
     name: "Velvet",
     description:
-      "Oxblood velvet, fine brass rules, and a collector's-edition folio frame a poised editorial page.",
+      "Oxblood velvet breathes under slow directional light while fine brass rules hold a poised collector's frame.",
     vibe: "Rich & Poised",
     background: "#080307",
   },
@@ -749,7 +736,7 @@ const THEME_DEFINITIONS: Array<
     signature: true,
     name: "Quarry",
     description:
-      "Cut-stone planes, architectural marks, and one warm mineral seam form a grounded working dossier.",
+      "Cut-stone planes shift under architectural marks while one warm mineral seam travels through the grounded field.",
     vibe: "Solid & Grounded",
     background: "#050403",
   },
@@ -780,15 +767,9 @@ const THEME_DEFINITIONS: Array<
   {
     id: "atelier",
     signature: true,
-    signatureExperience: {
-      id: "editorial-feature",
-      name: "Editorial Feature",
-      description:
-        "A magazine-like profile with a feature opener, fact box, plates, and pull quotes.",
-    },
     name: "Atelier",
     description:
-      "A magazine-like career feature with a bold opener, measured story columns, and numbered plates.",
+      "Printed-paper fields, offset color plates, and measured registration marks move like a living design studio.",
     vibe: "Editorial & Curated",
     background: "#E8DFCF",
   },
@@ -805,7 +786,7 @@ const THEME_DEFINITIONS: Array<
     bespokeWorld: true,
     name: "Filigree",
     description:
-      "A continuous line of chased gold climbs the page in asymmetric openwork, catching a jeweler's light as each chapter comes forward.",
+      "A continuous line of chased gold climbs the dark field in asymmetric openwork, catching a jeweler's moving light.",
     vibe: "Intricate & Regal",
     background: "#05060A",
   },
@@ -820,15 +801,9 @@ const THEME_DEFINITIONS: Array<
   {
     id: "solstice",
     signature: true,
-    signatureExperience: {
-      id: "solar-briefing",
-      name: "Solar Briefing",
-      description:
-        "A metric-led career briefing where peak outcomes become flares along a continuous daylight arc.",
-    },
     name: "Solstice",
     description:
-      "A metric-led daylight briefing with peak signals, horizon chapters, and a radiant career arc.",
+      "A radiant solar horizon rolls through molten reflections, slow flare light, and suspended golden dust.",
     vibe: "Radiant & Outcome-Led",
     background: "#0A0605",
   },
@@ -867,15 +842,9 @@ const THEME_DEFINITIONS: Array<
   {
     id: "axiom",
     signature: true,
-    signatureExperience: {
-      id: "proof-museum",
-      name: "Proof Museum",
-      description:
-        "An evidence-first gallery where outcomes, work samples, and roles become exhibits.",
-    },
     name: "Axiom",
     description:
-      "An evidence-first gallery of outcomes, work samples, and precisely catalogued experience.",
+      "Precision points, measured arcs, and cool indexed light assemble into a disciplined technical constellation.",
     vibe: "Evidence-led & Precise",
     background: "#040713",
   },
@@ -914,15 +883,9 @@ const THEME_DEFINITIONS: Array<
   {
     id: "nocturne",
     signature: true,
-    signatureExperience: {
-      id: "midnight-edition",
-      name: "Midnight Edition",
-      description:
-        "A quiet lunar editorial where proof, perspective, and experience read like a collected night edition.",
-    },
     name: "Nocturne",
     description:
-      "A collected night edition with engraved lunar studies, silver rules, and precisely indexed chapters.",
+      "Engraved lunar studies, silver rules, and quiet orbital sparks move through a deep midnight field.",
     vibe: "Poised & Editorial",
     background: "#050713",
   },

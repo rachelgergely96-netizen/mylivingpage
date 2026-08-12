@@ -209,16 +209,16 @@ export default function ResumeLayout({
               alt={data.name}
               data-motion-item="profile-photo"
               data-motion-kind="profile"
-              width={56}
-              height={56}
-              sizes="(min-width: 640px) 56px, 44px"
-              className="resume-theme-avatar h-11 w-11 shrink-0 rounded-none object-cover sm:h-14 sm:w-14"
+              width={80}
+              height={80}
+              sizes={compact ? "56px" : "(min-width: 640px) 80px, 64px"}
+              className="resume-theme-avatar h-16 w-16 shrink-0 rounded-none object-cover sm:h-20 sm:w-20"
             />
           ) : (
             <div
               data-motion-item="profile-monogram"
               data-motion-kind="profile"
-              className="resume-theme-monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-none font-body text-xl font-bold sm:h-14 sm:w-14 sm:text-2xl"
+              className="resume-theme-monogram flex h-16 w-16 shrink-0 items-center justify-center rounded-none font-body text-2xl font-bold sm:h-20 sm:w-20 sm:text-3xl"
             >
               {(data.name || "?").slice(0, 1).toUpperCase()}
             </div>
@@ -414,20 +414,21 @@ export default function ResumeLayout({
             >
               Experience
             </h2>
-            <div data-experience-list className="space-y-2">
+            <div data-experience-list>
               {experience.map((exp, experienceIndex) => (
                 <article
                   key={`${exp.company}-${exp.title}-${exp.dates}`}
                   data-experience-index={experienceIndex}
                   data-motion-item={`experience-${exp.company}-${exp.title}`}
                   data-motion-kind="experience"
-                  className={`resume-theme-card rounded-none border ${compact ? "p-2.5 sm:p-3" : "p-3 sm:p-4"}`}
+                  className={`resume-theme-experience-entry ${compact ? "py-3" : "py-5 sm:py-6"}`}
                 >
-                  <div className="flex flex-wrap items-baseline justify-between gap-1.5 sm:gap-2">
-                    <p className="text-xs font-medium sm:text-sm">
-                      {exp.title}{" "}
-                      <span className="resume-theme-subtle">
-                        ·{" "}
+                  <div className="resume-theme-experience-heading grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-6">
+                    <div className="min-w-0">
+                      <h3 className="resume-theme-experience-title text-sm font-semibold leading-5 sm:text-base sm:leading-6">
+                        {exp.title}
+                      </h3>
+                      <p className="resume-theme-experience-company resume-theme-muted mt-0.5 text-xs sm:text-sm">
                         {exp.url && !disableExternalLinks ? (
                           <a
                             href={exp.url.startsWith("http") ? exp.url : `https://${exp.url}`}
@@ -435,7 +436,7 @@ export default function ResumeLayout({
                             rel="noopener noreferrer"
                             data-analytics-target-key="experience_company"
                             data-analytics-target-label={exp.company}
-                            className="resume-theme-link pointer-events-auto inline-flex items-center gap-0.5 transition-colors"
+                            className="resume-theme-link pointer-events-auto inline-flex items-center gap-1 transition-colors"
                           >
                             {exp.company}
                             <svg className="inline h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -443,11 +444,11 @@ export default function ResumeLayout({
                             </svg>
                           </a>
                         ) : exp.company}
-                      </span>
-                    </p>
+                      </p>
+                    </div>
                     <p
                       data-experience-dates
-                      className="resume-theme-subtle font-mono text-[11px]"
+                      className="resume-theme-subtle font-mono text-[11px] leading-5 sm:text-right"
                     >
                       {exp.dates}
                     </p>
@@ -456,15 +457,15 @@ export default function ResumeLayout({
                     // The editor authors highlights one per line, so render them
                     // as a list rather than wrapped chips: sentence-length
                     // achievements read as a run-on when they sit side by side.
-                    <ul className="mt-2 space-y-1">
+                    <ul className="mt-3 space-y-1.5">
                       {exp.highlights.map((highlight) => (
                         <li
                           key={`${exp.company}-${highlight}`}
-                          className="resume-theme-subtle flex gap-2 text-[11px] leading-5"
+                          className="resume-theme-muted flex gap-2.5 text-[13px] leading-5 sm:text-sm sm:leading-6"
                         >
                           <span
                             aria-hidden="true"
-                            className="resume-theme-marker mt-[0.55em] h-1 w-1 shrink-0"
+                            className="resume-theme-marker mt-[0.72em] h-1 w-1 shrink-0"
                           />
                           <span>{highlight}</span>
                         </li>

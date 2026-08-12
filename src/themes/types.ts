@@ -96,17 +96,16 @@ export const THEME_CONTENT_PROFILE_IDS = [
 ] as const;
 
 /**
- * Authored content treatments shared by a small family of compatible themes.
- * These profiles style the semantic resume without duplicating or reordering it.
+ * Visual identity motifs used by theme previews and generated share cards.
+ * The live Living Page foreground deliberately does not branch on this value.
  */
 export type ThemeContentProfileId = (typeof THEME_CONTENT_PROFILE_IDS)[number];
 
 export const THEME_READING_MODE_IDS = ["glass", "solid"] as const;
 
 /**
- * Defines how semantic resume content is optically separated from a moving
- * renderer. Glass profiles keep more of the world visible through a sharp
- * blur; solid profiles use denser authored plates without blur.
+ * Classifies the contrast lineage of theme artwork for registry tooling.
+ * Living Pages use one fixed reading stage across every background world.
  */
 export type ThemeReadingMode = (typeof THEME_READING_MODE_IDS)[number];
 
@@ -117,29 +116,11 @@ export const THEME_MATERIAL_PROFILE_IDS = [
 ] as const;
 
 /**
- * Material profiles refine surface and light behavior without changing the
- * semantic resume or replacing a theme's authored content profile.
+ * Material profiles tune background-world depth polish. They do not change
+ * the semantic resume foreground or its shared surface treatment.
  */
 export type ThemeMaterialProfileId =
   (typeof THEME_MATERIAL_PROFILE_IDS)[number];
-
-export const THEME_SIGNATURE_EXPERIENCE_IDS = [
-  "achievement-atlas",
-  "proof-museum",
-  "editorial-feature",
-  "bloom-composition",
-  "solar-briefing",
-  "midnight-edition",
-] as const;
-
-export type ThemeSignatureExperienceId =
-  (typeof THEME_SIGNATURE_EXPERIENCE_IDS)[number];
-
-export interface ThemeSignatureExperience {
-  id: ThemeSignatureExperienceId;
-  name: string;
-  description: string;
-}
 
 /**
  * A small, renderer-agnostic model of what is happening on a Living Page.
@@ -158,6 +139,10 @@ export interface ThemeMotionContext {
   activeSectionIndex: number;
   sectionCount: number;
   sectionProgress: number;
+  /** Decaying [0, 1] arrival pulse when the dominant section changes. */
+  sectionImpulse: number;
+  /** Direction of the latest section transition through the page story. */
+  sectionDirection: -1 | 0 | 1;
   focusedItem: string | null;
   focusKind: string | null;
   focusX: number;
@@ -214,7 +199,6 @@ export interface ThemeMeta {
   contentProfile: ThemeContentProfileId;
   materialProfile: ThemeMaterialProfileId;
   readingMode: ThemeReadingMode;
-  signatureExperience?: ThemeSignatureExperience;
   name: string;
   description: string;
   vibe: string;

@@ -10,6 +10,10 @@ import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
 
 const QUALITY_LAB_THEMES = THEME_REGISTRY;
+const THEME_QUALITY_SAMPLE = {
+  ...SIGNAL_FRAME_SAMPLE,
+  avatar_url: "/theme-quality-avatar.svg",
+};
 const PROTOTYPE_THEME_IDS = [
   "meridian",
   "halo",
@@ -142,7 +146,7 @@ export function ThemeQualityLab() {
           >
             <div data-analytics-scroll-root="true" className="relative h-full overflow-y-auto">
               <ResumeLayout
-                data={SIGNAL_FRAME_SAMPLE}
+                data={THEME_QUALITY_SAMPLE}
                 headingLevel="h1"
                 disableExternalLinks
                 useExternalScrollRoot
@@ -174,11 +178,11 @@ export function ThemeQualityLab() {
             </span>
           </div>
           <p className="site-muted mt-2 text-sm leading-6">
-            The accent, type mood, and signature motif travel with the selected theme.
+            The animated background world changes while the Living Page format stays fixed.
           </p>
           <div className="mt-4">
             <LandingStoryShareCard
-              data={SIGNAL_FRAME_SAMPLE}
+              data={THEME_QUALITY_SAMPLE}
               headingLevel="h3"
               themeId={theme.id}
             />
@@ -189,7 +193,7 @@ export function ThemeQualityLab() {
             className="mt-3 w-full justify-center"
             isOwner
             pageId="theme-quality-preview"
-            resumeData={SIGNAL_FRAME_SAMPLE}
+            resumeData={THEME_QUALITY_SAMPLE}
             slug="avery-morgan"
             themeId={theme.id}
           />
@@ -206,9 +210,9 @@ export function ThemeQualityLab() {
               </dd>
             </div>
             <div className="p-3">
-              <dt className="site-eyebrow">Profile</dt>
+              <dt className="site-eyebrow">Living Page</dt>
               <dd className="mt-2 font-mono text-[10px] uppercase text-site-text">
-                {theme.contentProfile.replaceAll("-", " ")}
+                Uniform skeleton
               </dd>
             </div>
           </dl>

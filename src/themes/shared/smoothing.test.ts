@@ -15,6 +15,8 @@ function liveMotion(overrides: Partial<ThemeMotionContext> = {}): ThemeMotionCon
     activeSectionIndex: 0,
     sectionCount: 0,
     sectionProgress: 0,
+    sectionImpulse: 0,
+    sectionDirection: 0,
     focusedItem: null,
     focusKind: null,
     focusX: 0.5,

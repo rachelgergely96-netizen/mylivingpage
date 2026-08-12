@@ -739,8 +739,40 @@ function drawWorldPolish(
   const pageMotion = resolveThemeMotion(motion);
   const effectiveTime = motion?.reducedMotion ? 0 : finiteClamp(time, 0, 1_000_000);
   const focusMix = pageMotion.focusStrength * 0.65;
-  const targetX = pointerX * (1 - focusMix) + pageMotion.focusX * focusMix;
-  const targetY = pointerY * (1 - focusMix) + pageMotion.focusY * focusMix;
+  const baseTargetX = pointerX * (1 - focusMix) + pageMotion.focusX * focusMix;
+  const baseTargetY = pointerY * (1 - focusMix) + pageMotion.focusY * focusMix;
+  const sectionSide = pageMotion.activeSectionIndex % 2 === 0 ? 1 : -1;
+  const sectionMid = pageMotion.sectionImpulse;
+  // The near layer settles a fraction later than the mid layer. The differing
+  // decay curve supplies Zajno-style overlap without adding objects or motion
+  // to the resume foreground.
+  const sectionNear = Math.sqrt(sectionMid);
+  const targetX = finiteClamp(
+    baseTargetX + sectionSide * sectionMid * 0.008 * profile.depthStrength,
+    0,
+    1,
+    0.5,
+  );
+  const targetY = finiteClamp(
+    baseTargetY +
+      pageMotion.sectionDirection * sectionMid * 0.01 * profile.depthStrength,
+    0,
+    1,
+    0.5,
+  );
+  const nearTargetX = finiteClamp(
+    baseTargetX + sectionSide * sectionNear * 0.012 * profile.depthStrength,
+    0,
+    1,
+    0.5,
+  );
+  const nearTargetY = finiteClamp(
+    baseTargetY +
+      pageMotion.sectionDirection * sectionNear * 0.014 * profile.depthStrength,
+    0,
+    1,
+    0.5,
+  );
   const velocity = finiteClamp(pageMotion.scrollVelocity / 4, -1, 1);
   // The mid (motif) layer parallax is held slightly back so the near (bokeh)
   // layer can move a touch more — widening the near/mid depth-band separation
@@ -750,7 +782,7 @@ function drawWorldPolish(
     width *
     finiteClamp(
       profile.anchorX +
-        (targetX - 0.5) * 0.028 * profile.depthStrength +
+        (targetX - 0.5) * 0.035 * profile.depthStrength +
         (pageMotion.storyProgress - 0.5) * 0.035,
       0.58,
       0.9,
@@ -759,8 +791,8 @@ function drawWorldPolish(
     height *
     finiteClamp(
       profile.anchorY +
-        (targetY - 0.5) * 0.021 * profile.depthStrength +
-        velocity * 0.012,
+        (targetY - 0.5) * 0.026 * profile.depthStrength +
+        velocity * 0.015,
       0.2,
       0.58,
     );
@@ -883,8 +915,8 @@ function drawWorldPolish(
       width,
       height,
       effectiveTime,
-      targetX,
-      targetY,
+      nearTargetX,
+      nearTargetY,
       pageMotion.storyProgress,
       accent,
       profile,

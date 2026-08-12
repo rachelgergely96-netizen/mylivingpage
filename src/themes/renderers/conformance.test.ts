@@ -243,6 +243,8 @@ function motionContext(
     activeSectionIndex: 2,
     sectionCount: 6,
     sectionProgress: 0.35,
+    sectionImpulse: 0.4,
+    sectionDirection: 1,
     focusedItem: "item-3",
     focusKind: "project",
     focusX: 0.64,

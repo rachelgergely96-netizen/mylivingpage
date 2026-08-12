@@ -48,6 +48,8 @@ const MOTION: ThemeMotionContext = {
   activeSectionIndex: 4,
   sectionCount: 8,
   sectionProgress: 0.3,
+  sectionImpulse: 0.8,
+  sectionDirection: 1,
   focusedItem: "project-1",
   focusKind: "project",
   focusX: 0.72,

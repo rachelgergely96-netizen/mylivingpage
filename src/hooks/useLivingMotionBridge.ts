@@ -6,6 +6,18 @@ import type { ThemeMotionContext } from "@/themes/types";
 
 const SECTION_SELECTOR = "[data-motion-section], [data-analytics-section]";
 const MOTION_ITEM_SELECTOR = "[data-motion-item]";
+export const SECTION_PULSE_COOLDOWN_MS = 220;
+
+export function canTriggerSectionPulse(
+  now: number,
+  lastPulseAt: number,
+): boolean {
+  if (!Number.isFinite(now)) return false;
+  return (
+    !Number.isFinite(lastPulseAt) ||
+    now - lastPulseAt >= SECTION_PULSE_COOLDOWN_MS
+  );
+}
 
 export function getMotionSectionId(
   dataset: { motionSection?: string; analyticsSection?: string },
@@ -53,6 +65,8 @@ export function createInitialThemeMotionContext(): ThemeMotionContext {
     activeSectionIndex: 0,
     sectionCount: 0,
     sectionProgress: 0,
+    sectionImpulse: 0,
+    sectionDirection: 0,
     focusedItem: null,
     focusKind: null,
     focusX: 0.5,
@@ -176,6 +190,7 @@ export function useLivingMotionBridge({
     let activeSectionElement: HTMLElement | null = null;
     let pointerTarget: HTMLElement | null = null;
     let keyboardTarget: HTMLElement | null = null;
+    let lastSectionPulseAt = Number.NEGATIVE_INFINITY;
 
     const findMotionTarget = (eventTarget: EventTarget | null): HTMLElement | null => {
       if (!(eventTarget instanceof Element)) return null;
@@ -244,6 +259,7 @@ export function useLivingMotionBridge({
       });
       const motion = motionRef.current;
       const previousSection = motion.activeSection;
+      const previousSectionIndex = motion.activeSectionIndex;
 
       motion.scrollProgress = snapshot.scrollProgress;
       motion.activeSection = snapshot.activeSection;
@@ -276,7 +292,20 @@ export function useLivingMotionBridge({
         container.removeAttribute("data-motion-section");
       }
       if (previousSection && previousSection !== snapshot.activeSection) {
-        motion.interactionImpulse = Math.max(motion.interactionImpulse, 0.72);
+        if (motion.reducedMotion) {
+          motion.sectionImpulse = 0;
+          motion.sectionDirection = 0;
+        } else if (canTriggerSectionPulse(now, lastSectionPulseAt)) {
+          motion.interactionImpulse = Math.max(motion.interactionImpulse, 0.72);
+          motion.sectionImpulse = 1;
+          motion.sectionDirection =
+            snapshot.activeSectionIndex > previousSectionIndex
+              ? 1
+              : snapshot.activeSectionIndex < previousSectionIndex
+                ? -1
+                : 0;
+          lastSectionPulseAt = now;
+        }
       }
 
       syncFocusTarget();

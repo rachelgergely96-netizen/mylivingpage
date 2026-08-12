@@ -87,6 +87,24 @@ test("the hero shows the page itself and keeps one résumé source visible", asy
     ),
   ).toBeGreaterThanOrEqual(9);
 
+  // The homepage teaches the interaction once, then lets the cue disappear.
+  // Only the showroom preview is narrowed; real Living Pages keep the shared
+  // uniform foreground contract.
+  await expect(story.locator("[data-homepage-motion-cue]")).toContainText(
+    "Move here to explore",
+  );
+  const motionPreview = story.locator('[data-homepage-motion-preview="hero"]');
+  const motionRoot = motionPreview.locator("xpath=ancestor::*[@data-living-output][1]");
+  const foregroundRatio = await motionPreview.evaluate((preview) => {
+    const foreground = preview.querySelector<HTMLElement>(".resume-theme-content");
+    if (!foreground) return 1;
+    return foreground.getBoundingClientRect().width / preview.getBoundingClientRect().width;
+  });
+  expect(foregroundRatio).toBeLessThanOrEqual(0.89);
+  expect(
+    await motionRoot.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor),
+  ).toBe("crosshair");
+
   // The style chooser always addresses the Living Page now that no other
   // output can occupy the stage.
   await expect(story.locator("[data-story-style-chooser]")).toContainText("page styles");

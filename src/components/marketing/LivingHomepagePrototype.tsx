@@ -262,14 +262,15 @@ function StoryLivingOutput({ world }: { world: WorldDirection }) {
           // definite: a percentage height cannot resolve against a parent
           // sized by flex, which collapsed the résumé layer inside it.
           style={{ position: "absolute", inset: 0 }}
-          interactive={false}
+          interactive
           animated
-          mobileAmbientMotion={false}
+          mobileAmbientMotion
           motionAware
           maxFps={24}
         >
           <div
             className={styles.storyResumeViewport}
+            data-homepage-motion-preview="hero"
             role="region"
             aria-label="Sample professional page preview"
             tabIndex={0}
@@ -283,6 +284,7 @@ function StoryLivingOutput({ world }: { world: WorldDirection }) {
             />
           </div>
         </ThemeCanvas>
+        <HomepageMotionCue />
       </div>
       <div className={styles.storyOutputBar}>
         <span>One current link</span>
@@ -307,6 +309,16 @@ function StoryQrPreview() {
         d="M1 1h6v6H1V1Zm1 1v4h4V2H2Zm12-1h6v6h-6V1Zm1 1v4h4V2h-4ZM1 14h6v6H1v-6Zm1 1v4h4v-4H2ZM3 3h2v2H3V3Zm12 0h2v2h-2V3ZM3 16h2v2H3v-2ZM9 1h2v2H9V1Zm3 1h1v3h-2V4h1V2ZM8 5h2v2H8V5Zm3 2h2v2h-2V7Zm3 1h2v2h-2V8Zm3 0h3v2h-1v2h-2V8ZM8 9h2v3H8V9Zm3 1h2v2h-2v-2Zm3 2h2v2h-2v-2Zm3 1h3v2h-3v-2ZM8 13h2v2H8v-2Zm3 1h2v3h-2v-3Zm3 1h2v2h-2v-2Zm3 1h2v4h-2v-4ZM8 17h2v3H8v-3Zm3 1h2v2h-2v-2Zm3 0h2v2h-2v-2Z"
       />
     </svg>
+  );
+}
+
+function HomepageMotionCue() {
+  return (
+    <span className={styles.motionPreviewCue} data-homepage-motion-cue aria-hidden="true">
+      <i />
+      <span className={styles.motionPreviewCuePointer}>Move here to explore</span>
+      <span className={styles.motionPreviewCueTouch}>Background in motion</span>
+    </span>
   );
 }
 
@@ -720,14 +732,15 @@ export default function LivingHomepagePrototype({
                   height="100%"
                   className={`${styles.themeCanvasRoot} rounded-none`}
                   style={{ position: "absolute", inset: 0 }}
-                  interactive={false}
+                  interactive
                   animated
-                  mobileAmbientMotion={false}
+                  mobileAmbientMotion
                   motionAware
                   maxFps={24}
                 >
                   <div
                     className={styles.storyResumeViewport}
+                    data-homepage-motion-preview="chapter"
                     role="region"
                     aria-label={`Sample page in the ${THEME_MAP[showcaseThemeId].name} style`}
                     tabIndex={0}
@@ -741,6 +754,7 @@ export default function LivingHomepagePrototype({
                     />
                   </div>
                 </ThemeCanvas>
+                <HomepageMotionCue key={showcaseThemeId} />
               </div>
               <div
                 className={styles.pagesStyleRow}

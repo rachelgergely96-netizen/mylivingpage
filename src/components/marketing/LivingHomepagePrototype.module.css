@@ -895,6 +895,46 @@
   outline-offset: -3px;
 }
 
+/* The homepage is a showroom, not the public page itself. Give the hero world
+   a little more visible edge and briefly teach the cause-and-effect gesture;
+   the cue fades after one beat and the canvas only reacts while engaged. */
+.storyResumeViewport[data-homepage-motion-preview="hero"] :global(.resume-theme-content) {
+  width: 88%;
+}
+
+.motionPreviewCue {
+  align-items: center;
+  animation: motionPreviewCue 4.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: rgba(5, 12, 24, 0.82);
+  border: 1px solid var(--world-accent-border);
+  bottom: 13px;
+  color: var(--world-accent-bright);
+  display: inline-flex;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 8px;
+  gap: 7px;
+  letter-spacing: 0.06em;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: absolute;
+  right: 13px;
+  text-transform: uppercase;
+  z-index: 4;
+}
+
+.motionPreviewCue > i {
+  animation: motionPreviewSignal 1.4s ease-in-out 2;
+  background: var(--world-accent);
+  box-shadow: 0 0 12px var(--world-accent);
+  display: block;
+  height: 5px;
+  width: 5px;
+}
+
+.motionPreviewCueTouch {
+  display: none;
+}
+
 /* A percentage height cannot resolve against a parent whose own height comes
    from flexing, so the canvas root was collapsing to the canvas element's
    intrinsic size — the phone showed a masthead and 200px of empty world.
@@ -1613,6 +1653,30 @@
   }
 }
 
+@keyframes motionPreviewCue {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  12%,
+  72% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+    visibility: hidden;
+  }
+}
+
+@keyframes motionPreviewSignal {
+  50% {
+    opacity: 0.5;
+    transform: scale(0.72);
+  }
+}
+
 @media (min-width: 1041px) {
   .heroCopy .secondaryButton {
     display: none;
@@ -1930,6 +1994,10 @@
     min-height: 420px;
   }
 
+  .storyResumeViewport[data-homepage-motion-preview="hero"] :global(.resume-theme-content) {
+    width: 92%;
+  }
+
   /* Page first on a phone; the résumé it came from reads underneath. The
      token strip is decorative and would point backwards once inverted. */
   .truthTransfer {
@@ -2171,6 +2239,16 @@
 
   .truthTransfer small {
     color: var(--world-accent-bright);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .motionPreviewCuePointer {
+    display: none;
+  }
+
+  .motionPreviewCueTouch {
+    display: inline;
   }
 }
 

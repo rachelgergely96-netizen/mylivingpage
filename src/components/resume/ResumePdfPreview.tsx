@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
 import type { ResumeData } from "@/types/resume";
 
 interface ResumePdfPreviewProps {
   resumeData: ResumeData;
+  localPreviewMode?: boolean;
 }
 
 /**
@@ -18,7 +20,10 @@ interface ResumePdfPreviewProps {
  * PDF render, and the editor should not spend one every time somebody scrolls
  * past this section.
  */
-export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) {
+export default function ResumePdfPreview({
+  resumeData,
+  localPreviewMode = false,
+}: ResumePdfPreviewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,7 +62,12 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
     try {
       const response = await fetch("/api/resume/preview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(localPreviewMode
+            ? { "X-Editor-Preview-Page": EDITOR_LAYOUT_PREVIEW_PAGE_ID }
+            : {}),
+        },
         body: JSON.stringify({ resumeData }),
       });
 
@@ -96,7 +106,7 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
         setLoading(false);
       }
     }
-  }, [loading, releaseObjectUrl, resumeData]);
+  }, [loading, localPreviewMode, releaseObjectUrl, resumeData]);
 
   return (
     <section
@@ -133,6 +143,16 @@ export default function ResumePdfPreview({ resumeData }: ResumePdfPreviewProps) 
 
       {previewUrl ? (
         <div className="mt-4">
+          <div className="mb-3 flex justify-end">
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="site-button site-button-secondary inline-flex"
+            >
+              Open PDF in a new tab
+            </a>
+          </div>
           {pageCount !== null ? (
             <p
               className={`mb-2 text-xs font-semibold ${

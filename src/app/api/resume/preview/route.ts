@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import {
+  EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+  isEditorPreviewEnabled,
+} from "@/lib/editor-preview";
+import {
   countPdfPages,
   getFriendlyResumePdfError,
   renderResumePdf,
@@ -23,12 +27,19 @@ const MAX_REQUEST_BODY_BYTES = 256 * 1024;
  * the saved version would show stale content mid-edit.
  */
 export async function POST(request: Request) {
-  const authResult = await requireAuthenticatedUser();
-  if ("response" in authResult) {
-    return authResult.response;
-  }
+  const isLocalEditorPreview =
+    isEditorPreviewEnabled() &&
+    request.headers.get("x-editor-preview-page") ===
+      EDITOR_LAYOUT_PREVIEW_PAGE_ID;
 
-  const { user } = authResult.value;
+  let userId = EDITOR_LAYOUT_PREVIEW_PAGE_ID;
+  if (!isLocalEditorPreview) {
+    const authResult = await requireAuthenticatedUser();
+    if ("response" in authResult) {
+      return authResult.response;
+    }
+    userId = authResult.value.user.id;
+  }
 
   const declaredContentLength = Number(request.headers.get("content-length"));
   if (
@@ -41,21 +52,23 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const rateLimit = await enforceRateLimit({
-      request,
-      policy: "ats_export_preview",
-      route: "/api/resume/preview",
-      userId: user.id,
-    });
-    if (rateLimit.limited) {
-      return rateLimit.response;
+  if (!isLocalEditorPreview) {
+    try {
+      const rateLimit = await enforceRateLimit({
+        request,
+        policy: "ats_export_preview",
+        route: "/api/resume/preview",
+        userId,
+      });
+      if (rateLimit.limited) {
+        return rateLimit.response;
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Résumé preview is temporarily unavailable. Please try again." },
+        { status: 503 },
+      );
     }
-  } catch {
-    return NextResponse.json(
-      { error: "Résumé preview is temporarily unavailable. Please try again." },
-      { status: 503 },
-    );
   }
 
   let body: unknown;

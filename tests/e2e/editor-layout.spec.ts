@@ -213,6 +213,13 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   await expect(commandBar).toHaveCSS("position", "sticky");
   await expect(preview).toHaveCSS("position", "sticky");
 
+  const previewCanvas = preview.locator("canvas");
+  await expect(previewCanvas).toHaveCount(1);
+  await previewCanvas.evaluate((canvas) => {
+    canvas.dataset.editorRenderProbe = "preserved";
+  });
+  await expect(previewCanvas).toHaveCSS("cursor", "default");
+
   const workspaceBox = await workspace.boundingBox();
   const contentBox = await page.getByRole("heading", { name: "Shape the signal, section by section" }).boundingBox();
   const previewBox = await preview.boundingBox();
@@ -226,6 +233,7 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   await expect(page.getByRole("button", { name: "Copy link" })).toBeDisabled();
   await expect(page.locator("[data-editor-preview-status]")).toHaveText("Unsaved view");
   await expect(preview.getByText("Principal Platform Engineer", { exact: true })).toBeVisible();
+  await expect(previewCanvas).toHaveAttribute("data-editor-render-probe", "preserved");
 
   await page.getByRole("button", { name: "Save Changes" }).click();
   await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
@@ -265,6 +273,33 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   ).toBeVisible();
   await expect(headline).toHaveValue("Distinguished Platform Engineer");
   await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+});
+
+test("the editor renders the real PDF and exposes a browser-safe open action", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/dev/editor-preview");
+
+  const panel = page.locator("[data-resume-pdf-preview]");
+  await panel.scrollIntoViewIfNeeded();
+
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/resume/preview") &&
+      response.request().method() === "POST",
+  );
+  await panel.getByRole("button", { name: "Show the PDF" }).click();
+
+  expect((await responsePromise).status()).toBe(200);
+  await expect(panel.getByRole("link", { name: "Open PDF in a new tab" })).toHaveAttribute(
+    "href",
+    /^blob:/,
+  );
+  await expect(panel.locator('object[type="application/pdf"]')).toHaveAttribute(
+    "data",
+    /^blob:/,
+  );
 });
 
 test("the editor saves on its own after edits stop", async ({ page }) => {

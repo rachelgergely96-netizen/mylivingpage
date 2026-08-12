@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
@@ -27,6 +35,7 @@ import VariantPlanner from "@/components/VariantPlanner";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
+import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
 import { sanitizeAtsTargeting } from "@/lib/ats-target-roles";
 import { PAGE_VISIBILITY_WRITES } from "@/lib/page-visibility";
 import { mergeResumePatch } from "@/lib/ats-review";
@@ -64,6 +73,9 @@ interface PageEditorClientProps {
  * thought does not cost the paragraph.
  */
 const AUTOSAVE_DELAY_MS = 2500;
+
+const EditorThemePicker = memo(ThemePicker);
+const EditorPreviewResumeLayout = memo(ResumeLayout);
 
 function normalizeLegacyResumeData(data: ResumeData) {
   const next = { ...data };
@@ -656,9 +668,18 @@ export default function PageEditorClient({
     }
   };
 
-  const previewVariant =
-    variants.find((variant) => variant.id === previewVariantId) ?? null;
-  const previewData = data ? applyPageVariant(data, previewVariant) : null;
+  const previewVariant = useMemo(
+    () => variants.find((variant) => variant.id === previewVariantId) ?? null,
+    [previewVariantId, variants],
+  );
+  const deferredPreviewSource = useDeferredValue(data);
+  const previewData = useMemo(
+    () =>
+      deferredPreviewSource
+        ? applyPageVariant(deferredPreviewSource, previewVariant)
+        : null,
+    [deferredPreviewSource, previewVariant],
+  );
 
   const selectedTheme = THEME_REGISTRY.find((theme) => theme.id === themeId);
   const nextReadinessCheck = readiness?.checks.find(
@@ -1099,7 +1120,7 @@ export default function PageEditorClient({
                   Your professional story stays the same while the style changes.
                 </p>
               </div>
-              <ThemePicker
+              <EditorThemePicker
                 themes={THEME_REGISTRY}
                 selectedThemeId={themeId}
                 onSelectTheme={setThemeId}
@@ -1198,7 +1219,10 @@ export default function PageEditorClient({
                   setData((prev) => (prev ? mergeResumePatch(prev, patch) : prev))
                 }
               />
-              <ResumePdfPreview resumeData={data} />
+              <ResumePdfPreview
+                resumeData={data}
+                localPreviewMode={pageId === EDITOR_LAYOUT_PREVIEW_PAGE_ID}
+              />
               <p className="px-1 text-xs leading-5 text-site-muted">
                 The check uses the fields currently in this editor. Save your changes before relying
                 on the public PDF.
@@ -1250,10 +1274,12 @@ export default function PageEditorClient({
               themeId={themeId}
               height="clamp(420px, calc(100dvh - 26.5rem), 680px)"
               className="rounded-none"
+              interactive={false}
+              maxFps={30}
               motionAware
             >
               <div className="h-full">
-                <ResumeLayout
+                <EditorPreviewResumeLayout
                   data={previewData ?? data}
                   headingLevel="h2"
                   disableExternalLinks

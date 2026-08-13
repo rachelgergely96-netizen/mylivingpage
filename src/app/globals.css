@@ -1019,12 +1019,13 @@ a {
   border: 1px solid var(--theme-border);
   background: linear-gradient(
     145deg,
-    rgba(13, 17, 25, 0.92),
-    rgba(7, 10, 16, 0.9)
+    rgba(13, 17, 25, 0.38),
+    rgba(7, 10, 16, 0.3)
   );
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    0 16px 40px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: none;
   padding: clamp(1.25rem, 3.5vw, 2.75rem);
 }
 
@@ -1053,8 +1054,13 @@ a {
 [data-theme-format="uniform"] .resume-theme-masthead {
   align-items: flex-start;
   gap: clamp(1rem, 3vw, 1.75rem);
-  border-bottom: 1px solid var(--theme-border);
-  padding-bottom: clamp(1.25rem, 2.6vw, 1.75rem);
+  border: 1px solid var(--theme-border);
+  background: linear-gradient(
+    135deg,
+    var(--theme-surface-strong),
+    var(--theme-surface)
+  );
+  padding: clamp(1rem, 2.4vw, 1.5rem);
 }
 
 [data-theme-format="uniform"] .resume-theme-avatar,
@@ -1077,8 +1083,10 @@ a {
 }
 
 [data-theme-format="uniform"] .resume-theme-summary {
-  border-bottom: 1px solid var(--theme-border);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
   margin-bottom: clamp(1.5rem, 3vw, 2rem);
+  padding-right: clamp(0.85rem, 1.8vw, 1.2rem);
 }
 
 [data-theme-format="uniform"] .resume-theme-summary > p {
@@ -1100,6 +1108,13 @@ a {
   line-height: 1.2;
 }
 
+[data-theme-format="uniform"] [data-section-heading] {
+  border: 1px solid var(--theme-border);
+  border-left-color: var(--theme-accent-border);
+  background: var(--theme-surface-strong);
+  padding: 0.55rem 0.65rem;
+}
+
 [data-theme-format="uniform"] .resume-theme-section-title::after {
   background: var(--theme-border);
 }
@@ -1113,14 +1128,18 @@ a {
 [data-theme-format="uniform"]
   :is(.resume-theme-card, .resume-theme-card-accent) {
   border-color: var(--theme-border);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--theme-surface-strong);
   box-shadow: none;
   backdrop-filter: none;
 }
 
 [data-theme-format="uniform"] .resume-theme-card-accent {
   border-left-color: var(--theme-accent-border);
-  background: rgba(157, 184, 232, 0.055);
+  background: color-mix(
+    in srgb,
+    var(--theme-accent-soft) 22%,
+    var(--theme-surface-strong)
+  );
 }
 
 [data-theme-format="uniform"] .resume-theme-impact-strip {
@@ -1134,6 +1153,9 @@ a {
 [data-theme-format="uniform"] [data-experience-list] {
   border-top: 1px solid var(--theme-border);
   border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding-right: clamp(0.65rem, 1.6vw, 1rem);
+  padding-left: clamp(0.65rem, 1.6vw, 1rem);
 }
 
 [data-theme-format="uniform"] .resume-theme-experience-entry {
@@ -1176,6 +1198,11 @@ a {
 
 @media (max-width: 639px) {
   [data-theme-format="uniform"] .resume-theme-content {
+    background: linear-gradient(
+      145deg,
+      rgba(13, 17, 25, 0.44),
+      rgba(7, 10, 16, 0.36)
+    );
     padding: 1.1rem;
   }
 

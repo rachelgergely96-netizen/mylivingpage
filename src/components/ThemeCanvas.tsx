@@ -74,8 +74,8 @@ const UNIFORM_LIVING_PAGE_STYLE: ThemeCanvasStyle = {
   "--theme-text": "#f7f9fc",
   "--theme-text-muted": "rgba(237, 242, 250, 0.84)",
   "--theme-text-subtle": "rgba(221, 230, 243, 0.68)",
-  "--theme-surface": "rgba(10, 13, 20, 0.82)",
-  "--theme-surface-strong": "rgba(8, 11, 17, 0.95)",
+  "--theme-surface": "rgba(10, 13, 20, 0.66)",
+  "--theme-surface-strong": "rgba(8, 11, 17, 0.78)",
   "--theme-border": "rgba(222, 231, 244, 0.14)",
   fontFamily: "var(--font-dm-sans), sans-serif",
 };

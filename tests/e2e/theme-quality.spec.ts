@@ -22,6 +22,70 @@ const FORMER_FORMAT_THEME_IDS = [
 ] as const;
 const LEGACY_FORMAT_LABEL_PATTERN = /Waypoint|Exhibit|PLATE|STEM|FLARE|ENTRY/i;
 
+type RgbaColor = { r: number; g: number; b: number; a: number };
+
+function parseCssColor(value: string): RgbaColor {
+  const normalized = value.trim();
+  if (normalized.startsWith("#")) {
+    const hex = normalized.slice(1);
+    const expanded = hex.length === 3
+      ? hex.split("").map((part) => part + part).join("")
+      : hex;
+    if (expanded.length !== 6) {
+      throw new Error(`Unsupported hex color: ${value}`);
+    }
+    return {
+      r: Number.parseInt(expanded.slice(0, 2), 16),
+      g: Number.parseInt(expanded.slice(2, 4), 16),
+      b: Number.parseInt(expanded.slice(4, 6), 16),
+      a: 1,
+    };
+  }
+
+  const channels = normalized.match(/[0-9.]+/g)?.map(Number) ?? [];
+  if (channels.length < 3) {
+    throw new Error(`Unsupported CSS color: ${value}`);
+  }
+  return {
+    r: channels[0],
+    g: channels[1],
+    b: channels[2],
+    a: channels[3] ?? 1,
+  };
+}
+
+function compositeColor(foreground: RgbaColor, background: RgbaColor): RgbaColor {
+  return {
+    r: foreground.r * foreground.a + background.r * (1 - foreground.a),
+    g: foreground.g * foreground.a + background.g * (1 - foreground.a),
+    b: foreground.b * foreground.a + background.b * (1 - foreground.a),
+    a: 1,
+  };
+}
+
+function relativeLuminance(color: RgbaColor): number {
+  const linearize = (channel: number) => {
+    const value = channel / 255;
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  return (
+    0.2126 * linearize(color.r) +
+    0.7152 * linearize(color.g) +
+    0.0722 * linearize(color.b)
+  );
+}
+
+function contrastRatio(foreground: RgbaColor, background: RgbaColor): number {
+  const foregroundLuminance = relativeLuminance(foreground);
+  const backgroundLuminance = relativeLuminance(background);
+  return (
+    (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+  );
+}
+
 const NIBBLE_BITS = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
 function perceptualHashDistance(left: string, right: string): number {
@@ -647,7 +711,7 @@ test("all themes use one narrative font across Living Pages and share cards", as
   }
 });
 
-test("all themes apply the same reading stage to identity, summaries, and cards", async ({
+test("all themes use a transparent stage with local reading plates", async ({
   page,
 }) => {
   test.setTimeout(180_000);
@@ -678,6 +742,12 @@ test("all themes apply the same reading stage to identity, summaries, and cards"
       const card = element.querySelector<HTMLElement>(
         ".resume-theme-card",
       );
+      const experience = element.querySelector<HTMLElement>(
+        "[data-experience-list]",
+      );
+      const sectionHeading = element.querySelector<HTMLElement>(
+        "[data-section-heading]",
+      );
       const stats = element.querySelector<HTMLElement>("[data-resume-stats]");
       const statsCard = stats?.querySelector<HTMLElement>(".resume-theme-card");
       const muted = element.querySelector<HTMLElement>(".resume-theme-muted");
@@ -687,12 +757,14 @@ test("all themes apply the same reading stage to identity, summaries, and cards"
       const mastheadStyle = read(masthead);
       const summaryStyle = read(summary);
       const cardStyle = read(card);
+      const experienceStyle = read(experience);
+      const sectionHeadingStyle = read(sectionHeading);
       const statsStyle = read(stats);
       const statsCardStyle = read(statsCard);
       const mutedStyle = read(muted);
-      const colorAlpha = (value: string | undefined) => {
-        if (!value) return 0;
-        const matches = [
+      const colorAlphas = (value: string | undefined) => {
+        if (!value) return [];
+        return [
           ...Array.from(value.matchAll(/rgba?\(([^)]*)\)/g), (match) => {
             const slashAlpha = /\/\s*([0-9.]+)/.exec(match[1])?.[1];
             const commaAlpha = match[1].split(",")[3]?.trim();
@@ -708,8 +780,15 @@ test("all themes apply the same reading stage to identity, summaries, and cards"
               index: match.index,
             }),
           ),
-        ].sort((left, right) => left.index - right.index);
-        return matches.at(-1)?.alpha ?? 0;
+        ]
+          .sort((left, right) => left.index - right.index)
+          .map((match) => match.alpha);
+      };
+      const colorAlpha = (value: string | undefined) =>
+        Math.max(0, ...colorAlphas(value));
+      const alphaFloor = (value: string | undefined) => {
+        const alphas = colorAlphas(value);
+        return alphas.length > 0 ? Math.min(...alphas) : 0;
       };
       const alpha = mutedStyle?.color.match(
         /rgba?\([^,]+,[^,]+,[^,]+(?:,\s*([0-9.]+))?\)/,
@@ -719,29 +798,41 @@ test("all themes apply the same reading stage to identity, summaries, and cards"
         cardBackdrop: cardStyle?.backdropFilter ?? "none",
         cardBaseAlpha: colorAlpha(cardStyle?.backgroundColor),
         cardGradientTailAlpha: colorAlpha(cardStyle?.backgroundImage),
-        mastheadBackground: mastheadStyle?.backgroundImage ?? "none",
+        experienceGuardAlpha: colorAlpha(experienceStyle?.backgroundColor),
+        mastheadGuardFloor: alphaFloor(mastheadStyle?.backgroundImage),
         mastheadRadius: mastheadStyle?.borderRadius ?? "",
         mutedAlpha: alpha ? Number(alpha) : 1,
+        sectionHeadingGuardAlpha: colorAlpha(
+          sectionHeadingStyle?.backgroundColor,
+        ),
         statsGuardAlpha: Math.max(
           colorAlpha(statsStyle?.backgroundColor),
           colorAlpha(statsStyle?.backgroundImage),
           colorAlpha(statsCardStyle?.backgroundColor),
           colorAlpha(statsCardStyle?.backgroundImage),
         ),
+        stageAlphaCeiling: colorAlpha(stageStyle?.backgroundImage),
+        stageAlphaFloor: alphaFloor(stageStyle?.backgroundImage),
+        stageBackdrop: stageStyle?.backdropFilter ?? "none",
         stageBackground: stageStyle?.backgroundImage ?? "none",
         stageRadius: stageStyle?.borderRadius ?? "",
-        summaryBackground: summaryStyle?.backgroundImage ?? "none",
+        summaryGuardAlpha: colorAlpha(summaryStyle?.backgroundColor),
         summaryRadius: summaryStyle?.borderRadius ?? "",
       };
     });
 
     expect(guard.stageBackground, `${theme.id} reading stage`).not.toBe("none");
-    expect(guard.mastheadBackground, `${theme.id} masthead material`).toBe("none");
-    expect(guard.summaryBackground, `${theme.id} summary material`).toBe("none");
+    expect(guard.stageAlphaFloor, `${theme.id} stage alpha floor`).toBeGreaterThanOrEqual(0.28);
+    expect(guard.stageAlphaCeiling, `${theme.id} stage alpha ceiling`).toBeLessThanOrEqual(0.48);
+    expect(guard.stageBackdrop, `${theme.id} unblurred world`).toBe("none");
+    expect(guard.mastheadGuardFloor, `${theme.id} masthead guard`).toBeGreaterThanOrEqual(0.66);
+    expect(guard.summaryGuardAlpha, `${theme.id} summary guard`).toBeGreaterThanOrEqual(0.66);
+    expect(guard.sectionHeadingGuardAlpha, `${theme.id} section-heading guard`).toBeGreaterThanOrEqual(0.78);
+    expect(guard.experienceGuardAlpha, `${theme.id} experience guard`).toBeGreaterThanOrEqual(0.66);
     expect(
       Math.max(guard.cardBaseAlpha, guard.cardGradientTailAlpha),
       `${theme.id} card guard`,
-    ).toBeGreaterThanOrEqual(0.02);
+    ).toBeGreaterThanOrEqual(0.78);
     expect(
       guard.mutedAlpha,
       `${theme.id} muted text alpha`,
@@ -749,11 +840,54 @@ test("all themes apply the same reading stage to identity, summaries, and cards"
     expect(
       guard.statsGuardAlpha,
       `${theme.id} stats guard`,
-    ).toBeGreaterThanOrEqual(0.02);
+    ).toBeGreaterThanOrEqual(0.78);
     expect(guard.stageRadius, `${theme.id} stage geometry`).toBe("0px");
     expect(guard.mastheadRadius, `${theme.id} masthead geometry`).toBe("0px");
     expect(guard.summaryRadius, `${theme.id} summary geometry`).toBe("0px");
     expect(guard.cardBackdrop, `${theme.id} solid separation`).toBe("none");
+  }
+});
+
+test("local plates preserve text contrast on the lightest and darkest worlds", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/theme-lab");
+  const select = page.getByLabel("Catalog theme");
+
+  for (const themeId of ["atlas", "atelier"] as const) {
+    await select.selectOption(themeId);
+    const livingPage = page.locator(
+      `[data-theme-lab-canvas] [data-theme-id="${themeId}"]`,
+    );
+    await expect(livingPage).toHaveAttribute("data-theme-renderer-status", "ready");
+
+    const tokens = await livingPage.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        muted: style.getPropertyValue("--theme-text-muted").trim(),
+        strong: style.getPropertyValue("--theme-surface-strong").trim(),
+        subtle: style.getPropertyValue("--theme-text-subtle").trim(),
+        surface: style.getPropertyValue("--theme-surface").trim(),
+        text: style.getPropertyValue("--theme-text").trim(),
+      };
+    });
+    const world = parseCssColor(THEME_MAP[themeId].background);
+    const strongPlate = compositeColor(parseCssColor(tokens.strong), world);
+    const surfacePlate = compositeColor(parseCssColor(tokens.surface), world);
+
+    expect(
+      contrastRatio(compositeColor(parseCssColor(tokens.text), strongPlate), strongPlate),
+      `${themeId} primary text contrast`,
+    ).toBeGreaterThanOrEqual(7);
+    expect(
+      contrastRatio(compositeColor(parseCssColor(tokens.muted), surfacePlate), surfacePlate),
+      `${themeId} muted text contrast`,
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrastRatio(compositeColor(parseCssColor(tokens.subtle), surfacePlate), surfacePlate),
+      `${themeId} subtle text contrast`,
+    ).toBeGreaterThanOrEqual(3);
   }
 });
 

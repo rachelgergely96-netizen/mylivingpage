@@ -74,22 +74,22 @@ const WORLD_DIRECTIONS: readonly WorldDirection[] = [
     promise: "Good when you want your work and experience to have more room.",
   },
   {
-    id: "quarry",
-    label: "Practical and grounded",
-    shortLabel: "Practical",
-    promise: "Good when hands-on work and practical results should come first.",
+    id: "fresco",
+    label: "Textured and collected",
+    shortLabel: "Textured",
+    promise: "Good when you want quiet depth and a crafted, understated feel.",
   },
   {
-    id: "velvet",
-    label: "Warm and editorial",
-    shortLabel: "Warm",
-    promise: "Good when personality and team leadership matter.",
+    id: "silk",
+    label: "Polished and fluid",
+    shortLabel: "Polished",
+    promise: "Good when you want your work to feel modern, refined, and in motion.",
   },
   {
-    id: "atelier",
-    label: "Creative and expressive",
-    shortLabel: "Creative",
-    promise: "Good when you want ideas and different kinds of work to stand out.",
+    id: "mosaic",
+    label: "Bold and dimensional",
+    shortLabel: "Bold",
+    promise: "Good when color and creative range should stand out without moving the content.",
   },
 ] as const;
 
@@ -382,7 +382,7 @@ export default function LivingHomepagePrototype({
 
   // The page/card chapters share one selection so the share card visibly
   // follows the chosen page style — the theme-matching detail, demonstrated.
-  const [showcaseThemeId, setShowcaseThemeId] = useState<ThemeId>("velvet");
+  const [showcaseThemeId, setShowcaseThemeId] = useState<ThemeId>("silk");
   const showcaseWorld = WORLD_DIRECTIONS.find((world) => world.id === showcaseThemeId)
     ?? WORLD_DIRECTIONS[0];
   const showcaseStyle = useMemo(() => getWorldStyle(showcaseThemeId), [showcaseThemeId]);
@@ -712,11 +712,11 @@ export default function LivingHomepagePrototype({
               <span>The Living Page</span>{THEME_COUNT} styles · five collections
             </p>
             <h3 id="living-pages-title" className={styles.chapterMovement}>
-              A page with a world behind it.
+              The world stays visible. Your work stays readable.
             </h3>
             <p>
-              Every style is a hand-built animated backdrop. Your details sit on clear,
-              legible plates in the same order—whatever look you choose.
+              Every style is a hand-built animated backdrop. A lighter shared frame lets
+              the motion show through, while focused reading plates keep every detail crisp.
             </p>
           </div>
 
@@ -783,8 +783,8 @@ export default function LivingHomepagePrototype({
 
             <div className={styles.chapterClaim} data-pages-details>
               <p>
-                Hand-built worlds that move as you scroll and hold still under reduced
-                motion. Your words stay put, in the same clean order, on every style.
+                Switch styles and the background stays visible around and between focused
+                reading plates. The order, font, and wording stay fixed—only the atmosphere changes.
               </p>
             </div>
           </div>

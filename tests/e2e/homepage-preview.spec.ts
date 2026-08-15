@@ -201,6 +201,11 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   const transform = story.locator("[data-transform-motion]");
   await expect(transform).toHaveAttribute("data-transform-cycle", "0");
   await expect(directions.getByRole("radio")).toHaveCount(5);
+  expect(
+    await directions.getByRole("radio").evaluateAll((options) =>
+      options.map((option) => option.getAttribute("data-theme-id")),
+    ),
+  ).toEqual(["atlas", "nocturne", "fresco", "silk", "mosaic"]);
   await calm.click();
 
   await expect(calm).toHaveAttribute("aria-checked", "true");
@@ -249,11 +254,11 @@ test("theme controls are equal and support roving keyboard selection", async ({ 
     .toHaveAttribute("data-theme-id", "nocturne");
 
   await page.keyboard.press("End");
-  const expressive = directions.getByRole("radio", { name: /Creative and expressive/ });
-  await expect(expressive).toBeFocused();
-  await expect(expressive).toHaveAttribute("aria-checked", "true");
+  const dimensional = directions.getByRole("radio", { name: /Bold and dimensional/ });
+  await expect(dimensional).toBeFocused();
+  await expect(dimensional).toHaveAttribute("aria-checked", "true");
   await expect(story.locator("[data-story-living-output]"))
-    .toHaveAttribute("data-theme-id", "atelier");
+    .toHaveAttribute("data-theme-id", "mosaic");
   // The story stage keeps exactly one animated canvas; the Living Page
   // chapter below owns the only other one on the page.
   await expect(story.locator('[data-theme-renderer-status="ready"]')).toHaveCount(1);
@@ -302,11 +307,11 @@ test("reduced motion keeps the full transformation understandable and interactiv
   await expect(story.locator("[data-transform-motion] b").first()).toBeHidden();
   await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
 
-  const practical = story.getByRole("radio", { name: /Practical and grounded/ });
-  await practical.click();
-  await expect(practical).toHaveAttribute("aria-checked", "true");
+  const textured = story.getByRole("radio", { name: /Textured and collected/ });
+  await textured.click();
+  await expect(textured).toHaveAttribute("aria-checked", "true");
   await expect(story.locator("[data-story-living-output]"))
-    .toHaveAttribute("data-theme-id", "quarry");
+    .toHaveAttribute("data-theme-id", "fresco");
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
@@ -334,12 +339,14 @@ test("the page and card chapters share one style selection", async ({ page }) =>
 
   await pagesChapter.scrollIntoViewIfNeeded();
   await expect(
-    pagesChapter.getByRole("heading", { name: "A page with a world behind it." }),
+    pagesChapter.getByRole("heading", {
+      name: "The world stays visible. Your work stays readable.",
+    }),
   ).toBeVisible();
   await expect(pagesChapter.locator("[data-pages-style]")).toHaveCount(5);
 
   const card = cardChapter.locator("[data-testid='story-share-card']");
-  await expect(card).toHaveAttribute("data-theme-id", "velvet");
+  await expect(card).toHaveAttribute("data-theme-id", "silk");
 
   await pagesChapter.locator("[data-pages-style='atlas']").click();
   await expect(pagesChapter.locator("[data-pages-stage]")).toBeVisible();

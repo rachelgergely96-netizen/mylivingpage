@@ -1,6 +1,10 @@
 import React from "react";
 import Link from "next/link";
 import AnalyticsCopyLinkButton from "@/components/analytics/AnalyticsCopyLinkButton";
+import {
+  AnalyticsRangeLink,
+  AnalyticsRangeMotionBoundary,
+} from "@/components/analytics/AnalyticsRangeMotion";
 import AnalyticsRetryButton from "@/components/analytics/AnalyticsRetryButton";
 import {
   ANALYTICS_RANGE_DAYS,
@@ -189,6 +193,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
 
       <div className="mt-6">
         <div
+          data-testid="analytics-trend-chart"
           role="img"
           className="flex items-end gap-px border-b border-site-border sm:gap-1"
           style={{ height: 180 }}
@@ -204,6 +209,7 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
             return (
               <div
                 key={day.date}
+                data-analytics-day-bar={day.date}
                 className="group relative flex-1"
                 style={{ height: "100%" }}
                 title={`${day.label}: ${formatPeopleLooked(day.count)}`}
@@ -227,6 +233,47 @@ function TrendChart({ analytics }: { analytics: PageAnalyticsDashboardData }) {
             {analytics.trend.dailyViews[analytics.trend.dailyViews.length - 1]?.label ?? ""}
           </span>
         </div>
+
+        <details
+          data-testid="analytics-daily-values"
+          className="mt-4 border border-site-border bg-site-surface"
+        >
+          <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-site-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-site-action">
+            View daily values
+          </summary>
+          <div className="max-h-72 overflow-auto border-t border-site-border">
+            <table className="w-full border-collapse text-left text-sm tabular-nums">
+              <caption className="sr-only">
+                Daily page views over the {analytics.rangeLabel.toLowerCase()}
+              </caption>
+              <thead className="sticky top-0 bg-site-surface-raised text-xs text-site-muted">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Date
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    People who looked
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-site-border">
+                {analytics.trend.dailyViews.map((day) => (
+                  <tr key={`daily-value-${day.date}`}>
+                    <th
+                      scope="row"
+                      className="px-3 py-2 font-normal text-site-secondary"
+                    >
+                      {day.label}
+                    </th>
+                    <td className="px-3 py-2 text-right text-site-text">
+                      {day.count.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
     </section>
   );
@@ -320,21 +367,13 @@ function TopBar({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {(Object.keys(ANALYTICS_RANGE_DAYS) as AnalyticsRangeKey[]).map((rangeKey) => {
-            const active = analytics.rangeKey === rangeKey;
-
             return (
-              <Link
+              <AnalyticsRangeLink
                 key={rangeKey}
-                href={`/dashboard/analytics/${pageId}?range=${rangeKey}`}
-                aria-current={active ? "page" : undefined}
-                className={`site-button px-4 py-2 text-xs ${
-                  active
-                    ? "border-site-action bg-site-selected text-site-action"
-                    : "site-button-secondary"
-                }`}
-              >
-                {rangeKey.replace("d", " days")}
-              </Link>
+                currentRange={analytics.rangeKey}
+                pageId={pageId}
+                targetRange={rangeKey}
+              />
             );
           })}
         </div>
@@ -543,7 +582,13 @@ export default function PageAnalyticsDashboard({
 
   if (isUnavailable) {
     return (
-      <div className="space-y-6 font-site">
+      <AnalyticsRangeMotionBoundary
+        key={`${pageId}:${analytics.rangeKey}`}
+        availability={analytics.state.availability}
+        lowData={analytics.state.lowData}
+        pageId={pageId}
+        rangeKey={analytics.rangeKey}
+      >
         <TopBar
           analytics={analytics}
           pageId={pageId}
@@ -559,12 +604,18 @@ export default function PageAnalyticsDashboard({
           }
           action={<AnalyticsRetryButton />}
         />
-      </div>
+      </AnalyticsRangeMotionBoundary>
     );
   }
 
   return (
-    <div className="space-y-6 font-site">
+    <AnalyticsRangeMotionBoundary
+      key={`${pageId}:${analytics.rangeKey}`}
+      availability={analytics.state.availability}
+      lowData={analytics.state.lowData}
+      pageId={pageId}
+      rangeKey={analytics.rangeKey}
+    >
       <TopBar
         analytics={analytics}
         pageId={pageId}
@@ -912,6 +963,6 @@ export default function PageAnalyticsDashboard({
           )}
         </>
       ) : null}
-    </div>
+    </AnalyticsRangeMotionBoundary>
   );
 }

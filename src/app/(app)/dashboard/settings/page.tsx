@@ -9,6 +9,7 @@ import {
   type AccountAccessState,
 } from "@/lib/account-access";
 import PageVisibilityControl from "@/components/dashboard/PageVisibilityControl";
+import MotionModeControl from "@/components/motion/MotionModeControl";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import {
   getPageVisibilityState,
@@ -699,6 +700,8 @@ export default function SettingsPage() {
           <p className="mt-1 text-xs text-site-muted">Email changes are not yet supported.</p>
         </div>
       </section>
+
+      <MotionModeControl className="mb-5" />
 
       {/* ── Account Section (Password) ── */}
       {profile.hasPassword && (

@@ -1050,6 +1050,13 @@ test("share-card panel motion is isolated and disabled for reduced motion", asyn
     )
     .not.toBe("");
   await expect(story.locator(".share-card-glass-specular")).toBeVisible();
+  const opticalRibbon = story.locator("[data-share-card-optical-ribbon]");
+  await expect(opticalRibbon).toBeVisible();
+  expect(
+    await opticalRibbon.evaluate(
+      (element) => window.getComputedStyle(element).willChange,
+    ),
+  ).toContain("transform");
   expect(
     await storyOuter.evaluate(
       (element) => window.getComputedStyle(element).backgroundColor,
@@ -1120,6 +1127,19 @@ test("share-card panel motion is isolated and disabled for reduced motion", asyn
     });
   expect(reducedGlassLight.animationName).toBe("none");
   expect(reducedGlassLight.opacity).toBeGreaterThan(0.25);
+  const reducedRibbon = await reducedStory
+    .locator("[data-share-card-optical-ribbon]")
+    .evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        animationName: style.animationName,
+        transitionDuration: style.transitionDuration,
+        willChange: style.willChange,
+      };
+    });
+  expect(reducedRibbon.animationName).toBe("none");
+  expect(reducedRibbon.transitionDuration).toBe("0s");
+  expect(reducedRibbon.willChange).toBe("auto");
 });
 
 test("attention motion stays brief and fully respects reduced motion", async ({

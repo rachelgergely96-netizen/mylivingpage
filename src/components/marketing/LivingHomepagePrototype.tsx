@@ -3,11 +3,15 @@
 import Link from "next/link";
 import type { CSSProperties, KeyboardEvent, MutableRefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import MotionModeControl from "@/components/motion/MotionModeControl";
 import CookieSettingsButton from "@/components/privacy/CookieSettingsButton";
+import HomepageLivingProof from "@/components/marketing/HomepageLivingProof";
 import { LandingStoryShareCard } from "@/components/marketing/LandingStoryShareCard";
 import MobileStickyCta from "@/components/marketing/MobileStickyCta";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { MOTION_EVENTS, MOTION_SIGNALS } from "@/lib/motion";
 import { SIGNAL_FRAME_SAMPLE } from "@/lib/signal-frame-sample";
 import { THEME_MAP } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
@@ -175,16 +179,20 @@ function StorySourceResume() {
   );
 }
 
-function TruthTransfer({ motionKey }: { motionKey: number }) {
+function TruthTransfer() {
   return (
     <div
       className={styles.truthTransfer}
       aria-hidden="true"
+      data-motion-event={MOTION_EVENTS.RESUME_IMPORT_FACT_DETECTED}
+      data-motion-signal={MOTION_SIGNALS.TRUTH_TRANSFER}
+      data-motion-state="facts-detected"
+      data-motion-sequence="1"
       data-transform-motion
-      data-transform-cycle={motionKey}
+      data-transform-cycle="initial"
     >
       <span className={styles.truthLine} />
-      <div key={motionKey} className={styles.truthTokens}>
+      <div className={styles.truthTokens}>
         <b>Name</b>
         <b>Title</b>
         <b>Result</b>
@@ -367,47 +375,28 @@ export default function LivingHomepagePrototype({
 }: LivingHomepagePrototypeProps) {
   const isProduction = mode === "production";
   const signupRefs = SIGNUP_REFS[mode];
-  const [activeThemeId, setActiveThemeId] = useState<ThemeId>(WORLD_DIRECTIONS[0].id);
+  const [selectedThemeId, setSelectedThemeId] = useState<ThemeId>("silk");
   const [storyMomentId, setStoryMomentId] = useState<StoryMomentId>("referral");
-  const [motionKey, setMotionKey] = useState(0);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [styleSignalSequence, setStyleSignalSequence] = useState(0);
   const styleControlRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const { mode: motionMode } = useMotionPreference();
 
-  const activeWorld = WORLD_DIRECTIONS.find((world) => world.id === activeThemeId)
+  const selectedWorld = WORLD_DIRECTIONS.find((world) => world.id === selectedThemeId)
     ?? WORLD_DIRECTIONS[0];
   const activeStoryIndex = STORY_MOMENTS.findIndex((moment) => moment.id === storyMomentId);
   const activeStoryMoment = STORY_MOMENTS[activeStoryIndex] ?? STORY_MOMENTS[0];
-  const activeStyle = useMemo(() => getWorldStyle(activeWorld.id), [activeWorld.id]);
+  const selectedStyle = useMemo(() => getWorldStyle(selectedThemeId), [selectedThemeId]);
 
-  // The page/card chapters share one selection so the share card visibly
-  // follows the chosen page style — the theme-matching detail, demonstrated.
-  const [showcaseThemeId, setShowcaseThemeId] = useState<ThemeId>("silk");
-  const showcaseWorld = WORLD_DIRECTIONS.find((world) => world.id === showcaseThemeId)
-    ?? WORLD_DIRECTIONS[0];
-  const showcaseStyle = useMemo(() => getWorldStyle(showcaseThemeId), [showcaseThemeId]);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const syncPreference = () => setReducedMotion(query.matches);
-    syncPreference();
-    query.addEventListener("change", syncPreference);
-    return () => query.removeEventListener("change", syncPreference);
-  }, []);
-
-  // Below-the-fold sections reveal once with a quiet rise. Content is fully
-  // visible whenever the observer can't run (reduced motion, no IO support),
-  // so nothing can be stranded hidden.
+  // Mark semantic scenes as they enter so local correspondence/handoff cues
+  // can run without hiding or moving the surrounding reading surface.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
 
     const sections = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]"));
-    const skipMotion =
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      !("IntersectionObserver" in window);
 
-    if (skipMotion) {
+    if (!("IntersectionObserver" in window)) {
       sections.forEach((section) => {
         section.dataset.visible = "true";
       });
@@ -419,8 +408,6 @@ export default function LivingHomepagePrototype({
         section.dataset.visible = "true";
       }
     });
-    root.dataset.motionReady = "true";
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -441,17 +428,20 @@ export default function LivingHomepagePrototype({
     return () => observer.disconnect();
   }, []);
 
+  const applyTheme = (themeId: ThemeId) => {
+    if (themeId === selectedThemeId) return;
+    setSelectedThemeId(themeId);
+    setStyleSignalSequence((current) => current + 1);
+  };
+
   const selectWorld = (
     world: WorldDirection,
     index: number,
     controls: MutableRefObject<Array<HTMLButtonElement | null>>,
     moveFocus = false,
   ) => {
-    setActiveThemeId(world.id);
+    applyTheme(world.id);
     setStoryMomentId("referral");
-    // With the output tabs gone, a style change is what re-runs the facts
-    // travelling from the résumé to the page: same facts, new world.
-    setMotionKey((current) => current + 1);
     if (moveFocus) {
       window.requestAnimationFrame(() => controls.current[index]?.focus());
     }
@@ -483,8 +473,11 @@ export default function LivingHomepagePrototype({
     <div
       ref={rootRef}
       className={styles.prototype}
-      style={activeStyle}
-      data-motion-state={reducedMotion ? "reduced" : "full"}
+      style={selectedStyle}
+      data-homepage-prototype
+      data-homepage-style-sequence={styleSignalSequence}
+      data-motion-mode={motionMode}
+      data-motion-state={motionMode}
     >
       <a className={styles.skipLink} href="#prototype-content">Skip to main content</a>
 
@@ -563,11 +556,12 @@ export default function LivingHomepagePrototype({
                 <h2 id="live-product-story-title">
                   See one résumé become a Living Page.
                 </h2>
+                <MotionModeControl compact className={styles.storyMotionControl} />
               </div>
 
               <div className={styles.storyStage} data-story-stage data-transformation-stage>
                 <StorySourceResume />
-                <TruthTransfer motionKey={motionKey} />
+                <TruthTransfer />
                 <div
                   id="prototype-story-output"
                   className={styles.storyOutputFrame}
@@ -575,8 +569,8 @@ export default function LivingHomepagePrototype({
                   aria-label="Your Living Page"
                   data-story-output-region={storyMomentId}
                 >
-                  <div key={`${storyMomentId}-${motionKey}`} className={styles.storyActiveOutput}>
-                    <StoryOutput moment={storyMomentId} world={activeWorld} />
+                  <div key={storyMomentId} className={styles.storyActiveOutput}>
+                    <StoryOutput moment={storyMomentId} world={selectedWorld} />
                   </div>
                   <p className={styles.storyOutputNote}>{activeStoryMoment.note}</p>
                 </div>
@@ -601,7 +595,7 @@ export default function LivingHomepagePrototype({
                   aria-describedby="story-style-choice-help"
                 >
                   {WORLD_DIRECTIONS.map((world, index) => {
-                    const selected = world.id === activeWorld.id;
+                    const selected = world.id === selectedWorld.id;
                     return (
                       <button
                         key={world.id}
@@ -632,8 +626,18 @@ export default function LivingHomepagePrototype({
                   aria-atomic="true"
                   data-style-selection-status
                 >
-                  <strong>{activeWorld.label} · {THEME_MAP[activeWorld.id].name}</strong>
-                  <span>{activeWorld.promise}</span>
+                  <strong>{selectedWorld.label} · {THEME_MAP[selectedWorld.id].name}</strong>
+                  <span>{selectedWorld.promise}</span>
+                  {styleSignalSequence > 0 ? (
+                    <span
+                      key={`hero-style-${styleSignalSequence}`}
+                      className={styles.styleSignal}
+                      data-homepage-style-signal
+                      aria-hidden="true"
+                    >
+                      Style matched
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -700,6 +704,8 @@ export default function LivingHomepagePrototype({
             </Link>
           </aside>
 
+          <HomepageLivingProof themeId={selectedThemeId} />
+
         <div
           id="living-pages"
           className={styles.pagesSection}
@@ -721,14 +727,19 @@ export default function LivingHomepagePrototype({
           </div>
 
           <div className={styles.pagesGrid}>
-            <div className={`${styles.storyLivingOutput} ${styles.pagesStage}`} data-pages-stage style={showcaseStyle}>
+            <div
+              className={`${styles.storyLivingOutput} ${styles.pagesStage}`}
+              data-pages-stage
+              data-theme-id={selectedThemeId}
+              style={selectedStyle}
+            >
               <div className={styles.storyBrowserBar}>
                 <span>mylivingpage.com/avery</span>
                 <b>Live</b>
               </div>
               <div className={styles.pagesViewport}>
                 <ThemeCanvas
-                  themeId={showcaseThemeId}
+                  themeId={selectedThemeId}
                   height="100%"
                   className={`${styles.themeCanvasRoot} rounded-none`}
                   style={{ position: "absolute", inset: 0 }}
@@ -742,7 +753,7 @@ export default function LivingHomepagePrototype({
                     className={styles.storyResumeViewport}
                     data-homepage-motion-preview="chapter"
                     role="region"
-                    aria-label={`Sample page in the ${THEME_MAP[showcaseThemeId].name} style`}
+                    aria-label={`Sample page in the ${THEME_MAP[selectedThemeId].name} style`}
                     tabIndex={0}
                   >
                     <ResumeLayout
@@ -754,7 +765,17 @@ export default function LivingHomepagePrototype({
                     />
                   </div>
                 </ThemeCanvas>
-                <HomepageMotionCue key={showcaseThemeId} />
+                <HomepageMotionCue />
+                {styleSignalSequence > 0 ? (
+                  <span
+                    key={`chapter-style-${styleSignalSequence}`}
+                    className={`${styles.styleSignal} ${styles.styleSignalOnStage}`}
+                    data-homepage-style-signal
+                    aria-hidden="true"
+                  >
+                    Same facts. New world.
+                  </span>
+                ) : null}
               </div>
               <div
                 className={styles.pagesStyleRow}
@@ -762,13 +783,13 @@ export default function LivingHomepagePrototype({
                 aria-label="Choose a page style for this preview"
               >
                 {WORLD_DIRECTIONS.map((world) => {
-                  const selected = world.id === showcaseThemeId;
+                  const selected = world.id === selectedThemeId;
                   return (
                     <button
                       key={world.id}
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => setShowcaseThemeId(world.id)}
+                      onClick={() => applyTheme(world.id)}
                       className={selected ? styles.pagesStyleActive : undefined}
                       style={getWorldStyle(world.id)}
                       data-pages-style={world.id}
@@ -789,7 +810,7 @@ export default function LivingHomepagePrototype({
             </div>
           </div>
           <p className={styles.chapterFootnote}>
-            Previewing <strong>{showcaseWorld.label} · {THEME_MAP[showcaseThemeId].name}</strong>.{" "}
+            Previewing <strong>{selectedWorld.label} · {THEME_MAP[selectedThemeId].name}</strong>.{" "}
             <Link href="/examples">Open full sample pages</Link>
           </p>
         </div>
@@ -800,6 +821,7 @@ export default function LivingHomepagePrototype({
           className={styles.cardSection}
           data-share-card-chapter
           data-reveal
+          data-motion-signal={MOTION_SIGNALS.SHARE_HANDOFF}
           aria-labelledby="share-card-title"
         >
           <div className={styles.sectionHeading}>
@@ -823,14 +845,23 @@ export default function LivingHomepagePrototype({
 
           <div className={styles.cardGrid}>
             <div className={styles.cardStage} data-card-stage>
+              <span
+                key={`share-style-${styleSignalSequence}`}
+                className={styles.shareHandoffSignal}
+                data-homepage-share-signal
+                aria-hidden="true"
+              >
+                <i />
+                Page style carried to card
+              </span>
               <LandingStoryShareCard
                 data={SIGNAL_FRAME_SAMPLE}
-                themeId={showcaseThemeId}
+                themeId={selectedThemeId}
                 headingLevel="h3"
                 qrLabel="Open the full living page"
               />
-              <p className={styles.cardStageNote} aria-live="polite">
-                Matched to <strong>{THEME_MAP[showcaseThemeId].name}</strong>, the style
+              <p className={styles.cardStageNote}>
+                Matched to <strong>{THEME_MAP[selectedThemeId].name}</strong>, the style
                 picked above.<span className={styles.pointerOnly}> With a cursor, tilt it.</span>
               </p>
             </div>
@@ -933,6 +964,7 @@ export default function LivingHomepagePrototype({
             : "Homepage conversion prototype · Sample profiles only"}
         </span>
         <nav aria-label={isProduction ? "Site and policy links" : "Prototype footer"}>
+          <MotionModeControl compact className="mr-2 w-48" />
           <Link href="/examples">Examples</Link>
           <Link href="/guides">Guides</Link>
           <Link href="/pricing">Pricing</Link>

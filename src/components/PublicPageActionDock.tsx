@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import ContactOwnerButton from "@/components/ContactOwnerButton";
 import DownloadResumeButton from "@/components/DownloadResumeButton";
+import MotionModeControl from "@/components/motion/MotionModeControl";
 import ShareCardDownload from "@/components/ShareCardDownload";
 import type { ResumeData } from "@/types/resume";
 
@@ -110,6 +111,11 @@ export default function PublicPageActionDock({
           analyticsCtaLabel={analyticsCtaLabel}
           enabled={shareCardEnabled}
           className={dockButtonClassName}
+        />
+
+        <MotionModeControl
+          compact
+          className="shadow-[var(--site-shadow-raised)]"
         />
       </div>
     </div>

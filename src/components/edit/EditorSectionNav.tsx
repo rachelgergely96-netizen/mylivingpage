@@ -22,10 +22,12 @@ export const LIVING_PAGE_EDITOR_SECTIONS = [
 export type EditorSectionAnchorId = (typeof LIVING_PAGE_EDITOR_SECTIONS)[number]["id"];
 
 interface EditorSectionNavProps {
+  allowsSmoothScroll?: boolean;
   signalSectionIds?: readonly EditorSectionAnchorId[];
 }
 
 export default function EditorSectionNav({
+  allowsSmoothScroll = false,
   signalSectionIds = [],
 }: EditorSectionNavProps) {
   const scrollRef = useRef<HTMLOListElement | null>(null);
@@ -107,14 +109,11 @@ export default function EditorSectionNav({
 
     const nextLeft =
       activeLink.offsetLeft - scrollContainer.clientWidth / 2 + activeLink.clientWidth / 2;
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
     scrollContainer.scrollTo({
       left: Math.max(0, nextLeft),
-      behavior: prefersReducedMotion ? "auto" : "smooth",
+      behavior: allowsSmoothScroll ? "smooth" : "auto",
     });
-  }, [activeSectionId]);
+  }, [activeSectionId, allowsSmoothScroll]);
 
   const activeIndex = Math.max(
     0,
@@ -143,7 +142,7 @@ export default function EditorSectionNav({
       </div>
       <ol
         ref={scrollRef}
-        className="scrollbar-hide flex w-full min-w-0 max-w-full gap-1.5 overflow-x-auto scroll-smooth pb-0.5"
+        className="scrollbar-hide flex w-full min-w-0 max-w-full gap-1.5 overflow-x-auto scroll-auto pb-0.5"
       >
         {LIVING_PAGE_EDITOR_SECTIONS.map((section) => {
           const active = section.id === activeSectionId;
@@ -173,9 +172,7 @@ export default function EditorSectionNav({
                         0,
                         window.scrollY + target.getBoundingClientRect().top - viewportOffset,
                       ),
-                      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                        ? "auto"
-                        : "smooth",
+                      behavior: allowsSmoothScroll ? "smooth" : "auto",
                     });
                   }
                   window.history.replaceState(null, "", `#${section.id}`);

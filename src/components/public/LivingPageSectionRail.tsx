@@ -5,15 +5,23 @@ import {
   calculateScrollMotion,
   getMotionSectionId,
 } from "@/hooks/useLivingMotionBridge";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import {
   LIVING_PAGE_SECTION_LABELS,
   type LivingPageSectionId,
 } from "@/lib/living-page-sections";
+import { calculateLivingPageViewport } from "@/lib/living-page-viewport";
+import { MOTION_EVENTS, MOTION_MODE_POLICIES, MOTION_SIGNALS } from "@/lib/motion";
 
 const SECTION_SELECTOR = "[data-motion-section], [data-analytics-section]";
 
 interface LivingPageSectionRailProps {
   sectionIds: readonly LivingPageSectionId[];
+}
+
+interface ChapterEnteredEvent {
+  sequence: number;
+  target: LivingPageSectionId;
 }
 
 interface ScrollTargetInput {
@@ -47,11 +55,20 @@ function getSectionId(element: HTMLElement): LivingPageSectionId | null {
 export default function LivingPageSectionRail({
   sectionIds,
 }: LivingPageSectionRailProps) {
+  const { mode: motionMode } = useMotionPreference();
+  const scrollBehavior = MOTION_MODE_POLICIES[motionMode].allowsSmoothScroll
+    ? "smooth" : "auto";
   const navRef = useRef<HTMLElement | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
+  const chapterEventSequenceRef = useRef(0);
+  const measuredSectionIdRef = useRef<LivingPageSectionId | null>(
+    sectionIds[0] ?? null,
+  );
   const [activeSectionId, setActiveSectionId] = useState<LivingPageSectionId | null>(
     sectionIds[0] ?? null,
   );
+  const [chapterEnteredEvent, setChapterEnteredEvent] =
+    useState<ChapterEnteredEvent | null>(null);
 
   useEffect(() => {
     const nav = navRef.current;
@@ -80,12 +97,16 @@ export default function LivingPageSectionRail({
       frame = null;
       const rootRect = scrollRoot.getBoundingClientRect();
       const sections = findSections();
-      const railHeight = nav.offsetHeight;
+      const viewport = calculateLivingPageViewport({
+        rootTop: rootRect.top,
+        rootHeight: scrollRoot.clientHeight,
+        stickyInset: nav.offsetHeight,
+      });
       const snapshot = calculateScrollMotion({
         scrollTop: scrollRoot.scrollTop,
         scrollHeight: scrollRoot.scrollHeight,
-        viewportHeight: Math.max(1, scrollRoot.clientHeight - railHeight),
-        viewportTop: rootRect.top + railHeight,
+        scrollPortHeight: scrollRoot.clientHeight,
+        ...viewport,
         sections: sections.map((section) => {
           const rect = section.getBoundingClientRect();
           return {
@@ -97,7 +118,17 @@ export default function LivingPageSectionRail({
       });
 
       if (snapshot.activeSection) {
-        setActiveSectionId(snapshot.activeSection as LivingPageSectionId);
+        const nextSectionId = snapshot.activeSection as LivingPageSectionId;
+        setActiveSectionId(nextSectionId);
+
+        if (nextSectionId !== measuredSectionIdRef.current) {
+          measuredSectionIdRef.current = nextSectionId;
+          chapterEventSequenceRef.current += 1;
+          setChapterEnteredEvent({
+            sequence: chapterEventSequenceRef.current,
+            target: nextSectionId,
+          });
+        }
       }
     };
 
@@ -138,14 +169,11 @@ export default function LivingPageSectionRail({
     const overflowRight = chipRect.right - listRect.right;
     if (overflowLeft >= 0 && overflowRight <= 0) return;
 
-    const prefersReducedMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
     list.scrollTo({
       left: list.scrollLeft + (overflowLeft < 0 ? overflowLeft : overflowRight),
-      behavior: prefersReducedMotion ? "auto" : "smooth",
+      behavior: scrollBehavior,
     });
-  }, [activeSectionId]);
+  }, [activeSectionId, scrollBehavior]);
 
   if (sectionIds.length < 2) return null;
 
@@ -168,9 +196,6 @@ export default function LivingPageSectionRail({
 
     const rootRect = scrollRoot.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
-    const prefersReducedMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
 
     setActiveSectionId(sectionId);
     scrollRoot.scrollTo({
@@ -180,7 +205,7 @@ export default function LivingPageSectionRail({
         targetTop: targetRect.top,
         railHeight: nav.offsetHeight,
       }),
-      behavior: prefersReducedMotion ? "auto" : "smooth",
+      behavior: scrollBehavior,
     });
   };
 
@@ -189,6 +214,13 @@ export default function LivingPageSectionRail({
       ref={navRef}
       aria-label="Living Page chapters"
       data-living-section-rail
+      data-motion-event={
+        chapterEnteredEvent ? MOTION_EVENTS.PAGE_CHAPTER_ENTERED : undefined
+      }
+      data-motion-sequence={chapterEnteredEvent?.sequence}
+      data-motion-signal={MOTION_SIGNALS.CAREER_CHAPTERS}
+      data-motion-state={chapterEnteredEvent ? "entered" : undefined}
+      data-motion-target={chapterEnteredEvent?.target}
       className="resume-theme theme-surface-strong sticky top-0 z-30 rounded-none border-b"
     >
       <div className="mx-auto max-w-4xl px-4 py-2 sm:px-6 md:px-8">
@@ -211,6 +243,7 @@ export default function LivingPageSectionRail({
 
           <div className="min-w-0 flex-1 text-center">
             <span
+              key={currentId}
               aria-current="step"
               className="resume-theme-accent block truncate text-xs font-semibold uppercase tracking-[0.14em]"
             >

@@ -9,6 +9,8 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { MOTION_MODE_POLICIES } from "@/lib/motion";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import {
   FEEDBACK_TYPE_LABELS,
@@ -62,6 +64,9 @@ function feedbackMatchesQuery(item: AdminFeedbackItem, query: string) {
 }
 
 export default function AdminFeedbackInbox({ items }: AdminFeedbackInboxProps) {
+  const { mode: motionMode } = useMotionPreference();
+  const allowsSmoothScroll =
+    MOTION_MODE_POLICIES[motionMode].allowsSmoothScroll;
   const [filter, setFilter] = useState<FeedbackFilter>("all");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
@@ -89,9 +94,7 @@ export default function AdminFeedbackInbox({ items }: AdminFeedbackInboxProps) {
     if (revealDetail && window.matchMedia("(max-width: 1023px)").matches) {
       window.requestAnimationFrame(() => {
         detailRef.current?.scrollIntoView({
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-            ? "auto"
-            : "smooth",
+          behavior: allowsSmoothScroll ? "smooth" : "auto",
           block: "start",
         });
       });

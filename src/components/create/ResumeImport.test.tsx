@@ -16,6 +16,7 @@ describe("ResumeImport", () => {
     expect(markup).toContain("up to 3.5 MB");
     expect(markup).toContain("not sent to an AI provider");
     expect(markup).toContain("Autofill my page");
+    expect(markup).not.toContain("data-motion-event");
   });
 
   it("warns before replacing fields already in the draft", () => {

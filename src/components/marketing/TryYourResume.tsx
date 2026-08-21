@@ -5,7 +5,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import ThemePicker from "@/components/ThemePicker";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { saveAnonymousCreateDraft } from "@/lib/anonymous-draft";
+import { MOTION_MODE_POLICIES } from "@/lib/motion";
 import { MAX_RESUME_TEXT_CHARACTERS, parseResumeText } from "@/lib/resume-import";
 import { THEME_REGISTRY } from "@/themes/registry";
 import type { ThemeId } from "@/themes/types";
@@ -24,6 +26,9 @@ import type { ResumeData } from "@/types/resume";
  * exposure to hand to anonymous callers.
  */
 export default function TryYourResume() {
+  const { mode: motionMode } = useMotionPreference();
+  const allowsSmoothScroll =
+    MOTION_MODE_POLICIES[motionMode].allowsSmoothScroll;
   const [resumeText, setResumeText] = useState("");
   const [parsed, setParsed] = useState<ResumeData | null>(null);
   const [detectedCount, setDetectedCount] = useState(0);
@@ -45,13 +50,11 @@ export default function TryYourResume() {
 
     window.requestAnimationFrame(() => {
       previewRef.current?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "auto"
-          : "smooth",
+        behavior: allowsSmoothScroll ? "smooth" : "auto",
         block: "start",
       });
     });
-  }, [canPreview, resumeText]);
+  }, [allowsSmoothScroll, canPreview, resumeText]);
 
   const keepIt = useCallback(() => {
     if (!parsed) {

@@ -1,3 +1,5 @@
+import type { MotionMode } from "@/lib/motion";
+
 export const THEME_IDS = [
   "cosmic",
   "fluid",
@@ -131,6 +133,8 @@ export type ThemeMaterialProfileId =
  * range unless noted otherwise.
  */
 export interface ThemeMotionContext {
+  /** Additive motion contract; absent legacy contexts resolve from reducedMotion. */
+  motionMode?: MotionMode;
   scrollProgress: number;
   /** Viewport-heights per second, clamped to [-4, 4]. */
   scrollVelocity: number;

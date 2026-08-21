@@ -7,6 +7,7 @@ import AtsReadinessCard from "@/components/AtsReadinessCard";
 import GuidedFlow from "@/components/create/GuidedFlow";
 import FirstViewActivationHub from "@/components/create/FirstViewActivationHub";
 import JobSeekerStarterKit from "@/components/create/JobSeekerStarterKit";
+import PublishArtifactHandoff from "@/components/create/PublishArtifactHandoff";
 import ResumeImport from "@/components/create/ResumeImport";
 import VariantPlanner from "@/components/VariantPlanner";
 import DraftBanner from "@/components/DraftBanner";
@@ -26,7 +27,10 @@ import {
 } from "@/lib/job-seeker-starter";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import { applyPageVariant, sanitizePageVariants } from "@/lib/page-variants";
+import { MOTION_MODE_POLICIES } from "@/lib/motion";
+import type { ResumeImportField } from "@/lib/resume-import";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { usernameFromEmail } from "@/lib/usernames";
@@ -109,14 +113,18 @@ function hasGuidedDraftContent(data: Partial<ResumeData>) {
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { mode } = useMotionPreference();
+  const allowsSmoothScroll = MOTION_MODE_POLICIES[mode].allowsSmoothScroll;
   const [step, setStep] = useState<Step>("input");
   const [guidedData, setGuidedData] = useState<Partial<ResumeData>>(EMPTY_GUIDED_DATA);
   const [resumeText, setResumeText] = useState("");
+  const [autofilledFields, setAutofilledFields] = useState<ResumeImportField[]>([]);
   const [guidedFlowVersion, setGuidedFlowVersion] = useState(0);
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>("cosmic");
   const [error, setError] = useState("");
   const [parsedData, setParsedData] = useState<ResumeData | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [publishConfirmationSequence, setPublishConfirmationSequence] = useState(0);
   const [publicSlug, setPublicSlug] = useState("");
   const [publishedSlug, setPublishedSlug] = useState("");
   const [publishedPageId, setPublishedPageId] = useState<string | null>(null);
@@ -207,6 +215,7 @@ export default function CreatePage() {
 
   const applyDraft = useCallback((draft: CreateDraft) => {
     setResumeText(draft.resumeText ?? "");
+    setAutofilledFields([]);
     setGuidedData(draft.guidedData ?? EMPTY_GUIDED_DATA);
     // Remount GuidedFlow so its per-row input ids re-derive from the restored data.
     setGuidedFlowVersion((version) => version + 1);
@@ -243,10 +252,9 @@ export default function CreatePage() {
     }
 
     previousStepRef.current = step;
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+    window.scrollTo({ top: 0, behavior: allowsSmoothScroll ? "smooth" : "auto" });
     stepHeadingRef.current?.focus({ preventScroll: true });
-  }, [step]);
+  }, [allowsSmoothScroll, step]);
 
   useEffect(() => () => {
     if (copyLinkTimerRef.current !== null) {
@@ -255,13 +263,12 @@ export default function CreatePage() {
   }, []);
 
   const focusGuidedFlow = useCallback(() => {
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     guidedFlowSectionRef.current?.scrollIntoView({
-      behavior: reducedMotion ? "auto" : "smooth",
+      behavior: allowsSmoothScroll ? "smooth" : "auto",
       block: "start",
     });
     guidedFlowSectionRef.current?.focus({ preventScroll: true });
-  }, []);
+  }, [allowsSmoothScroll]);
 
   useEffect(() => {
     const fetchPlanInfo = async () => {
@@ -499,6 +506,7 @@ export default function CreatePage() {
       }
 
       const nextSlug = result?.slug ?? usernameFromEmail(user.email);
+      setPublishConfirmationSequence((sequence) => sequence + 1);
       setPublishedSlug(nextSlug);
       setPublishedPageId(result?.pageId ?? null);
       setPublicSlug(nextSlug);
@@ -650,6 +658,7 @@ export default function CreatePage() {
             )}
             onImported={(result) => {
               setResumeText(result.text);
+              setAutofilledFields(result.detectedFields);
               setGuidedData(result.data);
               setParsedData(null);
               setVariants([]);
@@ -695,7 +704,10 @@ export default function CreatePage() {
               />
               <button
                 type="button"
-                onClick={() => setResumeText("")}
+                onClick={() => {
+                  setResumeText("");
+                  setAutofilledFields([]);
+                }}
                 className="site-button site-button-secondary mt-3"
               >
                 Remove saved reference
@@ -716,6 +728,8 @@ export default function CreatePage() {
               }}
               onBack={() => router.push("/dashboard")}
               consolidatedReview={Boolean(resumeText.trim())}
+              motionSequence={guidedFlowVersion}
+              autofilledFields={autofilledFields}
             />
           </div>
         </section>
@@ -951,6 +965,16 @@ export default function CreatePage() {
               </div>
             </div>
           </div>
+
+          {parsedData ? (
+            <PublishArtifactHandoff
+              confirmed={publishConfirmationSequence > 0}
+              resumeData={parsedData}
+              sequence={publishConfirmationSequence}
+              slug={predictedSlug}
+              themeId={selectedTheme}
+            />
+          ) : null}
 
           <section className="site-panel p-5 sm:p-6">
             <p className="site-eyebrow">

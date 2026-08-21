@@ -73,7 +73,8 @@
     linear-gradient(180deg, var(--site-action-soft), transparent 16rem),
     var(--site-canvas-alt);
   padding: clamp(0.75rem, 2vw, 1.25rem);
-  animation: stage-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: stage-enter var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
 }
 
 .controlPanel {
@@ -272,8 +273,10 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .stage {
-    animation: none;
-  }
+:global(html[data-motion-mode="calm"]) .stage {
+  animation-duration: var(--motion-duration-micro);
+}
+
+:global(html[data-motion-mode="still"]) .stage {
+  animation: none;
 }

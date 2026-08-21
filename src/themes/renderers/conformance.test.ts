@@ -82,6 +82,13 @@ const FRAME_TIMES = [0, 0.75, 2.5, 6.25];
 const DELTA_SECONDS = 1 / 60;
 const POINTER_X = 0.3;
 const POINTER_Y = 0.7;
+const SHOWCASE_DIALECTS = [
+  "atlas",
+  "nocturne",
+  "fresco",
+  "silk",
+  "mosaic",
+] as const satisfies readonly ThemeId[];
 
 type LogEntry = [kind: string, ...detail: unknown[]];
 
@@ -415,6 +422,38 @@ describe("renderer conformance", () => {
           expect(agitated).toEqual(still);
         });
       }
+    });
+  }
+});
+
+describe("showcase chapter dialects", () => {
+  for (const id of SHOWCASE_DIALECTS) {
+    it(`${id} gives ordered career chapters a distinct world frame`, async () => {
+      const renderer = await loadRawRenderer(id);
+      const openingChapter = renderComparableFrame(
+        renderer,
+        motionContext({
+          activeSection: "summary",
+          activeSectionIndex: 0,
+          sectionProgress: 0.1,
+          sectionImpulse: 0,
+          sectionDirection: 0,
+          interactionImpulse: 0,
+        }),
+      );
+      const laterChapter = renderComparableFrame(
+        renderer,
+        motionContext({
+          activeSection: "projects",
+          activeSectionIndex: 4,
+          sectionProgress: 0.65,
+          sectionImpulse: 1,
+          sectionDirection: 1,
+          interactionImpulse: 0.72,
+        }),
+      );
+
+      expect(laterChapter).not.toEqual(openingChapter);
     });
   }
 });

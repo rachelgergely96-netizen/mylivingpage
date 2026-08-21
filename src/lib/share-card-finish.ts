@@ -109,14 +109,9 @@ const FULL_BLEED: CSSProperties = {
 const HOLO_SPARKLES: Array<[number, number, number, string]> = [
   [74, 18, 3, "rgba(255,255,255,0.85)"],
   [83, 34, 2, "rgba(96,225,255,0.8)"],
-  [68, 52, 2, "rgba(255,110,224,0.7)"],
   [88, 58, 3, "rgba(255,255,255,0.75)"],
   [79, 74, 2, "rgba(96,225,255,0.7)"],
-  [64, 30, 2, "rgba(255,255,255,0.6)"],
   [92, 22, 2, "rgba(255,110,224,0.65)"],
-  [71, 86, 2, "rgba(255,255,255,0.65)"],
-  [85, 80, 2, "rgba(96,225,255,0.6)"],
-  [60, 68, 2, "rgba(255,110,224,0.55)"],
 ];
 
 function classicTreatment(visual: ShareCardVisual): ShareCardFinishTreatment {
@@ -244,11 +239,11 @@ function holographicTreatment(
     id: "holographic",
     outerBackground: "#050507",
     panelBackground:
-      "linear-gradient(145deg, rgba(18,22,30,0.4) 0%, rgba(6,9,14,0.5) 48%, rgba(10,13,19,0.44) 100%)",
-    panelBorder: "1px solid rgba(224,238,255,0.36)",
+      "linear-gradient(145deg, rgba(18,22,30,0.5) 0%, rgba(6,9,14,0.62) 48%, rgba(10,13,19,0.54) 100%)",
+    panelBorder: "1px solid rgba(228,242,255,0.5)",
     panelBoxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), inset 1px 0 0 rgba(198,238,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.28), inset -1px 0 0 rgba(255,108,224,0.1), inset 0 0 0 1px rgba(214,232,255,0.06), 0 8px 18px rgba(0,0,0,0.28), 0 28px 64px rgba(0,0,0,0.42), 0 36px 80px ${rgba(accent, 0.1)}`,
-    panelRadius: 18,
-    skeletonOpacity: 0.4,
+    panelRadius: 12,
+    skeletonOpacity: 0.26,
     showGlowOrbs: false,
     text: "#f6f7ff",
     textMuted: "rgba(232,237,248,0.86)",
@@ -313,7 +308,7 @@ function holographicTreatment(
         bottom: 6,
         left: 6,
         border: "1px solid rgba(218,235,255,0.14)",
-        borderRadius: 12,
+        borderRadius: 7,
         boxShadow:
           "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.22)",
       },
@@ -334,8 +329,8 @@ function holographicTreatment(
       {
         ...FULL_BLEED,
         background:
-          "linear-gradient(112deg, rgba(96,225,255,0.05) 6%, rgba(120,170,255,0.065) 20%, rgba(170,130,255,0.075) 33%, rgba(255,110,224,0.08) 46%, rgba(255,140,160,0.065) 58%, rgba(255,196,120,0.055) 69%, rgba(150,235,150,0.05) 80%, rgba(96,225,255,0.06) 92%)",
-        opacity: 0.85,
+          "linear-gradient(112deg, rgba(96,225,255,0.025) 6%, rgba(120,170,255,0.04) 22%, rgba(0,0,0,0) 39%, rgba(170,130,255,0.065) 51%, rgba(255,110,224,0.09) 62%, rgba(255,196,120,0.075) 73%, rgba(150,235,150,0.05) 82%, rgba(96,225,255,0.07) 92%)",
+        opacity: 0.9,
       },
       // Sparse cyan/theme/magenta refraction stays on the physical edge.
       {
@@ -343,11 +338,11 @@ function holographicTreatment(
         top: 1,
         right: 18,
         left: 18,
-        height: 6,
+        height: 7,
         background:
-          "linear-gradient(90deg, rgba(116,238,255,0.05) 0%, rgba(255,255,255,0.32) 18%, rgba(255,255,255,0.05) 44%, rgba(255,116,220,0.17) 72%, rgba(116,224,255,0.13) 100%)",
-        borderRadius: 8,
-        opacity: 0.52,
+          "linear-gradient(90deg, rgba(116,238,255,0.14) 0%, rgba(255,255,255,0.52) 18%, rgba(255,255,255,0.08) 44%, rgba(255,116,220,0.24) 72%, rgba(116,224,255,0.2) 100%)",
+        borderRadius: 5,
+        opacity: 0.66,
       },
       // The side edge carries a faint prismatic split outside the reading lane.
       {
@@ -355,30 +350,35 @@ function holographicTreatment(
         top: 18,
         right: 1,
         bottom: 18,
-        width: 6,
-        background: `linear-gradient(180deg, rgba(116,238,255,0.16) 0%, rgba(255,255,255,0.07) 24%, ${rgba(accentBright, 0.22)} 54%, rgba(255,104,220,0.17) 78%, rgba(255,255,255,0.1) 100%)`,
-        borderRadius: 8,
+        width: 7,
+        background: `linear-gradient(180deg, rgba(116,238,255,0.28) 0%, rgba(255,255,255,0.12) 24%, ${rgba(accentBright, 0.34)} 54%, rgba(255,104,220,0.26) 78%, rgba(255,255,255,0.16) 100%)`,
+        borderRadius: 5,
       },
-      // Static export-safe specular at the glass rest pose, chromatically
-      // split into cyan / white / magenta bands — light through foil. Live
-      // previews add a pointer-coupled twin above; PNG and OG stay
-      // deterministic.
+      // Two broad optical contours replace three flat specular sheets. The
+      // result is more sculptural while reducing the export tree.
       {
-        ...FULL_BLEED,
-        background:
-          "linear-gradient(112deg, rgba(0,0,0,0) 50%, rgba(96,225,255,0.09) 60%, rgba(96,225,255,0.02) 66%, rgba(0,0,0,0) 72%)",
-        opacity: 0.5,
+        position: "absolute",
+        top: 96,
+        right: -112,
+        width: 660,
+        height: 238,
+        borderRadius: "50%",
+        transform: "rotate(-14deg)",
+        transformOrigin: "center",
+        background: `radial-gradient(ellipse 76% 58% at 48% 52%, rgba(0,0,0,0) 30%, rgba(104,232,255,0.1) 39%, rgba(255,255,255,0.2) 47%, ${rgba(accentBright, 0.18)} 54%, rgba(255,104,220,0.13) 61%, rgba(255,198,120,0.08) 66%, rgba(0,0,0,0) 74%)`,
+        opacity: 0.72,
       },
       {
-        ...FULL_BLEED,
-        background: `linear-gradient(112deg, rgba(0,0,0,0) 54%, rgba(112,238,255,0.03) 61%, rgba(255,255,255,0.08) 66%, ${rgba(accentBright, 0.055)} 69%, rgba(255,110,220,0.035) 72%, rgba(0,0,0,0) 80%)`,
-        opacity: 0.5,
-      },
-      {
-        ...FULL_BLEED,
-        background:
-          "linear-gradient(112deg, rgba(0,0,0,0) 58%, rgba(255,110,224,0.02) 66%, rgba(255,110,224,0.085) 71%, rgba(0,0,0,0) 78%)",
-        opacity: 0.5,
+        position: "absolute",
+        top: 176,
+        right: -62,
+        width: 560,
+        height: 126,
+        borderRadius: "50%",
+        transform: "rotate(-10deg)",
+        transformOrigin: "center",
+        background: `linear-gradient(180deg, rgba(0,0,0,0) 22%, rgba(112,238,255,0.08) 42%, rgba(255,255,255,0.16) 50%, ${rgba(accent, 0.12)} 57%, rgba(255,110,224,0.08) 64%, rgba(0,0,0,0) 78%)`,
+        opacity: 0.66,
       },
       // Specular sparkle field — deterministic glitter points in the open
       // glass zone, clear of the reading lane.
@@ -398,15 +398,15 @@ function holographicTreatment(
       top: 0,
       bottom: 0,
       left: 0,
-      width: "60%",
+      width: "66%",
       background:
-        "linear-gradient(90deg, rgba(3,6,11,0.48) 0%, rgba(3,6,11,0.36) 52%, rgba(3,6,11,0.16) 76%, rgba(3,6,11,0) 100%)",
+        "linear-gradient(90deg, rgba(3,6,11,0.66) 0%, rgba(3,6,11,0.5) 52%, rgba(3,6,11,0.22) 78%, rgba(3,6,11,0) 100%)",
     },
     emblem: null,
     signatureSerial: "MLP GLASS",
-    serialColor: "rgba(214,226,244,0.3)",
+    serialColor: "rgba(214,226,244,0.42)",
     footerBackground:
-      "linear-gradient(110deg, rgba(3,7,13,0.84) 0%, rgba(6,11,18,0.8) 68%, rgba(4,8,14,0.88) 100%)",
+      "linear-gradient(110deg, rgba(3,7,13,0.94) 0%, rgba(6,11,18,0.92) 68%, rgba(4,8,14,0.96) 100%)",
     monogramBackground: `linear-gradient(145deg, rgba(255,255,255,0.11) 0%, ${rgba(accent, 0.6)} 48%, ${rgba(accentBright, 0.76)} 100%)`,
     monogramColor: "#05070c",
     avatarBorder: "rgba(225,239,255,0.36)",

@@ -75,14 +75,21 @@ test("the hero shows the page itself and keeps one résumé source visible", asy
   // proof survives without a tab to switch between them.
   await expect(story.locator("[data-truth-source]")).toBeVisible();
   await expect(story.locator("[data-truth-destination]")).toBeVisible();
-  await expect(story.locator("[data-transform-motion]")).toContainText("Same facts");
+  const transform = story.locator("[data-transform-motion]");
+  await expect(transform).toContainText("Same facts");
+  await expect(transform).toHaveAttribute(
+    "data-motion-event",
+    "resume.import.fact.detected",
+  );
+  await expect(transform).toHaveAttribute("data-motion-signal", "truth-transfer");
+  await expect(transform).toHaveAttribute("data-motion-sequence", "1");
   expect(
-    await story.locator("[data-transform-motion] b").first().evaluate(
+    await transform.locator("b").first().evaluate(
       (node) => getComputedStyle(node).animationName,
     ),
   ).toContain("truthTravel");
   expect(
-    await story.locator("[data-transform-motion] b").first().evaluate(
+    await transform.locator("b").first().evaluate(
       (node) => Number.parseFloat(getComputedStyle(node).fontSize),
     ),
   ).toBeGreaterThanOrEqual(9);
@@ -93,6 +100,9 @@ test("the hero shows the page itself and keeps one résumé source visible", asy
   await expect(story.locator("[data-homepage-motion-cue]")).toContainText(
     "Move here to explore",
   );
+  await expect(
+    story.getByRole("combobox", { name: "Motion preference" }),
+  ).toBeVisible();
   const motionPreview = story.locator('[data-homepage-motion-preview="hero"]');
   const motionRoot = motionPreview.locator("xpath=ancestor::*[@data-living-output][1]");
   const foregroundRatio = await motionPreview.evaluate((preview) => {
@@ -143,6 +153,144 @@ test("homepage promises an editable review and a clear stopping point", async ({
   const shortcutBox = await shortcutLink.boundingBox();
   expect(shortcutBox).not.toBeNull();
   expect(shortcutBox!.height).toBeGreaterThanOrEqual(44);
+});
+
+test("Living Proof keeps one local fact synchronized and traceable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(productionHomepage);
+
+  const proof = page.locator("[data-living-proof]");
+  await proof.scrollIntoViewIfNeeded();
+  await expect(
+    proof.getByRole("heading", {
+      name: "Change one achievement. Watch it stay connected.",
+    }),
+  ).toBeVisible();
+  await expect(proof.locator("[data-proof-sample]")).toHaveCount(2);
+  await expect(proof.locator("[data-proof-output]")).toHaveCount(3);
+  await expect(proof.locator("[aria-live='polite']")).toHaveCount(1);
+
+  const outputRoots = proof.locator("[data-proof-output]");
+  await outputRoots.evaluateAll((outputs) => {
+    outputs.forEach((output) => {
+      (output as HTMLElement).dataset.stabilityProbe = "retained";
+    });
+  });
+
+  const designSample = proof.locator("[data-proof-sample='design-lead']");
+  await designSample.focus();
+  await page.keyboard.press("Enter");
+  await expect(designSample).toBeFocused();
+  await expect(designSample).toHaveAttribute("aria-pressed", "true");
+  await expect(proof).toHaveAttribute("data-motion-sequence", "1");
+
+  const editedAchievement =
+    "Reduced response time from three days to six hours.";
+  const input = proof.locator("[data-proof-achievement-input]");
+  await input.fill(editedAchievement);
+  await proof.getByRole("button", { name: "Apply to all views" }).click();
+
+  await expect(proof).toHaveAttribute("data-motion-sequence", "2");
+  await expect(proof.locator("[data-proof-fact='achievement']")).toHaveCount(3);
+  await expect(proof.locator("[data-proof-fact='achievement']")).toHaveText([
+    editedAchievement,
+    editedAchievement,
+    editedAchievement,
+  ]);
+  expect(
+    await outputRoots.evaluateAll((outputs) =>
+      outputs.map((output) => output.getAttribute("data-stability-probe")),
+    ),
+  ).toEqual(["retained", "retained", "retained"]);
+  await expect(proof.locator("[data-proof-sync-status]")).toContainText(
+    "Updated in three places",
+  );
+  await expect(proof.locator("[data-proof-sync-signal]")).toHaveAttribute(
+    "data-motion-event",
+    "editor.field.changed",
+  );
+  await expect(proof.locator("[data-proof-sync-signal]")).toHaveAttribute(
+    "data-motion-signal",
+    "edit-to-proof",
+  );
+
+  const lineageToggle = proof.locator("[data-proof-lineage-toggle]");
+  await lineageToggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(lineageToggle).toBeFocused();
+  await expect(lineageToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(proof.locator("[data-proof-source-line]")).toHaveText(
+    "Raised portal task completion 40% through a system redesign.",
+  );
+  await expect(proof.locator("[data-proof-lineage]")).toContainText(
+    "The original stays visible",
+  );
+
+  const recruiterLens = proof.locator("[data-recruiter-lens-toggle]");
+  await recruiterLens.focus();
+  await page.keyboard.press("Space");
+  await expect(recruiterLens).toBeFocused();
+  await expect(recruiterLens).toHaveAttribute("aria-pressed", "true");
+  await expect(proof.getByLabel("Recruiter scan order")).toHaveCSS(
+    "opacity",
+    "1",
+  );
+});
+
+test("pasted Living Proof text stays ephemeral and leaves no request trail", async ({
+  page,
+}) => {
+  const marker = "LOCALPROOF8K2";
+  const leakedRequests: string[] = [];
+  page.on("request", (request) => {
+    const payload = `${request.url()} ${request.postData() ?? ""}`;
+    if (payload.includes(marker)) leakedRequests.push(payload);
+  });
+
+  await page.goto(productionHomepage);
+  const proof = page.locator("[data-living-proof]");
+  await proof.locator("[data-proof-paste-toggle]").click();
+  await proof.locator("[data-proof-paste-input]").fill(`Jordan Rivera
+Operations Manager
+Boston, MA
+
+EXPERIENCE
+Operations Manager | Example Systems | 2021 - Present
+- Reduced fulfillment errors 32% by redesigning the review workflow.
+
+SKILLS
+Operations, Process design, SQL, ${marker}`);
+  await proof.locator("[data-proof-paste-apply]").click();
+
+  const achievement =
+    "Reduced fulfillment errors 32% by redesigning the review workflow.";
+  await expect(proof.locator("[data-proof-fact='achievement']")).toHaveText([
+    achievement,
+    achievement,
+    achievement,
+  ]);
+  await expect(proof.locator("[data-proof-paste-input]")).toHaveValue("");
+  await expect(proof.locator("[data-proof-sync-status]")).toContainText(
+    "updated all three views",
+  );
+  expect(leakedRequests).toEqual([]);
+  expect(
+    await page.evaluate(
+      (sentinel) => ({
+        local: Object.values(localStorage).some((value) => value.includes(sentinel)),
+        session: Object.values(sessionStorage).some((value) => value.includes(sentinel)),
+        url: location.href.includes(sentinel),
+      }),
+      marker,
+    ),
+  ).toEqual({ local: false, session: false, url: false });
+
+  await page.reload();
+  await expect(proof.locator("[data-proof-fact='achievement']").first()).toHaveText(
+    "Cut release time 38% across product and engineering teams.",
+  );
 });
 
 test("homepage explains readable content and the always-free promise without overclaiming", async ({ page }) => {
@@ -199,24 +347,53 @@ test("the five-theme rail updates the real Living Page preview immediately", asy
   });
   const calm = directions.getByRole("radio", { name: /Calm and focused/ });
   const transform = story.locator("[data-transform-motion]");
-  await expect(transform).toHaveAttribute("data-transform-cycle", "0");
+  await expect(transform).toHaveAttribute("data-transform-cycle", "initial");
+  await expect(transform).toHaveAttribute("data-motion-sequence", "1");
   await expect(directions.getByRole("radio")).toHaveCount(5);
   expect(
     await directions.getByRole("radio").evaluateAll((options) =>
       options.map((option) => option.getAttribute("data-theme-id")),
     ),
   ).toEqual(["atlas", "nocturne", "fresco", "silk", "mosaic"]);
+  const motionPreview = story.locator('[data-homepage-motion-preview="hero"]');
+  const motionCue = story.locator("[data-homepage-motion-cue]");
+  await motionPreview.evaluate((node) => {
+    node.dataset.domStabilityProbe = "retained";
+    node.scrollTop = Math.min(24, node.scrollHeight - node.clientHeight);
+  });
+  await motionCue.evaluate((node) => {
+    node.dataset.cueStabilityProbe = "retained";
+  });
+
   await calm.click();
 
+  await expect(calm).toBeFocused();
   await expect(calm).toHaveAttribute("aria-checked", "true");
-  // Choosing a style replays the facts travelling from the résumé to the
-  // page: same facts, new world. That cycle is what the tabs used to drive.
-  await expect(transform).toHaveAttribute("data-transform-cycle", "1");
+  // A style choice changes atmosphere, not résumé facts. The one-time truth
+  // transfer and the foreground DOM stay intact while every artifact matches.
+  await expect(transform).toHaveAttribute("data-transform-cycle", "initial");
+  await expect(transform).toHaveAttribute("data-motion-sequence", "1");
+  await expect(motionPreview).toHaveAttribute("data-dom-stability-probe", "retained");
+  await expect(motionCue).toHaveAttribute("data-cue-stability-probe", "retained");
+  await expect(page.locator("[data-homepage-prototype]"))
+    .toHaveAttribute("data-homepage-style-sequence", "1");
   const livingOutput = story.locator("[data-story-living-output]");
   await expect(livingOutput).toHaveAttribute("data-theme-id", "nocturne");
   await expect(livingOutput.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
+  await expect(page.locator("[data-pages-stage]")).toHaveAttribute(
+    "data-theme-id",
+    "nocturne",
+  );
+  await expect(page.locator("[data-testid='story-share-card']")).toHaveAttribute(
+    "data-theme-id",
+    "nocturne",
+  );
   await expect(chooser.locator("[data-style-selection-status]"))
     .toContainText("Calm and focused · Nocturne");
+  await expect(chooser.locator("[data-homepage-style-signal]")).toHaveCount(1);
+  await expect(story.locator('[aria-live="polite"]')).toHaveCount(1);
+  await expect(page.locator("[data-share-card-chapter] [aria-live='polite']"))
+    .toHaveCount(0);
 
   // The selection survives interacting with the rest of the hero.
   await story.locator("[data-also-included]").scrollIntoViewIfNeeded();
@@ -293,6 +470,34 @@ test("tablet and mobile layouts stay usable without horizontal overflow", async 
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
+
+  const proof = page.locator("[data-living-proof]");
+  await proof.scrollIntoViewIfNeeded();
+  const mobileProof = await proof.evaluate((root) => {
+    const targets = Array.from(root.querySelectorAll<HTMLElement>("button, textarea"));
+    const outputs = ["page", "recruiter", "share-card"].map((id) =>
+      root
+        .querySelector<HTMLElement>(`[data-proof-output='${id}']`)
+        ?.getBoundingClientRect(),
+    );
+    return {
+      inputFontSize: Number.parseFloat(
+        getComputedStyle(
+          root.querySelector<HTMLElement>("[data-proof-achievement-input]")!,
+        ).fontSize,
+      ),
+      minimumTargetHeight: Math.min(
+        ...targets.map((target) => target.getBoundingClientRect().height),
+      ),
+      outputY: outputs.map((box) => box?.y ?? 0),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  expect(mobileProof.overflow).toBe(0);
+  expect(mobileProof.minimumTargetHeight).toBeGreaterThanOrEqual(44);
+  expect(mobileProof.inputFontSize).toBeGreaterThanOrEqual(16);
+  expect(mobileProof.outputY[1]).toBeGreaterThan(mobileProof.outputY[0]);
+  expect(mobileProof.outputY[2]).toBeGreaterThan(mobileProof.outputY[1]);
 });
 
 test("reduced motion keeps the full transformation understandable and interactive", async ({ page }) => {
@@ -300,11 +505,14 @@ test("reduced motion keeps the full transformation understandable and interactiv
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(productionHomepage);
 
-  await expect(page.locator('[data-motion-state="reduced"]')).toBeVisible();
+  await expect(
+    page.locator('[data-homepage-prototype][data-motion-state="still"]'),
+  ).toBeVisible();
   const story = page.locator("[data-live-product-story]");
   await expect(story.locator("[data-truth-source]")).toBeVisible();
   await expect(story.locator("[data-truth-destination]")).toBeVisible();
   await expect(story.locator("[data-transform-motion] b").first()).toBeHidden();
+  await expect(story.locator("[data-homepage-motion-cue]")).toBeHidden();
   await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
 
   const textured = story.getByRole("radio", { name: /Textured and collected/ });
@@ -312,6 +520,17 @@ test("reduced motion keeps the full transformation understandable and interactiv
   await expect(textured).toHaveAttribute("aria-checked", "true");
   await expect(story.locator("[data-story-living-output]"))
     .toHaveAttribute("data-theme-id", "fresco");
+  await expect(story.locator("[data-homepage-style-signal]")).toBeHidden();
+  const proof = page.locator("[data-living-proof]");
+  await proof
+    .locator("[data-proof-achievement-input]")
+    .fill("Made release decisions easier to audit and explain.");
+  await proof.getByRole("button", { name: "Apply to all views" }).click();
+  await expect(proof.locator("[data-proof-sync-signal]")).toBeHidden();
+  await expect(proof.locator("[data-proof-sync-status]")).toContainText(
+    "Updated in three places",
+  );
+  await expect(proof.locator("[data-proof-fact='achievement']")).toHaveCount(3);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
   ).toBe(true);
@@ -351,6 +570,12 @@ test("the page and card chapters share one style selection", async ({ page }) =>
   await pagesChapter.locator("[data-pages-style='atlas']").click();
   await expect(pagesChapter.locator("[data-pages-stage]")).toBeVisible();
   await expect(card).toHaveAttribute("data-theme-id", "atlas");
+  await expect(
+    page.locator("[data-live-product-story] [data-story-living-output]"),
+  ).toHaveAttribute("data-theme-id", "atlas");
+  await expect(
+    page.getByRole("radio", { name: /Clear and structured/ }),
+  ).toHaveAttribute("aria-checked", "true");
 
   await cardChapter.scrollIntoViewIfNeeded();
   await expect(
@@ -358,4 +583,7 @@ test("the page and card chapters share one style selection", async ({ page }) =>
   ).toBeVisible();
   await expect(cardChapter.locator("[data-share-card-glass-shell]")).toBeVisible();
   await expect(cardChapter.locator("[data-card-stage]")).toContainText("Matched to");
+  await expect(cardChapter).toHaveAttribute("data-motion-signal", "share-handoff");
+  await expect(cardChapter.locator("[data-homepage-share-signal]"))
+    .toContainText("Page style carried to card");
 });

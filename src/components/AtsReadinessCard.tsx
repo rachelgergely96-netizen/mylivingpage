@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import {
   buildAtsReadinessFingerprint,
   type AtsReadinessCheck,
@@ -14,6 +15,7 @@ import {
   upsertTargetRole,
   MAX_SAVED_TARGET_ROLES,
 } from "@/lib/ats-target-roles";
+import { MOTION_MODE_POLICIES } from "@/lib/motion";
 import type {
   AtsPersistedTargeting,
   AtsTargetRole,
@@ -297,6 +299,9 @@ export default function AtsReadinessCard({
   onTargetingChange,
   onApplyProposal,
 }: AtsReadinessCardProps) {
+  const { mode: motionMode } = useMotionPreference();
+  const motionModeRef = useRef(motionMode);
+  motionModeRef.current = motionMode;
   const activeRole = targeting ? getActiveTargetRole(targeting) : null;
   const [targetTitle, setTargetTitle] = useState(activeRole?.title ?? "");
   const [jobDescription, setJobDescription] = useState(
@@ -466,9 +471,9 @@ export default function AtsReadinessCard({
     const frame = window.requestAnimationFrame(() => {
       resultsRef.current?.focus({ preventScroll: true });
       resultsRef.current?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "auto"
-          : "smooth",
+        behavior: MOTION_MODE_POLICIES[motionModeRef.current].allowsSmoothScroll
+          ? "smooth"
+          : "auto",
         block: "start",
       });
     });

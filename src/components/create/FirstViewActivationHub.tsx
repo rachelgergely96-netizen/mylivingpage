@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { MOTION_MODE_POLICIES } from "@/lib/motion";
 import type {
   FirstViewLoopState,
   PageProofResponse,
@@ -74,6 +76,9 @@ export default function FirstViewActivationHub({
   variants = [],
   defaultVariantId = null,
 }: FirstViewActivationHubProps) {
+  const { mode: motionMode } = useMotionPreference();
+  const allowsSmoothScroll =
+    MOTION_MODE_POLICIES[motionMode].allowsSmoothScroll;
   const [selectedScenario, setSelectedScenario] =
     useState<ShareScenario>("application_follow_up");
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
@@ -224,9 +229,8 @@ export default function FirstViewActivationHub({
 
   const focusSharePanel = () => {
     setLoopState("repeat_share_prompt");
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     sharePanelRef.current?.scrollIntoView({
-      behavior: reducedMotion ? "auto" : "smooth",
+      behavior: allowsSmoothScroll ? "smooth" : "auto",
       block: "start",
     });
     sharePanelRef.current?.focus({ preventScroll: true });

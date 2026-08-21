@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   memo,
+  type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -33,8 +35,18 @@ import ThemeCanvas from "@/components/ThemeCanvas";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import VariantPlanner from "@/components/VariantPlanner";
 import { useLocalDraft } from "@/hooks/useLocalDraft";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
+import {
+  EDITOR_SIGNAL_DWELL_MS,
+  INITIAL_EDITOR_SIGNAL,
+  getEditorSaveMotionState,
+  getEditorSignalLabel,
+  getEditorSignalSection,
+  getEditorSignalTargetSelector,
+} from "@/lib/editor-motion-signal";
+import { MOTION_EVENTS, MOTION_MODE_POLICIES } from "@/lib/motion";
 import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
 import { sanitizeAtsTargeting } from "@/lib/ats-target-roles";
 import { PAGE_VISIBILITY_WRITES } from "@/lib/page-visibility";
@@ -103,10 +115,13 @@ export default function PageEditorClient({
   autosaveEnabled = true,
 }: PageEditorClientProps) {
   const router = useRouter();
+  const { mode } = useMotionPreference();
+  const allowsSmoothScroll = MOTION_MODE_POLICIES[mode].allowsSmoothScroll;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [saveConfirmationSequence, setSaveConfirmationSequence] = useState(0);
 
   const [page, setPage] = useState<PageRecord | null>(null);
   const [data, setData] = useState<ResumeData | null>(null);
@@ -125,10 +140,14 @@ export default function PageEditorClient({
   const [removingAvatar, setRemovingAvatar] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [copiedVariantId, setCopiedVariantId] = useState<string | null>(null);
+  const [editorSignal, setEditorSignal] = useState(INITIAL_EDITOR_SIGNAL);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const successTimerRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
   const variantCopyTimerRef = useRef<number | null>(null);
+  const editorPreviewRef = useRef<HTMLElement | null>(null);
+  const editorSignalTargetRef = useRef<HTMLElement | null>(null);
+  const editorSignalTimerRef = useRef<number | null>(null);
   // The live path is derived below from state this callback must not depend on;
   // a ref keeps the copy handler stable without going stale.
   const livePathRef = useRef("/");
@@ -243,6 +262,10 @@ export default function PageEditorClient({
       if (autosaveTimerRef.current !== null) {
         window.clearTimeout(autosaveTimerRef.current);
       }
+      if (editorSignalTimerRef.current !== null) {
+        window.clearTimeout(editorSignalTimerRef.current);
+      }
+      editorSignalTargetRef.current?.removeAttribute("data-editor-signal-active");
     },
     [],
   );
@@ -298,9 +321,8 @@ export default function PageEditorClient({
       return;
     }
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
-  }, [editorReady]);
+    target.scrollIntoView({ behavior: allowsSmoothScroll ? "smooth" : "auto" });
+  }, [allowsSmoothScroll, editorReady]);
 
   useEffect(() => {
     if (!hasChanges || !data) {
@@ -458,6 +480,7 @@ export default function PageEditorClient({
 
         const hasNewerEdits = latestEditorSnapshotRef.current !== submittedSnapshot;
         setSavedSnapshot(submittedSnapshot);
+        setSaveConfirmationSequence((sequence) => sequence + 1);
         if (!hasNewerEdits) {
           clearDraft();
         }
@@ -681,6 +704,121 @@ export default function PageEditorClient({
     [deferredPreviewSource, previewVariant],
   );
 
+  const markEditorSourceChange = useCallback((target: EventTarget | null) => {
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const sourceSection = target.closest<HTMLElement>("[data-editor-section]");
+    const section = getEditorSignalSection(sourceSection?.dataset.editorSection);
+    if (!section) {
+      return;
+    }
+
+    setEditorSignal((current) => ({
+      section,
+      sequence: current.sequence + 1,
+      state: "source-changed",
+    }));
+  }, []);
+
+  const handleEditorChangeCapture = useCallback(
+    (event: FormEvent<HTMLDivElement>) => markEditorSourceChange(event.target),
+    [markEditorSourceChange],
+  );
+
+  const handleEditorActionCapture = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (event.target instanceof Element && event.target.closest("button")) {
+        markEditorSourceChange(event.target);
+      }
+    },
+    [markEditorSourceChange],
+  );
+
+  const editorSignalSection = editorSignal.section;
+  const editorSignalSequence = editorSignal.sequence;
+
+  useEffect(() => {
+    const section = editorSignalSection;
+    const sequence = editorSignalSequence;
+    if (!section || sequence === 0) {
+      return;
+    }
+
+    if (deferredPreviewSource !== data) {
+      return;
+    }
+
+    if (editorSignalTimerRef.current !== null) {
+      window.clearTimeout(editorSignalTimerRef.current);
+      editorSignalTimerRef.current = null;
+    }
+    editorSignalTargetRef.current?.removeAttribute("data-editor-signal-active");
+
+    const target = editorPreviewRef.current?.querySelector<HTMLElement>(
+      getEditorSignalTargetSelector(section),
+    );
+    if (!target) {
+      editorSignalTargetRef.current = null;
+      setEditorSignal((current) =>
+        current.sequence === sequence && current.state !== "preview-empty"
+          ? { ...current, state: "preview-empty" }
+          : current,
+      );
+      return;
+    }
+
+    editorSignalTargetRef.current = target;
+    target.setAttribute("data-editor-signal-active", "true");
+    setEditorSignal((current) =>
+      current.sequence === sequence && current.state !== "preview-matched"
+        ? { ...current, state: "preview-matched" }
+        : current,
+    );
+
+    editorSignalTimerRef.current = window.setTimeout(() => {
+      if (editorSignalTargetRef.current === target) {
+        target.removeAttribute("data-editor-signal-active");
+        editorSignalTargetRef.current = null;
+      }
+      editorSignalTimerRef.current = null;
+      setEditorSignal((current) =>
+        current.sequence === sequence ? { ...current, state: "settled" } : current,
+      );
+    }, EDITOR_SIGNAL_DWELL_MS);
+
+    return () => {
+      if (editorSignalTimerRef.current !== null) {
+        window.clearTimeout(editorSignalTimerRef.current);
+        editorSignalTimerRef.current = null;
+      }
+      if (editorSignalTargetRef.current === target) {
+        target.removeAttribute("data-editor-signal-active");
+        editorSignalTargetRef.current = null;
+      }
+    };
+  }, [
+    data,
+    deferredPreviewSource,
+    editorSignalSection,
+    editorSignalSequence,
+    previewData,
+  ]);
+
+  const editorFieldEventActive =
+    editorSignal.state === "source-changed" || editorSignal.state === "preview-matched";
+
+  const editorSignalLabel = editorSignal.section
+    ? getEditorSignalLabel(editorSignal.section)
+    : null;
+  const editorSaveMotionState = getEditorSaveMotionState({
+    confirmed: Boolean(success),
+    hasChanges,
+    saving,
+  });
+  const editorSaveConfirmed = editorSaveMotionState === "confirmed";
+
   const selectedTheme = THEME_REGISTRY.find((theme) => theme.id === themeId);
   const nextReadinessCheck = readiness?.checks.find(
     (check) => check.status === "needs_attention",
@@ -705,9 +843,7 @@ export default function PageEditorClient({
     window.requestAnimationFrame(() => {
       document.getElementById("editor-workspace")?.scrollIntoView({
         block: "start",
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "auto"
-          : "smooth",
+        behavior: allowsSmoothScroll ? "smooth" : "auto",
       });
     });
   };
@@ -764,6 +900,13 @@ export default function PageEditorClient({
               <span
                 role="status"
                 aria-live="polite"
+                data-motion-event={
+                  editorSaveConfirmed ? MOTION_EVENTS.EDITOR_SAVE_CONFIRMED : undefined
+                }
+                data-motion-signal={editorSaveConfirmed ? "edit-to-proof" : undefined}
+                data-motion-state={editorSaveConfirmed ? "confirmed" : undefined}
+                data-motion-sequence={editorSaveConfirmed ? saveConfirmationSequence : undefined}
+                data-motion-target={editorSaveConfirmed ? "page" : undefined}
                 className={`inline-flex items-center gap-2 border px-2.5 py-1 text-xs font-medium transition-colors ${
                   saving
                     ? "border-site-warning text-site-warning"
@@ -774,6 +917,7 @@ export default function PageEditorClient({
               >
                 <span
                   aria-hidden="true"
+                  data-motion-ambient
                   className={`h-1.5 w-1.5 ${
                     saving
                       ? "animate-pulse bg-site-warning"
@@ -923,7 +1067,10 @@ export default function PageEditorClient({
         {/* While the mobile preview is active every editor section is hidden,
             so the scroll-tracking page map would pin to a meaningless stop. */}
         <div className={mobileWorkspaceView === "preview" ? "hidden xl:block" : undefined}>
-          <EditorSectionNav signalSectionIds={signalSectionIds} />
+          <EditorSectionNav
+            allowsSmoothScroll={allowsSmoothScroll}
+            signalSectionIds={signalSectionIds}
+          />
         </div>
         {copyStatus === "copied" ? (
           <p role="status" className="sr-only">Live page link copied.</p>
@@ -1095,7 +1242,12 @@ export default function PageEditorClient({
               </div>
             </section>
 
-            <ResumeEditorFields data={data} onChange={setData} />
+            <div
+              onChangeCapture={handleEditorChangeCapture}
+              onClickCapture={handleEditorActionCapture}
+            >
+              <ResumeEditorFields data={data} onChange={setData} />
+            </div>
 
             <section
               id="editor-section-design"
@@ -1232,9 +1384,10 @@ export default function PageEditorClient({
         </section>
 
         <aside
+          ref={editorPreviewRef}
           aria-labelledby="editor-preview-title"
           data-editor-preview
-          className={`${mobileWorkspaceView === "preview" ? "block" : "hidden"} min-w-0 xl:sticky xl:top-72 xl:block`}
+          className={`${mobileWorkspaceView === "preview" ? "block" : "hidden"} min-w-0 xl:sticky xl:top-72 xl:block [&_[data-editor-signal-active=true]]:ring-2 [&_[data-editor-signal-active=true]]:ring-inset [&_[data-editor-signal-active=true]]:ring-site-action [&_[data-editor-signal-active=true]]:transition-shadow [&_[data-editor-signal-active=true]]:duration-150`}
         >
           <section className="overflow-hidden rounded-none border border-site-border-strong bg-site-surface shadow-[var(--site-shadow-raised)]">
             {/* Below xl the mobile viewport is short, so the panel opens straight
@@ -1255,6 +1408,7 @@ export default function PageEditorClient({
             <div className="flex min-w-0 items-center gap-2 border-b border-site-border bg-site-canvas-alt px-3 py-2.5">
               <span
                 aria-hidden="true"
+                data-motion-ambient
                 className={`h-2 w-2 ${hasChanges ? "animate-pulse bg-site-warning" : "bg-site-success"}`}
               />
               <span
@@ -1269,6 +1423,31 @@ export default function PageEditorClient({
                 mylivingpage.com/<span className="text-site-action">{publicSlug || page?.slug}</span>
               </div>
             </div>
+
+            <p
+              role="status"
+              aria-live="polite"
+              data-editor-signal-status
+              data-motion-event={
+                editorFieldEventActive ? MOTION_EVENTS.EDITOR_FIELD_CHANGED : undefined
+              }
+              data-motion-signal={editorFieldEventActive ? "edit-to-proof" : undefined}
+              data-motion-state={editorFieldEventActive ? editorSignal.state : undefined}
+              data-motion-sequence={editorFieldEventActive ? editorSignal.sequence : undefined}
+              data-motion-target={
+                editorFieldEventActive ? editorSignal.section ?? undefined : undefined
+              }
+              className="flex min-h-9 min-w-0 items-center gap-2 border-b border-site-border bg-site-surface-raised px-3 py-2 text-xs text-site-secondary"
+            >
+              <span className="site-eyebrow shrink-0 text-site-action">Preview correspondence</span>
+              <span className="min-w-0 truncate">
+                {!editorSignalLabel
+                  ? "Edit a section to trace it into the live preview."
+                  : editorSignal.state === "preview-empty"
+                    ? `${editorSignalLabel} is not shown because it is empty.`
+                    : `${editorSignalLabel} changes update the live preview.`}
+              </span>
+            </p>
 
             <ThemeCanvas
               themeId={themeId}

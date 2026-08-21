@@ -2,6 +2,9 @@
 
 import React, { useEffect, useId, useRef, useState } from "react";
 import DelimitedListInput from "@/components/create/DelimitedListInput";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { MOTION_EVENTS, MOTION_MODE_POLICIES } from "@/lib/motion";
+import type { ResumeImportField } from "@/lib/resume-import";
 import type { ResumeData } from "@/types/resume";
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -12,6 +15,8 @@ interface GuidedFlowProps {
   onComplete: (data: ResumeData) => void;
   onBack: () => void;
   consolidatedReview?: boolean;
+  motionSequence?: number;
+  autofilledFields?: ResumeImportField[];
 }
 
 interface ExperienceEntry {
@@ -59,6 +64,15 @@ const STEP_PROMPTS = [
   { heading: "The finishing touches", sub: "A summary and a few standout numbers." },
 ];
 
+const AUTOFILL_STEP_FIELDS: ReadonlyArray<ReadonlyArray<ResumeImportField>> = [
+  ["name", "headline", "location"],
+  ["contact"],
+  ["experience"],
+  ["education", "certifications"],
+  ["skills", "projects"],
+  ["summary"],
+];
+
 /* ── Helpers ────────────────────────────────────────────── */
 
 const inputClass =
@@ -80,7 +94,11 @@ export default function GuidedFlow({
   onComplete,
   onBack,
   consolidatedReview = false,
+  motionSequence = 0,
+  autofilledFields = [],
 }: GuidedFlowProps) {
+  const { mode } = useMotionPreference();
+  const allowsSmoothScroll = MOTION_MODE_POLICIES[mode].allowsSmoothScroll;
   const [step, setStep] = useState(0);
   const stepPanelRef = useRef<HTMLElement | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -173,13 +191,12 @@ export default function GuidedFlow({
     }
 
     previousStepRef.current = step;
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     stepPanelRef.current?.scrollIntoView({
-      behavior: reducedMotion ? "auto" : "smooth",
+      behavior: allowsSmoothScroll ? "smooth" : "auto",
       block: "start",
     });
     stepHeadingRef.current?.focus({ preventScroll: true });
-  }, [step]);
+  }, [allowsSmoothScroll, step]);
 
   /* ── Progress dots ──────────────────────────────────── */
   const progressDots = (
@@ -733,7 +750,14 @@ export default function GuidedFlow({
 
   if (consolidatedReview) {
     return (
-      <section className="site-panel p-4 sm:p-6 md:p-8">
+      <section
+        className="site-panel p-4 sm:p-6 md:p-8"
+        data-motion-event={MOTION_EVENTS.RESUME_IMPORT_REVIEW_REQUIRED}
+        data-motion-signal="review-gate"
+        data-motion-state="review-required"
+        data-motion-sequence={motionSequence}
+        data-motion-target="autofilled-fields"
+      >
         <p className="site-eyebrow">Autofill review</p>
         <h2 className="site-section-title mt-2">Review what we found</h2>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-site-secondary">
@@ -742,17 +766,38 @@ export default function GuidedFlow({
         </p>
 
         <div className="mt-8 space-y-10">
-          {stepRenderers.map((renderStep, index) => (
-            <section key={STEP_PROMPTS[index].heading} aria-labelledby={`autofill-section-${index}`}>
-              <h3 id={`autofill-section-${index}`} className="site-panel-title">
-                {STEP_PROMPTS[index].heading}
-              </h3>
-              <p className="mb-4 mt-1 text-sm text-site-secondary">
-                {STEP_PROMPTS[index].sub}
-              </p>
-              {renderStep()}
-            </section>
-          ))}
+          {stepRenderers.map((renderStep, index) => {
+            const detectedTargets = AUTOFILL_STEP_FIELDS[index].filter((field) =>
+              autofilledFields.includes(field),
+            );
+            const wasAutofilled = detectedTargets.length > 0;
+
+            return (
+              <section
+                key={STEP_PROMPTS[index].heading}
+                aria-labelledby={`autofill-section-${index}`}
+                data-motion-event={
+                  wasAutofilled
+                    ? MOTION_EVENTS.RESUME_IMPORT_FACT_DETECTED
+                    : undefined
+                }
+                data-motion-signal={wasAutofilled ? "truth-transfer" : undefined}
+                data-motion-state={wasAutofilled ? "autofilled" : undefined}
+                data-motion-sequence={wasAutofilled ? motionSequence : undefined}
+                data-motion-target={
+                  wasAutofilled ? detectedTargets.join(",") : undefined
+                }
+              >
+                <h3 id={`autofill-section-${index}`} className="site-panel-title">
+                  {STEP_PROMPTS[index].heading}
+                </h3>
+                <p className="mb-4 mt-1 text-sm text-site-secondary">
+                  {STEP_PROMPTS[index].sub}
+                </p>
+                {renderStep()}
+              </section>
+            );
+          })}
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-site-border pt-6">

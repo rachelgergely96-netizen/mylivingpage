@@ -8,6 +8,8 @@ import React, {
   useState,
 } from "react";
 import DashboardPagePreview from "@/components/dashboard/DashboardPagePreview";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { resolveMotionDuration } from "@/lib/motion";
 import type { PageProofStatus } from "@/lib/analytics/proofSummary";
 import type { ResumeData } from "@/types/resume";
 import styles from "./DashboardWelcomeBack.module.css";
@@ -42,10 +44,7 @@ type WelcomeStyle = CSSProperties & {
 
 type WelcomePhase = "entering" | "holding" | "revealing";
 
-const ENTRY_DURATION_MS = 1100;
 const HOLD_DURATION_MS = 4200;
-const REDUCED_HOLD_DURATION_MS = 4200;
-const REVEAL_DURATION_MS = 760;
 
 function firstName(displayName: string | null): string | null {
   return displayName?.trim().split(/\s+/)[0] || null;
@@ -101,9 +100,11 @@ function consumeWelcomeIntent() {
 }
 
 export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
+  const { mode: motionMode } = useMotionPreference();
+  const entryDurationMs = resolveMotionDuration("context", motionMode);
+  const revealDurationMs = resolveMotionDuration("context", motionMode);
   const [visible, setVisible] = useState(Boolean(snapshot));
   const [phase, setPhase] = useState<WelcomePhase>("entering");
-  const [reducedMotion, setReducedMotion] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
   const [visibilityPaused, setVisibilityPaused] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -131,17 +132,6 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
   }, []);
 
   useEffect(() => {
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateMotionPreference = () => setReducedMotion(motionQuery.matches);
-
-    updateMotionPreference();
-    motionQuery.addEventListener("change", updateMotionPreference);
-    return () => {
-      motionQuery.removeEventListener("change", updateMotionPreference);
-    };
-  }, []);
-
-  useEffect(() => {
     const updateVisibility = () => setVisibilityPaused(document.hidden);
 
     updateVisibility();
@@ -158,18 +148,16 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
 
     const timer = window.setTimeout(
       () => {
-        holdRemainingRef.current = reducedMotion
-          ? REDUCED_HOLD_DURATION_MS
-          : HOLD_DURATION_MS;
+        holdRemainingRef.current = HOLD_DURATION_MS;
         moveToPhase("holding");
       },
-      reducedMotion ? 0 : ENTRY_DURATION_MS,
+      entryDurationMs,
     );
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [moveToPhase, phase, reducedMotion, snapshot, visible]);
+  }, [entryDurationMs, moveToPhase, phase, snapshot, visible]);
 
   useEffect(() => {
     if (!snapshot || !visible || phase !== "holding" || paused) {
@@ -203,13 +191,13 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
           document.getElementById("main-content")?.focus();
         });
       },
-      reducedMotion ? 0 : REVEAL_DURATION_MS,
+      revealDurationMs,
     );
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [phase, reducedMotion, snapshot, visible]);
+  }, [phase, revealDurationMs, snapshot, visible]);
 
   useEffect(() => {
     if (!snapshot || !visible) {
@@ -281,10 +269,8 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     "--welcome-accent": snapshot.accent,
     "--welcome-accent-bright": snapshot.accentBright,
     "--welcome-accent-soft": snapshot.accentSoft,
-    "--welcome-hold-duration": `${
-      reducedMotion ? REDUCED_HOLD_DURATION_MS : HOLD_DURATION_MS
-    }ms`,
-    "--welcome-reveal-duration": `${REVEAL_DURATION_MS}ms`,
+    "--welcome-hold-duration": `${HOLD_DURATION_MS}ms`,
+    "--welcome-reveal-duration": `${revealDurationMs}ms`,
   };
   const handoffStatus =
     phase === "entering"
@@ -303,6 +289,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
       aria-modal="true"
       className={styles.root}
       data-dashboard-welcome
+      data-motion-mode={motionMode}
       data-paused={paused ? "true" : "false"}
       data-state={phase}
       role="dialog"

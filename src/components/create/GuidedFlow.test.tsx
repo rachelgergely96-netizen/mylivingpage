@@ -21,6 +21,8 @@ describe("GuidedFlow", () => {
         onUpdate={vi.fn()}
         onComplete={vi.fn()}
         onBack={vi.fn()}
+        motionSequence={7}
+        autofilledFields={["name", "headline", "experience", "skills", "projects"]}
       />,
     );
 
@@ -30,5 +32,14 @@ describe("GuidedFlow", () => {
     expect(markup).toContain("Skills and projects");
     expect(markup).toContain("Continue to theme and preview");
     expect(markup).not.toContain("1 of 6");
+    expect(markup).toContain('data-motion-event="resume.import.review.required"');
+    expect(markup).toContain('data-motion-signal="review-gate"');
+    expect(markup).toContain('data-motion-state="review-required"');
+    expect(markup).toContain('data-motion-sequence="7"');
+    expect(markup).toContain('data-motion-target="autofilled-fields"');
+    expect(markup).toContain('data-motion-event="resume.import.fact.detected"');
+    expect(markup).toContain('data-motion-state="autofilled"');
+    expect(markup).toContain('data-motion-target="name,headline"');
+    expect(markup).toContain('data-motion-target="skills,projects"');
   });
 });

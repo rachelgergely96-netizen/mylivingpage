@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import MotionPreferenceProvider from "@/components/motion/MotionPreferenceProvider";
 import JsonLd from "@/components/seo/JsonLd";
 import AnalyticsConsent from "@/components/privacy/AnalyticsConsent";
 import { fontVariableClasses } from "@/lib/fonts";
+import { MOTION_PREFERENCE_BOOTSTRAP_SCRIPT } from "@/lib/motion";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import { buildSiteStructuredData } from "@/lib/structured-data";
 import "./globals.css";
@@ -30,11 +32,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          id="motion-preference-bootstrap"
+          dangerouslySetInnerHTML={{ __html: MOTION_PREFERENCE_BOOTSTRAP_SCRIPT }}
+        />
+      </head>
       <body className={`${fontVariableClasses} antialiased`}>
         <JsonLd data={buildSiteStructuredData()} />
-        {children}
-        <AnalyticsConsent />
+        <MotionPreferenceProvider>
+          {children}
+          <AnalyticsConsent />
+        </MotionPreferenceProvider>
       </body>
     </html>
   );

@@ -583,7 +583,7 @@
 }
 
 .truthTokens b {
-  animation: truthTravel 720ms cubic-bezier(0.45, 0, 0.2, 1) both;
+  animation: truthTravel var(--motion-duration-standard) var(--motion-ease-standard) both;
   background: var(--canvas-alt);
   border: 1px solid var(--world-accent-border);
   color: var(--world-accent-bright);
@@ -599,12 +599,12 @@
 }
 
 .truthTokens b:nth-child(2) {
-  animation-delay: 90ms;
+  animation-delay: 80ms;
   top: 43px;
 }
 
 .truthTokens b:nth-child(3) {
-  animation-delay: 180ms;
+  animation-delay: 160ms;
   top: 78px;
 }
 
@@ -676,7 +676,7 @@
 }
 
 .storyActiveOutput > * {
-  animation: outputReveal 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: outputReveal var(--motion-duration-standard) var(--motion-ease-enter) both;
 }
 
 .storyOutputNote {
@@ -904,7 +904,9 @@
 
 .motionPreviewCue {
   align-items: center;
-  animation: motionPreviewCue 4.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation:
+    motionPreviewCueEnter var(--motion-duration-standard) var(--motion-ease-enter) 120ms both,
+    motionPreviewCueExit var(--motion-duration-standard) var(--motion-ease-exit) 2400ms forwards;
   background: rgba(5, 12, 24, 0.82);
   border: 1px solid var(--world-accent-border);
   bottom: 13px;
@@ -923,7 +925,7 @@
 }
 
 .motionPreviewCue > i {
-  animation: motionPreviewSignal 1.4s ease-in-out 2;
+  animation: motionPreviewSignal var(--motion-duration-context-active) var(--motion-ease-standard) 2;
   background: var(--world-accent);
   box-shadow: 0 0 12px var(--world-accent);
   display: block;
@@ -1141,16 +1143,46 @@
 }
 
 .storyStyleStatus {
+  align-items: center;
   color: var(--text-muted);
   display: flex;
+  flex-wrap: wrap;
   font-size: 12px;
   gap: 7px;
   margin-top: 7px;
+  min-height: 24px;
+  padding-right: 112px;
+  position: relative;
 }
 
 .storyStyleStatus strong {
   color: var(--world-accent-bright);
   font-weight: 700;
+}
+
+.styleSignal {
+  align-items: center;
+  background: var(--canvas-alt);
+  border: 1px solid var(--world-accent-border);
+  color: var(--world-accent-bright);
+  display: inline-flex;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  padding: 5px 7px;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  text-transform: uppercase;
+  top: -4px;
+  z-index: 5;
+}
+
+.styleSignalOnStage {
+  right: 12px;
+  top: 12px;
 }
 
 .identityBand {
@@ -1545,39 +1577,9 @@
   color: var(--text);
 }
 
-/* Below-the-fold sections reveal once with a quiet rise. The hidden state only
-   exists after the IntersectionObserver arms (data-motion-ready), so content
-   is always visible without JS, under reduced motion, or in old browsers. */
-.prototype[data-motion-ready="true"] [data-reveal] {
-  opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.prototype[data-motion-ready="true"] [data-reveal][data-visible="true"] {
-  opacity: 1;
-  transform: none;
-}
-
-/* If reduced-motion turns on mid-session the observer may never fire for
-   unrevealed sections — this guarantees nothing stays stranded hidden. */
-@media (prefers-reduced-motion: reduce) {
-  .prototype [data-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
-
-/* Print / PDF-save renders the whole page without scrolling, so the observer
-   never fires — mirror the reduced-motion guard to keep every section visible. */
-@media print {
-  .prototype [data-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
+/* IntersectionObserver marks semantic scenes without hiding or moving whole
+   sections. Motion belongs to the relationship being explained, not the
+   reading surface around it. */
 
 /* "The paper settles" — the stage opens on the résumé someone already has,
    then it eases back into a supporting role as the page it becomes fades in
@@ -1590,8 +1592,8 @@
 @keyframes paperSettle {
   from {
     opacity: 0.72;
-    scale: 1.07;
-    translate: 16px -10px;
+    scale: 1.02;
+    translate: var(--motion-distance-standard) calc(-1 * var(--motion-distance-micro));
   }
   to {
     opacity: 1;
@@ -1612,40 +1614,38 @@
 }
 
 .storySource {
-  animation: paperSettle 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: paperSettle var(--motion-duration-context-active) var(--motion-ease-enter) both;
 }
 
 .storyOutputFrame {
-  animation: pageSettle 760ms cubic-bezier(0.22, 1, 0.36, 1) 340ms both;
+  animation: pageSettle var(--motion-duration-context-active) var(--motion-ease-enter) both;
 }
 
-/* Reduced motion gets the settled state immediately — both the résumé and the
+/* Calm/Still get the settled state immediately — both the résumé and the
    page it became are present and complete, just without the choreography. */
-@media (prefers-reduced-motion: reduce) {
-  .storySource,
-  .storyOutputFrame {
-    animation: none;
-  }
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
+  :is(.storySource, .storyOutputFrame) {
+  animation: none;
 }
 
 @keyframes truthTravel {
   0% {
     opacity: 0;
-    transform: translateX(-24px);
+    transform: translateX(calc(-1 * var(--motion-distance-standard)));
   }
   30% {
     opacity: 1;
   }
   100% {
     opacity: 0.9;
-    transform: translateX(8px);
+    transform: translateX(var(--motion-distance-micro));
   }
 }
 
 @keyframes outputReveal {
   from {
     opacity: 0.55;
-    transform: translateX(8px);
+    transform: translateX(var(--motion-distance-micro));
   }
   to {
     opacity: 1;
@@ -1653,19 +1653,23 @@
   }
 }
 
-@keyframes motionPreviewCue {
-  0% {
+@keyframes motionPreviewCueEnter {
+  from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(var(--motion-distance-micro));
   }
-  12%,
-  72% {
+  to {
     opacity: 1;
     transform: none;
   }
-  100% {
+}
+
+@keyframes motionPreviewCueExit {
+  from {
+    opacity: 1;
+  }
+  to {
     opacity: 0;
-    transform: none;
     visibility: hidden;
   }
 }
@@ -2219,27 +2223,105 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .prototype *,
-  .prototype *::before,
-  .prototype *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.001ms !important;
+@keyframes homepageStyleSignalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-micro));
   }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 
+@keyframes homepageSignalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes homepageSignalFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes homepageShareHandoffEnter {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--motion-distance-standard)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+:global(html[data-motion-mode="calm"]) .prototype *,
+:global(html[data-motion-mode="calm"]) .prototype *::before,
+:global(html[data-motion-mode="calm"]) .prototype *::after {
+  animation: none !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: var(--motion-duration-micro) !important;
+}
+
+:global(html[data-motion-mode="still"]) .prototype *,
+:global(html[data-motion-mode="still"]) .prototype *::before,
+:global(html[data-motion-mode="still"]) .prototype *::after {
+  animation: none !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: var(--motion-duration-instant) !important;
+}
+
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
   .truthTokens {
-    display: none;
-  }
+  display: none;
+}
 
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
   .storyActiveOutput > * {
-    animation: none !important;
-  }
+  animation: none !important;
+}
 
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
   .truthTransfer small {
-    color: var(--world-accent-bright);
-  }
+  color: var(--world-accent-bright);
+}
+
+/* The semantic event lives on the relationship, while its tokens carry the
+   visual cue. Never translate the entire source-to-destination track. */
+:global(html) .truthTransfer[data-motion-event][data-motion-state] {
+  animation: none;
+  transform: none;
+}
+
+:global(html[data-motion-mode="full"]) .styleSignal {
+  animation:
+    homepageStyleSignalEnter var(--motion-duration-standard) var(--motion-ease-enter) both,
+    homepageSignalFadeOut var(--motion-duration-micro) var(--motion-ease-exit) 900ms forwards;
+}
+
+:global(html[data-motion-mode="calm"])
+  .prototype [data-homepage-style-signal] {
+  animation:
+    homepageSignalFadeIn var(--motion-duration-micro) var(--motion-ease-enter) both,
+    homepageSignalFadeOut var(--motion-duration-micro) var(--motion-ease-exit) 700ms forwards !important;
+  transform: none !important;
+}
+
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
+  .motionPreviewCue,
+:global(html[data-motion-mode="still"])
+  .prototype :is([data-homepage-style-signal], [data-homepage-share-signal]) {
+  display: none !important;
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -2479,6 +2561,50 @@
 
 .cardStage {
   min-width: 0;
+  position: relative;
+}
+
+.shareHandoffSignal {
+  align-items: center;
+  background: rgba(5, 12, 24, 0.88);
+  border: 1px solid var(--world-accent-border);
+  color: var(--world-accent-bright);
+  display: inline-flex;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 9px;
+  font-weight: 700;
+  gap: 7px;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+  text-transform: uppercase;
+  top: 12px;
+  z-index: 6;
+}
+
+.shareHandoffSignal i {
+  background: var(--world-accent);
+  box-shadow: 0 0 10px var(--world-accent);
+  height: 5px;
+  width: 5px;
+}
+
+:global(html[data-motion-mode="full"])
+  .cardSection[data-visible="true"] .shareHandoffSignal {
+  animation:
+    homepageShareHandoffEnter var(--motion-duration-standard) var(--motion-ease-enter) both,
+    homepageSignalFadeOut var(--motion-duration-micro) var(--motion-ease-exit) 1100ms forwards;
+}
+
+:global(html[data-motion-mode="calm"])
+  .cardSection[data-visible="true"] .shareHandoffSignal {
+  animation:
+    homepageSignalFadeIn var(--motion-duration-micro) var(--motion-ease-enter) both,
+    homepageSignalFadeOut var(--motion-duration-micro) var(--motion-ease-exit) 700ms forwards !important;
+  transform: none !important;
 }
 
 .cardStageNote {
@@ -2548,7 +2674,11 @@
    page is titled inside its own shell, and the PDF and card become an
    included strip rather than alternatives competing for the stage. */
 .storyHeaderQuiet {
+  align-items: center;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
   padding: 14px 18px;
 }
 
@@ -2557,6 +2687,23 @@
   font-weight: 630;
   letter-spacing: -0.025em;
   margin: 0;
+}
+
+.storyMotionControl {
+  flex: 0 0 210px;
+  width: 210px;
+}
+
+@media (max-width: 620px) {
+  .storyHeaderQuiet {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .storyMotionControl {
+    flex-basis: auto;
+    width: 100%;
+  }
 }
 
 .storyLivingTitle {

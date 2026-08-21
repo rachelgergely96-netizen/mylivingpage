@@ -53,15 +53,21 @@ const SILK_BOTX = new Float64Array(SILK_N);
 const SILK_BOTY = new Float64Array(SILK_N);
 
 export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, motion) => {
-  // Uniform motion contract: resolve page motion once at the top. All resolved
-  // values are zero/centered at rest and in the preview; silk keeps its base
-  // composition untouched by page motion, so M is plumbing only for now.
-  // reducedMotion freezes time to the canonical T=0 pose and rests the
-  // pointer-speed lift envelope so a still pointer yields a static frame.
+  // Uniform motion contract: the ordered story changes the drape's light and
+  // phase, while the host's decaying section impulse provides one short settle.
+  // Both are pure inputs; chapter motion never adds shared mutable event state.
+  // reducedMotion freezes time to the canonical T=0 pose and resolveThemeMotion
+  // removes the transient settle so a still pointer yields a static frame.
   const M = resolveThemeMotion(motion);
   const reduced = !!(motion && motion.reducedMotion);
   const T = reduced ? 0 : finiteClamp(t, 0, 1e6);
-  void M;
+  const hasStory = M.sectionCount > 0;
+  const story = hasStory ? M.storyProgress : 0;
+  const storyPhase = story * TAU;
+  const storyOffset = hasStory ? story - 0.5 : 0;
+  const chapterImpulse = M.sectionImpulse;
+  const chapterDirection =
+    M.sectionDirection || (M.activeSectionIndex % 2 === 0 ? 1 : -1);
   const S = SILK_S, CFG = SILK_CFG, BANDS = SILK_BANDS, N = SILK_N;
   const TOPX = SILK_TOPX, TOPY = SILK_TOPY, BOTX = SILK_BOTX, BOTY = SILK_BOTY;
   const nx = (typeof mx === "number" && isFinite(mx)) ? mx : 0.5;
@@ -90,8 +96,15 @@ export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, m
   // slow drifting ambient sheen (soft round bloom) — biased toward the scrim-protected
   // left/lower field so the low-scrim right stays dark behind resume text
   ctx.save(); ctx.globalCompositeOperation = "screen";
-  const ax = w * 0.34 + Math.sin(T * 0.05) * w * 0.24;
-  const ay = h * 0.46 + Math.cos(T * 0.06) * h * 0.22;
+  const ax =
+    w * 0.34 +
+    Math.sin(T * 0.05) * w * 0.24 +
+    Math.sin(storyPhase) * w * 0.04 +
+    chapterDirection * chapterImpulse * w * 0.012;
+  const ay =
+    h * 0.46 +
+    Math.cos(T * 0.06) * h * 0.22 +
+    storyOffset * h * 0.06;
   softGlow(ctx, ax, ay, Math.max(w, h) * 0.5, "rgba(150,170,255,0.045)", "rgba(150,170,255,0)");
   ctx.restore();
 
@@ -105,8 +118,13 @@ export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, m
     for (let i = 0; i < N; i++) {
       const fx = i / (N - 1);
       const x = fx * w;
-      const p1 = TAU * c.c1 * fx + T * c.sp1 + c.phase;
-      const p2 = TAU * c.c2 * fx + T * c.sp2 + c.phase * 0.7;
+      const storyFoldPhase = storyPhase * (0.08 + b * 0.004);
+      const p1 = TAU * c.c1 * fx + T * c.sp1 + c.phase + storyFoldPhase;
+      const p2 =
+        TAU * c.c2 * fx +
+        T * c.sp2 +
+        c.phase * 0.7 -
+        storyFoldPhase * 0.6;
       // amplitude envelope travels opposite the crests -> waves swell as they propagate
       const env = 0.55 + 0.45 * Math.sin(TAU * c.envC * fx - T * c.envSp + c.drift);
       const nz = noise2D(fx * 2.1 + c.nseed, T * 0.05 + b * 0.6);
@@ -118,6 +136,14 @@ export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, m
       y += (S.py - y) * fall * 0.26;
       const dist = Math.sqrt(d2);
       y += Math.sin(dist * 0.012 - T * 1.6) * fall * lift * 8;
+      // A chapter arrival tightens one fold for a fraction of a second. The
+      // maximum displacement stays below the ribbon thickness, so the world
+      // acknowledges the chapter without producing a camera or content jump.
+      y +=
+        Math.sin(TAU * fx + storyPhase + b * 0.55) *
+        chapterDirection *
+        chapterImpulse *
+        Math.min(3.2, c.thick * 0.12);
       const wob = c.thick * (0.62 + 0.38 * Math.sin(p2 * 1.1 + b));
       TOPX[i] = x; TOPY[i] = y - wob;
       BOTX[i] = x; BOTY[i] = y + wob;
@@ -131,7 +157,7 @@ export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, m
     for (let i = N - 2; i > 0; i--) { const mX = (BOTX[i] + BOTX[i - 1]) * 0.5, mY = (BOTY[i] + BOTY[i - 1]) * 0.5; ctx.quadraticCurveTo(BOTX[i], BOTY[i], mX, mY); }
     ctx.lineTo(BOTX[0], BOTY[0]);
     ctx.closePath();
-    const hue = (c.hue + T * 10) % 360;
+    const hue = (c.hue + T * 10 + story * 14) % 360;
     // iridescent fill — luminance biased to the scrim-protected left, dim on the low-scrim
     // right, peak lightness capped so the bright-pass bloom can't blow it toward white
     const g = ctx.createLinearGradient(0, by - 60, w, by + 60);
@@ -145,7 +171,10 @@ export const renderSilk: ThemeRenderer = (ctx, w, h, t, mx, my, _deltaSeconds, m
     ctx.moveTo(TOPX[0], TOPY[0]);
     for (let i = 1; i < N - 1; i++) { const mX = (TOPX[i] + TOPX[i + 1]) * 0.5, mY = (TOPY[i] + TOPY[i + 1]) * 0.5; ctx.quadraticCurveTo(TOPX[i], TOPY[i], mX, mY); }
     ctx.lineTo(TOPX[N - 1], TOPY[N - 1]);
-    const sheen = Math.min(0.26, 0.07 + bandFall * (0.12 + lift * 0.30));
+    const sheen = Math.min(
+      0.26,
+      0.07 + bandFall * (0.12 + lift * 0.30) + chapterImpulse * 0.035,
+    );
     ctx.strokeStyle = `hsla(${(hue + 46) % 360},92%,82%,${sheen})`;
     ctx.lineWidth = 0.9; ctx.stroke();
   }

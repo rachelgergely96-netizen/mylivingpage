@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 import {
   createInitialThemeMotionContext,
   useLivingMotionBridge,
 } from "@/hooks/useLivingMotionBridge";
+import { MOTION_MODE_POLICIES, type MotionMode } from "@/lib/motion";
 import { THEME_MAP } from "@/themes/registry";
 import { createSeededRandom } from "@/themes/shared/random";
 import { getLoadedRenderer, loadRenderer } from "@/themes/loadRenderer";
@@ -91,6 +93,8 @@ interface ThemeCanvasProps {
   interactive?: boolean;
   animated?: boolean;
   mobileAmbientMotion?: boolean;
+  /** Override the saved device preference for an authored static surface. */
+  motionMode?: MotionMode;
   /** Let supported renderers react to page sections, scroll, and focused cards. */
   motionAware?: boolean;
   /**
@@ -111,11 +115,15 @@ export default function ThemeCanvas({
   interactive = true,
   animated = true,
   mobileAmbientMotion = false,
+  motionMode: motionModeOverride,
   motionAware = false,
   maxFps = 30,
   hd = true,
   children,
 }: ThemeCanvasProps) {
+  const { mode: preferredMotionMode } = useMotionPreference();
+  const activeMotionMode = motionModeOverride ?? preferredMotionMode;
+  const motionPolicy = MOTION_MODE_POLICIES[activeMotionMode];
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -124,6 +132,7 @@ export default function ThemeCanvas({
   const elapsedRef = useRef(0);
   const lastFrameRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const staticPaintRef = useRef<(() => void) | null>(null);
   const samplerRef = useRef<MotionSampler | null>(null);
   if (!samplerRef.current) {
     samplerRef.current = createMotionSampler();
@@ -138,7 +147,22 @@ export default function ThemeCanvas({
   const resolvedThemeId = theme.id;
   const themeStyle = UNIFORM_LIVING_PAGE_STYLE;
 
-  useLivingMotionBridge({ containerRef, motionRef, enabled: motionAware });
+  motionRef.current.motionMode = activeMotionMode;
+  motionRef.current.reducedMotion = activeMotionMode === "still";
+  reducedMotionRef.current = activeMotionMode === "still";
+
+  const requestMotionPaint = useCallback(() => {
+    if (activeMotionMode === "full") {
+      staticPaintRef.current?.();
+    }
+  }, [activeMotionMode]);
+
+  useLivingMotionBridge({
+    containerRef,
+    motionRef,
+    enabled: motionAware,
+    onMotionChange: requestMotionPaint,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,25 +190,23 @@ export default function ThemeCanvas({
       typeof window.matchMedia === "function" ? window.matchMedia("(pointer: fine)") : null;
     const anyPointerCoarseQuery =
       typeof window.matchMedia === "function" ? window.matchMedia("(any-pointer: coarse)") : null;
-    const reducedMotionQuery =
-      typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 
     const syncAmbientMode = () => {
       const hasTouchCapability = window.navigator.maxTouchPoints > 0;
       const coarsePrimary = pointerCoarseQuery?.matches ?? false;
       const finePrimary = pointerFineQuery?.matches ?? false;
       const anyCoarse = anyPointerCoarseQuery?.matches ?? false;
-      const prefersReducedMotion = reducedMotionQuery?.matches ?? false;
 
-      reducedMotionRef.current = prefersReducedMotion;
-      motionRef.current.reducedMotion = prefersReducedMotion;
-      if (prefersReducedMotion) {
+      reducedMotionRef.current = activeMotionMode === "still";
+      motionRef.current.motionMode = activeMotionMode;
+      motionRef.current.reducedMotion = activeMotionMode === "still";
+      if (activeMotionMode !== "full") {
         clearTransientThemeMotion(motionRef.current);
       }
 
       ambientEnabledRef.current =
         mobileAmbientMotion &&
-        !prefersReducedMotion &&
+        motionPolicy.allowsAmbientMotion &&
         (coarsePrimary || (!finePrimary && (anyCoarse || hasTouchCapability)));
 
       if (ambientEnabledRef.current && !touchActiveRef.current && performance.now() >= ambientResumeAtRef.current) {
@@ -432,19 +454,25 @@ export default function ThemeCanvas({
         return;
       }
       const sampler = samplerRef.current!;
-      sampler.setPointerTarget(mouseRef.current.x, mouseRef.current.y);
+      const presentationTarget = {
+        x: 0.5 + (mouseRef.current.x - 0.5) * motionPolicy.pointerScale,
+        y: 0.5 + (mouseRef.current.y - 0.5) * motionPolicy.pointerScale,
+      };
+      sampler.setPointerTarget(presentationTarget.x, presentationTarget.y);
       let stepSeconds = deltaSeconds;
       if (!runningRef.current) {
         // Static paints (initial, resize, reduced motion) show the settled
         // pose immediately instead of a mid-glide sample.
-        sampler.snapPointer(mouseRef.current.x, mouseRef.current.y);
+        sampler.snapPointer(presentationTarget.x, presentationTarget.y);
       } else if (deltaSeconds === 0) {
         // Out-of-band paint (e.g. resize) while animating: nudge the sampler
         // instead of passing 0, which would hard-snap every inertial sample.
         stepSeconds = 0.004;
       }
       const smoothedMotion = sampler.step(
-        motionAware ? motionRef.current : undefined,
+        motionAware && activeMotionMode === "full"
+          ? motionRef.current
+          : undefined,
         stepSeconds,
       );
       const presentationPointer = applySectionMotionToPointer(
@@ -471,6 +499,7 @@ export default function ThemeCanvas({
 
         rendererRef.current = null;
         container?.setAttribute("data-theme-renderer-status", "fallback");
+        container?.setAttribute("data-motion-running", "false");
         runningRef.current = false;
         if (animationRef.current) {
           cancelAnimationFrame(animationRef.current);
@@ -480,22 +509,55 @@ export default function ThemeCanvas({
       }
     };
 
+    const minFrameMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0;
+    let scheduledStaticFrame: number | null = null;
+    let lastStaticPaintAt: number | null = null;
+    const getPaintTime = () => activeMotionMode === "full" ? elapsedRef.current : 0;
+    const paintStaticFrame = () => {
+      if (runningRef.current) return;
+      if (activeMotionMode !== "full") {
+        clearTransientThemeMotion(motionRef.current);
+      }
+      renderFrame(getPaintTime());
+    };
+    const drawStaticFrame = (now: number) => {
+      if (runningRef.current) {
+        scheduledStaticFrame = null;
+        return;
+      }
+      if (
+        lastStaticPaintAt !== null &&
+        !shouldPresentFrame(now, lastStaticPaintAt, minFrameMs)
+      ) {
+        scheduledStaticFrame = requestAnimationFrame(drawStaticFrame);
+        return;
+      }
+      scheduledStaticFrame = null;
+      lastStaticPaintAt = now;
+      paintStaticFrame();
+    };
+    const scheduleStaticPaint = () => {
+      if (runningRef.current || scheduledStaticFrame !== null) return;
+      scheduledStaticFrame = requestAnimationFrame(drawStaticFrame);
+    };
+    staticPaintRef.current = scheduleStaticPaint;
+
     const handleResize = () => {
       if (resize()) {
-        renderFrame(elapsedRef.current);
+        scheduleStaticPaint();
       }
     };
 
     const stop = () => {
       runningRef.current = false;
       lastFrameRef.current = null;
+      container?.setAttribute("data-motion-running", "false");
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
     };
 
-    const minFrameMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0;
     const draw = (now: number) => {
       if (!runningRef.current) {
         return;
@@ -510,7 +572,7 @@ export default function ThemeCanvas({
       }
       const delta = Math.min(0.05, (now - lastFrameRef.current) * 0.001);
       lastFrameRef.current = now;
-      elapsedRef.current += delta;
+      elapsedRef.current += delta * motionPolicy.rendererTimeScale;
       decayTransientThemeMotion(motionRef.current, delta);
       applyAmbientPointer(elapsedRef.current, now);
       const paintStart = performance.now();
@@ -523,21 +585,29 @@ export default function ThemeCanvas({
         return;
       }
       if (!rendererRef.current) {
-        renderFrame(elapsedRef.current);
+        container?.setAttribute("data-motion-running", "false");
+        paintStaticFrame();
         return;
       }
-      if (!animated || reducedMotionRef.current) {
-        renderFrame(elapsedRef.current);
+      if (!animated || !motionPolicy.allowsContinuousMotion) {
+        container?.setAttribute("data-motion-running", "false");
+        paintStaticFrame();
         return;
       }
       runningRef.current = true;
+      container?.setAttribute("data-motion-running", "true");
       animationRef.current = requestAnimationFrame(draw);
     };
 
     const handleMove = (event: MouseEvent) => {
+      if (activeMotionMode !== "full") return;
       updatePointer(event.clientX, event.clientY);
+      if (!runningRef.current) {
+        scheduleStaticPaint();
+      }
     };
     const handleTouchStart = (event: TouchEvent) => {
+      if (activeMotionMode !== "full") return;
       const touch = event.touches[0];
       if (!touch) return;
       touchActiveRef.current = true;
@@ -545,6 +615,7 @@ export default function ThemeCanvas({
       updatePointer(touch.clientX, touch.clientY);
     };
     const handleTouch = (event: TouchEvent) => {
+      if (activeMotionMode !== "full") return;
       const touch = event.touches[0];
       if (!touch) return;
       touchActiveRef.current = true;
@@ -562,8 +633,8 @@ export default function ThemeCanvas({
         y: 0.5,
         at: performance.now(),
       };
-      if (!runningRef.current) {
-        renderFrame(elapsedRef.current);
+      if (activeMotionMode === "full" && !runningRef.current) {
+        scheduleStaticPaint();
       }
     };
     const handleVisibility = () => {
@@ -581,9 +652,9 @@ export default function ThemeCanvas({
       }
       const handleChange = () => {
         syncAmbientMode();
-        if (!animated || reducedMotionRef.current) {
+        if (!animated || !motionPolicy.allowsContinuousMotion) {
           stop();
-          renderFrame(elapsedRef.current);
+          scheduleStaticPaint();
         } else {
           start();
         }
@@ -623,7 +694,7 @@ export default function ThemeCanvas({
           // Repaint now that the renderer exists. If the rAF loop is already
           // running it will pick this up on its own; this covers the static
           // (non-animated / reduced-motion) case where nothing repaints otherwise.
-          renderFrame(elapsedRef.current);
+          paintStaticFrame();
           start();
         })
         .catch((error: unknown) => {
@@ -639,7 +710,7 @@ export default function ThemeCanvas({
           }
           setRendererStatus("fallback");
           stop();
-          renderFrame(elapsedRef.current);
+          paintStaticFrame();
           console.error(`[ThemeCanvas] Falling back to the ${resolvedThemeId} background.`, error);
         })
         .finally(() => {
@@ -668,14 +739,13 @@ export default function ThemeCanvas({
     resize();
     container?.setAttribute("data-theme-quality", "full");
     applyAmbientPointer(elapsedRef.current, performance.now());
-    renderFrame(elapsedRef.current);
+    paintStaticFrame();
     window.addEventListener("resize", handleResize);
     window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibility);
     watchMediaQuery(pointerCoarseQuery);
     watchMediaQuery(pointerFineQuery);
     watchMediaQuery(anyPointerCoarseQuery);
-    watchMediaQuery(reducedMotionQuery);
 
     // ResizeObserver catches late layout shifts that the initial resize() misses
     let observer: ResizeObserver | null = null;
@@ -715,8 +785,14 @@ export default function ThemeCanvas({
 
     return () => {
       cancelled = true;
+      if (scheduledStaticFrame !== null) {
+        cancelAnimationFrame(scheduledStaticFrame);
+      }
       if (retryTimer !== null) {
         window.clearTimeout(retryTimer);
+      }
+      if (staticPaintRef.current === scheduleStaticPaint) {
+        staticPaintRef.current = null;
       }
       stop();
       window.removeEventListener("resize", handleResize);
@@ -734,7 +810,18 @@ export default function ThemeCanvas({
         container.removeEventListener("touchcancel", handleTouchEnd);
       }
     };
-  }, [animated, interactive, mobileAmbientMotion, motionAware, maxFps, hd, resolvedThemeId, theme]);
+  }, [
+    activeMotionMode,
+    animated,
+    hd,
+    interactive,
+    maxFps,
+    mobileAmbientMotion,
+    motionAware,
+    motionPolicy,
+    resolvedThemeId,
+    theme,
+  ]);
 
   return (
     <div
@@ -745,6 +832,8 @@ export default function ThemeCanvas({
       data-theme-format="uniform"
       data-theme-renderer-status="loading"
       data-motion-aware={motionAware ? "true" : undefined}
+      data-motion-mode={activeMotionMode}
+      data-motion-state={activeMotionMode}
       className={className}
       style={{
         position: "relative",

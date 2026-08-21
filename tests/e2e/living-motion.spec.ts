@@ -10,6 +10,7 @@ test("embedded Living Page previews expose sharp keyboard-operable chapter navig
   const sample = page.locator("#career-switching-designer");
   const rail = sample.getByRole("navigation", { name: "Living Page chapters" });
   const projectsButton = rail.getByRole("button", { name: /Projects$/ });
+  const experienceButton = rail.getByRole("button", { name: /Experience$/ });
 
   await expect(rail).toBeVisible();
   await expect(sample.locator("canvas[aria-hidden='true']")).toBeVisible();
@@ -18,6 +19,14 @@ test("embedded Living Page previews expose sharp keyboard-operable chapter navig
   await page.keyboard.press("Enter");
 
   await expect(projectsButton).toHaveAttribute("aria-current", "step");
+  await expect(rail).toHaveAttribute(
+    "data-motion-event",
+    "page.chapter.entered",
+  );
+  await expect(rail).toHaveAttribute("data-motion-signal", "career-chapters");
+  await expect(rail).toHaveAttribute("data-motion-state", "entered");
+  await expect(rail).toHaveAttribute("data-motion-target", "projects");
+  await expect(rail).toHaveAttribute("data-motion-sequence", /[1-9]\d*/);
   await expect
     .poll(() =>
       sample
@@ -28,6 +37,16 @@ test("embedded Living Page previews expose sharp keyboard-operable chapter navig
   await expect(
     sample.locator("[data-analytics-section='projects']"),
   ).toHaveAttribute("data-motion-active", "true");
+
+  const projectsSequence = Number(
+    await rail.getAttribute("data-motion-sequence"),
+  );
+  await experienceButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(rail).toHaveAttribute("data-motion-target", "experience");
+  await expect
+    .poll(async () => Number(await rail.getAttribute("data-motion-sequence")))
+    .toBeGreaterThan(projectsSequence);
 });
 
 test("mobile chapter navigation stays compact and honors reduced motion", async ({
@@ -45,6 +64,12 @@ test("mobile chapter navigation stays compact and honors reduced motion", async 
   await expect(rail).toBeVisible();
   await nextButton.click();
   await expect(rail.locator("span[aria-current='step']")).toHaveText("Impact");
+  await expect(rail).toHaveAttribute(
+    "data-motion-event",
+    "page.chapter.entered",
+  );
+  await expect(rail).toHaveAttribute("data-motion-target", "stats");
+  await expect(rail).toHaveAttribute("data-motion-sequence", /[1-9]\d*/);
   await expect
     .poll(() =>
       sample

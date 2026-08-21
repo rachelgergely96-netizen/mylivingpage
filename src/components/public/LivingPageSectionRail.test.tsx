@@ -12,6 +12,9 @@ describe("LivingPageSectionRail", () => {
     );
 
     expect(markup).toContain('aria-label="Living Page chapters"');
+    expect(markup).toContain('data-motion-signal="career-chapters"');
+    expect(markup).not.toContain("data-motion-event=");
+    expect(markup).not.toContain("data-motion-sequence=");
     expect(markup).toContain("Intro");
     expect(markup).toContain("Impact");
     expect(markup).toContain("Experience");

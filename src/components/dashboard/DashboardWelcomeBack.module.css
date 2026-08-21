@@ -2,7 +2,7 @@
   --welcome-accent: var(--site-action);
   --welcome-accent-bright: var(--site-action-hover);
   --welcome-accent-soft: var(--site-action-soft);
-  --welcome-reveal-duration: 760ms;
+  --welcome-reveal-duration: var(--motion-duration-context-active);
   position: fixed;
   z-index: 80;
   inset: 0;
@@ -18,7 +18,8 @@
     ),
     linear-gradient(135deg, #050b14 0%, #08111f 48%, #040912 100%);
   color: var(--site-text);
-  animation: welcome-backdrop-in 240ms ease-out both;
+  animation: welcome-backdrop-in var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
   will-change: clip-path, opacity;
 }
 
@@ -54,29 +55,30 @@
     transparent 62%
   );
   content: "";
-  transform: translateX(-55%);
-  animation: welcome-atmosphere-pass 1050ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  opacity: 0;
+  animation: welcome-atmosphere-pass var(--motion-duration-context)
+    var(--motion-ease-enter) both;
 }
 
 .root[data-state="revealing"] {
   overflow: hidden;
   pointer-events: none;
   animation: welcome-dashboard-reveal var(--welcome-reveal-duration)
-    cubic-bezier(0.76, 0, 0.24, 1) both;
+    var(--motion-ease-exit) both;
 }
 
 .root[data-state="revealing"] .stage {
   animation: welcome-stage-reveal var(--welcome-reveal-duration)
-    cubic-bezier(0.76, 0, 0.24, 1) both;
+    var(--motion-ease-exit) both;
 }
 
 .root[data-state="revealing"] .preview {
   animation: welcome-preview-reveal var(--welcome-reveal-duration)
-    cubic-bezier(0.22, 1, 0.36, 1) both;
+    var(--motion-ease-exit) both;
 }
 
-.root[data-state="holding"] .preview {
+:global(html[data-motion-mode="full"])
+  .root[data-state="holding"] .preview {
   animation: welcome-preview-hold var(--welcome-hold-duration) ease-in-out both;
 }
 
@@ -157,7 +159,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
     inset 0 -1px 0 color-mix(in srgb, var(--welcome-accent) 10%, transparent);
   grid-template-columns: minmax(0, 0.86fr) minmax(24rem, 1.14fr);
-  animation: welcome-stage-in 720ms 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-stage-in var(--motion-duration-context)
+    var(--motion-ease-enter) both;
 }
 
 .stage::before {
@@ -175,7 +178,8 @@
   );
   content: "";
   opacity: 0;
-  animation: welcome-signal-scan 880ms 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-signal-scan var(--motion-duration-context)
+    var(--motion-ease-enter) both;
   pointer-events: none;
 }
 
@@ -199,7 +203,8 @@
   font-weight: 650;
   letter-spacing: 0.11em;
   text-transform: uppercase;
-  animation: welcome-copy-in 440ms 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-copy-in var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
 }
 
 .eyebrow::before {
@@ -220,7 +225,8 @@
   letter-spacing: -0.065em;
   line-height: 0.94;
   text-wrap: balance;
-  animation: welcome-copy-in 560ms 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-copy-in var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
 }
 
 .body {
@@ -229,7 +235,8 @@
   color: rgba(222, 232, 244, 0.7);
   font-size: clamp(0.95rem, 1.5vw, 1.12rem);
   line-height: 1.7;
-  animation: welcome-copy-in 520ms 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-copy-in var(--motion-duration-standard) var(--motion-duration-micro)
+    var(--motion-ease-enter) both;
 }
 
 .signalRail {
@@ -240,7 +247,8 @@
   border-bottom: 1px solid
     color-mix(in srgb, var(--welcome-accent) 18%, #27364a);
   grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
-  animation: welcome-copy-in 480ms 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-copy-in var(--motion-duration-standard) 120ms
+    var(--motion-ease-enter) both;
 }
 
 .signalCell {
@@ -289,7 +297,8 @@
   flex: 0 0 auto;
   background: var(--welcome-accent);
   box-shadow: 0 0 18px var(--welcome-accent);
-  animation: welcome-status-lock 480ms 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-status-lock var(--motion-duration-micro) 220ms
+    var(--motion-ease-enter) both;
 }
 
 .statusDotMuted {
@@ -300,7 +309,8 @@
 .handoff {
   max-width: 35rem;
   margin-top: 1.25rem;
-  animation: welcome-copy-in 460ms 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-copy-in var(--motion-duration-standard) 120ms
+    var(--motion-ease-enter) both;
 }
 
 .handoffMeta {
@@ -340,7 +350,8 @@
   box-shadow: 0 0 14px var(--welcome-accent);
 }
 
-.root[data-state="holding"] .handoffFill {
+:global(html[data-motion-mode="full"])
+  .root[data-state="holding"] .handoffFill {
   animation: welcome-handoff-progress var(--welcome-hold-duration) linear both;
   animation-play-state: running;
 }
@@ -358,7 +369,8 @@
   align-items: center;
   margin-top: 2rem;
   gap: 1rem;
-  animation: welcome-copy-in 460ms 580ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-copy-in var(--motion-duration-standard) 120ms
+    var(--motion-ease-enter) both;
 }
 
 .continue {
@@ -472,8 +484,8 @@
     0 0 4rem color-mix(in srgb, var(--welcome-accent) 10%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform-origin: 50% 60%;
-  animation: welcome-preview-in 720ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: welcome-preview-in var(--motion-duration-context)
+    var(--motion-ease-enter) both;
   will-change: transform, opacity;
 }
 
@@ -489,8 +501,8 @@
   );
   content: "";
   transform: translateX(-125%);
-  animation: welcome-preview-light 850ms 430ms cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: welcome-preview-light var(--motion-duration-standard) 120ms
+    var(--motion-ease-enter) both;
   pointer-events: none;
 }
 
@@ -532,35 +544,30 @@
 }
 
 @keyframes welcome-dashboard-reveal {
-  0% {
-    opacity: 1;
-    clip-path: inset(0 0 0 0);
-  }
-
-  46% {
+  from {
     opacity: 1;
   }
 
-  100% {
+  to {
     opacity: 0;
-    clip-path: inset(0 0 0 100%);
   }
 }
 
 @keyframes welcome-atmosphere-pass {
-  from {
-    transform: translateX(-55%);
+  0%,
+  100% {
+    opacity: 0;
   }
 
-  to {
-    transform: translateX(55%);
+  50% {
+    opacity: 0.72;
   }
 }
 
 @keyframes welcome-stage-in {
   from {
     opacity: 0;
-    transform: translateY(1rem);
+    transform: translateY(var(--motion-distance-standard));
   }
 
   to {
@@ -572,16 +579,14 @@
 @keyframes welcome-signal-scan {
   0% {
     opacity: 0;
-    transform: translateY(0);
   }
 
-  24% {
+  50% {
     opacity: 0.9;
   }
 
   100% {
     opacity: 0;
-    transform: translateY(min(42rem, 68vh));
   }
 }
 
@@ -617,8 +622,8 @@
 @keyframes welcome-preview-in {
   from {
     opacity: 0;
-    transform: perspective(75rem) translate3d(2rem, 1.2rem, 0) rotateY(-5deg)
-      scale(0.97);
+    transform: perspective(75rem) translate3d(var(--motion-distance-standard), var(--motion-distance-micro), 0)
+      rotateY(-2deg) scale(0.99);
   }
 
   to {
@@ -644,8 +649,8 @@
   }
 
   50% {
-    transform: perspective(75rem) translate3d(0, -0.22rem, 0.8rem)
-      scale(1.006);
+    transform: perspective(75rem) translate3d(0, calc(-1 * var(--motion-distance-micro)), var(--motion-distance-micro))
+      scale(1.003);
   }
 }
 
@@ -667,7 +672,7 @@
 
   to {
     opacity: 0;
-    transform: translateX(2.5rem) scale(0.988);
+    transform: translateX(var(--motion-distance-standard)) scale(0.99);
   }
 }
 
@@ -679,8 +684,8 @@
 
   to {
     opacity: 0;
-    transform: perspective(75rem) translate3d(3rem, 0, 4rem) rotateY(-1.5deg)
-      scale(1.04);
+    transform: perspective(75rem) translate3d(var(--motion-distance-standard), 0, var(--motion-distance-micro))
+      rotateY(-1deg) scale(1.01);
   }
 }
 
@@ -760,36 +765,85 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .root,
-  .root::after,
-  .stage,
-  .stage::before,
-  .eyebrow,
-  .title,
-  .body,
-  .signalRail,
-  .handoff,
-  .handoffFill,
-  .actions,
-  .statusDot,
-  .preview,
-  .preview::after {
-    animation: none !important;
-    transition: none !important;
+@keyframes welcome-calm-reveal {
+  from {
+    opacity: 1;
   }
 
-  .root[data-state="revealing"] {
-    clip-path: none;
+  to {
     opacity: 0;
   }
+}
 
-  /* The fill animation is disabled above, so the bar would sit empty for the
-     whole hold — hide it and let the aria-live status line carry the
-     auto-advance message instead. */
+:global(html[data-motion-mode="calm"])
+  .root:not([data-state="revealing"]) {
+  animation-duration: var(--motion-duration-micro);
+  animation-timing-function: var(--motion-ease-enter);
+}
+
+:global(html[data-motion-mode="calm"]) .root::after,
+:global(html[data-motion-mode="calm"]) .stage,
+:global(html[data-motion-mode="calm"]) .stage::before,
+:global(html[data-motion-mode="calm"]) .eyebrow,
+:global(html[data-motion-mode="calm"]) .title,
+:global(html[data-motion-mode="calm"]) .body,
+:global(html[data-motion-mode="calm"]) .signalRail,
+:global(html[data-motion-mode="calm"]) .handoff,
+:global(html[data-motion-mode="calm"]) .handoffFill,
+:global(html[data-motion-mode="calm"]) .actions,
+:global(html[data-motion-mode="calm"]) .statusDot,
+:global(html[data-motion-mode="calm"]) .preview,
+:global(html[data-motion-mode="calm"]) .preview::after {
+  animation: none !important;
+}
+
+:global(html[data-motion-mode="calm"]) .root[data-state="revealing"] {
+  clip-path: none;
+  animation: welcome-calm-reveal var(--welcome-reveal-duration)
+    var(--motion-ease-exit) both;
+}
+
+:global(html[data-motion-mode="calm"]) :is(.pause, .skip, .continue) {
+  transition-duration: var(--motion-duration-micro);
+}
+
+:global(html[data-motion-mode="still"]) .root,
+:global(html[data-motion-mode="still"]) .root::after,
+:global(html[data-motion-mode="still"]) .stage,
+:global(html[data-motion-mode="still"]) .stage::before,
+:global(html[data-motion-mode="still"]) .eyebrow,
+:global(html[data-motion-mode="still"]) .title,
+:global(html[data-motion-mode="still"]) .body,
+:global(html[data-motion-mode="still"]) .signalRail,
+:global(html[data-motion-mode="still"]) .handoff,
+:global(html[data-motion-mode="still"]) .handoffFill,
+:global(html[data-motion-mode="still"]) .actions,
+:global(html[data-motion-mode="still"]) .statusDot,
+:global(html[data-motion-mode="still"]) .preview,
+:global(html[data-motion-mode="still"]) .preview::after,
+:global(html[data-motion-mode="still"]) :is(.pause, .skip, .continue) {
+  animation: none !important;
+  transition: none !important;
+}
+
+:global(html[data-motion-mode="still"])
+  .root[data-state="revealing"] {
+  clip-path: none;
+  opacity: 0;
+}
+
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
+  .continue:hover,
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
+  .continue:focus-visible {
+  transform: none;
+}
+
+/* Calm and Still do not animate the hold meter. The aria-live status line
+   continues to communicate that the dashboard opens automatically. */
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
   .handoffTrack {
-    display: none;
-  }
+  display: none;
 }
 
 @media (forced-colors: active) {

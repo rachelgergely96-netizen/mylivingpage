@@ -521,8 +521,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+:global(html:is([data-motion-mode="calm"], [data-motion-mode="still"]))
   .railStatus::before {
-    animation: none;
-  }
+  animation: none;
 }

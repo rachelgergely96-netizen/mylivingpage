@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import {
+  MOTION_EASINGS,
+  MOTION_MODE_POLICIES,
+  resolveMotionDuration,
+} from "@/lib/motion";
 
 interface TiltCardProps {
   children: ReactNode;
@@ -53,8 +59,8 @@ function setGlassLight(
 /**
  * A subtle cursor-following 3D tilt for STATIC cards (no live canvas inside —
  * transforming a canvas host janks and blurs on Safari). Disabled on coarse /
- * hover-less pointers and under reduced motion, and it only animates transform
- * so it never thrashes layout.
+ * hover-less pointers and outside Full motion, and it only animates transform
+ * so it never thrashes layout. Explicit motion preferences override the OS.
  */
 export default function TiltCard({
   children,
@@ -64,6 +70,9 @@ export default function TiltCard({
   style,
   targetSelector,
 }: TiltCardProps) {
+  const { mode: motionMode } = useMotionPreference();
+  const allowsTilt =
+    MOTION_MODE_POLICIES[motionMode].allowsContinuousMotion;
   const innerRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef(0);
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -82,11 +91,27 @@ export default function TiltCard({
     [],
   );
 
+  useEffect(() => {
+    if (allowsTilt) return;
+    const target = targetSelector
+      ? (hostRef.current?.querySelector<HTMLElement>(targetSelector) ?? null)
+      : innerRef.current;
+    cancelAnimationFrame(frameRef.current);
+    window.clearTimeout(resetTimerRef.current);
+    if (!target) return;
+    target.dataset.tiltActive = "false";
+    target.style.transition = "none";
+    target.style.transform =
+      "perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)";
+    target.style.willChange = "auto";
+    setGlassLight(target, 0, 0);
+  }, [allowsTilt, targetSelector]);
+
   const canTilt = () =>
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
     window.matchMedia("(hover: hover) and (pointer: fine)").matches &&
-    !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    allowsTilt;
 
   const handleMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const el = getTarget();
@@ -97,7 +122,8 @@ export default function TiltCard({
     const py = (event.clientY - rect.top) / Math.max(rect.height, 1) - 0.5;
     cancelAnimationFrame(frameRef.current);
     frameRef.current = requestAnimationFrame(() => {
-      el.style.transition = "transform 90ms cubic-bezier(0.2, 0.7, 0.2, 1)";
+      const durationMs = resolveMotionDuration("micro", motionMode);
+      el.style.transition = `transform ${durationMs}ms ${MOTION_EASINGS.standard}`;
       el.style.transform = `perspective(1000px) rotateX(${(-py * 2 * max).toFixed(2)}deg) rotateY(${(px * 2 * max).toFixed(2)}deg) translateZ(${lift}px)`;
       setGlassLight(el, px, py);
     });
@@ -111,7 +137,9 @@ export default function TiltCard({
     window.clearTimeout(resetTimerRef.current);
     el.dataset.tiltActive = "true";
     el.style.willChange = "transform";
-    el.style.transition = "transform 140ms ease-out";
+    el.style.transition = `transform ${resolveMotionDuration(
+      "micro", motionMode,
+    )}ms ${MOTION_EASINGS.enter}`;
     el.style.transformStyle = "preserve-3d";
   };
 
@@ -121,13 +149,16 @@ export default function TiltCard({
     cancelAnimationFrame(frameRef.current);
     window.clearTimeout(resetTimerRef.current);
     el.dataset.tiltActive = "false";
-    el.style.transition = "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)";
+    const resetDurationMs = allowsTilt
+      ? resolveMotionDuration("context", motionMode)
+      : 0;
+    el.style.transition = `transform ${resetDurationMs}ms ${MOTION_EASINGS.enter}`;
     el.style.transform =
       "perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)";
     setGlassLight(el, 0, 0);
     resetTimerRef.current = window.setTimeout(() => {
       el.style.willChange = "auto";
-    }, 440);
+    }, resetDurationMs + 20);
   };
 
   return (

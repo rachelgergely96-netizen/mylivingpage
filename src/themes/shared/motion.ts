@@ -1,6 +1,8 @@
+import { MOTION_MODE_POLICIES, type MotionMode } from "@/lib/motion";
 import type { ThemeMotionContext } from "../types";
 
 export interface ResolvedThemeMotion {
+  motionMode: MotionMode;
   scrollProgress: number;
   scrollVelocity: number;
   activeSection: string | null;
@@ -51,7 +53,12 @@ export function storyStepWeight(
 export function resolveThemeMotion(
   motion: Readonly<ThemeMotionContext> | undefined,
 ): ResolvedThemeMotion {
-  const reducedMotion = motion?.reducedMotion ?? false;
+  const requestedMode =
+    motion?.motionMode ?? (motion?.reducedMotion ? "still" : "full");
+  // Legacy callers can still force Still with reducedMotion even if a stale
+  // additive motionMode value is present.
+  const motionMode: MotionMode = motion?.reducedMotion ? "still" : requestedMode;
+  const policy = MOTION_MODE_POLICIES[motionMode];
   const scrollProgress = finiteClamp(motion?.scrollProgress, 0, 1);
   const sectionCount = Math.round(finiteClamp(motion?.sectionCount, 0, 100));
   const activeSectionIndex = Math.round(
@@ -73,18 +80,17 @@ export function resolveThemeMotion(
       : scrollProgress;
 
   return {
+    motionMode,
     scrollProgress,
-    scrollVelocity: reducedMotion
-      ? 0
-      : finiteClamp(motion?.scrollVelocity, -4, 4),
+    scrollVelocity:
+      finiteClamp(motion?.scrollVelocity, -4, 4) * policy.impulseScale,
     activeSection: motion?.activeSection ?? null,
     activeSectionIndex,
     sectionCount,
     sectionProgress,
-    sectionImpulse: reducedMotion
-      ? 0
-      : finiteClamp(motion?.sectionImpulse, 0, 1),
-    sectionDirection: reducedMotion
+    sectionImpulse:
+      finiteClamp(motion?.sectionImpulse, 0, 1) * policy.impulseScale,
+    sectionDirection: policy.impulseScale === 0
       ? 0
       : motion?.sectionDirection === 1
         ? 1
@@ -101,12 +107,9 @@ export function resolveThemeMotion(
     ),
     focusX: finiteClamp(motion?.focusX, 0, 1, 0.5),
     focusY: finiteClamp(motion?.focusY, 0, 1, 0.5),
-    interactionImpulse: reducedMotion
-      ? 0
-      : finiteClamp(motion?.interactionImpulse, 0, 1),
-    pointerSpeed: reducedMotion
-      ? 0
-      : finiteClamp(motion?.pointerSpeed, 0, 4),
+    interactionImpulse:
+      finiteClamp(motion?.interactionImpulse, 0, 1) * policy.impulseScale,
+    pointerSpeed: finiteClamp(motion?.pointerSpeed, 0, 4) * policy.pointerScale,
   };
 }
 

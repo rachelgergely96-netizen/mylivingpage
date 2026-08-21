@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { MOTION_EVENTS } from "@/lib/motion";
 import type { ParsedResumeImport, ResumeImportField } from "@/lib/resume-import";
 import { MAX_RESUME_FILE_BYTES, MAX_RESUME_FILE_LABEL } from "@/lib/resume-file-limits";
 
@@ -62,6 +63,7 @@ export default function ResumeImport({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [errorField, setErrorField] = useState<"file" | "text" | null>(null);
+  const [importSequence, setImportSequence] = useState(0);
   const [lastImport, setLastImport] = useState<{
     sourceName: string;
     detectedFields: ResumeImportField[];
@@ -97,6 +99,7 @@ export default function ResumeImport({
     }
 
     setImporting(true);
+    setImportSequence((sequence) => sequence + 1);
     setError("");
     setErrorField(null);
     setLastImport(null);
@@ -150,7 +153,10 @@ export default function ResumeImport({
     : [];
 
   return (
-    <section className="site-panel overflow-hidden">
+    <section
+      className="site-panel overflow-hidden"
+      aria-busy={importing || undefined}
+    >
       <div className="p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
@@ -307,6 +313,10 @@ export default function ResumeImport({
           <div
             aria-live="polite"
             className="mt-4 border border-site-success bg-site-surface px-4 py-3"
+            data-motion-event={MOTION_EVENTS.RESUME_IMPORT_FACT_DETECTED}
+            data-motion-signal="truth-transfer"
+            data-motion-state="facts-detected"
+            data-motion-sequence={importSequence}
           >
             <p className="text-sm font-medium text-site-success">
               Autofilled {lastImport.detectedFields.length}{" "}
@@ -329,6 +339,11 @@ export default function ResumeImport({
                     <div
                       key={field}
                       className="grid gap-0.5 border-l-2 border-site-border pl-3"
+                      data-motion-event={MOTION_EVENTS.RESUME_IMPORT_FACT_DETECTED}
+                      data-motion-signal="truth-transfer"
+                      data-motion-state="fact-confirmed"
+                      data-motion-sequence={importSequence}
+                      data-motion-target={field}
                     >
                       <dt className="text-xs font-semibold capitalize text-site-text">
                         {FIELD_LABELS[field]}

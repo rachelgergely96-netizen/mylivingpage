@@ -198,6 +198,20 @@ describe("analytics dashboard page", () => {
     );
   });
 
+  it("uses a valid range query for the analytics result", async () => {
+    fetchPageAnalyticsDashboardMock.mockResolvedValue(makeBaseAnalytics());
+
+    const element = await AnalyticsPage({
+      params: Promise.resolve({ pageId: "page-1" }),
+      searchParams: Promise.resolve({ range: "7d" }),
+    });
+    renderToStaticMarkup(element);
+
+    expect(fetchPageAnalyticsDashboardMock).toHaveBeenCalledWith(
+      expect.objectContaining({ rangeKey: "7d" }),
+    );
+  });
+
   it("renders the unavailable dashboard state instead of throwing", async () => {
     fetchPageAnalyticsDashboardMock.mockResolvedValue(
       createUnavailablePageAnalyticsDashboard({

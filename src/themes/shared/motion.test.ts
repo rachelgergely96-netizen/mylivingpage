@@ -21,6 +21,7 @@ describe("Living Page motion model", () => {
     const motion = createInitialThemeMotionContext();
 
     expect(motion).toMatchObject({
+      motionMode: "full",
       scrollProgress: 0,
       scrollVelocity: 0,
       activeSection: null,
@@ -70,6 +71,19 @@ describe("Living Page motion model", () => {
         sections: [],
       }).scrollProgress,
     ).toBe(1);
+  });
+
+  it("uses the physical scroll port for progress and the inset viewport for chapters", () => {
+    const snapshot = calculateScrollMotion({
+      scrollTop: 1_500,
+      scrollHeight: 2_000,
+      scrollPortHeight: 500,
+      viewportHeight: 440,
+      viewportTop: 60,
+      sections: [],
+    });
+
+    expect(snapshot.scrollProgress).toBe(1);
   });
 
   it("uses visible section ratio with stable DOM-order ties", () => {
@@ -134,6 +148,39 @@ describe("Living Page motion model", () => {
       pointerSpeed: 0,
     });
     expect(finiteClamp(Number.NaN, -1, 1, 0.5)).toBe(0.5);
+  });
+
+  it("resolves Full, Calm, and Still additively without breaking the legacy flag", () => {
+    const motion = createInitialThemeMotionContext();
+    motion.scrollVelocity = 3;
+    motion.sectionImpulse = 0.9;
+    motion.sectionDirection = 1;
+    motion.interactionImpulse = 0.75;
+    motion.pointerSpeed = 3;
+    motion.motionMode = "calm";
+
+    expect(resolveThemeMotion(motion)).toMatchObject({
+      motionMode: "calm",
+      scrollVelocity: 0,
+      sectionImpulse: 0,
+      sectionDirection: 0,
+      interactionImpulse: 0,
+      pointerSpeed: 0,
+    });
+
+    motion.motionMode = "still";
+    expect(resolveThemeMotion(motion)).toMatchObject({
+      motionMode: "still",
+      scrollVelocity: 0,
+      sectionImpulse: 0,
+      sectionDirection: 0,
+      interactionImpulse: 0,
+      pointerSpeed: 0,
+    });
+
+    motion.motionMode = "full";
+    motion.reducedMotion = true;
+    expect(resolveThemeMotion(motion).motionMode).toBe("still");
   });
 
   it("derives a continuous normalized position through the ordered page story", () => {

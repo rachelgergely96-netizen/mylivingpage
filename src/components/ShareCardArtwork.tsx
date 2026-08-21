@@ -143,6 +143,7 @@ export function ShareCardArtwork({
 
         {animatedShine && treatment.shine ? (
           <div
+            aria-hidden="true"
             data-share-card-light-stage
             style={{
               bottom: 0,
@@ -178,6 +179,21 @@ export function ShareCardArtwork({
                   position: "absolute",
                   top: "-15%",
                   width: "130%",
+                }}
+              />
+            ) : null}
+            {treatment.id === "holographic" ? (
+              <div
+                className="share-card-holo-ribbon"
+                data-share-card-optical-ribbon
+                style={{
+                  background: `radial-gradient(ellipse 78% 60% at 48% 52%, rgba(0,0,0,0) 30%, rgba(104,232,255,0.13) 40%, rgba(255,255,255,0.22) 48%, ${visual.glow} 54%, rgba(255,104,220,0.15) 61%, rgba(255,198,120,0.09) 66%, rgba(0,0,0,0) 75%)`,
+                  height: "96%",
+                  pointerEvents: "none",
+                  position: "absolute",
+                  right: "-12%",
+                  top: "2%",
+                  width: "68%",
                 }}
               />
             ) : null}

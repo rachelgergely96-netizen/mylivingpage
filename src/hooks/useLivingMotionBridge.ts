@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { MutableRefObject, RefObject } from "react";
+import { calculateLivingPageViewport } from "@/lib/living-page-viewport";
 import type { ThemeMotionContext } from "@/themes/types";
 
 const SECTION_SELECTOR = "[data-motion-section], [data-analytics-section]";
@@ -40,6 +41,8 @@ interface ScrollMotionInput {
   scrollTop: number;
   scrollHeight: number;
   viewportHeight: number;
+  /** Physical scroll port height, before sticky UI is removed. */
+  scrollPortHeight?: number;
   viewportTop?: number;
   sections: MotionSectionGeometry[];
 }
@@ -58,6 +61,7 @@ export function clampMotionValue(value: number, min = 0, max = 1): number {
 
 export function createInitialThemeMotionContext(): ThemeMotionContext {
   return {
+    motionMode: "full",
     scrollProgress: 0,
     scrollVelocity: 0,
     scrollDirection: 0,
@@ -96,10 +100,11 @@ export function calculateScrollMotion({
   scrollTop,
   scrollHeight,
   viewportHeight,
+  scrollPortHeight = viewportHeight,
   viewportTop = 0,
   sections,
 }: ScrollMotionInput): ScrollMotionSnapshot {
-  const maxScroll = Math.max(0, scrollHeight - viewportHeight);
+  const maxScroll = Math.max(0, scrollHeight - scrollPortHeight);
   const scrollProgress = maxScroll > 0 ? clampMotionValue(scrollTop / maxScroll) : 0;
 
   if (sections.length === 0) {
@@ -164,6 +169,7 @@ interface UseLivingMotionBridgeOptions {
   containerRef: RefObject<HTMLDivElement | null>;
   motionRef: MutableRefObject<ThemeMotionContext>;
   enabled: boolean;
+  onMotionChange?: () => void;
 }
 
 /**
@@ -174,6 +180,7 @@ export function useLivingMotionBridge({
   containerRef,
   motionRef,
   enabled,
+  onMotionChange,
 }: UseLivingMotionBridgeOptions): void {
   useEffect(() => {
     const container = containerRef.current;
@@ -233,6 +240,14 @@ export function useLivingMotionBridge({
       frame = null;
       const now = performance.now();
       const scrollRect = scrollRoot.getBoundingClientRect();
+      const stickyInset =
+        scrollRoot.querySelector<HTMLElement>("[data-living-section-rail]")
+          ?.offsetHeight ?? 0;
+      const viewport = calculateLivingPageViewport({
+        rootTop: scrollRect.top,
+        rootHeight: scrollRoot.clientHeight,
+        stickyInset,
+      });
       const seenSectionIds = new Set<string>();
       const sectionEntries = Array.from(
         scrollRoot.querySelectorAll<HTMLElement>(SECTION_SELECTOR),
@@ -253,8 +268,8 @@ export function useLivingMotionBridge({
       const snapshot = calculateScrollMotion({
         scrollTop: scrollRoot.scrollTop,
         scrollHeight: scrollRoot.scrollHeight,
-        viewportHeight: scrollRoot.clientHeight,
-        viewportTop: scrollRect.top,
+        scrollPortHeight: scrollRoot.clientHeight,
+        ...viewport,
         sections,
       });
       const motion = motionRef.current;
@@ -292,7 +307,9 @@ export function useLivingMotionBridge({
         container.removeAttribute("data-motion-section");
       }
       if (previousSection && previousSection !== snapshot.activeSection) {
-        if (motion.reducedMotion) {
+        const allowsSectionImpulse =
+          !motion.reducedMotion && (motion.motionMode ?? "full") === "full";
+        if (!allowsSectionImpulse) {
           motion.sectionImpulse = 0;
           motion.sectionDirection = 0;
         } else if (canTriggerSectionPulse(now, lastSectionPulseAt)) {
@@ -309,6 +326,7 @@ export function useLivingMotionBridge({
       }
 
       syncFocusTarget();
+      onMotionChange?.();
     };
 
     const scheduleMeasure = () => {
@@ -322,26 +340,31 @@ export function useLivingMotionBridge({
       const changed = nextTarget !== pointerTarget;
       pointerTarget = nextTarget;
       syncFocusTarget(changed ? 0.42 : 0);
+      onMotionChange?.();
     };
     const handlePointerOut = (event: PointerEvent) => {
       if (pointerTarget?.contains(event.relatedTarget as Node | null)) return;
       pointerTarget = findMotionTarget(event.relatedTarget);
       syncFocusTarget(pointerTarget ? 0.32 : 0);
+      onMotionChange?.();
     };
     const handlePointerDown = (event: PointerEvent) => {
       pointerTarget = findMotionTarget(event.target);
       syncFocusTarget(1);
+      onMotionChange?.();
     };
     const handleFocusIn = (event: FocusEvent) => {
       const nextTarget = findMotionTarget(event.target);
       const changed = nextTarget !== keyboardTarget;
       keyboardTarget = nextTarget;
       syncFocusTarget(changed ? 0.8 : 0);
+      onMotionChange?.();
     };
     const handleFocusOut = (event: FocusEvent) => {
       if (keyboardTarget?.contains(event.relatedTarget as Node | null)) return;
       keyboardTarget = findMotionTarget(event.relatedTarget);
       syncFocusTarget(keyboardTarget ? 0.65 : 0);
+      onMotionChange?.();
     };
 
     measure(false);
@@ -366,5 +389,5 @@ export function useLivingMotionBridge({
       container.removeEventListener("focusout", handleFocusOut);
       window.removeEventListener("resize", handleResize);
     };
-  }, [containerRef, enabled, motionRef]);
+  }, [containerRef, enabled, motionRef, onMotionChange]);
 }

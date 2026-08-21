@@ -112,6 +112,9 @@ describe("PageAnalyticsDashboard", () => {
     expect(markup).toContain("Details are temporarily unavailable");
     expect(markup).toContain("Traffic data could not be loaded right now. Please try again soon.");
     expect(markup).toContain("Try again");
+    expect(markup).toContain('data-motion-state="unavailable"');
+    expect(markup).not.toContain("data-motion-event=");
+    expect(markup).not.toContain("data-motion-target=");
     expect(markup).not.toContain("New people");
     expect(markup).not.toContain("When people looked over");
   });
@@ -135,5 +138,76 @@ describe("PageAnalyticsDashboard", () => {
     expect(markup).toContain("Target the next send");
     expect(markup).toContain("Recruiter follow-up");
     expect(markup).toContain("Hiring manager version");
+  });
+
+  it("exposes daily values in a semantic disclosure without focusable bars", () => {
+    const markup = renderToStaticMarkup(
+      <PageAnalyticsDashboard
+        analytics={makeAnalytics()}
+        pageId="page-1"
+        pageName="Rachel"
+        publicPath="/rachel"
+      />,
+    );
+
+    expect(markup).toContain('data-testid="analytics-daily-values"');
+    expect(markup).toContain("View daily values");
+    expect(markup).toContain("<table");
+    expect(markup).toContain('<th scope="col"');
+    expect(markup).toContain('<th scope="row"');
+    expect(markup).toContain("People who looked");
+    expect(markup).toContain('data-analytics-day-bar="');
+    expect(markup).not.toMatch(/data-analytics-day-bar="[^"]+"[^>]*tabindex=/);
+  });
+
+  it("does not treat a directly rendered range result as a user range change", () => {
+    const analytics = makeAnalytics();
+    analytics.state = {
+      ...analytics.state,
+      lowData: false,
+    };
+
+    const directMarkup = renderToStaticMarkup(
+      <PageAnalyticsDashboard
+        analytics={analytics}
+        pageId="page-1"
+        pageName="Rachel"
+        publicPath="/rachel"
+      />,
+    );
+    const defaultMarkup = renderToStaticMarkup(
+      <PageAnalyticsDashboard
+        analytics={analytics}
+        pageId="page-1"
+        pageName="Rachel"
+        publicPath="/rachel"
+      />,
+    );
+
+    expect(directMarkup).not.toContain(
+      'data-motion-event="analytics.range.updated"',
+    );
+    expect(directMarkup).not.toContain('data-motion-state="resolved"');
+    expect(directMarkup).not.toContain('data-motion-target="7d"');
+    expect(directMarkup).not.toContain("data-motion-sequence=");
+    expect(directMarkup).toContain('data-analytics-range-target="7d"');
+    expect(defaultMarkup).not.toContain("data-motion-event=");
+    expect(defaultMarkup).not.toContain("data-motion-target=");
+  });
+
+  it("keeps a low-data range render unresolved", () => {
+    const markup = renderToStaticMarkup(
+      <PageAnalyticsDashboard
+        analytics={makeAnalytics()}
+        pageId="page-1"
+        pageName="Rachel"
+        publicPath="/rachel"
+      />,
+    );
+
+    expect(markup).toContain('data-motion-signal="edit-to-proof"');
+    expect(markup).toContain('data-motion-state="low-data"');
+    expect(markup).not.toContain("data-motion-event=");
+    expect(markup).not.toContain("data-motion-target=");
   });
 });

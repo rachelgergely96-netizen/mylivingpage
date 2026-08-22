@@ -1,0 +1,33 @@
+.previewFrame {
+  transition:
+    border-color var(--motion-duration-micro) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-micro) var(--motion-ease-standard);
+}
+
+.previewFrame[data-correspondence-target="identity"]
+  :global([data-resume-header]),
+.previewFrame[data-correspondence-target="summary"]
+  :global([data-motion-section="summary"]),
+.previewFrame[data-correspondence-target="experience"]
+  :global([data-motion-section="experience"]),
+.previewFrame[data-correspondence-target="projects"]
+  :global([data-motion-section="projects"]),
+.previewFrame[data-correspondence-target="education"]
+  :global([data-motion-section="education"]),
+.previewFrame[data-correspondence-target="skills"]
+  :global([data-motion-section="skills"]),
+.previewFrame[data-correspondence-target="certifications"]
+  :global([data-motion-section="certifications"]) {
+  outline: 2px solid var(--theme-accent, var(--site-action));
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .previewFrame {
+    transition: none;
+  }
+}
+
+:global(html[data-motion-mode="still"]) .previewFrame {
+  transition: none;
+}

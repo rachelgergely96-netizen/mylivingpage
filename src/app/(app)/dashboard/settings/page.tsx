@@ -10,6 +10,7 @@ import {
 } from "@/lib/account-access";
 import PageVisibilityControl from "@/components/dashboard/PageVisibilityControl";
 import MotionModeControl from "@/components/motion/MotionModeControl";
+import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
 import {
   getPageVisibilityState,
@@ -476,10 +477,12 @@ export default function SettingsPage() {
           <p className="site-eyebrow">Settings</p>
           <h1 className="site-page-title mt-2">Account settings</h1>
         </div>
-        <p className="sr-only" role="status">Loading settings…</p>
-        <div aria-hidden="true" className="space-y-5">
-          <div className="site-panel h-72 animate-pulse p-5 sm:p-7" />
-          <div className="site-panel h-44 animate-pulse p-5 sm:p-7" />
+        <div className="site-panel flex items-center gap-4 p-5 sm:p-7" role="status" aria-live="polite">
+          <ModeAwareLoadingIndicator size="lg" />
+          <div>
+            <p className="font-semibold text-site-text">Loading settings</p>
+            <p className="mt-1 text-sm text-site-muted">Preparing your account controls…</p>
+          </div>
         </div>
       </main>
     );

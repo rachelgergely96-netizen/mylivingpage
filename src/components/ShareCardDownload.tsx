@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ScaledShareCardArtwork } from "@/components/ScaledShareCardArtwork";
 import { ShareCardArtwork } from "@/components/ShareCardArtwork";
@@ -27,6 +27,8 @@ interface ShareCardDownloadProps {
   analyticsHref?: string;
   analyticsCtaLabel?: string;
   className?: string;
+  onDialogOpen?: () => void;
+  returnFocusTarget?: () => HTMLElement | null;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -68,6 +70,8 @@ export default function ShareCardDownload({
   analyticsHref,
   analyticsCtaLabel = "Open page analytics",
   className,
+  onDialogOpen,
+  returnFocusTarget,
 }: ShareCardDownloadProps) {
   const exportCardRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -139,9 +143,9 @@ export default function ShareCardDownload({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousBodyOverflow;
-      (previouslyFocused ?? trigger)?.focus();
+      (returnFocusTarget?.() ?? previouslyFocused ?? trigger)?.focus();
     };
-  }, [open]);
+  }, [open, returnFocusTarget]);
 
   if (!isOwner) return null;
   if (!enabled) return null;
@@ -257,6 +261,7 @@ export default function ShareCardDownload({
     setDownloadError(null);
     setShareFeedback(null);
     setCopied(false);
+    onDialogOpen?.();
     setOpen(true);
   };
 

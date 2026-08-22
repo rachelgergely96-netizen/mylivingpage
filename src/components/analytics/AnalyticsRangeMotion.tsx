@@ -1,11 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { MouseEvent, ReactNode } from "react";
 import Link from "next/link";
 import type { AnalyticsRangeKey } from "@/lib/analytics/constants";
 import {
   consumeClientAnalyticsRangeIntent,
+  getAnalyticsRangeMotionRenderKey,
   isCurrentAnalyticsRangeMotionResolution,
   markClientAnalyticsRangeIntent,
   type AnalyticsRangeMotionResolution,
@@ -21,6 +28,14 @@ interface AnalyticsRangeMotionBoundaryProps {
   rangeKey: AnalyticsRangeKey;
 }
 
+interface AnalyticsRangeMotionContextValue {
+  resolution: AnalyticsRangeMotionResolution | null;
+  resolved: boolean;
+}
+
+const AnalyticsRangeMotionContext =
+  createContext<AnalyticsRangeMotionContextValue | null>(null);
+
 export function AnalyticsRangeMotionBoundary({
   availability,
   children,
@@ -30,10 +45,24 @@ export function AnalyticsRangeMotionBoundary({
 }: AnalyticsRangeMotionBoundaryProps) {
   const [resolution, setResolution] =
     useState<AnalyticsRangeMotionResolution | null>(null);
+  const handledRenderKeyRef = useRef<string | null>(null);
   const isUnavailable = availability === "unavailable";
   const canResolve = !isUnavailable && !lowData;
 
   useEffect(() => {
+    const renderKey = getAnalyticsRangeMotionRenderKey(
+      pageId,
+      rangeKey,
+      canResolve,
+    );
+    // React Strict Mode replays effect setup on the same mounted instance.
+    // The first setup consumes the one-shot intent; the replay must preserve
+    // that resolution rather than clearing it and finding nothing to consume.
+    if (handledRenderKeyRef.current === renderKey) {
+      return;
+    }
+    handledRenderKeyRef.current = renderKey;
+
     // A client boundary can survive an App Router query navigation. Clear the
     // previous range before consuming the intent for these rendered props so
     // Back/direct navigation cannot replay an earlier semantic event.
@@ -58,8 +87,9 @@ export function AnalyticsRangeMotionBoundary({
   return (
     <div
       className="space-y-6 font-site"
-      data-motion-event={resolved ? MOTION_EVENTS.ANALYTICS_RANGE_UPDATED : undefined}
-      data-motion-signal={MOTION_SIGNALS.EDIT_TO_PROOF}
+      data-motion-signal={
+        isUnavailable ? undefined : MOTION_SIGNALS.EDIT_TO_PROOF
+      }
       data-motion-state={
         isUnavailable
           ? "unavailable"
@@ -69,9 +99,48 @@ export function AnalyticsRangeMotionBoundary({
               ? "resolved"
               : undefined
       }
-      data-motion-target={resolved ? rangeKey : undefined}
-      data-motion-sequence={resolved ? resolution.sequence : undefined}
     >
+      <AnalyticsRangeMotionContext.Provider
+        value={{ resolution, resolved }}
+      >
+        {children}
+      </AnalyticsRangeMotionContext.Provider>
+    </div>
+  );
+}
+
+export function AnalyticsRangeMotionTarget({
+  children,
+  rangeLabel,
+}: {
+  children: ReactNode;
+  rangeLabel: string;
+}) {
+  const context = useContext(AnalyticsRangeMotionContext);
+  const resolved = context?.resolved ?? false;
+
+  return (
+    <div
+      data-analytics-range-summary
+      data-motion-event={
+        resolved ? MOTION_EVENTS.ANALYTICS_RANGE_UPDATED : undefined
+      }
+      data-motion-signal={resolved ? MOTION_SIGNALS.EDIT_TO_PROOF : undefined}
+      data-motion-state={resolved ? "resolved" : undefined}
+      data-motion-sequence={
+        resolved ? context?.resolution?.sequence : undefined
+      }
+      data-motion-target={resolved ? "summary-metrics" : undefined}
+    >
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-analytics-range-update-status
+        className="sr-only"
+      >
+        {resolved ? `Activity summary updated for ${rangeLabel.toLowerCase()}.` : ""}
+      </p>
       {children}
     </div>
   );

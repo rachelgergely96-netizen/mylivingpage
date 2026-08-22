@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   PAGE_VISIBILITY_WRITES,
   type PageVisibilityState,
 } from "@/lib/page-visibility";
+import { MOTION_EVENTS, MOTION_SIGNALS } from "@/lib/motion";
 
 interface PublishPageButtonProps {
   pageId: string;
@@ -31,6 +32,10 @@ export default function PublishPageButton({
   const [publishing, setPublishing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmedState, setConfirmedState] = useState<
+    Extract<PageVisibilityState, "public" | "link"> | null
+  >(null);
+  const [confirmationSequence, setConfirmationSequence] = useState(0);
   const busy = publishing || isPending;
 
   const publishPage = async () => {
@@ -40,6 +45,7 @@ export default function PublishPageButton({
 
     setPublishing(true);
     setError(null);
+    setConfirmedState(null);
 
     try {
       const response = await fetch(`/api/pages/${pageId}`, {
@@ -55,8 +61,10 @@ export default function PublishPageButton({
         throw new Error(payload?.error ?? "Unable to publish this page.");
       }
 
-      onPublished?.(publishAs);
+      setConfirmationSequence((sequence) => sequence + 1);
+      setConfirmedState(publishAs);
       startTransition(() => {
+        onPublished?.(publishAs);
         router.refresh();
       });
     } catch (publishError) {
@@ -116,6 +124,32 @@ export default function PublishPageButton({
           <span>{error}</span>
         </p>
       ) : null}
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-dashboard-publish-status
+        data-motion-event={
+          confirmedState ? MOTION_EVENTS.PAGE_PUBLISH_CONFIRMED : undefined
+        }
+        data-motion-signal={
+          confirmedState ? MOTION_SIGNALS.SHARE_HANDOFF : undefined
+        }
+        data-motion-state={confirmedState ? "confirmed" : undefined}
+        data-motion-sequence={confirmedState ? confirmationSequence : undefined}
+        data-motion-target={confirmedState ? "visibility" : undefined}
+        className={
+          confirmedState
+            ? "site-alert-success mt-2 px-3 py-2 text-xs leading-5"
+            : "sr-only"
+        }
+      >
+        {confirmedState
+          ? confirmedState === "link"
+            ? "Page published as link-only."
+            : "Page published publicly."
+          : ""}
+      </p>
     </div>
   );
 }

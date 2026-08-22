@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import AuthMessage from "@/components/auth/AuthMessage";
+import AuthDestinationNotice from "@/components/auth/AuthDestinationNotice";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
 import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
@@ -25,6 +26,7 @@ export default function SignupPage() {
   const [captchaError, setCaptchaError] = useState(false);
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/create");
+  const [destinationPath, setDestinationPath] = useState<string | null>(null);
   const [signupReferrer, setSignupReferrer] = useState<string | null>(null);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -32,7 +34,12 @@ export default function SignupPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setNextPath(sanitizeInternalRedirectPath(params.get("next"), "/create"));
+    const requestedNext = params.get("next");
+    setNextPath(sanitizeInternalRedirectPath(requestedNext, "/create"));
+    const visibleNext = requestedNext
+      ? sanitizeInternalRedirectPath(requestedNext, "")
+      : "";
+    setDestinationPath(visibleNext || null);
     const ref = params.get("ref") || params.get("utm_source") || null;
     if (ref) setSignupReferrer(ref);
   }, []);
@@ -172,6 +179,7 @@ export default function SignupPage() {
           You&apos;re a few minutes away from having something you can actually send.
         </p>
 
+        <AuthDestinationNotice action="verify" path={destinationPath} />
         {status === "success" ? (
           <div className="mt-6">
             <AuthMessage id="signup-message" tone="success">

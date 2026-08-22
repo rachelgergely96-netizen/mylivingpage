@@ -30,6 +30,10 @@ describe("ThemePicker", () => {
     expect(markup.match(/aria-checked="true"/g)).toHaveLength(1);
     expect(markup).toContain("data-theme-preview-selected=\"true\"");
     expect(markup).toContain("class=\"theme-picker-preview\"");
+    expect(markup).toContain("data-theme-picker");
+    expect(markup).toContain("data-theme-selection-status");
+    expect(markup).not.toContain("theme.selection.changed");
+    expect(markup).not.toContain("data-motion-target=");
   });
 
   it("can open on the selected theme collection instead of the full catalog", () => {

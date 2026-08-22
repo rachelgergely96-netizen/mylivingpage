@@ -394,7 +394,11 @@ test.describe.serial("authenticated user journeys", () => {
       await expect(panel.getByTestId("recruiter-skim-content")).toHaveCount(0);
       await expect(panel.getByRole("button", { name: "Download Résumé PDF" })).toHaveCount(0);
       await expect(panel.getByRole("link", { name: "Email" })).toHaveCount(0);
-      await expect(panel.getByRole("link", { name: "Open the full page" })).toHaveCount(0);
+      await expect(panel.getByRole("link", { name: "Open the full page" })).toBeVisible();
+      await expect(panel.getByRole("link", { name: "Open the full page" })).toHaveAttribute(
+        "href",
+        `/${profile.username}`,
+      );
 
       await expandButton.click();
 
@@ -431,7 +435,7 @@ test.describe.serial("authenticated user journeys", () => {
     await viewerContext.close();
   });
 
-  test("public page keeps Resume PDF and share actions stacked without overlap for owners", async ({ page }) => {
+  test("public page keeps compact mobile actions and stacked desktop actions for owners", async ({ page }) => {
     test.skip(
       !canRunAdminFixtureFlows,
       "Set Playwright Supabase service-role env vars to run public mobile action-dock coverage.",
@@ -469,9 +473,28 @@ test.describe.serial("authenticated user journeys", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/${profile.username}`);
+    const mobileBar = page.locator("[data-public-action-bar]");
+    const moreButton = mobileBar.getByRole("button", { name: "More" });
+    await expect(mobileBar).toBeVisible();
+    await expect(moreButton).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Download Résumé PDF" }),
+    ).toBeHidden();
+    await moreButton.click();
+    const actionSheet = page.getByRole("dialog", {
+      name: "Continue with this page",
+    });
+    await expect(actionSheet).toBeVisible();
+    await expect(
+      actionSheet.getByRole("button", { name: "Close page actions" }),
+    ).toBeFocused();
     await assertStackedDock();
+    await page.keyboard.press("Escape");
+    await expect(actionSheet).toBeHidden();
+    await expect(moreButton).toBeFocused();
 
     await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(mobileBar).toBeHidden();
     await assertStackedDock();
   });
 
@@ -525,9 +548,19 @@ test.describe.serial("authenticated user journeys", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/${profile.username}`);
 
-    const downloadButton = page.getByRole("button", { name: "Download Résumé PDF" });
-    const shareButton = page.getByRole("button", { name: /Share / });
+    const moreButton = page
+      .locator("[data-public-action-bar]")
+      .getByRole("button", { name: "More" });
+    await moreButton.click();
+    const actionSheet = page.getByRole("dialog", {
+      name: "Continue with this page",
+    });
+    const downloadButton = actionSheet.getByRole("button", {
+      name: "Download Résumé PDF",
+    });
+    const shareButton = actionSheet.getByRole("button", { name: /Share / });
 
+    await expect(actionSheet).toBeVisible();
     await expect(downloadButton).toBeVisible();
     await expect(shareButton).toBeVisible();
 
@@ -786,6 +819,20 @@ test.describe.serial("authenticated user journeys", () => {
         userAgent: "Mozilla/5.0 (iPad)",
         country: "GB",
       },
+      {
+        viewedAt: daysAgo(40),
+        viewerIp: "seed-range-4",
+        referrer: null,
+        userAgent: "Mozilla/5.0",
+        country: "US",
+      },
+      {
+        viewedAt: daysAgo(80),
+        viewerIp: "seed-range-5",
+        referrer: null,
+        userAgent: "Mozilla/5.0",
+        country: "US",
+      },
     ]);
 
     await page.goto(`/dashboard/analytics/${livePage.id}`);
@@ -804,9 +851,22 @@ test.describe.serial("authenticated user journeys", () => {
     await page.getByRole("link", { name: "90 days" }).click();
     await page.waitForURL(new RegExp(`/dashboard/analytics/${livePage.id}\\?range=90d`));
     await expect(page.getByTestId("analytics-trend-total")).toHaveText(
-      "3 people looked in this range.",
+      "5 people looked in this range.",
     );
-    await expect(page.getByTestId("analytics-stat-views")).toContainText("3");
+    await expect(page.getByTestId("analytics-stat-views")).toContainText("5");
+    const updatedSummary = page.locator("[data-analytics-range-summary]");
+    await expect(updatedSummary).toHaveAttribute(
+      "data-motion-event",
+      "analytics.range.updated",
+    );
+    await expect(updatedSummary).toHaveAttribute(
+      "data-motion-target",
+      "summary-metrics",
+    );
+    await expect(
+      updatedSummary.locator("[data-analytics-range-update-status]"),
+    ).toContainText("Activity summary updated for last 90 days.");
+    await expect(page.locator("[data-motion-state='unavailable']")).toHaveCount(0);
   });
 });
 

@@ -20,6 +20,9 @@ test("examples leads with a Living Page and keeps the switcher simple", async ({
     "true",
   );
   await expect(stage.locator("canvas[aria-hidden='true']")).toBeVisible();
+  await expect(stage.locator("[data-example-preview-provenance]")).toContainText(
+    "Fictional sample",
+  );
   await expect(stage).toBeInViewport({ ratio: 0.35 });
   await expect(stage).toHaveCSS("transform", "none");
   await expect(page.getByText("What the link changes")).toHaveCount(0);
@@ -50,7 +53,17 @@ test("examples leads with a Living Page and keeps the switcher simple", async ({
   expect(desktopFlow.previewWider).toBe(true);
   expect(desktopFlow.deadSpace).toBeLessThanOrEqual(2);
 
-  await page.getByRole("tab", { name: /After applying/ }).click();
+  await stage.evaluate((element) => {
+    element.setAttribute("data-mounted-probe", "preserved");
+  });
+  const afterApplyingTab = page.getByRole("tab", { name: /After applying/ });
+  await afterApplyingTab.focus();
+  await afterApplyingTab.click();
+  await expect(afterApplyingTab).toBeFocused();
+  await expect(stage).toHaveAttribute("data-mounted-probe", "preserved");
+  await expect(stage.locator("[data-example-preview-provenance]")).toContainText(
+    "Fictional sample",
+  );
   await expect(
     page.getByRole("heading", { name: "Early-career litigation attorney" }),
   ).toBeVisible();
@@ -81,7 +94,7 @@ test("examples keeps the complete Living Page inside its compact mobile preview"
   const mobileOrder = await Promise.all([stage.boundingBox(), switcher.boundingBox()]);
   expect(mobileOrder[0]).not.toBeNull();
   expect(mobileOrder[1]).not.toBeNull();
-  expect(mobileOrder[0]!.y).toBeLessThan(mobileOrder[1]!.y);
+  expect(mobileOrder[1]!.y).toBeLessThan(mobileOrder[0]!.y);
 
   await page.getByRole("tab", { name: /Referral asks/ }).click();
   await expect(
@@ -121,7 +134,9 @@ test("examples keeps the complete Living Page inside its compact mobile preview"
   await expect(nextScrollRoot).toBeVisible();
   expect(await nextScrollRoot.evaluate((element) => element.scrollTop)).toBe(0);
 
-  await page.locator("#choose-a-moment").scrollIntoViewIfNeeded();
+  await stage.evaluate((element) => {
+    element.scrollIntoView({ block: "start", behavior: "auto" });
+  });
   await expect(page.getByTestId("mobile-sticky-cta")).toHaveAttribute(
     "aria-hidden",
     "false",
@@ -131,4 +146,22 @@ test("examples keeps the complete Living Page inside its compact mobile preview"
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("deep-linked examples restore context without replaying a selection event", async ({
+  page,
+}) => {
+  await page.goto("/examples#early-career-attorney");
+
+  await expect(
+    page.getByRole("heading", { name: "Early-career litigation attorney" }),
+  ).toBeVisible();
+  const correspondence = page.locator("[data-selection-correspondence]");
+  await expect(correspondence).toBeVisible();
+  await expect(correspondence).not.toHaveAttribute(
+    "data-motion-event",
+    "example.context.changed",
+  );
+  await expect(correspondence).not.toHaveAttribute("data-motion-sequence", /.+/);
+  await expect(page.locator("[role='status'][aria-live='polite']")).toHaveCount(1);
 });

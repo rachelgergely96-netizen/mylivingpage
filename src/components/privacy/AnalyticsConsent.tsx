@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useFixedSurfacePresence } from "@/hooks/useFixedSurfaceCoordinator";
 import {
   ANALYTICS_CONSENT_STORAGE_KEY,
   isAnalyticsEligiblePath,
@@ -143,6 +144,7 @@ export default function AnalyticsConsent() {
   };
 
   const showPrompt = hydrated && (settingsOpen || (eligible && choice === null));
+  useFixedSurfacePresence("analytics-consent", showPrompt);
 
   return (
     <>

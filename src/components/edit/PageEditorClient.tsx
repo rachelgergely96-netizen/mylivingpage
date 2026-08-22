@@ -27,6 +27,7 @@ import EditorSectionNav, {
   type EditorSectionAnchorId,
 } from "@/components/edit/EditorSectionNav";
 import PublishPageButton from "@/components/PublishPageButton";
+import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import ResumeLayout from "@/components/ResumeLayout";
 import ResumeEditorFields from "@/components/resume/ResumeEditorFields";
 import ResumePdfPreview from "@/components/resume/ResumePdfPreview";
@@ -45,6 +46,7 @@ import {
   getEditorSignalLabel,
   getEditorSignalSection,
   getEditorSignalTargetSelector,
+  type EditorSignalSection,
 } from "@/lib/editor-motion-signal";
 import { MOTION_EVENTS, MOTION_MODE_POLICIES } from "@/lib/motion";
 import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
@@ -704,6 +706,14 @@ export default function PageEditorClient({
     [deferredPreviewSource, previewVariant],
   );
 
+  const markEditorSectionChange = useCallback((section: EditorSignalSection) => {
+    setEditorSignal((current) => ({
+      section,
+      sequence: current.sequence + 1,
+      state: "source-changed",
+    }));
+  }, []);
+
   const markEditorSourceChange = useCallback((target: EventTarget | null) => {
     if (!(target instanceof Element)) {
       return;
@@ -715,12 +725,8 @@ export default function PageEditorClient({
       return;
     }
 
-    setEditorSignal((current) => ({
-      section,
-      sequence: current.sequence + 1,
-      state: "source-changed",
-    }));
-  }, []);
+    markEditorSectionChange(section);
+  }, [markEditorSectionChange]);
 
   const handleEditorChangeCapture = useCallback(
     (event: FormEvent<HTMLDivElement>) => markEditorSourceChange(event.target),
@@ -852,7 +858,7 @@ export default function PageEditorClient({
     return (
       <main className="site-container-wide max-w-6xl py-8" id="main-content">
         <div className="site-panel p-6 text-center sm:p-8">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-site-border border-t-site-action" />
+          <ModeAwareLoadingIndicator className="mx-auto" size="lg" />
           <p className="mt-4 text-sm text-site-muted" role="status">Loading page…</p>
         </div>
       </main>
@@ -1367,9 +1373,13 @@ export default function PageEditorClient({
                 showHeader={false}
                 targeting={atsTargeting}
                 onTargetingChange={setAtsTargeting}
-                onApplyProposal={(patch) =>
-                  setData((prev) => (prev ? mergeResumePatch(prev, patch) : prev))
-                }
+                onApplyProposal={(patch, affectedSections) => {
+                  setData((prev) => (prev ? mergeResumePatch(prev, patch) : prev));
+                  const primarySection = affectedSections[0];
+                  if (primarySection) {
+                    markEditorSectionChange(primarySection);
+                  }
+                }}
               />
               <ResumePdfPreview
                 resumeData={data}

@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useFixedSurfaceActive, useFixedSurfacePresence } from "@/hooks/useFixedSurfaceCoordinator";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import {
+  MOTION_EASINGS,
+  resolveMotionDistance,
+  resolveMotionDuration,
+} from "@/lib/motion";
 
 interface MobileStickyCtaProps {
   href: string;
@@ -20,6 +27,9 @@ export default function MobileStickyCta({
   hideNearId,
   dismissStorageKey = "mlp-mobile-sticky-dismissed",
 }: MobileStickyCtaProps) {
+  const { mode } = useMotionPreference();
+  const consentOpen = useFixedSurfaceActive("analytics-consent");
+  const actionSheetOpen = useFixedSurfaceActive("public-action-sheet");
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [ready, setReady] = useState(false);
@@ -76,14 +86,35 @@ export default function MobileStickyCta({
     }
   };
 
-  const isShown = ready && visible;
+  const isShown = ready && visible && !consentOpen && !actionSheetOpen;
+  const durationMs = resolveMotionDuration(
+    mode === "calm" ? "micro" : "context",
+    mode,
+  );
+  const distancePx = resolveMotionDistance("marketing", mode, "marketing");
+  useFixedSurfacePresence("mobile-sticky-cta", isShown);
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-all duration-300 motion-reduce:transition-none md:hidden ${
-        isShown ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
-      }`}
+      className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden"
+      style={{
+        opacity: isShown ? 1 : 0,
+        pointerEvents: isShown ? "auto" : "none",
+        transform:
+          mode === "full" && !isShown
+            ? `translateY(${distancePx}px)`
+            : "translateY(0)",
+        transitionDuration: `${durationMs}ms`,
+        transitionProperty:
+          mode === "still"
+            ? "none"
+            : mode === "calm"
+              ? "opacity"
+              : "opacity, transform",
+        transitionTimingFunction: MOTION_EASINGS.standard,
+      }}
       aria-hidden={!isShown}
+      data-motion-mode={mode}
       data-testid="mobile-sticky-cta"
       data-site-ui
     >

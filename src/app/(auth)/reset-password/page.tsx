@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import AuthMessage from "@/components/auth/AuthMessage";
+import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -101,10 +102,7 @@ export default function ResetPasswordPage() {
         {verification === "verifying" ? (
           <div className="mt-6">
             <p role="status" className="flex items-center gap-2 text-sm text-site-secondary">
-              <span
-                aria-hidden="true"
-                className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-site-border border-t-site-action"
-              />
+              <ModeAwareLoadingIndicator size="sm" />
               Verifying reset link…
             </p>
           </div>

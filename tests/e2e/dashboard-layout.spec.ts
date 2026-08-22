@@ -53,6 +53,7 @@ test("returning users enter through their real Living Page signal", async ({
   await page.goto("/dev/dashboard-preview?welcome=1");
 
   const welcome = page.locator("[data-dashboard-welcome]");
+  const main = page.locator("#main-content");
   const continueButton = welcome.getByRole("button", {
     name: "Open dashboard now",
   });
@@ -76,6 +77,8 @@ test("returning users enter through their real Living Page signal", async ({
   ).toBeVisible();
   await expect(page).toHaveURL("/dev/dashboard-preview");
   await expect(continueButton).toBeFocused();
+  await expect(main).toHaveAttribute("inert", "");
+  await expect(main).toHaveAttribute("aria-hidden", "true");
   await expect(welcome).toHaveAttribute("data-state", "holding", {
     timeout: 2_000,
   });
@@ -85,7 +88,9 @@ test("returning users enter through their real Living Page signal", async ({
   await page.waitForTimeout(2_500);
   await expect(welcome).toBeVisible();
   await expect(welcome).toHaveCount(0, { timeout: 5_000 });
-  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(main).not.toHaveAttribute("inert", "");
+  await expect(main).not.toHaveAttribute("aria-hidden", "true");
+  await expect(main).toBeFocused();
   await expect(
     page.getByRole("heading", { name: /Welcome back, Avery/i }),
   ).toBeVisible();
@@ -125,7 +130,7 @@ test("welcome handoff can be paused, resumed, or skipped from the keyboard", asy
   await expect(page.locator("[data-dashboard-welcome]")).toHaveCount(0);
 });
 
-test("welcome-back reveal is static and contained on reduced-motion mobile", async ({
+test("Still mode keeps the welcome summary inline and the dashboard immediately usable", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -133,27 +138,33 @@ test("welcome-back reveal is static and contained on reduced-motion mobile", asy
   await page.goto("/dev/dashboard-preview?welcome=1");
 
   const welcome = page.locator("[data-dashboard-welcome]");
+  const main = page.locator("#main-content");
+
   await expect(welcome).toBeVisible();
+  await expect(welcome).toHaveAttribute("data-state", "inline");
+  await expect(page.locator("[role=dialog]")).toHaveCount(0);
+  await expect(welcome).toContainText("Avery, your page kept living.");
+  await expect(welcome).toContainText("Someone viewed it after your last share.");
+  await expect(welcome).toContainText("/avery-sample");
   await expect(
     welcome.getByRole("button", { name: "Open dashboard now" }),
-  ).toBeVisible();
-  await expect(
-    welcome.getByRole("button", { name: "Skip intro" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+
+  await expect(main).toBeVisible();
+  await main.focus();
+  await expect(main).toBeFocused();
+  await expect(main.getByRole("button", { name: "Copy link" })).toBeVisible();
+  await expect(page).toHaveURL("/dev/dashboard-preview");
 
   const animationDuration = await welcome.evaluate(
     (element) => window.getComputedStyle(element).animationDuration,
   );
-  expect(Number.parseFloat(animationDuration)).toBeLessThanOrEqual(0.00001);
+  expect(Number.parseFloat(animationDuration) || 0).toBeLessThanOrEqual(0.00001);
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  await page.waitForTimeout(2_500);
-  await expect(welcome).toBeVisible();
-  await expect(welcome).toHaveCount(0, { timeout: 3_500 });
-  await expect(page.locator("#main-content")).toBeFocused();
 });
 
 test("welcome intent is consumed without a reveal when the account has no page", async ({

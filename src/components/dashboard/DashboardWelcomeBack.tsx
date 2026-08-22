@@ -103,6 +103,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
   const { mode: motionMode } = useMotionPreference();
   const entryDurationMs = resolveMotionDuration("context", motionMode);
   const revealDurationMs = resolveMotionDuration("context", motionMode);
+  const holdDurationMs = motionMode === "full" ? HOLD_DURATION_MS : 0;
   const [visible, setVisible] = useState(Boolean(snapshot));
   const [phase, setPhase] = useState<WelcomePhase>("entering");
   const [userPaused, setUserPaused] = useState(false);
@@ -112,7 +113,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
   const phaseRef = useRef<WelcomePhase>("entering");
   const holdRemainingRef = useRef(HOLD_DURATION_MS);
   const holdStartedAtRef = useRef(0);
-  const paused = userPaused || visibilityPaused;
+  const paused = motionMode === "full" && (userPaused || visibilityPaused);
 
   const moveToPhase = useCallback((nextPhase: WelcomePhase) => {
     phaseRef.current = nextPhase;
@@ -142,13 +143,13 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
   }, []);
 
   useEffect(() => {
-    if (!snapshot || !visible || phase !== "entering") {
+    if (!snapshot || !visible || motionMode === "still" || phase !== "entering") {
       return;
     }
 
     const timer = window.setTimeout(
       () => {
-        holdRemainingRef.current = HOLD_DURATION_MS;
+        holdRemainingRef.current = holdDurationMs;
         moveToPhase("holding");
       },
       entryDurationMs,
@@ -157,7 +158,7 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [entryDurationMs, moveToPhase, phase, snapshot, visible]);
+  }, [entryDurationMs, holdDurationMs, motionMode, moveToPhase, phase, snapshot, visible]);
 
   useEffect(() => {
     if (!snapshot || !visible || phase !== "holding" || paused) {
@@ -165,11 +166,11 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     }
 
     holdStartedAtRef.current = performance.now();
-    const timer = window.setTimeout(revealDashboard, holdRemainingRef.current);
+    const timer = window.setTimeout(revealDashboard, motionMode === "full" ? holdRemainingRef.current : 0);
 
     return () => {
       window.clearTimeout(timer);
-      if (phaseRef.current === "holding") {
+      if (motionMode === "full" && phaseRef.current === "holding") {
         const elapsed = performance.now() - holdStartedAtRef.current;
         holdRemainingRef.current = Math.max(
           0,
@@ -177,10 +178,10 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
         );
       }
     };
-  }, [paused, phase, revealDashboard, snapshot, visible]);
+  }, [motionMode, paused, phase, revealDashboard, snapshot, visible]);
 
   useEffect(() => {
-    if (!snapshot || !visible || phase !== "revealing") {
+    if (!snapshot || !visible || motionMode === "still" || phase !== "revealing") {
       return;
     }
 
@@ -197,15 +198,24 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [phase, revealDurationMs, snapshot, visible]);
+  }, [motionMode, phase, revealDurationMs, snapshot, visible]);
 
   useEffect(() => {
-    if (!snapshot || !visible) {
+    if (!snapshot || !visible || motionMode === "still") {
       return;
     }
 
     const previousOverflow = document.body.style.overflow;
+    const dashboardMain = document.getElementById("main-content");
+    const previousMainInert = dashboardMain?.inert ?? false;
+    const previousMainAriaHidden = dashboardMain
+      ? dashboardMain.getAttribute("aria-hidden")
+      : null;
     document.body.style.overflow = "hidden";
+    if (dashboardMain) {
+      dashboardMain.inert = true;
+      dashboardMain.setAttribute("aria-hidden", "true");
+    }
     const focusFrame = window.requestAnimationFrame(() => {
       continueRef.current?.focus({ preventScroll: true });
     });
@@ -246,9 +256,17 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
+      if (dashboardMain) {
+        dashboardMain.inert = previousMainInert;
+        if (previousMainAriaHidden === null) {
+          dashboardMain.removeAttribute("aria-hidden");
+        } else {
+          dashboardMain.setAttribute("aria-hidden", previousMainAriaHidden);
+        }
+      }
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [revealDashboard, snapshot, visible]);
+  }, [motionMode, revealDashboard, snapshot, visible]);
 
   if (!snapshot || !visible) {
     return null;
@@ -269,9 +287,65 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
     "--welcome-accent": snapshot.accent,
     "--welcome-accent-bright": snapshot.accentBright,
     "--welcome-accent-soft": snapshot.accentSoft,
-    "--welcome-hold-duration": `${HOLD_DURATION_MS}ms`,
+    "--welcome-hold-duration": `${holdDurationMs}ms`,
     "--welcome-reveal-duration": `${revealDurationMs}ms`,
   };
+
+  if (motionMode === "still") {
+    return (
+      <section
+        aria-describedby="dashboard-welcome-description"
+        aria-labelledby="dashboard-welcome-title"
+        className={styles.inlineRoot}
+        data-dashboard-welcome
+        data-motion-mode="still"
+        data-state="inline"
+        role="status"
+        style={welcomeStyle}
+      >
+        <div className={styles.inlineCopy}>
+          <p className={styles.inlineEyebrow}>{eyebrow}</p>
+          <h2 id="dashboard-welcome-title" className={styles.inlineTitle}>
+            {copy.title}
+          </h2>
+          <p id="dashboard-welcome-description" className={styles.inlineBody}>
+            {copy.body}
+          </p>
+        </div>
+        <dl className={styles.inlineSignals}>
+          <div>
+            <dt>Page status</dt>
+            <dd>
+              <span
+                className={
+                  snapshot.publicViewAvailable
+                    ? styles.inlineStatusDot
+                    : `${styles.inlineStatusDot} ${styles.statusDotMuted}`
+                }
+                aria-hidden="true"
+              />
+              {status}
+            </dd>
+          </div>
+          <div>
+            <dt>Current link</dt>
+            <dd>{snapshot.livePath}</dd>
+          </div>
+          <div>
+            <dt>Theme</dt>
+            <dd>{snapshot.themeName}</dd>
+          </div>
+        </dl>
+        <button
+          type="button"
+          className={styles.inlineDismiss}
+          onClick={() => setVisible(false)}
+        >
+          Dismiss summary
+        </button>
+      </section>
+    );
+  }
   const handoffStatus =
     phase === "entering"
       ? "Bringing your page into view…"
@@ -301,14 +375,16 @@ export function DashboardWelcomeBack({ snapshot }: DashboardWelcomeBackProps) {
             my<span>living</span>page
           </span>
           <div className={styles.topbarActions}>
-            <button
-              type="button"
-              aria-pressed={userPaused}
-              className={styles.pause}
-              onClick={() => setUserPaused((isPaused) => !isPaused)}
-            >
-              {userPaused ? "Resume intro" : "Pause intro"}
-            </button>
+            {motionMode === "full" ? (
+              <button
+                type="button"
+                aria-pressed={userPaused}
+                className={styles.pause}
+                onClick={() => setUserPaused((isPaused) => !isPaused)}
+              >
+                {userPaused ? "Resume intro" : "Pause intro"}
+              </button>
+            ) : null}
             <button
               type="button"
               className={styles.skip}

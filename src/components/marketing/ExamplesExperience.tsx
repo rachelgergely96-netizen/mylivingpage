@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import SamplePageCard from "@/components/marketing/SamplePageCard";
+import { MOTION_EVENTS, MOTION_SIGNALS } from "@/lib/motion";
 import type {
   MarketingSampleGroup,
   ResolvedMarketingSample,
 } from "@/lib/marketing-samples";
-import SamplePageCard from "@/components/marketing/SamplePageCard";
 import styles from "./ExamplesExperience.module.css";
 
 interface ResolvedMarketingSampleGroup extends MarketingSampleGroup {
@@ -63,7 +64,9 @@ export default function ExamplesExperience({
   const initialGroup = getInitialGroup(sampleGroups);
   const [activeGroupId, setActiveGroupId] = useState(initialGroup.id);
   const [activeSampleId, setActiveSampleId] = useState(initialGroup.samples[0].id);
+  const [selectionSequence, setSelectionSequence] = useState(0);
   const groupTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const stageRef = useRef<HTMLDivElement | null>(null);
 
   const activeGroup =
     sampleGroups.find((group) => group.id === activeGroupId) ?? initialGroup;
@@ -80,16 +83,12 @@ export default function ExamplesExperience({
       return;
     }
 
-    if (!requestedSampleId) {
-      return;
-    }
+    if (!requestedSampleId) return;
 
     const requestedGroup = sampleGroups.find((group) =>
       group.samples.some((sample) => sample.id === requestedSampleId),
     );
-    if (!requestedGroup) {
-      return;
-    }
+    if (!requestedGroup) return;
 
     setActiveGroupId(requestedGroup.id);
     setActiveSampleId(requestedSampleId);
@@ -97,6 +96,13 @@ export default function ExamplesExperience({
       document.getElementById(requestedSampleId)?.scrollIntoView({ block: "start" });
     });
   }, [sampleGroups]);
+
+  useEffect(() => {
+    const scrollRoot = stageRef.current?.querySelector<HTMLElement>(
+      '[data-analytics-scroll-root="true"]',
+    );
+    if (scrollRoot) scrollRoot.scrollTo({ top: 0, behavior: "auto" });
+  }, [activeSample.id]);
 
   const updateHash = (sampleId: string) => {
     const url = new URL(window.location.href);
@@ -108,19 +114,23 @@ export default function ExamplesExperience({
     );
   };
 
+  const announceSelection = () => {
+    setSelectionSequence((sequence) => sequence + 1);
+  };
+
   const selectGroup = (group: ResolvedMarketingSampleGroup) => {
     const nextSample = group.samples[0];
-    if (!nextSample) {
-      return;
-    }
+    if (!nextSample) return;
 
     setActiveGroupId(group.id);
     setActiveSampleId(nextSample.id);
+    announceSelection();
     updateHash(nextSample.id);
   };
 
   const selectSample = (sample: ResolvedMarketingSample) => {
     setActiveSampleId(sample.id);
+    announceSelection();
     updateHash(sample.id);
   };
 
@@ -143,9 +153,7 @@ export default function ExamplesExperience({
     }
 
     const nextGroup = sampleGroups[nextIndex];
-    if (!nextGroup) {
-      return;
-    }
+    if (!nextGroup) return;
 
     event.preventDefault();
     selectGroup(nextGroup);
@@ -186,21 +194,6 @@ export default function ExamplesExperience({
       </header>
 
       <div className={styles.showcase}>
-        <div
-          id="example-stage"
-          key={`${activeGroup.id}-${activeSample.id}`}
-          className={styles.stage}
-          role="tabpanel"
-          aria-labelledby={`example-moment-${activeGroup.id}`}
-          data-example-stage
-        >
-          <SamplePageCard
-            sample={activeSample}
-            anchorId={activeSample.id}
-            previewHeight="clamp(22rem, 38vw, 30rem)"
-          />
-        </div>
-
         <aside className={styles.controlPanel} data-example-switcher>
           <div id="choose-a-moment" className={styles.momentPicker}>
             <div className={styles.pickerHeading}>
@@ -263,14 +256,52 @@ export default function ExamplesExperience({
               </div>
             ) : null}
 
-            <p className={styles.selectionStatus} role="status" aria-live="polite">
+            <p className={styles.selectionStatus}>
               Showing: <strong>{activeSample.roleLabel}</strong>
             </p>
-            <p className={styles.groupDescription}>
-              {getMomentHelper(activeGroup.id)}
-            </p>
+            <p className={styles.groupDescription}>{getMomentHelper(activeGroup.id)}</p>
           </div>
         </aside>
+
+        <div
+          ref={stageRef}
+          id="example-stage"
+          className={styles.stage}
+          role="tabpanel"
+          aria-labelledby={`example-moment-${activeGroup.id}`}
+          data-example-stage
+        >
+          <div
+            className={styles.correspondence}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-selection-correspondence
+            data-motion-event={
+              selectionSequence > 0 ? MOTION_EVENTS.EXAMPLE_CONTEXT_CHANGED : undefined
+            }
+            data-motion-signal={MOTION_SIGNALS.CAREER_CHAPTERS}
+            data-motion-sequence={selectionSequence || undefined}
+            data-motion-state={selectionSequence > 0 ? "changed" : undefined}
+            data-motion-target="example-context"
+          >
+            <span
+              className={styles.correspondenceSignal}
+              data-example-correspondence-indicator
+              aria-hidden="true"
+            />
+            <span>
+              <strong>{getMomentLabel(activeGroup.id)}</strong>
+              <span aria-hidden="true"> → </span>
+              {activeSample.demo.data.headline}
+            </span>
+          </div>
+          <SamplePageCard
+            sample={activeSample}
+            anchorId={activeSample.id}
+            previewHeight="clamp(22rem, 38vw, 30rem)"
+          />
+        </div>
       </div>
     </section>
   );

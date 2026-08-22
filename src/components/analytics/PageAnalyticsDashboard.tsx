@@ -4,6 +4,7 @@ import AnalyticsCopyLinkButton from "@/components/analytics/AnalyticsCopyLinkBut
 import {
   AnalyticsRangeLink,
   AnalyticsRangeMotionBoundary,
+  AnalyticsRangeMotionTarget,
 } from "@/components/analytics/AnalyticsRangeMotion";
 import AnalyticsRetryButton from "@/components/analytics/AnalyticsRetryButton";
 import {
@@ -570,6 +571,52 @@ function NoticeBanner({
   );
 }
 
+function EmptyAnalyticsCausalSequence() {
+  const steps = [
+    {
+      label: "Page shared",
+      detail: "Send the tracked page link in a real follow-up.",
+    },
+    {
+      label: "First view",
+      detail: "A real outside visit becomes the first proof point.",
+    },
+    {
+      label: "Insights appear",
+      detail: "Patterns fill in only after enough activity is recorded.",
+    },
+  ];
+
+  return (
+    <section
+      data-testid="analytics-empty-causal-sequence"
+      className="site-panel p-4 sm:p-6"
+    >
+      <p className="site-eyebrow">Truthful signal path</p>
+      <h2 className="site-panel-title mt-2 text-xl">How insights appear</h2>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-site-secondary">
+        This dashboard never invents activity. It fills in through this sequence.
+      </p>
+      <ol className="mt-4 grid gap-3 md:grid-cols-3">
+        {steps.map((step, index) => (
+          <li
+            key={step.label}
+            className="border border-site-border bg-site-canvas-alt p-4"
+          >
+            <p className="site-eyebrow text-site-action">
+              {String(index + 1).padStart(2, "0")}
+            </p>
+            <p className="mt-2 font-semibold text-site-text">{step.label}</p>
+            <p className="mt-2 text-xs leading-5 text-site-secondary">
+              {step.detail}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export default function PageAnalyticsDashboard({
   analytics,
   pageId,
@@ -636,48 +683,52 @@ export default function PageAnalyticsDashboard({
         <InsightsStrip insights={analytics.insights} />
       ) : null}
 
-      <section
-        className={`grid gap-4 ${
-          isBasic ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-4"
-        }`}
-      >
-        <StatCard
-          label="People who looked"
-          value={analytics.overview.views.value}
-          formatter={formatInteger}
-          metric={analytics.overview.views}
-          helpText={`People who opened your page in the ${analytics.rangeLabel.toLowerCase()}.`}
-          testId="analytics-stat-views"
-        />
-        <StatCard
-          label="New people"
-          value={analytics.overview.uniqueVisitors.value}
-          formatter={formatInteger}
-          metric={analytics.overview.uniqueVisitors}
-          helpText="Distinct outside visitors we could separate in this range."
-          testId="analytics-stat-unique-visitors"
-        />
-        {!isBasic ? (
+      <AnalyticsRangeMotionTarget rangeLabel={analytics.rangeLabel}>
+        <section
+          className={`grid gap-4 ${
+            isBasic ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-4"
+          }`}
+        >
           <StatCard
-            label="Clicked through"
-            value={analytics.overview.outboundCtr.value}
-            formatter={formatPercent}
-            metric={analytics.overview.outboundCtr}
-            helpText="The share of page reviews that turned into at least one next-step click."
-            testId="analytics-stat-outbound-ctr"
+            label="People who looked"
+            value={analytics.overview.views.value}
+            formatter={formatInteger}
+            metric={analytics.overview.views}
+            helpText={`People who opened your page in the ${analytics.rangeLabel.toLowerCase()}.`}
+            testId="analytics-stat-views"
           />
-        ) : null}
-        {!isBasic ? (
           <StatCard
-            label="Average reading time"
-            value={analytics.overview.avgEngagedTime.value}
-            formatter={formatDuration}
-            metric={analytics.overview.avgEngagedTime}
-            helpText="Average time people spent reading once they scrolled or interacted enough to measure."
-            testId="analytics-stat-avg-engaged-time"
+            label="New people"
+            value={analytics.overview.uniqueVisitors.value}
+            formatter={formatInteger}
+            metric={analytics.overview.uniqueVisitors}
+            helpText="Distinct outside visitors we could separate in this range."
+            testId="analytics-stat-unique-visitors"
           />
-        ) : null}
-      </section>
+          {!isBasic ? (
+            <StatCard
+              label="Clicked through"
+              value={analytics.overview.outboundCtr.value}
+              formatter={formatPercent}
+              metric={analytics.overview.outboundCtr}
+              helpText="The share of page reviews that turned into at least one next-step click."
+              testId="analytics-stat-outbound-ctr"
+            />
+          ) : null}
+          {!isBasic ? (
+            <StatCard
+              label="Average reading time"
+              value={analytics.overview.avgEngagedTime.value}
+              formatter={formatDuration}
+              metric={analytics.overview.avgEngagedTime}
+              helpText="Average time people spent reading once they scrolled or interacted enough to measure."
+              testId="analytics-stat-avg-engaged-time"
+            />
+          ) : null}
+        </section>
+      </AnalyticsRangeMotionTarget>
+
+      {analytics.state.lowData ? <EmptyAnalyticsCausalSequence /> : null}
 
       {analytics.state.hasTraffic ? (
         <TrendChart analytics={analytics} />

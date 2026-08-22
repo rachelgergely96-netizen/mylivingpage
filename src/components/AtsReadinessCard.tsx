@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
 import {
   buildAtsReadinessFingerprint,
@@ -16,6 +17,11 @@ import {
   MAX_SAVED_TARGET_ROLES,
 } from "@/lib/ats-target-roles";
 import { MOTION_MODE_POLICIES } from "@/lib/motion";
+import {
+  EDITOR_SIGNAL_SECTIONS,
+  getEditorSignalLabel,
+  type EditorSignalSection,
+} from "@/lib/editor-motion-signal";
 import type {
   AtsPersistedTargeting,
   AtsTargetRole,
@@ -43,7 +49,10 @@ interface AtsReadinessCardProps {
   targeting?: AtsPersistedTargeting;
   onTargetingChange?: (targeting: AtsPersistedTargeting) => void;
   /** Applies an accepted rewrite to the résumé being edited. */
-  onApplyProposal?: (patch: Partial<ResumeData>) => void;
+  onApplyProposal?: (
+    patch: Partial<ResumeData>,
+    affectedSections: EditorSignalSection[],
+  ) => void;
 }
 
 interface CompletedCheck {
@@ -125,6 +134,40 @@ const JOB_COMPARISON_CHECK_IDS = new Set([
   "job-keyword-coverage",
   "target-title-present",
 ]);
+
+const ATS_PATCH_SECTION_BY_KEY: Partial<
+  Record<keyof ResumeData, EditorSignalSection>
+> = {
+  name: "profile",
+  headline: "profile",
+  location: "profile",
+  email: "profile",
+  linkedin: "profile",
+  github: "profile",
+  website: "profile",
+  avatar_url: "profile",
+  summary: "summary",
+  stats: "stats",
+  experience: "experience",
+  education: "education",
+  skills: "skills",
+  projects: "projects",
+  proofs: "proof",
+  testimonials: "testimonials",
+  certifications: "certifications",
+};
+
+export function getAtsProposalAffectedSections(
+  patch: Partial<ResumeData>,
+): EditorSignalSection[] {
+  const sections = new Set(
+    (Object.keys(patch) as Array<keyof ResumeData>)
+      .map((key) => ATS_PATCH_SECTION_BY_KEY[key])
+      .filter((section): section is EditorSignalSection => Boolean(section)),
+  );
+
+  return EDITOR_SIGNAL_SECTIONS.filter((section) => sections.has(section));
+}
 
 function JobComparisonResult({
   jobDescription,
@@ -310,9 +353,16 @@ export default function AtsReadinessCard({
   const [completedCheck, setCompletedCheck] = useState<CompletedCheck | null>(null);
   const [proposals, setProposals] = useState<AtsProposal[]>([]);
   const [dismissedProposalIds, setDismissedProposalIds] = useState<string[]>([]);
+  const [appliedProposal, setAppliedProposal] = useState<{
+    affectedSections: EditorSignalSection[];
+    focusProposalId: string | null;
+    title: string;
+  } | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const resultsRef = useRef<HTMLDivElement | null>(null);
+  const proposalStatusRef = useRef<HTMLParagraphElement | null>(null);
+  const proposalButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const rolesSupported = Boolean(targeting && onTargetingChange);
   const latestTargetingRef = useRef(targeting);
 
@@ -351,6 +401,7 @@ export default function AtsReadinessCard({
     setError("");
     setCompletedCheck(null);
     setProposals([]);
+    setAppliedProposal(null);
 
     try {
       const response = await fetch("/api/resume/readiness", {
@@ -480,6 +531,47 @@ export default function AtsReadinessCard({
 
     return () => window.cancelAnimationFrame(frame);
   }, [readiness]);
+
+  useEffect(() => {
+    if (!appliedProposal) {
+      return;
+    }
+
+    // Do not move focus out from under a modal owned by the editor.
+    if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+      return;
+    }
+
+    const nextProposalButton = appliedProposal.focusProposalId
+      ? proposalButtonRefs.current.get(appliedProposal.focusProposalId)
+      : null;
+    (nextProposalButton ?? proposalStatusRef.current)?.focus({
+      preventScroll: true,
+    });
+  }, [appliedProposal]);
+
+  const acceptProposal = (proposal: AtsProposal) => {
+    if (!onApplyProposal) {
+      return;
+    }
+
+    const affectedSections = getAtsProposalAffectedSections(proposal.applyData);
+    const currentIndex = visibleProposals.findIndex(
+      (candidate) => candidate.id === proposal.id,
+    );
+    const remainingProposal =
+      visibleProposals[currentIndex + 1] ??
+      visibleProposals[currentIndex - 1] ??
+      null;
+
+    onApplyProposal(proposal.applyData, affectedSections);
+    setDismissedProposalIds((ids) => [...ids, proposal.id]);
+    setAppliedProposal({
+      affectedSections,
+      focusProposalId: remainingProposal?.id ?? null,
+      title: proposal.title,
+    });
+  };
 
   return (
     <section
@@ -686,10 +778,7 @@ export default function AtsReadinessCard({
             role="status"
             className="site-callout flex items-center gap-3 px-4 py-3 text-sm text-site-action-hover"
           >
-            <span
-              aria-hidden="true"
-              className="h-4 w-4 animate-spin rounded-full border-2 border-site-border border-t-site-action"
-            />
+            <ModeAwareLoadingIndicator size="sm" />
             Checking the résumé structure, PDF, and selected job context…
           </div>
         ) : null}
@@ -739,6 +828,28 @@ export default function AtsReadinessCard({
           }`}
           data-ats-readiness-results
         >
+          <p
+            ref={proposalStatusRef}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            tabIndex={-1}
+            data-ats-proposal-status
+            className={
+              appliedProposal
+                ? "site-alert-success px-4 py-3 text-sm leading-6 outline-none"
+                : "sr-only"
+            }
+          >
+            {appliedProposal
+              ? `Applied “${appliedProposal.title}” to ${appliedProposal.affectedSections
+                  .map(getEditorSignalLabel)
+                  .join(", ") || "the editor"}. Preview ${appliedProposal.affectedSections.length === 1 ? "section" : "sections"}: ${appliedProposal.affectedSections
+                  .map(getEditorSignalLabel)
+                  .join(", ") || "updated fields"}. This change is not saved yet; review it and save when ready.`
+              : ""}
+          </p>
+
           {onApplyProposal && visibleProposals.length > 0 && resultIsCurrent ? (
             <section
               aria-labelledby="ats-proposals-title"
@@ -778,11 +889,15 @@ export default function AtsReadinessCard({
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
-                        type="button"
-                        onClick={() => {
-                          onApplyProposal(proposal.applyData);
-                          setDismissedProposalIds((ids) => [...ids, proposal.id]);
+                        ref={(node) => {
+                          if (node) {
+                            proposalButtonRefs.current.set(proposal.id, node);
+                          } else {
+                            proposalButtonRefs.current.delete(proposal.id);
+                          }
                         }}
+                        type="button"
+                        onClick={() => acceptProposal(proposal)}
                         className="site-button site-button-primary px-3 py-1.5 text-xs"
                       >
                         Accept this change

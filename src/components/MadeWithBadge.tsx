@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useFixedSurfaceActive, useFixedSurfacePresence } from "@/hooks/useFixedSurfaceCoordinator";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { resolveMotionDuration } from "@/lib/motion";
 
 const DISMISSED_STORAGE_KEY = "mlp-made-with-dismissed";
 
@@ -22,6 +25,9 @@ function persistDismissed() {
 }
 
 export default function MadeWithBadge({ isSignedIn }: { isSignedIn: boolean }) {
+  const { mode } = useMotionPreference();
+  const consentOpen = useFixedSurfaceActive("analytics-consent");
+  const actionSheetOpen = useFixedSurfaceActive("public-action-sheet");
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -36,7 +42,10 @@ export default function MadeWithBadge({ isSignedIn }: { isSignedIn: boolean }) {
         return;
       }
       if (active) {
-        showTimer = window.setTimeout(() => setShow(true), 800);
+        showTimer = window.setTimeout(
+          () => setShow(true),
+          mode === "still" ? 0 : 800,
+        );
       }
     };
 
@@ -48,18 +57,29 @@ export default function MadeWithBadge({ isSignedIn }: { isSignedIn: boolean }) {
         window.clearTimeout(showTimer);
       }
     };
-  }, [isSignedIn]);
+  }, [isSignedIn, mode]);
 
-  if (!show || dismissed) return null;
+  const isShown = show && !dismissed && !consentOpen && !actionSheetOpen;
+  const enterDurationMs = resolveMotionDuration("standard", mode);
+  useFixedSurfacePresence("acquisition-badge", isShown);
+
+  if (!isShown) return null;
 
   return (
     <div
       data-testid="public-page-signup-prompt"
       className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2"
-      style={{ animation: "badgeFadeIn 0.4s ease-out forwards" }}
+      style={
+        enterDurationMs > 0
+          ? { animation: `badgeFadeIn ${enterDurationMs}ms ease-out forwards` }
+          : undefined
+      }
+      data-motion-mode={mode}
       data-site-ui
     >
-      <style>{`@keyframes badgeFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      {enterDurationMs > 0 ? (
+        <style>{`@keyframes badgeFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      ) : null}
       <div className="site-panel-raised flex items-center gap-1.5 pl-4 pr-1.5">
         <Link
           href="/signup?ref=public_page_prompt&next=/create"

@@ -69,6 +69,67 @@ export default async function PricingPage() {
           </p>
         </section>
 
+        <section
+          className="site-panel mt-8 px-5 py-8 sm:px-8 sm:py-10"
+          aria-labelledby="pricing-source-map-title"
+          data-pricing-correspondence
+        >
+          <p className="site-eyebrow">One reviewed source</p>
+          <h2 id="pricing-source-map-title" className="site-section-title mt-3">
+            Review once, then create the format the moment needs.
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-site-secondary">
+            Your saved professional information can be used to create each format below. Review
+            changes before you publish or download; this map describes the workflow, not a
+            real-time synchronization guarantee.
+          </p>
+
+          <div className="mt-7 grid items-stretch gap-3 lg:grid-cols-[minmax(0,0.8fr)_auto_minmax(0,1.7fr)]">
+            <div className="border border-site-action bg-site-selected p-5">
+              <p className="site-eyebrow text-site-action">
+                Source
+              </p>
+              <p className="mt-3 font-site text-lg font-semibold text-site-text">
+                Reviewed professional information
+              </p>
+              <p className="mt-2 text-sm leading-6 text-site-secondary">
+                The experience, skills, links, and wording you choose to save.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center px-2 text-2xl text-site-action" aria-hidden="true">
+              <span className="rotate-90 lg:rotate-0">→</span>
+            </div>
+
+            <ul className="grid gap-px bg-site-border sm:grid-cols-3" aria-label="Formats you can create">
+              {[
+                {
+                  name: "Living Page",
+                  moment: "For links people can open and scan",
+                },
+                {
+                  name: "Résumé PDF",
+                  moment: "For portals and file attachments",
+                },
+                {
+                  name: "Share card + QR",
+                  moment: "For portable visual sharing",
+                },
+              ].map((format, index) => (
+                <li key={format.name} className="bg-site-surface p-5">
+                  <p className="font-mono text-xs text-site-action">
+                    {String(index + 1).padStart(2, "0")}
+                  </p>
+                  <p className="mt-3 font-site text-base font-semibold text-site-text">
+                    {format.name}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-site-muted">{format.moment}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         <section aria-label="Everything included for free" className="mt-12 grid gap-5 sm:mt-20 lg:grid-cols-3">
           {FREE_PRODUCT_FEATURE_GROUPS.map((group, index) => {
             const featured = index === 0;

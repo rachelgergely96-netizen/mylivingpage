@@ -62,11 +62,13 @@
 .showcase {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(17rem, 0.55fr);
+  grid-template-areas: "stage control";
   align-items: start;
   gap: 1rem;
 }
 
 .stage {
+  grid-area: stage;
   min-width: 0;
   border: 1px solid var(--site-border-strong);
   background:
@@ -78,6 +80,7 @@
 }
 
 .controlPanel {
+  grid-area: control;
   position: sticky;
   top: 5rem;
   min-width: 0;
@@ -85,6 +88,32 @@
   background: var(--site-surface-raised);
   box-shadow: var(--site-shadow-raised);
   padding: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.correspondence {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--site-border);
+  background: var(--site-surface);
+  padding: 0.65rem 0.8rem;
+  color: var(--site-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.correspondence strong {
+  color: var(--site-text);
+  font-weight: 600;
+}
+
+.correspondenceSignal {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  background: var(--site-action);
 }
 
 .momentPicker {
@@ -239,6 +268,9 @@
 
   .showcase {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "control"
+      "stage";
   }
 
   .controlPanel {

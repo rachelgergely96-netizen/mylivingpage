@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiteLegalFooter from "@/components/legal/SiteLegalFooter";
 import SiteHeader from "@/components/marketing/SiteHeader";
+import SemanticChapterRail from "@/components/navigation/SemanticChapterRail";
 import JsonLd from "@/components/seo/JsonLd";
-import { GUIDES, getGuide } from "@/lib/guides";
+import ProvenancePlate from "@/components/ui/ProvenancePlate";
+import { GUIDES, getGuide, type GuideSlug } from "@/lib/guides";
 import { getRequestLegalSite } from "@/lib/legal/request-site";
 import { getAbsoluteUrl, SITE_NAME } from "@/lib/site";
 import { buildGuideArticleStructuredData } from "@/lib/structured-data";
@@ -12,6 +14,25 @@ import { buildGuideArticleStructuredData } from "@/lib/structured-data";
 interface GuidePageProps {
   params: Promise<{ slug: string }>;
 }
+
+const GUIDE_SECTION_IDS: Record<GuideSlug, readonly string[]> = {
+  "resume-pdf-check": [
+    "what-a-pdf-check-catches",
+    "why-clean-pdf-text-matters",
+    "after-the-pdf-check",
+  ],
+  "recruiter-search-keywords": [
+    "how-recruiters-search",
+    "keyword-variations-to-include",
+    "after-a-recruiter-finds-you",
+  ],
+  "living-page-vs-pdf-resume": [
+    "start-with-your-current-information",
+    "why-a-living-page-scans-faster",
+    "one-source-for-sendable-assets",
+    "keep-one-page-link-current",
+  ],
+};
 
 function getSignupHref(ref: string) {
   return `/signup?ref=${ref}&next=/create`;
@@ -74,6 +95,11 @@ export default async function GuidePage({ params }: GuidePageProps) {
 
   const site = await getRequestLegalSite();
   const articleJsonLd = buildGuideArticleStructuredData(guide);
+  const sectionIds = GUIDE_SECTION_IDS[guide.slug];
+  const chapterItems = guide.sections.map((section, index) => ({
+    id: sectionIds[index] ?? `${guide.slug}-section-${index + 1}`,
+    label: section.title,
+  }));
   const relatedGuides = guide.related
     .map((relatedSlug) => getGuide(relatedSlug))
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
@@ -112,32 +138,67 @@ export default async function GuidePage({ params }: GuidePageProps) {
             </span>
           </div>
 
+          <ProvenancePlate
+            className="mt-8"
+            title="Editorial guidance with a visible review boundary"
+            description={
+              <p>
+                Chapter markers link to real article sections. The guide body stays still in every
+                motion mode.
+              </p>
+            }
+            items={[
+              { label: "Source", value: guide.author },
+              { label: "Decision stage", value: guide.decisionStage },
+              { label: "Last reviewed", value: formatGuideDate(guide.updatedAt) },
+              { label: "Reading behavior", value: "Stable headings and deep links" },
+            ]}
+          />
+
           <aside className="site-callout mt-8 px-5 py-5" aria-label="Short answer">
             <p className="site-eyebrow">Short answer</p>
             <p className="mt-3 text-base leading-8 text-site-text">{guide.answer}</p>
           </aside>
 
+          <SemanticChapterRail
+            items={chapterItems}
+            ariaLabel={`Chapters in ${guide.title}`}
+            className="mt-8"
+          />
+
           <div className="mt-10 space-y-12">
-            {guide.sections.map((section) => (
-              <section key={section.title}>
-                <h2 className="site-section-title text-[1.75rem]">{section.title}</h2>
-                <div className="mt-4 space-y-4 text-base leading-8 text-site-secondary">
-                  {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph}>{paragraph}</p>
-                  ))}
-                </div>
-                {section.bullets?.length ? (
-                  <ul className="mt-5 divide-y divide-site-border border-y border-site-border">
-                    {section.bullets.map((bullet) => (
-                      <li key={bullet} className="flex items-start gap-3 py-4 text-sm leading-7 text-site-secondary">
-                        <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 bg-site-action" />
-                        <span>{bullet}</span>
-                      </li>
+            {guide.sections.map((section, index) => {
+              const sectionId = chapterItems[index]?.id ?? `${guide.slug}-section-${index + 1}`;
+              const headingId = `${sectionId}-title`;
+
+              return (
+                <section
+                  key={sectionId}
+                  id={sectionId}
+                  aria-labelledby={headingId}
+                  className="scroll-mt-32"
+                >
+                  <h2 id={headingId} className="site-section-title text-[1.75rem]">
+                    {section.title}
+                  </h2>
+                  <div className="mt-4 space-y-4 text-base leading-8 text-site-secondary">
+                    {section.paragraphs.map((paragraph) => (
+                      <p key={paragraph}>{paragraph}</p>
                     ))}
-                  </ul>
-                ) : null}
-              </section>
-            ))}
+                  </div>
+                  {section.bullets?.length ? (
+                    <ul className="mt-5 divide-y divide-site-border border-y border-site-border">
+                      {section.bullets.map((bullet) => (
+                        <li key={bullet} className="flex items-start gap-3 py-4 text-sm leading-7 text-site-secondary">
+                          <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 bg-site-action" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
+              );
+            })}
           </div>
         </article>
 

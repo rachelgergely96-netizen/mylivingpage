@@ -110,8 +110,21 @@ html[data-motion-mode="full"]
         [data-motion-state="fact-confirmed"]
       ),
     [data-motion-event="editor.field.changed"][data-editor-signal-status][data-motion-state="preview-matched"],
-    [data-motion-event="analytics.range.updated"][data-motion-state="resolved"]
+    [data-motion-event="resume.pdf.preview.ready"][data-resume-pdf-ready-status][data-motion-state="ready"],
+    [data-motion-event="analytics.first_view.detected"][data-first-view-proof][data-motion-state="detected"],
+    [data-motion-event="analytics.range.updated"][data-analytics-range-summary][data-motion-state="resolved"]
   ) {
+  --motion-event-distance: var(--motion-distance-micro);
+  animation: motion-semantic-enter var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
+}
+
+html[data-motion-mode="full"]
+  [data-theme-picker][data-motion-event="theme.selection.changed"][data-motion-state="selected"]
+  [data-theme-selection-indicator],
+html[data-motion-mode="full"]
+  [data-selection-correspondence][data-motion-event="example.context.changed"][data-motion-state="changed"]
+  [data-example-correspondence-indicator] {
   --motion-event-distance: var(--motion-distance-micro);
   animation: motion-semantic-enter var(--motion-duration-standard)
     var(--motion-ease-enter) both;
@@ -126,7 +139,10 @@ html[data-motion-mode="full"]
 }
 
 html[data-motion-mode="full"]
-  [data-motion-event="editor.save.confirmed"][data-motion-state="confirmed"] {
+  :is(
+    [data-motion-event="editor.save.confirmed"][data-motion-state="confirmed"],
+    [data-motion-event="page.publish.confirmed"][data-dashboard-publish-status][data-motion-state="confirmed"]
+  ) {
   animation: motion-semantic-confirm var(--motion-duration-standard)
     var(--motion-ease-standard) both;
 }
@@ -138,8 +154,7 @@ html[data-motion-mode="calm"]
         [data-motion-state="autofilled"],
         [data-motion-state="fact-confirmed"]
       ),
-    [data-motion-event="editor.field.changed"][data-editor-signal-status][data-motion-state="preview-matched"],
-    [data-motion-event="analytics.range.updated"][data-motion-state="resolved"]
+    [data-motion-event="editor.field.changed"][data-editor-signal-status][data-motion-state="preview-matched"]
   ) {
   --motion-event-distance: var(--motion-distance-micro);
   animation: motion-semantic-enter var(--motion-duration-micro)
@@ -156,7 +171,19 @@ html[data-motion-mode="calm"]
 
 /* Calm confirmations change only opacity; they never travel. */
 html[data-motion-mode="calm"]
-  [data-motion-event="editor.save.confirmed"][data-motion-state="confirmed"] {
+  :is(
+    [data-motion-event="editor.save.confirmed"][data-motion-state="confirmed"],
+    [data-motion-event="page.publish.confirmed"][data-dashboard-publish-status][data-motion-state="confirmed"],
+    [data-motion-event="resume.pdf.preview.ready"][data-resume-pdf-ready-status][data-motion-state="ready"],
+    [data-motion-event="analytics.first_view.detected"][data-first-view-proof][data-motion-state="detected"],
+    [data-motion-event="analytics.range.updated"][data-analytics-range-summary][data-motion-state="resolved"]
+  ),
+html[data-motion-mode="calm"]
+  [data-theme-picker][data-motion-event="theme.selection.changed"][data-motion-state="selected"]
+  [data-theme-selection-indicator],
+html[data-motion-mode="calm"]
+  [data-selection-correspondence][data-motion-event="example.context.changed"][data-motion-state="changed"]
+  [data-example-correspondence-indicator] {
   animation: motion-semantic-confirm var(--motion-duration-micro)
     var(--motion-ease-standard) both;
 }
@@ -174,6 +201,16 @@ html[data-motion-mode="calm"]
 html[data-motion-mode="calm"] [data-motion-ambient],
 html[data-motion-mode="still"] [data-motion-ambient] {
   animation: none !important;
+}
+
+html[data-motion-mode="calm"]
+  :is([data-theme-picker] button, [data-editor-signal-active="true"]) {
+  transition-duration: var(--motion-duration-micro) !important;
+}
+
+html[data-motion-mode="still"]
+  :is([data-theme-picker] button, [data-editor-signal-active="true"]) {
+  transition-duration: var(--motion-duration-instant) !important;
 }
 
 html[data-motion-mode="calm"] [data-homepage-prototype] *,
@@ -1938,6 +1975,16 @@ html[data-motion-mode="still"] [data-site-ui] *::after {
   transition-duration: var(--motion-duration-instant) !important;
   animation-duration: var(--motion-duration-instant) !important;
   animation-iteration-count: 1 !important;
+}
+
+html[data-motion-mode="calm"] .motion-responsive-control {
+  transition-duration: var(--motion-duration-micro) !important;
+  transform: none !important;
+}
+
+html[data-motion-mode="still"] .motion-responsive-control {
+  transition: none !important;
+  transform: none !important;
 }
 
 html[data-motion-mode="still"]

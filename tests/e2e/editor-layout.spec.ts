@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { AtsReadinessResult } from "../../src/lib/ats-readiness";
 import { DEMO_PAGES } from "../../src/lib/demo-data";
+import { MOTION_STORAGE_KEY } from "../../src/lib/motion";
 import type { PageRecord } from "../../src/types/resume";
 
 const demo = DEMO_PAGES[0];
@@ -278,6 +279,10 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
 test("the editor renders the real PDF and exposes a browser-safe open action", async ({
   page,
 }) => {
+  await page.route("**/api/resume/preview", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    await route.fallback();
+  });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/dev/editor-preview");
 
@@ -290,6 +295,7 @@ test("the editor renders the real PDF and exposes a browser-safe open action", a
       response.request().method() === "POST",
   );
   await panel.getByRole("button", { name: "Show the PDF" }).click();
+  await expect(panel).toHaveAttribute("aria-busy", "true");
 
   expect((await responsePromise).status()).toBe(200);
   await expect(panel.getByRole("link", { name: "Open PDF in a new tab" })).toHaveAttribute(
@@ -300,6 +306,175 @@ test("the editor renders the real PDF and exposes a browser-safe open action", a
     "data",
     /^blob:/,
   );
+  const readyStatus = panel.locator("[data-resume-pdf-ready-status]");
+  await expect(readyStatus).toContainText("Résumé PDF preview ready.");
+  await expect(readyStatus).toHaveAttribute(
+    "data-motion-event",
+    "resume.pdf.preview.ready",
+  );
+  await expect(readyStatus).toHaveAttribute("data-motion-signal", "edit-to-proof");
+  await expect(readyStatus).toHaveAttribute("data-motion-state", "ready");
+  await expect(readyStatus).toHaveAttribute("data-motion-target", "resume-pdf");
+  await expect(panel.locator('object[type="application/pdf"]')).not.toHaveAttribute(
+    "data-motion-event",
+    /.+/,
+  );
+
+  await page.route("**/api/resume/preview", async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Preview unavailable." }),
+    });
+  });
+  await panel.getByRole("button", { name: "Render again" }).click();
+  await expect(panel.getByRole("alert")).toContainText("Preview unavailable.");
+  await expect(panel.locator("[data-resume-pdf-ready-status]")).toHaveCount(0);
+  await expect(panel.locator("[data-motion-event='resume.pdf.preview.ready']")).toHaveCount(0);
+});
+
+test("theme selection keeps the focused card and preview DOM stable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/dev/editor-preview?autosave=off");
+
+  const picker = page.locator("[data-theme-picker]");
+  await picker.scrollIntoViewIfNeeded();
+  const nextThemeCandidate = picker
+    .locator(
+      '[role="radio"]:not([aria-disabled="true"]):not([aria-checked="true"])',
+    )
+    .first();
+  const nextThemeId = await nextThemeCandidate
+    .locator("[data-theme-preview]")
+    .getAttribute("data-theme-preview");
+  expect(nextThemeId).not.toBeNull();
+  const nextTheme = picker.locator(
+    `[role="radio"]:has([data-theme-preview="${nextThemeId}"])`,
+  );
+  await expect(nextTheme).toBeVisible();
+
+  const preview = nextTheme.locator("[data-theme-preview]");
+  await preview.evaluate((element) => {
+    element.setAttribute("data-stability-probe", "retained");
+  });
+  await nextTheme.focus();
+  await nextTheme.press("Space");
+
+  await expect(nextTheme).toBeFocused();
+  await expect(nextTheme).toHaveAttribute("aria-checked", "true");
+  await expect(preview).toHaveAttribute("data-stability-probe", "retained");
+  await expect(picker).toHaveAttribute(
+    "data-motion-event",
+    "theme.selection.changed",
+  );
+  await expect(picker).toHaveAttribute("data-motion-signal", "style-dialect");
+  await expect(picker).toHaveAttribute("data-motion-state", "selected");
+  await expect(picker).toHaveAttribute("data-motion-target", "theme");
+  await expect(picker.locator("[data-theme-selection-status]")).toContainText(
+    "theme selected.",
+  );
+
+  const fullIndicator = nextTheme.locator("[data-theme-selection-indicator]");
+  const fullMotion = await fullIndicator.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    const duration = style.animationDuration.endsWith("ms")
+      ? Number.parseFloat(style.animationDuration)
+      : Number.parseFloat(style.animationDuration) * 1_000;
+    return { duration, name: style.animationName };
+  });
+  expect(fullMotion.name).toContain("motion-semantic-enter");
+  expect(fullMotion.duration).toBeLessThanOrEqual(220);
+
+  await page.evaluate(
+    ([storageKey, mode]) => window.localStorage.setItem(storageKey, mode),
+    [MOTION_STORAGE_KEY, "calm"],
+  );
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-motion-mode", "calm");
+  const calmPicker = page.locator("[data-theme-picker]");
+  const calmThemeCandidate = calmPicker
+    .locator(
+      '[role="radio"]:not([aria-disabled="true"]):not([aria-checked="true"])',
+    )
+    .first();
+  const calmThemeId = await calmThemeCandidate
+    .locator("[data-theme-preview]")
+    .getAttribute("data-theme-preview");
+  expect(calmThemeId).not.toBeNull();
+  const calmTheme = calmPicker.locator(
+    `[role="radio"]:has([data-theme-preview="${calmThemeId}"])`,
+  );
+  await calmTheme.focus();
+  await calmTheme.press("Space");
+  const calmMotion = await calmTheme
+    .locator("[data-theme-selection-indicator]")
+    .evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      const duration = style.animationDuration.endsWith("ms")
+        ? Number.parseFloat(style.animationDuration)
+        : Number.parseFloat(style.animationDuration) * 1_000;
+      return {
+        duration,
+        name: style.animationName,
+        transform: style.transform,
+      };
+    });
+  expect(calmMotion.name).toContain("motion-semantic-confirm");
+  expect(calmMotion.duration).toBeLessThanOrEqual(120);
+  expect(calmMotion.transform).toBe("none");
+  const calmTransitionDuration = await calmTheme.evaluate((element) => {
+    const durations = window
+      .getComputedStyle(element)
+      .transitionDuration.split(",")
+      .map((value) =>
+        value.trim().endsWith("ms")
+          ? Number.parseFloat(value)
+          : Number.parseFloat(value) * 1_000,
+      );
+    return Math.max(...durations);
+  });
+  expect(calmTransitionDuration).toBeLessThanOrEqual(120);
+
+  await page.evaluate(
+    ([storageKey, mode]) => window.localStorage.setItem(storageKey, mode),
+    [MOTION_STORAGE_KEY, "still"],
+  );
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-motion-mode", "still");
+  const stillThemeCandidate = page
+    .locator("[data-theme-picker]")
+    .locator(
+      '[role="radio"]:not([aria-disabled="true"]):not([aria-checked="true"])',
+    )
+    .first();
+  const stillThemeId = await stillThemeCandidate
+    .locator("[data-theme-preview]")
+    .getAttribute("data-theme-preview");
+  expect(stillThemeId).not.toBeNull();
+  const stillTheme = page.locator(
+    `[data-theme-picker] [role="radio"]:has([data-theme-preview="${stillThemeId}"])`,
+  );
+  await stillTheme.focus();
+  await stillTheme.press("Space");
+  await expect(stillTheme.locator("[data-theme-selection-indicator]")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  const stillTransitionDuration = await stillTheme.evaluate((element) =>
+    Math.max(
+      ...window
+        .getComputedStyle(element)
+        .transitionDuration.split(",")
+        .map((value) =>
+          value.trim().endsWith("ms")
+            ? Number.parseFloat(value)
+            : Number.parseFloat(value) * 1_000,
+        ),
+    ),
+  );
+  expect(stillTransitionDuration).toBe(0);
 });
 
 test("the editor saves on its own after edits stop", async ({ page }) => {
@@ -359,7 +534,24 @@ test("job-specific ATS check makes found and missing words easy to scan", async 
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ readiness: jobComparisonReadiness }),
+      body: JSON.stringify({
+        readiness: jobComparisonReadiness,
+        proposals: [
+          {
+            id: "summary-rewrite",
+            group: "content",
+            title: "Clarify the opening summary",
+            reason: "Lead with the role-relevant work already in the résumé.",
+            beforeText: demo.data.summary,
+            afterText:
+              "Product leader building measurable B2B platform outcomes.",
+            applyData: {
+              summary:
+                "Product leader building measurable B2B platform outcomes.",
+            },
+          },
+        ],
+      }),
     });
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -418,6 +610,27 @@ test("job-specific ATS check makes found and missing words easy to scan", async 
   await expect(results).toBeVisible();
   await expect(results).not.toHaveAttribute("data-stale", "true");
   await expect(page.locator("#ats-stale-notice")).toHaveCount(0);
+
+  const acceptProposal = page.getByRole("button", {
+    name: "Accept this change",
+  });
+  await acceptProposal.focus();
+  await acceptProposal.press("Enter");
+
+  const correspondence = page.locator("[data-editor-signal-status]");
+  await expect(correspondence).toHaveAttribute(
+    "data-motion-event",
+    "editor.field.changed",
+  );
+  await expect(correspondence).toHaveAttribute("data-motion-target", "summary");
+  const proposalStatus = page.locator("[data-ats-proposal-status]");
+  await expect(proposalStatus).toBeVisible();
+  await expect(proposalStatus).toBeFocused();
+  await expect(proposalStatus).toContainText("Preview section: Summary");
+  await expect(proposalStatus).toContainText("This change is not saved yet");
+  await expect(page.getByLabel("Professional summary")).toHaveValue(
+    "Product leader building measurable B2B platform outcomes.",
+  );
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,

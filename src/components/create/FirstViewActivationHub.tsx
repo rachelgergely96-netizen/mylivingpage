@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
-import { MOTION_MODE_POLICIES } from "@/lib/motion";
+import {
+  MOTION_EVENTS,
+  MOTION_MODE_POLICIES,
+  MOTION_SIGNALS,
+} from "@/lib/motion";
 import type {
   FirstViewLoopState,
   PageProofResponse,
@@ -68,6 +72,44 @@ function formatDuration(seconds: number | null) {
   return `${minutes}m ${remainder}s`;
 }
 
+export function isTruthfulFirstViewResolution(
+  payload: PageProofResponse,
+  expectedPageId: string,
+) {
+  if (
+    payload.pageId !== expectedPageId ||
+    payload.loopState !== "first_view_detected" ||
+    !payload.lastShareAt ||
+    !payload.firstViewAfterLatestShareAt
+  ) {
+    return false;
+  }
+
+  const sharedAt = Date.parse(payload.lastShareAt);
+  const viewedAt = Date.parse(payload.firstViewAfterLatestShareAt);
+  return (
+    Number.isFinite(sharedAt) &&
+    Number.isFinite(viewedAt) &&
+    viewedAt >= sharedAt
+  );
+}
+
+export function shouldEmitFirstViewMotion(
+  payload: PageProofResponse,
+  expectedPageId: string,
+  lastResolvedAt: string | null,
+) {
+  return (
+    isTruthfulFirstViewResolution(payload, expectedPageId) &&
+    payload.firstViewAfterLatestShareAt !== lastResolvedAt
+  );
+}
+
+// Document-lifetime deduplication prevents an App Router remount from replaying
+// the same confirmed view. It is intentionally in-memory: no page identifier or
+// activity timestamp is written to durable browser storage.
+const resolvedFirstViewAtByPage = new Map<string, string>();
+
 export default function FirstViewActivationHub({
   pageId,
   livePath,
@@ -87,6 +129,10 @@ export default function FirstViewActivationHub({
   const [loopState, setLoopState] =
     useState<FirstViewLoopState>("repeat_share_prompt");
   const [proof, setProof] = useState<PageProofResponse | null>(null);
+  const [firstViewSequence, setFirstViewSequence] = useState(0);
+  const [firstViewMotionKey, setFirstViewMotionKey] = useState<string | null>(
+    null,
+  );
   const [copyState, setCopyState] = useState<"idle" | "message" | "link" | "error">("idle");
   const [checkingProof, setCheckingProof] = useState(false);
   const [proofError, setProofError] = useState<string | null>(null);
@@ -95,6 +141,9 @@ export default function FirstViewActivationHub({
   );
   const sharePanelRef = useRef<HTMLDivElement | null>(null);
   const copyTimerRef = useRef<number | null>(null);
+  const resolvedFirstViewAtRef = useRef<string | null>(
+    resolvedFirstViewAtByPage.get(pageId) ?? null,
+  );
   const selectedVariant =
     variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const previewSharePath = useMemo(
@@ -117,6 +166,12 @@ export default function FirstViewActivationHub({
 
     setAppOrigin(window.location.origin.replace(/\/$/, ""));
   }, []);
+
+  useEffect(() => {
+    resolvedFirstViewAtRef.current =
+      resolvedFirstViewAtByPage.get(pageId) ?? null;
+    setFirstViewMotionKey(null);
+  }, [pageId]);
 
   useEffect(() => () => {
     if (copyTimerRef.current !== null) {
@@ -163,6 +218,7 @@ export default function FirstViewActivationHub({
       await navigator.clipboard.writeText(value);
       setCopyState(mode === "message_template" ? "message" : "link");
       setProofError(null);
+      setFirstViewMotionKey(null);
       setLoopState("waiting_for_first_view");
       void trackShareIntent("page.share.copy_link", {
         page_id: pageId,
@@ -189,6 +245,7 @@ export default function FirstViewActivationHub({
   const checkForViews = async () => {
     setCheckingProof(true);
     setProofError(null);
+    setFirstViewMotionKey(null);
 
     try {
       const response = await fetch(`/api/pages/${pageId}/proof`, {
@@ -205,7 +262,10 @@ export default function FirstViewActivationHub({
         !response.ok ||
         !payload ||
         ("error" in payload && typeof payload.error === "string") ||
-        !("loopState" in payload)
+        !("loopState" in payload) ||
+        payload.pageId !== pageId ||
+        (payload.loopState === "first_view_detected" &&
+          !isTruthfulFirstViewResolution(payload, pageId))
       ) {
         const message =
           payload && "error" in payload && typeof payload.error === "string"
@@ -216,6 +276,20 @@ export default function FirstViewActivationHub({
 
       setProof(payload);
       setLoopState(payload.loopState);
+      const resolvedFirstViewAt = payload.firstViewAfterLatestShareAt;
+      if (
+        resolvedFirstViewAt &&
+        shouldEmitFirstViewMotion(
+          payload,
+          pageId,
+          resolvedFirstViewAtRef.current,
+        )
+      ) {
+        resolvedFirstViewAtRef.current = resolvedFirstViewAt;
+        resolvedFirstViewAtByPage.set(pageId, resolvedFirstViewAt);
+        setFirstViewMotionKey(resolvedFirstViewAt);
+        setFirstViewSequence((sequence) => sequence + 1);
+      }
     } catch (error) {
       setProofError(
         error instanceof Error
@@ -228,6 +302,7 @@ export default function FirstViewActivationHub({
   };
 
   const focusSharePanel = () => {
+    setFirstViewMotionKey(null);
     setLoopState("repeat_share_prompt");
     sharePanelRef.current?.scrollIntoView({
       behavior: allowsSmoothScroll ? "smooth" : "auto",
@@ -264,9 +339,53 @@ export default function FirstViewActivationHub({
     <div className="space-y-5">
       <section
         className="site-panel-raised p-5 sm:p-6"
-        aria-live="polite"
         aria-busy={checkingProof}
+        data-first-view-proof={
+          loopState === "first_view_detected" && firstViewMotionKey
+            ? "resolved"
+            : undefined
+        }
+        data-motion-event={
+          loopState === "first_view_detected" && firstViewMotionKey
+            ? MOTION_EVENTS.ANALYTICS_FIRST_VIEW_DETECTED
+            : undefined
+        }
+        data-motion-signal={
+          loopState === "first_view_detected" && firstViewMotionKey
+            ? MOTION_SIGNALS.SHARE_HANDOFF
+            : undefined
+        }
+        data-motion-state={
+          loopState === "first_view_detected" && firstViewMotionKey
+            ? "detected"
+            : undefined
+        }
+        data-motion-sequence={
+          loopState === "first_view_detected" && firstViewMotionKey
+            ? firstViewSequence
+            : undefined
+        }
+        data-motion-target={
+          loopState === "first_view_detected" && firstViewMotionKey
+            ? "first-view"
+            : undefined
+        }
       >
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+          data-first-view-status
+        >
+          {checkingProof
+            ? "Checking for views."
+            : loopState === "first_view_detected" && firstViewMotionKey
+              ? "First view confirmed after your latest share."
+              : loopState === "waiting_for_first_view"
+                ? "Waiting for a first view after your latest share."
+                : ""}
+        </p>
         <p className="site-eyebrow">
           Proof
         </p>

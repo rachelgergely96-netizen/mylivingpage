@@ -1,3 +1,4 @@
+import React from "react";
 import Image from "next/image";
 import type { ResumeData } from "@/types/resume";
 
@@ -7,6 +8,7 @@ interface ResumeLayoutProps {
   headingLevel?: "h1" | "h2";
   disableExternalLinks?: boolean;
   useExternalScrollRoot?: boolean;
+  privacySafeDataAttributes?: boolean;
 }
 
 /* ── Backward-compat helpers ───────────────────────────────────────── */
@@ -69,6 +71,7 @@ export default function ResumeLayout({
   headingLevel = "h1",
   disableExternalLinks = false,
   useExternalScrollRoot = false,
+  privacySafeDataAttributes = false,
 }: ResumeLayoutProps) {
   const NameHeading = headingLevel;
   const headingSize = compact
@@ -254,7 +257,9 @@ export default function ResumeLayout({
               <article
                 key={`${stat.label}-${stat.value}`}
                 data-stat-index={statIndex}
-                data-motion-item={`stat-${stat.label}`}
+                data-motion-item={
+                  privacySafeDataAttributes ? `stat-${statIndex}` : `stat-${stat.label}`
+                }
                 data-motion-kind="stat"
                 className="resume-theme-card rounded-none border p-2.5 text-center sm:p-3"
               >
@@ -308,7 +313,9 @@ export default function ResumeLayout({
                   <article
                     key={proof.id}
                     data-proof-index={proofIndex}
-                    data-motion-item={`proof-${proof.id}`}
+                    data-motion-item={
+                      privacySafeDataAttributes ? `proof-${proofIndex}` : `proof-${proof.id}`
+                    }
                     data-motion-kind="proof"
                     className="resume-theme-card-accent rounded-none border p-3 sm:p-4"
                   >
@@ -380,10 +387,14 @@ export default function ResumeLayout({
               data-testimonial-grid
               className="grid gap-2 sm:gap-3 md:grid-cols-2"
             >
-              {testimonials.map((testimonial) => (
+              {testimonials.map((testimonial, testimonialIndex) => (
                 <article
                   key={testimonial.id}
-                  data-motion-item={`testimonial-${testimonial.id}`}
+                  data-motion-item={
+                    privacySafeDataAttributes
+                      ? `testimonial-${testimonialIndex}`
+                      : `testimonial-${testimonial.id}`
+                  }
                   data-motion-kind="testimonial"
                   className="resume-theme-card rounded-none border p-3 sm:p-4"
                 >
@@ -419,7 +430,11 @@ export default function ResumeLayout({
                 <article
                   key={`${exp.company}-${exp.title}-${exp.dates}`}
                   data-experience-index={experienceIndex}
-                  data-motion-item={`experience-${exp.company}-${exp.title}`}
+                  data-motion-item={
+                    privacySafeDataAttributes
+                      ? `experience-${experienceIndex}`
+                      : `experience-${exp.company}-${exp.title}`
+                  }
                   data-motion-kind="experience"
                   className={`resume-theme-experience-entry ${compact ? "py-3" : "py-5 sm:py-6"}`}
                 >
@@ -509,7 +524,11 @@ export default function ResumeLayout({
                   <article
                     key={project.name}
                     data-project-index={projectIndex}
-                    data-motion-item={`project-${project.name}`}
+                    data-motion-item={
+                      privacySafeDataAttributes
+                        ? `project-${projectIndex}`
+                        : `project-${project.name}`
+                    }
                     data-motion-kind="project"
                   >
                     {projectUrl ? (
@@ -588,10 +607,14 @@ export default function ResumeLayout({
               Education
             </h2>
             <div data-education-list className="space-y-2">
-              {data.education.map((education) => (
+              {data.education.map((education, educationIndex) => (
                 <article
                   key={`${education.school}-${education.degree}-${education.year}`}
-                  data-motion-item={`education-${education.school}-${education.degree}`}
+                  data-motion-item={
+                    privacySafeDataAttributes
+                      ? `education-${educationIndex}`
+                      : `education-${education.school}-${education.degree}`
+                  }
                   data-motion-kind="education"
                   className="resume-theme-card rounded-none border p-3"
                 >
@@ -623,16 +646,20 @@ export default function ResumeLayout({
               Skills
             </h2>
             <div data-skill-list className="space-y-3">
-              {skills.map((group) => (
+              {skills.map((group, groupIndex) => (
                 <div key={group.category}>
                   {skills.length > 1 ? (
                     <p className="resume-theme-subtle mb-1.5 text-[10px] font-medium uppercase">{group.category}</p>
                   ) : null}
                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    {group.items.map((skill) => (
+                    {group.items.map((skill, skillIndex) => (
                       <span
                         key={skill}
-                        data-motion-item={`skill-${skill}`}
+                        data-motion-item={
+                          privacySafeDataAttributes
+                            ? `skill-${groupIndex}-${skillIndex}`
+                            : `skill-${skill}`
+                        }
                         data-motion-kind="skill"
                         className="resume-theme-pill rounded-none border px-2.5 py-0.5 text-[11px] sm:px-3 sm:py-1 sm:text-xs"
                       >
@@ -662,10 +689,14 @@ export default function ResumeLayout({
               Certifications
             </h2>
             <div data-certification-list className="space-y-2">
-              {certs.map((cert) => (
+              {certs.map((cert, certificationIndex) => (
                 <div
                   key={cert.name}
-                  data-motion-item={`certification-${cert.name}`}
+                  data-motion-item={
+                    privacySafeDataAttributes
+                      ? `certification-${certificationIndex}`
+                      : `certification-${cert.name}`
+                  }
                   data-motion-kind="certification"
                   className="resume-theme-card flex items-center gap-2.5 rounded-none border px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
                 >

@@ -22,6 +22,14 @@ export const INITIAL_ANALYTICS_RANGE_MOTION_INTENT_STATE: AnalyticsRangeMotionIn
   nextSequence: 1,
 };
 
+export function getAnalyticsRangeMotionRenderKey(
+  pageId: string,
+  renderedRange: AnalyticsRangeKey,
+  canResolve: boolean,
+) {
+  return JSON.stringify([pageId, renderedRange, canResolve]);
+}
+
 export function isCurrentAnalyticsRangeMotionResolution(
   resolution: AnalyticsRangeMotionResolution | null,
   rangeKey: AnalyticsRangeKey,

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FREE_THEMES } from "@/lib/plans";
+import { MOTION_EVENTS, MOTION_SIGNALS } from "@/lib/motion";
 import ThemeCanvas from "@/components/ThemeCanvas";
 import type {
   ThemeCollectionFilterId,
@@ -30,6 +31,12 @@ interface ThemePickerPreviewProps {
   theme: ThemeMeta;
   selected: boolean;
   requested: boolean;
+}
+
+interface ThemeSelectionStatus {
+  sequence: number;
+  themeId: ThemeId;
+  themeName: string;
 }
 
 function StaticThemePreview({ theme }: { theme: ThemeMeta }) {
@@ -147,9 +154,12 @@ export default function ThemePicker({
     () => new Set([selectedThemeId]),
   );
   const [focusedThemeId, setFocusedThemeId] = useState<ThemeId | null>(null);
+  const [selectionStatus, setSelectionStatus] =
+    useState<ThemeSelectionStatus | null>(null);
   const filterScrollerRef = useRef<HTMLDivElement | null>(null);
   const activeChipRef = useRef<HTMLButtonElement | null>(null);
   const cardRefs = useRef(new Map<ThemeId, HTMLButtonElement>());
+  const previousSelectedThemeIdRef = useRef(selectedThemeId);
   const requestThemeRenderer = (themeId: ThemeId) => {
     setRequestedThemeIds((current) => {
       if (current.has(themeId)) {
@@ -198,6 +208,29 @@ export default function ThemePicker({
       : visibleThemeIds.includes(selectedThemeId)
         ? selectedThemeId
         : visibleThemeIds[0] ?? null;
+  const confirmedSelection =
+    selectionStatus?.themeId === selectedThemeId ? selectionStatus : null;
+
+  // Wait for the controlled value to change before announcing success. This
+  // keeps the event truthful if a parent rejects or rolls back a selection,
+  // while the keyed card and preview DOM remain mounted and focused.
+  useEffect(() => {
+    if (previousSelectedThemeIdRef.current === selectedThemeId) {
+      return;
+    }
+
+    previousSelectedThemeIdRef.current = selectedThemeId;
+    const selectedTheme = themes.find((theme) => theme.id === selectedThemeId);
+    if (!selectedTheme) {
+      return;
+    }
+
+    setSelectionStatus((current) => ({
+      sequence: (current?.sequence ?? 0) + 1,
+      themeId: selectedTheme.id,
+      themeName: selectedTheme.name,
+    }));
+  }, [selectedThemeId, themes]);
 
   // Keep the initially active filter chip visible inside the horizontal
   // scroller on small screens without scrolling the page itself.
@@ -238,7 +271,19 @@ export default function ThemePicker({
   };
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      data-theme-picker
+      data-motion-event={
+        confirmedSelection ? MOTION_EVENTS.THEME_SELECTION_CHANGED : undefined
+      }
+      data-motion-signal={
+        confirmedSelection ? MOTION_SIGNALS.STYLE_DIALECT : undefined
+      }
+      data-motion-state={confirmedSelection ? "selected" : undefined}
+      data-motion-sequence={confirmedSelection?.sequence}
+      data-motion-target={confirmedSelection ? "theme" : undefined}
+    >
       <div ref={filterScrollerRef} className="flex gap-2 overflow-x-auto pb-1">
         {THEME_COLLECTION_FILTER_IDS.map((collection) => {
           const active = activeCollection === collection;
@@ -322,7 +367,10 @@ export default function ThemePicker({
                         </span>
                       ) : null}
                       {selected ? (
-                        <span className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-none border border-site-action bg-site-surface px-2 py-0.5 text-xs font-semibold text-site-text">
+                        <span
+                          data-theme-selection-indicator
+                          className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-none border border-site-action bg-site-surface px-2 py-0.5 text-xs font-semibold text-site-text"
+                        >
                           <svg
                             aria-hidden="true"
                             className="h-3 w-3"
@@ -366,6 +414,18 @@ export default function ThemePicker({
           </section>
         ))}
       </div>
+
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-theme-selection-status
+        className="sr-only"
+      >
+        {confirmedSelection
+          ? `${confirmedSelection.themeName} theme selected.`
+          : ""}
+      </p>
 
       {anyVisibleLocked ? (
         <p className="text-xs leading-5 text-site-muted">

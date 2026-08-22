@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import AuthMessage from "@/components/auth/AuthMessage";
+import AuthDestinationNotice from "@/components/auth/AuthDestinationNotice";
 import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 import { getAuthErrorMessage } from "@/lib/auth/auth-error";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
@@ -67,6 +68,7 @@ export default function LoginPage() {
   const [pendingAction, setPendingAction] = useState<"email" | "google" | null>(null);
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/dashboard");
+  const [destinationPath, setDestinationPath] = useState<string | null>(null);
   // Carry the destination through to signup only when the URL actually asked
   // for one, so a funnel visitor (next=/create?ref=…) who switches to signup
   // keeps their intent, while a bare /login still links to a bare /signup.
@@ -80,6 +82,10 @@ export default function LoginPage() {
       requestedNext,
       "/dashboard",
     );
+    const visibleNext = requestedNext
+      ? sanitizeInternalRedirectPath(requestedNext, "")
+      : "";
+    setDestinationPath(visibleNext || null);
     setNextPath(resolvedNext);
     setCreateAccountHref(
       requestedNext
@@ -178,6 +184,7 @@ export default function LoginPage() {
           Keep your professional page, résumé PDF, and sharing tools current
           from one place.
         </p>
+        <AuthDestinationNotice action="signin" path={destinationPath} />
 
         <button
           type="button"

@@ -30,28 +30,37 @@ describe("shared motion contract", () => {
     expect(Object.values(MOTION_EVENTS)).toEqual([
       "resume.import.fact.detected",
       "resume.import.review.required",
+      "resume.pdf.preview.ready",
       "editor.field.changed",
       "editor.save.confirmed",
+      "theme.selection.changed",
+      "example.context.changed",
       "page.chapter.entered",
       "page.publish.confirmed",
       "share.artifact.ready",
+      "analytics.first_view.detected",
       "analytics.range.updated",
     ]);
     expect(Object.values(MOTION_SIGNALS)).toEqual([
       "truth-transfer",
       "review-gate",
       "edit-to-proof",
+      "style-dialect",
       "career-chapters",
       "share-handoff",
     ]);
     expect(MOTION_EVENT_SIGNALS).toEqual({
       "resume.import.fact.detected": "truth-transfer",
       "resume.import.review.required": "review-gate",
+      "resume.pdf.preview.ready": "edit-to-proof",
       "editor.field.changed": "edit-to-proof",
       "editor.save.confirmed": "edit-to-proof",
+      "theme.selection.changed": "style-dialect",
+      "example.context.changed": "career-chapters",
       "page.chapter.entered": "career-chapters",
       "page.publish.confirmed": "share-handoff",
       "share.artifact.ready": "share-handoff",
+      "analytics.first_view.detected": "share-handoff",
       "analytics.range.updated": "edit-to-proof",
     });
   });

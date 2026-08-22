@@ -53,9 +53,13 @@ export default function RecruiterSkimPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="resume-theme-accent text-xs uppercase tracking-[0.18em]">
-              Recruiter version
+              Recruiter view · owner curated
             </p>
             <p className="resume-theme-muted mt-1 text-sm">{variantLabel}</p>
+            <p className="resume-theme-subtle mt-2 max-w-2xl text-xs leading-5">
+              This view may emphasize, reorder, or use wording the page owner saved for this
+              audience. MyLivingPage did not rewrite it automatically for this visit.
+            </p>
             {visibleChips.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {visibleChips.map((point) => (
@@ -69,25 +73,33 @@ export default function RecruiterSkimPanel({
               </div>
             ) : null}
           </div>
-          <button
-            type="button"
-            aria-expanded={expanded}
-            aria-controls={contentId}
-            onClick={() => setExpanded((current) => !current)}
-            className="theme-surface resume-theme-link inline-flex min-h-11 items-center gap-2 self-start rounded-none border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:self-center"
-          >
-            <span>{expanded ? "Hide the highlights" : "Show the highlights"}</span>
-            <svg
-              className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              aria-hidden="true"
+          <div className="flex flex-wrap gap-2 self-start sm:justify-end sm:self-center">
+            <a
+              href={publicPath}
+              className="theme-surface-strong theme-link inline-flex min-h-11 items-center rounded-none border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)]"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
+              Open the full page
+            </a>
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={contentId}
+              onClick={() => setExpanded((current) => !current)}
+              className="theme-surface resume-theme-link inline-flex min-h-11 items-center gap-2 rounded-none border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)]"
+            >
+              <span>{expanded ? "Hide the highlights" : "Show the highlights"}</span>
+              <svg
+                className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {expanded ? (
@@ -138,7 +150,7 @@ export default function RecruiterSkimPanel({
                 {resumeData.email ? (
                   <a
                     href={`mailto:${resumeData.email}`}
-                    className="theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
+                    className="motion-responsive-control theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
                   >
                     Email
                   </a>
@@ -148,17 +160,11 @@ export default function RecruiterSkimPanel({
                     href={toHref(resumeData.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
+                    className="motion-responsive-control theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
                   >
                     LinkedIn
                   </a>
                 ) : null}
-                <a
-                  href={publicPath}
-                  className="theme-surface-strong theme-link inline-flex min-h-12 items-center rounded-none border px-4 py-2.5 text-[13px] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] sm:text-sm"
-                >
-                  Open the full page
-                </a>
               </div>
             </div>
 

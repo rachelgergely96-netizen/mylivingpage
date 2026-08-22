@@ -1,4 +1,6 @@
 import Link from "next/link";
+import React from "react";
+import MotionModeControl from "@/components/motion/MotionModeControl";
 import CookieSettingsButton from "@/components/privacy/CookieSettingsButton";
 import {
   getLegalSiteConfig,
@@ -57,9 +59,12 @@ export default function SiteLegalFooter({ siteId }: { siteId: LegalSiteId }) {
             ) : null}
           </div>
         </nav>
-        <p className="text-xs text-site-muted md:text-right">
-          Copyright {new Date().getFullYear()} {copyrightOwner}. All rights reserved.
-        </p>
+        <div className="flex min-w-48 flex-col items-center gap-3 md:items-end">
+          <MotionModeControl compact className="w-full max-w-52 shadow-none" />
+          <p className="text-xs text-site-muted md:text-right">
+            Copyright {new Date().getFullYear()} {copyrightOwner}. All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
   );

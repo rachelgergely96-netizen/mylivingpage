@@ -2,12 +2,24 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_ANALYTICS_RANGE_MOTION_INTENT_STATE,
   consumeAnalyticsRangeIntent,
+  getAnalyticsRangeMotionRenderKey,
   isCurrentAnalyticsRangeMotionResolution,
   markAnalyticsRangeIntent,
   type AnalyticsRangeMotionResolution,
 } from "@/lib/analytics/range-motion-intent";
 
 describe("analytics range motion intent", () => {
+  it("keeps Strict Mode effect replay on one key while real navigation changes it", () => {
+    const firstSetup = getAnalyticsRangeMotionRenderKey("page-1", "7d", true);
+    const strictReplay = getAnalyticsRangeMotionRenderKey("page-1", "7d", true);
+    const nextRange = getAnalyticsRangeMotionRenderKey("page-1", "90d", true);
+    const staticResult = getAnalyticsRangeMotionRenderKey("page-1", "90d", false);
+
+    expect(strictReplay).toBe(firstSetup);
+    expect(nextRange).not.toBe(firstSetup);
+    expect(staticResult).not.toBe(nextRange);
+  });
+
   it("marks only a real range change and increments a numeric replay sequence", () => {
     const unchanged = markAnalyticsRangeIntent(
       INITIAL_ANALYTICS_RANGE_MOTION_INTENT_STATE,

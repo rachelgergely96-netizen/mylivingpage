@@ -191,6 +191,8 @@ describe("PageAnalyticsDashboard", () => {
     expect(directMarkup).not.toContain('data-motion-target="7d"');
     expect(directMarkup).not.toContain("data-motion-sequence=");
     expect(directMarkup).toContain('data-analytics-range-target="7d"');
+    expect(directMarkup).toContain("data-analytics-range-summary");
+    expect(directMarkup).toContain("data-analytics-range-update-status");
     expect(defaultMarkup).not.toContain("data-motion-event=");
     expect(defaultMarkup).not.toContain("data-motion-target=");
   });
@@ -207,6 +209,11 @@ describe("PageAnalyticsDashboard", () => {
 
     expect(markup).toContain('data-motion-signal="edit-to-proof"');
     expect(markup).toContain('data-motion-state="low-data"');
+    expect(markup).toContain('data-testid="analytics-empty-causal-sequence"');
+    expect(markup).toContain("Page shared");
+    expect(markup).toContain("First view");
+    expect(markup).toContain("Insights appear");
+    expect(markup).toContain("never invents activity");
     expect(markup).not.toContain("data-motion-event=");
     expect(markup).not.toContain("data-motion-target=");
   });

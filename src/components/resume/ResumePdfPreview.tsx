@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { EDITOR_LAYOUT_PREVIEW_PAGE_ID } from "@/lib/editor-preview";
+import { MOTION_EVENTS, MOTION_SIGNALS } from "@/lib/motion";
 import type { ResumeData } from "@/types/resume";
 
 interface ResumePdfPreviewProps {
@@ -28,6 +29,8 @@ export default function ResumePdfPreview({
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewReady, setPreviewReady] = useState(false);
+  const [readySequence, setReadySequence] = useState(0);
   const objectUrlRef = useRef<string | null>(null);
   // Bumped whenever the résumé changes or a new render starts, so a response
   // that arrives after its request went stale is dropped rather than shown.
@@ -49,6 +52,7 @@ export default function ResumePdfPreview({
     releaseObjectUrl();
     setPreviewUrl(null);
     setPageCount(null);
+    setPreviewReady(false);
   }, [releaseObjectUrl, resumeData]);
 
   const renderPreview = useCallback(async () => {
@@ -56,6 +60,7 @@ export default function ResumePdfPreview({
 
     setLoading(true);
     setError(null);
+    setPreviewReady(false);
     renderGenerationRef.current += 1;
     const generation = renderGenerationRef.current;
 
@@ -81,10 +86,18 @@ export default function ResumePdfPreview({
       }
 
       const headerCount = Number(response.headers.get("X-Resume-Page-Count"));
+      const contentType = response.headers
+        .get("Content-Type")
+        ?.split(";")[0]
+        .trim()
+        .toLowerCase();
       const blob = await response.blob();
 
       if (generation !== renderGenerationRef.current) {
         return;
+      }
+      if (contentType !== "application/pdf" || blob.size === 0) {
+        throw new Error("Unable to render the résumé preview right now.");
       }
 
       releaseObjectUrl();
@@ -92,6 +105,8 @@ export default function ResumePdfPreview({
       objectUrlRef.current = url;
       setPreviewUrl(url);
       setPageCount(Number.isFinite(headerCount) && headerCount > 0 ? headerCount : null);
+      setReadySequence((sequence) => sequence + 1);
+      setPreviewReady(true);
     } catch (previewError) {
       if (generation !== renderGenerationRef.current) {
         return;
@@ -111,6 +126,7 @@ export default function ResumePdfPreview({
   return (
     <section
       aria-labelledby="resume-pdf-preview-title"
+      aria-busy={loading || undefined}
       data-resume-pdf-preview
       className="site-panel p-4 sm:p-5"
     >
@@ -153,16 +169,31 @@ export default function ResumePdfPreview({
               Open PDF in a new tab
             </a>
           </div>
-          {pageCount !== null ? (
+          {previewReady ? (
             <p
               className={`mb-2 text-xs font-semibold ${
-                pageCount === 1 ? "text-site-success" : "text-site-warning"
+                pageCount === null || pageCount === 1
+                  ? "text-site-success"
+                  : "text-site-warning"
               }`}
               role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-resume-pdf-ready-status
+              data-motion-event={MOTION_EVENTS.RESUME_PDF_PREVIEW_READY}
+              data-motion-signal={MOTION_SIGNALS.EDIT_TO_PROOF}
+              data-motion-state="ready"
+              data-motion-sequence={readySequence}
+              data-motion-target="resume-pdf"
             >
-              {pageCount === 1
-                ? "1 page."
-                : `${pageCount} pages. More than one page is not automatically an ATS problem.`}
+              {pageCount === null
+                ? "Résumé PDF preview ready."
+                : pageCount === 1
+                  ? "Résumé PDF preview ready. 1 page."
+                  : `Résumé PDF preview ready. ${pageCount} pages. More than one page is not automatically an ATS problem.`}
+              <span className="mt-1 block font-normal text-site-muted">
+                This preview reflects the current editor content; it does not save your page.
+              </span>
             </p>
           ) : null}
           <object

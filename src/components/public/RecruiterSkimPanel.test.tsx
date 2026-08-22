@@ -44,6 +44,10 @@ describe("RecruiterSkimPanel", () => {
     const markup = renderPanel();
 
     expect(markup).toContain("Show the highlights");
+    expect(markup).toContain("Recruiter view · owner curated");
+    expect(markup).toContain("did not rewrite it automatically for this visit");
+    expect(markup).toContain('href="/rachel"');
+    expect(markup).toContain("Open the full page");
     expect(markup).not.toContain("recruiter skim</span>");
     expect(markup).toContain('aria-expanded="false"');
     expect(markup).toContain("min-h-11");

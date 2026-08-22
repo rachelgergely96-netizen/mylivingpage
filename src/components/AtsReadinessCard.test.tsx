@@ -1,10 +1,23 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import AtsReadinessCard from "@/components/AtsReadinessCard";
+import AtsReadinessCard, {
+  getAtsProposalAffectedSections,
+} from "@/components/AtsReadinessCard";
 import { DEMO_PAGES } from "@/lib/demo-data";
 
 describe("AtsReadinessCard", () => {
+  it("maps accepted patch keys to stable preview section identifiers", () => {
+    expect(
+      getAtsProposalAffectedSections({
+        headline: "Principal Product Manager",
+        location: "New York",
+        summary: "Product leader",
+        proofs: [],
+      }),
+    ).toEqual(["profile", "summary", "proof"]);
+  });
+
   it("keeps the job comparison visible while clearly defaulting to a general check", () => {
     const markup = renderToStaticMarkup(
       <AtsReadinessCard resumeData={DEMO_PAGES[0].data} />,

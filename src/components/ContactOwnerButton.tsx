@@ -1,10 +1,12 @@
 "use client";
 
+import React from "react";
 import type { ResumeData } from "@/types/resume";
 
 interface ContactOwnerButtonProps {
   resumeData: ResumeData;
   className?: string;
+  label?: string;
 }
 
 function firstName(fullName: string): string {
@@ -23,6 +25,7 @@ function firstName(fullName: string): string {
 export default function ContactOwnerButton({
   resumeData,
   className,
+  label,
 }: ContactOwnerButtonProps) {
   const email = resumeData.email?.trim();
   if (!email) {
@@ -51,7 +54,7 @@ export default function ContactOwnerButton({
         <rect x="1.75" y="3.25" width="12.5" height="9.5" />
         <path d="M1.75 4.5 8 8.75l6.25-4.25" />
       </svg>
-      {name ? `Get in touch with ${name}` : "Get in touch"}
+      {label ?? (name ? `Get in touch with ${name}` : "Get in touch")}
     </a>
   );
 }

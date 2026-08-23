@@ -95,8 +95,69 @@ test("try keeps source lineage local, reviewable, and explicitly saved", async (
   ).not.toBeNull();
 });
 
+test("try keeps the preview recoverable when browser draft storage is blocked", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalSetItem = Storage.prototype.setItem;
+    window.addEventListener(
+      "mlp-test-enable-draft-storage",
+      () => {
+        Storage.prototype.setItem = originalSetItem;
+      },
+      { once: true },
+    );
+    Storage.prototype.setItem = function setItem(key: string, value: string) {
+      if (key === "mlp-draft-create-anonymous") {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      }
+      return originalSetItem.call(this, key, value);
+    };
+  });
+  await page.goto("/try");
+
+  await page.getByRole("button", { name: "Preview product leader sample" }).click();
+  await page.getByRole("button", { name: "Mark these facts reviewed" }).click();
+  const handoff = page.locator("section.site-callout");
+  await handoff.getByRole("link", { name: "Create my free page" }).click();
+
+  await expect(page).toHaveURL(/\/try$/);
+  const saveError = handoff.locator("[data-try-draft-save-error]");
+  await expect(saveError).toHaveRole("alert");
+  await expect(saveError).toContainText(
+    "We couldn't save a temporary browser draft",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Detected facts and their source lines" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Temporary device\/browser draft saved/i)).toHaveCount(0);
+  expect(
+    await page.evaluate(() => window.localStorage.getItem("mlp-draft-create-anonymous")),
+  ).toBeNull();
+
+  const loginLink = handoff.getByRole("link", { name: "I already have an account" });
+  await loginLink.click();
+  await expect(page).toHaveURL(/\/try$/);
+  await expect(saveError).toContainText(
+    "We couldn't save a temporary browser draft",
+  );
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("mlp-test-enable-draft-storage"));
+  });
+  await loginLink.evaluate((element) => {
+    element.addEventListener("click", (event) => event.preventDefault(), { once: true });
+  });
+  await loginLink.click();
+  await expect(saveError).toHaveCount(0);
+  await expect(page.getByText(/Temporary device\/browser draft saved/i)).toBeVisible();
+  expect(
+    await page.evaluate(() => window.localStorage.getItem("mlp-draft-create-anonymous")),
+  ).not.toBeNull();
+});
+
 test("guide chapter markers resolve to stable article landmarks", async ({ page }) => {
-  await page.goto("/guides/resume-pdf-check");
+  await page.goto("/guides/resume-pdf-check#why-clean-pdf-text-matters");
 
   const rail = page.locator("[data-semantic-chapter-rail]");
   await expect(rail).toBeVisible();
@@ -110,9 +171,48 @@ test("guide chapter markers resolve to stable article landmarks", async ({ page 
 
   const secondChapter = rail.locator("a").nth(1);
   const secondHref = await secondChapter.getAttribute("href");
-  await secondChapter.click();
-  await expect.poll(() => new URL(page.url()).hash).toBe(secondHref);
+  await expect(secondChapter).toHaveAttribute("aria-current", "step");
+  await expect(rail).not.toHaveAttribute("data-motion-event");
+  await expect(rail).not.toHaveAttribute("data-motion-sequence");
   await expect(page.locator(secondHref ?? "#missing-guide-section")).toBeVisible();
+
+  const thirdChapter = rail.locator("a").nth(2);
+  const thirdHref = await thirdChapter.getAttribute("href");
+  await thirdChapter.click();
+  await expect.poll(() => new URL(page.url()).hash).toBe(thirdHref);
+  await expect(rail).toHaveAttribute("data-motion-event", "page.chapter.entered");
+  await expect(rail).toHaveAttribute("data-motion-target", "after-the-pdf-check");
+  await expect(rail).toHaveAttribute("data-motion-sequence", "1");
+  await page.waitForTimeout(250);
+  await expect(rail).toHaveAttribute("data-motion-sequence", "1");
+
+  await page.evaluate(() => {
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+    document.getElementById("why-clean-pdf-text-matters")?.scrollIntoView({
+      block: "start",
+      behavior: "auto",
+    });
+  });
+  await expect(secondChapter).toHaveAttribute("aria-current", "step");
+
+  await page.reload();
+  await expect(secondChapter).toHaveAttribute("aria-current", "step");
+  await expect(rail).not.toHaveAttribute("data-motion-event");
+  await expect(rail).not.toHaveAttribute("data-motion-sequence");
+
+  await page.locator("#after-the-pdf-check").evaluate((element) => {
+    element.scrollIntoView({ block: "start", behavior: "auto" });
+  });
+  await expect(rail).toHaveAttribute("data-motion-target", "after-the-pdf-check");
+  await expect(rail).toHaveAttribute("data-motion-sequence", "1");
+
+  await page.evaluate(() => {
+    window.location.hash = "what-a-pdf-check-catches";
+  });
+  await expect(rail).toHaveAttribute("data-motion-target", "what-a-pdf-check-catches");
+  await expect(rail).toHaveAttribute("data-motion-sequence", "2");
+  await page.waitForTimeout(250);
+  await expect(rail).toHaveAttribute("data-motion-sequence", "2");
 });
 
 test("pricing describes one reviewed source without a live-sync promise", async ({

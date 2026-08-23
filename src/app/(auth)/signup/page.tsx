@@ -169,8 +169,8 @@ export default function SignupPage() {
   };
 
   return (
-    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-10 sm:px-6 sm:py-14">
-      <div className="site-panel-raised w-full p-6 sm:p-8">
+    <main id="main-content" data-site-ui className="mx-auto flex w-full max-w-[30rem] flex-1 items-center px-5 py-4 sm:px-6 sm:py-14">
+      <div className="site-panel-raised w-full p-4 sm:p-8">
         <p className="site-eyebrow">Create your free Living Page</p>
         <h1 className="site-page-title mt-3">
           Let&apos;s get your page live.
@@ -191,7 +191,7 @@ export default function SignupPage() {
           </div>
         ) : (
           <>
-            <label className="mt-5 flex min-h-11 items-start gap-3 border border-site-border bg-site-canvas-alt p-3 text-sm leading-5 text-site-secondary">
+            <label className="mt-4 flex min-h-11 items-start gap-3 border border-site-border bg-site-canvas-alt p-3 text-sm leading-5 text-site-secondary sm:mt-5">
               <input
                 id="signup-legal-acceptance"
                 type="checkbox"
@@ -229,20 +229,20 @@ export default function SignupPage() {
               type="button"
               onClick={onGoogleSignup}
               disabled={status === "loading"}
-              className="site-button site-button-secondary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
+              className="site-button site-button-secondary mt-3 w-full disabled:cursor-not-allowed disabled:opacity-50 sm:mt-4"
             >
               {pendingAction === "google" ? "Redirecting to Google…" : "Continue with Google"}
             </button>
 
-            <div className="my-5 flex items-center gap-3 text-xs text-site-muted">
+            <div className="my-3 flex items-center gap-3 text-xs text-site-muted sm:my-5">
               <div className="h-px flex-1 bg-site-border" />
               Or
               <div className="h-px flex-1 bg-site-border" />
             </div>
 
-            <form className="space-y-4" onSubmit={onSignup}>
+            <form className="space-y-3 sm:space-y-4" onSubmit={onSignup}>
               <div>
-                <label htmlFor="signup-email" className="mb-2 block text-sm font-semibold text-site-text">
+                <label htmlFor="signup-email" className="mb-1 block text-sm font-semibold text-site-text sm:mb-2">
                   Email address
                 </label>
                 <input
@@ -263,7 +263,7 @@ export default function SignupPage() {
                 />
               </div>
               <div>
-                <label htmlFor="signup-password" className="mb-2 block text-sm font-semibold text-site-text">
+                <label htmlFor="signup-password" className="mb-1 block text-sm font-semibold text-site-text sm:mb-2">
                   Create password
                 </label>
                 <input
@@ -282,7 +282,7 @@ export default function SignupPage() {
                   aria-describedby={message ? "signup-password-help signup-message" : "signup-password-help"}
                   className="site-field px-4"
                 />
-                <p id="signup-password-help" className="mt-2 text-xs text-site-muted">
+                <p id="signup-password-help" className="mt-1 text-xs text-site-muted sm:mt-2">
                   Use at least eight characters.
                 </p>
               </div>

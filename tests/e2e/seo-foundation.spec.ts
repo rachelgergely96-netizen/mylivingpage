@@ -151,7 +151,9 @@ test("guide articles link into the funnel with distinct CTA refs", async ({ page
   await page.goto("/guides/resume-pdf-check");
 
   await expect(page.getByText("Short answer")).toBeVisible();
-  await expect(page.getByText("Before you send it", { exact: true })).toBeVisible();
+  await expect(
+    page.locator("article .site-badge").filter({ hasText: /^Before you send it$/ }),
+  ).toBeVisible();
   await expect(page.getByText("By MyLivingPage Editorial Team")).toBeVisible();
   await expect(page.locator('time[dateTime="2026-03-20"]')).toHaveText("March 20, 2026");
   await expect(page.getByRole("link", { name: /Start from the résumé you already use/ })).toHaveAttribute(

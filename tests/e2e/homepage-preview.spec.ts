@@ -101,7 +101,7 @@ test("the hero shows the page itself and keeps one résumé source visible", asy
     "Move here to explore",
   );
   await expect(
-    story.getByRole("combobox", { name: "Motion preference" }),
+    story.getByRole("combobox", { name: "Living Page motion preference" }),
   ).toBeVisible();
   const motionPreview = story.locator('[data-homepage-motion-preview="hero"]');
   const motionRoot = motionPreview.locator("xpath=ancestor::*[@data-living-output][1]");

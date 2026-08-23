@@ -44,7 +44,7 @@ export default function AuthShell({ children, site }: AuthShellProps) {
           className="border-b border-site-border bg-site-canvas-alt"
           data-auth-progress
         >
-          <ol className="site-container grid grid-cols-3 py-3">
+          <ol className="site-container grid grid-cols-3 py-2 sm:py-3">
             {AUTH_STEPS.map((step, index) => (
               <li
                 key={step.label}

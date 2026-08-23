@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type MouseEvent } from "react";
 import ProvenancePlate from "@/components/ui/ProvenancePlate";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemeCanvas from "@/components/ThemeCanvas";
@@ -131,6 +131,7 @@ export default function TryYourResume() {
   const [correspondenceSequence, setCorrespondenceSequence] = useState(0);
   const [themeId, setThemeId] = useState<ThemeId>("cosmic");
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
   const canPreview = resumeText.trim().length > 40;
@@ -158,6 +159,7 @@ export default function TryYourResume() {
       setParseSequence((sequence) => sequence + 1);
       setCorrespondenceSequence((sequence) => sequence + 1);
       setSaved(false);
+      setSaveError(null);
 
       window.requestAnimationFrame(() => {
         previewRef.current?.scrollIntoView({
@@ -197,10 +199,15 @@ export default function TryYourResume() {
     });
   };
 
-  const keepIt = useCallback(() => {
-    if (!parsedImport || reviewState !== "reviewed") return;
+  const keepIt = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    if (!parsedImport || reviewState !== "reviewed") {
+      event.preventDefault();
+      return;
+    }
 
-    saveAnonymousCreateDraft({
+    setSaved(false);
+    setSaveError(null);
+    const persisted = saveAnonymousCreateDraft({
       resumeText: previewedText,
       guidedData: parsedImport.data,
       parsedData: null,
@@ -214,8 +221,23 @@ export default function TryYourResume() {
         target_audience: "general_public",
       },
     });
+
+    if (!persisted) {
+      event.preventDefault();
+      setSaveError(
+        "We couldn't save a temporary browser draft, so you haven't left this page. Keep this tab open, allow site storage or free browser space, then try the sign-up or sign-in link again.",
+      );
+      return;
+    }
+
     setSaved(true);
   }, [parsedImport, previewedText, reviewState, themeId]);
+  const keepItOnAuxClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (event.button === 1) keepIt(event);
+    },
+    [keepIt],
+  );
 
   const signupHref = "/signup?next=%2Fcreate";
 
@@ -263,6 +285,7 @@ export default function TryYourResume() {
               setResumeText(event.target.value);
               setSelectedSampleId(null);
               setSaved(false);
+              setSaveError(null);
               if (parsedImport) setReviewState("dirty");
             }}
             rows={10}
@@ -451,12 +474,18 @@ export default function TryYourResume() {
                 <>
                   <Link
                     href={signupHref}
+                    onAuxClick={keepItOnAuxClick}
                     onClick={keepIt}
                     className="site-button site-button-primary"
                   >
                     Create my free page
                   </Link>
-                  <Link href="/login?next=/create" onClick={keepIt} className="site-nav-link">
+                  <Link
+                    href="/login?next=/create"
+                    onAuxClick={keepItOnAuxClick}
+                    onClick={keepIt}
+                    className="site-nav-link"
+                  >
                     I already have an account
                   </Link>
                 </>
@@ -470,6 +499,15 @@ export default function TryYourResume() {
               <p role="status" className="mt-3 text-xs text-site-success">
                 Temporary device/browser draft saved. It contains the pasted résumé text, expires
                 after a couple of hours, and can be restored after you sign in.
+              </p>
+            ) : null}
+            {saveError ? (
+              <p
+                role="alert"
+                className="site-alert-danger mt-3 px-3 py-2 text-xs leading-5"
+                data-try-draft-save-error
+              >
+                {saveError}
               </p>
             ) : null}
           </section>

@@ -60,7 +60,7 @@ test("the homepage hero shows the Living Page itself, with the other outputs inc
   // The hero is the page, not a picker: there is no output-switching UI.
   await expect(story.locator("[data-story-moment]")).toHaveCount(0);
   await expect(story.getByRole("heading", { name: "Your Living Page" })).toBeVisible();
-  await expect(story.locator("[data-story-living-output]")).toHaveAttribute("data-theme-id", "atlas");
+  await expect(story.locator("[data-story-living-output]")).toHaveAttribute("data-theme-id", "silk");
   await expect(story.locator('[data-theme-renderer-status="ready"]')).toBeVisible();
 
   // The PDF and the share card are stated as included rather than as
@@ -79,7 +79,9 @@ test("reduced-motion visitors retain the complete content and static transformat
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
 
-  await expect(page.locator('[data-motion-state="reduced"]')).toBeVisible();
+  await expect(
+    page.locator('[data-homepage-prototype][data-motion-state="still"]'),
+  ).toBeVisible();
   await expect(page.locator("[data-transform-motion] b").first()).toBeHidden();
   await expect(page.locator("[data-truth-source]")).toBeVisible();
   await expect(page.locator("[data-truth-destination]")).toBeVisible();

@@ -9,8 +9,8 @@ test("examples page matches the simpler Living Page and Resume PDF positioning",
     }),
   ).toBeVisible();
   await expect(
-    page.getByText("Keep your résumé for file uploads.", {
-      exact: false,
+    page.getByText("Free · Private until published · Keep your résumé", {
+      exact: true,
     }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: /After applying/ })).toBeVisible();
@@ -61,6 +61,12 @@ test("signup page keeps the form above the fold while preserving create intent",
   await expect(emailField).toBeInViewport();
   await expect(passwordField).toBeInViewport();
   await expect(submitButton).toBeInViewport();
+  expect(
+    await submitButton.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= window.innerHeight;
+    }),
+  ).toBe(true);
 
   await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute(
     "href",

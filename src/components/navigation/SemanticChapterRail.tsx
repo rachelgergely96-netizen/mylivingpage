@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MOTION_EVENTS, MOTION_SIGNALS } from "@/lib/motion";
 
 export interface SemanticChapterItem {
@@ -19,6 +19,34 @@ interface ChapterEvent {
   target: string;
 }
 
+interface ChapterTransition {
+  activeId: string;
+  sequence: number;
+  event: ChapterEvent | null;
+}
+
+const CHAPTER_NAVIGATION_SETTLE_MS = 1_200;
+
+export function resolveChapterTransition(
+  currentId: string,
+  nextId: string,
+  sequence: number,
+  emitEvent: boolean,
+): ChapterTransition | null {
+  if (nextId === currentId) return null;
+
+  if (!emitEvent) {
+    return { activeId: nextId, sequence, event: null };
+  }
+
+  const nextSequence = sequence + 1;
+  return {
+    activeId: nextId,
+    sequence: nextSequence,
+    event: { sequence: nextSequence, target: nextId },
+  };
+}
+
 export default function SemanticChapterRail({
   items,
   ariaLabel = "Page chapters",
@@ -28,19 +56,57 @@ export default function SemanticChapterRail({
   const [chapterEvent, setChapterEvent] = useState<ChapterEvent | null>(null);
   const sequenceRef = useRef(0);
   const activeIdRef = useRef(activeId);
+  const pendingNavigationTargetRef = useRef<string | null>(null);
+  const pendingNavigationTimerRef = useRef<number | null>(null);
+  const scheduleMeasurementRef = useRef<(() => void) | null>(null);
+
+  const clearPendingNavigation = useCallback(() => {
+    pendingNavigationTargetRef.current = null;
+    if (pendingNavigationTimerRef.current !== null) {
+      window.clearTimeout(pendingNavigationTimerRef.current);
+      pendingNavigationTimerRef.current = null;
+    }
+  }, []);
+
+  const expectNavigationTo = useCallback(
+    (target: string) => {
+      clearPendingNavigation();
+      pendingNavigationTargetRef.current = target;
+      pendingNavigationTimerRef.current = window.setTimeout(() => {
+        if (pendingNavigationTargetRef.current === target) {
+          pendingNavigationTargetRef.current = null;
+          scheduleMeasurementRef.current?.();
+        }
+        pendingNavigationTimerRef.current = null;
+      }, CHAPTER_NAVIGATION_SETTLE_MS);
+    },
+    [clearPendingNavigation],
+  );
 
   useEffect(() => {
     if (items.length < 2) return;
 
     const allowedIds = new Set(items.map((item) => item.id));
     let frame: number | null = null;
+    let completedInitialMeasurement = false;
 
-    const commitActiveSection = (nextId: string) => {
-      if (!allowedIds.has(nextId) || nextId === activeIdRef.current) return;
-      activeIdRef.current = nextId;
-      setActiveId(nextId);
-      sequenceRef.current += 1;
-      setChapterEvent({ sequence: sequenceRef.current, target: nextId });
+    const commitActiveSection = (nextId: string, emitEvent: boolean) => {
+      if (!allowedIds.has(nextId)) return;
+
+      if (!emitEvent) setChapterEvent(null);
+
+      const transition = resolveChapterTransition(
+        activeIdRef.current,
+        nextId,
+        sequenceRef.current,
+        emitEvent,
+      );
+      if (!transition) return;
+
+      activeIdRef.current = transition.activeId;
+      sequenceRef.current = transition.sequence;
+      setActiveId(transition.activeId);
+      if (transition.event) setChapterEvent(transition.event);
     };
 
     const measure = () => {
@@ -54,12 +120,29 @@ export default function SemanticChapterRail({
       const entered = sections.filter(
         (section) => section.getBoundingClientRect().top <= readingLine,
       );
-      commitActiveSection((entered.at(-1) ?? sections[0]).id);
+      const measuredId = (entered.at(-1) ?? sections[0]).id;
+      const pendingTarget = pendingNavigationTargetRef.current;
+
+      // A click or hash change already emitted its semantic event. Ignore the
+      // intermediate chapters crossed by the browser's smooth anchor scroll.
+      if (completedInitialMeasurement && pendingTarget && measuredId !== pendingTarget) {
+        return;
+      }
+      if (pendingTarget === measuredId) clearPendingNavigation();
+
+      // The first geometry read can reflect browser-restored scroll. Seed the
+      // corresponding chapter without presenting restoration as a new event.
+      commitActiveSection(
+        !completedInitialMeasurement && allowedIds.has(hashId) ? hashId : measuredId,
+        completedInitialMeasurement,
+      );
+      completedInitialMeasurement = true;
     };
 
     const scheduleMeasure = () => {
       if (frame === null) frame = window.requestAnimationFrame(measure);
     };
+    scheduleMeasurementRef.current = scheduleMeasure;
 
     let hashId = "";
     try {
@@ -68,32 +151,60 @@ export default function SemanticChapterRail({
       hashId = "";
     }
     if (allowedIds.has(hashId)) {
-      activeIdRef.current = hashId;
-      setActiveId(hashId);
+      expectNavigationTo(hashId);
+      commitActiveSection(hashId, false);
     }
+
+    const handleHashChange = () => {
+      let nextHashId = "";
+      try {
+        nextHashId = decodeURIComponent(window.location.hash.slice(1));
+      } catch {
+        nextHashId = "";
+      }
+
+      if (allowedIds.has(nextHashId)) {
+        expectNavigationTo(nextHashId);
+        commitActiveSection(nextHashId, true);
+      }
+      scheduleMeasure();
+    };
 
     window.addEventListener("scroll", scheduleMeasure, { passive: true });
     window.addEventListener("resize", scheduleMeasure);
-    window.addEventListener("hashchange", scheduleMeasure);
-    measure();
+    window.addEventListener("hashchange", handleHashChange);
+    // Defer the first geometry read until the browser has had a frame to
+    // restore scroll position or resolve a deep link in production builds.
+    scheduleMeasure();
 
     return () => {
       if (frame !== null) window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", scheduleMeasure);
       window.removeEventListener("resize", scheduleMeasure);
-      window.removeEventListener("hashchange", scheduleMeasure);
+      window.removeEventListener("hashchange", handleHashChange);
+      if (scheduleMeasurementRef.current === scheduleMeasure) {
+        scheduleMeasurementRef.current = null;
+      }
+      clearPendingNavigation();
     };
-  }, [items]);
+  }, [clearPendingNavigation, expectNavigationTo, items]);
 
   if (items.length < 2) return null;
 
   const selectChapter = (id: string) => {
-    if (id !== activeIdRef.current) {
-      activeIdRef.current = id;
-      setActiveId(id);
-      sequenceRef.current += 1;
-      setChapterEvent({ sequence: sequenceRef.current, target: id });
-    }
+    expectNavigationTo(id);
+    const transition = resolveChapterTransition(
+      activeIdRef.current,
+      id,
+      sequenceRef.current,
+      true,
+    );
+    if (!transition) return;
+
+    activeIdRef.current = transition.activeId;
+    sequenceRef.current = transition.sequence;
+    setActiveId(transition.activeId);
+    if (transition.event) setChapterEvent(transition.event);
   };
 
   return (

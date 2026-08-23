@@ -296,7 +296,9 @@ test("the compact control is keyboard-operable, persistent, and mobile-safe", as
 
   const footer = page.locator("footer");
   const control = footer.locator("[data-motion-control]");
-  const select = control.getByRole("combobox", { name: "Motion preference" });
+  const select = control.getByRole("combobox", {
+    name: "Site motion preference",
+  });
   await footer.scrollIntoViewIfNeeded();
   await expect(control).toBeVisible();
   await expect(select).toHaveValue("system");
@@ -346,7 +348,9 @@ test("the compact control is keyboard-operable, persistent, and mobile-safe", as
   await page.reload();
   await expectRootMotion(page, "still", "still");
   await expect(
-    page.locator("footer").getByRole("combobox", { name: "Motion preference" }),
+    page.locator("footer").getByRole("combobox", {
+      name: "Site motion preference",
+    }),
   ).toHaveValue("still");
 });
 

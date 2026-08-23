@@ -556,7 +556,11 @@ export default function LivingHomepagePrototype({
                 <h2 id="live-product-story-title">
                   See one résumé become a Living Page.
                 </h2>
-                <MotionModeControl compact className={styles.storyMotionControl} />
+                <MotionModeControl
+                  compact
+                  ariaLabel="Living Page motion preference"
+                  className={styles.storyMotionControl}
+                />
               </div>
 
               <div className={styles.storyStage} data-story-stage data-transformation-stage>
@@ -964,7 +968,11 @@ export default function LivingHomepagePrototype({
             : "Homepage conversion prototype · Sample profiles only"}
         </span>
         <nav aria-label={isProduction ? "Site and policy links" : "Prototype footer"}>
-          <MotionModeControl compact className="mr-2 w-48" />
+          <MotionModeControl
+            compact
+            ariaLabel="Site motion preference"
+            className="mr-2 w-48"
+          />
           <Link href="/examples">Examples</Link>
           <Link href="/guides">Guides</Link>
           <Link href="/pricing">Pricing</Link>

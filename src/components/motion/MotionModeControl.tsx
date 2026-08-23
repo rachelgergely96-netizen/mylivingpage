@@ -34,11 +34,13 @@ const OPTIONS = [
 interface MotionModeControlProps {
   className?: string;
   compact?: boolean;
+  ariaLabel?: string;
 }
 
 export default function MotionModeControl({
   className = "",
   compact = false,
+  ariaLabel = "Motion preference",
 }: MotionModeControlProps) {
   const { mode, preference, systemReducedMotion, setPreference } =
     useMotionPreference();
@@ -53,7 +55,7 @@ export default function MotionModeControl({
       >
         <span className="font-semibold text-site-text">Motion</span>
         <select
-          aria-label="Motion preference"
+          aria-label={ariaLabel}
           value={preference}
           onChange={(event) =>
             setPreference(event.target.value as MotionPreference)

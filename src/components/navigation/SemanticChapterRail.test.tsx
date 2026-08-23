@@ -1,7 +1,9 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import SemanticChapterRail from "@/components/navigation/SemanticChapterRail";
+import SemanticChapterRail, {
+  resolveChapterTransition,
+} from "@/components/navigation/SemanticChapterRail";
 
 const chapters = [
   { id: "first-real-section", label: "First section" },
@@ -28,5 +30,39 @@ describe("SemanticChapterRail", () => {
         <SemanticChapterRail items={[chapters[0]]} ariaLabel="Article chapters" />,
       ),
     ).toBe("");
+  });
+
+  it("seeds a restored chapter without emitting, then emits each later transition once", () => {
+    const restored = resolveChapterTransition(
+      "first-real-section",
+      "second-real-section",
+      0,
+      false,
+    );
+    expect(restored).toEqual({
+      activeId: "second-real-section",
+      sequence: 0,
+      event: null,
+    });
+
+    const userTransition = resolveChapterTransition(
+      restored?.activeId ?? "",
+      "first-real-section",
+      restored?.sequence ?? 0,
+      true,
+    );
+    expect(userTransition).toEqual({
+      activeId: "first-real-section",
+      sequence: 1,
+      event: { sequence: 1, target: "first-real-section" },
+    });
+    expect(
+      resolveChapterTransition(
+        userTransition?.activeId ?? "",
+        "first-real-section",
+        userTransition?.sequence ?? 0,
+        true,
+      ),
+    ).toBeNull();
   });
 });

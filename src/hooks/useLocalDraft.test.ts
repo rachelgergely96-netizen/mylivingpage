@@ -43,14 +43,32 @@ describe("useLocalDraft storage helpers", () => {
       removeItem: vi.fn(),
     };
 
-    persistDraftEnvelope(storage, null, {
-      data: { resumeText: "Ignored" },
-      savedAt: 999,
-    });
+    expect(
+      persistDraftEnvelope(storage, null, {
+        data: { resumeText: "Ignored" },
+        savedAt: 999,
+      }),
+    ).toBe(false);
     removeDraftEnvelope(storage, null);
 
     expect(storage.setItem).not.toHaveBeenCalled();
     expect(storage.removeItem).not.toHaveBeenCalled();
+  });
+
+  it("reports whether browser storage accepted a draft", () => {
+    const acceptedStorage = { setItem: vi.fn() };
+    const blockedStorage = {
+      setItem: vi.fn(() => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      }),
+    };
+    const envelope = {
+      data: { resumeText: "Keep this work" },
+      savedAt: 999,
+    };
+
+    expect(persistDraftEnvelope(acceptedStorage, "draft-key", envelope)).toBe(true);
+    expect(persistDraftEnvelope(blockedStorage, "draft-key", envelope)).toBe(false);
   });
 
   it("does not throw when a draft cannot be removed from browser storage", () => {

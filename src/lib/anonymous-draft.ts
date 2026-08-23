@@ -30,15 +30,24 @@ export const ANONYMOUS_CREATE_DRAFT_KEY = "mlp-draft-create-anonymous";
  */
 export const ANONYMOUS_CREATE_DRAFT_TTL_MS = 2 * 60 * 60 * 1000;
 
-export function saveAnonymousCreateDraft<T>(data: T): void {
+export function saveAnonymousCreateDraft<T>(data: T): boolean {
   if (typeof window === "undefined") {
-    return;
+    return false;
   }
 
-  persistDraftEnvelope<T>(window.localStorage, ANONYMOUS_CREATE_DRAFT_KEY, {
-    data,
-    savedAt: Date.now(),
-  });
+  try {
+    return persistDraftEnvelope<T>(
+      window.localStorage,
+      ANONYMOUS_CREATE_DRAFT_KEY,
+      {
+        data,
+        savedAt: Date.now(),
+      },
+    );
+  } catch {
+    // Accessing localStorage itself can throw in hardened browser modes.
+    return false;
+  }
 }
 
 export function readAnonymousCreateDraft<T>(): DraftEnvelope<T> | null {
@@ -86,7 +95,9 @@ export function claimAnonymousCreateDraft<T>(userScopedKey: string): boolean {
     return false;
   }
 
-  persistDraftEnvelope<T>(window.localStorage, userScopedKey, anonymous);
+  if (!persistDraftEnvelope<T>(window.localStorage, userScopedKey, anonymous)) {
+    return false;
+  }
   discardAnonymousCreateDraft();
   return true;
 }

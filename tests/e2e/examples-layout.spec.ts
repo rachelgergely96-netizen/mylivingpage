@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ANALYTICS_CONSENT_STORAGE_KEY } from "../../src/lib/privacy/analytics-consent";
 
 test("examples leads with a Living Page and keeps the switcher simple", async ({
   page,
@@ -87,6 +88,9 @@ test("examples keeps the complete Living Page inside its compact mobile preview"
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((storageKey) => {
+    window.localStorage.setItem(storageKey, "essential");
+  }, ANALYTICS_CONSENT_STORAGE_KEY);
   await page.goto("/examples");
 
   const stage = page.locator("[data-example-stage]");

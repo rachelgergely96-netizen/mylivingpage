@@ -75,15 +75,18 @@ export function persistDraftEnvelope<T>(
   storage: Pick<Storage, "setItem">,
   key: string | null,
   envelope: DraftEnvelope<T>,
-) {
+): boolean {
   if (!key) {
-    return;
+    return false;
   }
 
   try {
     storage.setItem(key, JSON.stringify(envelope));
+    return true;
   } catch {
-    // localStorage full or unavailable - silently ignore
+    // Callers decide whether a failed write can be ignored or must block a
+    // handoff that depends on the draft being available later.
+    return false;
   }
 }
 

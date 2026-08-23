@@ -62,9 +62,13 @@ export default function PublicPageActionDock({
   const consentOpen = useFixedSurfaceActive("analytics-consent");
   const mobileSheetOpenRef = useRef(false);
   const shareOpenedFromMobileRef = useRef(false);
+  const breakpointFocusFrameRef = useRef<number | null>(null);
+  const mobileBarRef = useRef<HTMLDivElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
   const sheetCloseRef = useRef<HTMLButtonElement | null>(null);
+  const actionListRef = useRef<HTMLDivElement | null>(null);
+  const lastDockFocusRef = useRef<"actions" | "mobile" | null>(null);
   const sheetId = useId();
   const sheetTitleId = useId();
 
@@ -146,19 +150,93 @@ export default function PublicPageActionDock({
   }, [closeMobileSheet, mobileSheetOpen]);
 
   useEffect(() => {
-    const desktopQuery = window.matchMedia("(min-width: 768px)");
-    const closeAtDesktop = (event: MediaQueryListEvent) => {
-      if (event.matches && mobileSheetOpenRef.current) {
-        closeMobileSheet(false);
-        window.requestAnimationFrame(() => {
-          sheetRef.current
-            ?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-            ?.focus({ preventScroll: true });
-        });
+    const rememberDockFocus = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (mobileBarRef.current?.contains(target)) {
+        lastDockFocusRef.current = "mobile";
+      } else if (actionListRef.current?.contains(target)) {
+        lastDockFocusRef.current = window.matchMedia("(min-width: 768px)")
+          .matches
+          ? "actions"
+          : "mobile";
+      } else if (sheetRef.current?.contains(target)) {
+        lastDockFocusRef.current = "mobile";
+      } else if (target !== document.body) {
+        lastDockFocusRef.current = null;
       }
     };
-    desktopQuery.addEventListener("change", closeAtDesktop);
-    return () => desktopQuery.removeEventListener("change", closeAtDesktop);
+    const forgetDockFocusOnOutsidePointer = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !mobileBarRef.current?.contains(event.target) &&
+        !sheetRef.current?.contains(event.target)
+      ) {
+        lastDockFocusRef.current = null;
+      }
+    };
+
+    document.addEventListener("focusin", rememberDockFocus);
+    document.addEventListener("pointerdown", forgetDockFocusOnOutsidePointer);
+    return () => {
+      document.removeEventListener("focusin", rememberDockFocus);
+      document.removeEventListener(
+        "pointerdown",
+        forgetDockFocusOnOutsidePointer,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const focusFirstVisibleControl = (container: HTMLElement | null) => {
+      if (breakpointFocusFrameRef.current !== null) {
+        window.cancelAnimationFrame(breakpointFocusFrameRef.current);
+      }
+
+      breakpointFocusFrameRef.current = window.requestAnimationFrame(() => {
+        breakpointFocusFrameRef.current = null;
+        const focusTarget = Array.from(
+          container?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [],
+        ).find((element) => element.getClientRects().length > 0);
+        focusTarget?.focus({ preventScroll: true });
+      });
+    };
+
+    const handleBreakpointChange = (event: MediaQueryListEvent) => {
+      const activeElement = document.activeElement;
+      const focusWasInMobileSurface =
+        activeElement instanceof HTMLElement &&
+        (mobileBarRef.current?.contains(activeElement) ||
+          sheetRef.current?.contains(activeElement)) ||
+        lastDockFocusRef.current === "mobile";
+      const focusWasInDesktopActions =
+        activeElement instanceof HTMLElement &&
+        actionListRef.current?.contains(activeElement) ||
+        lastDockFocusRef.current === "actions";
+
+      if (event.matches) {
+        if (mobileSheetOpenRef.current) {
+          closeMobileSheet(false);
+        }
+        if (focusWasInMobileSurface) {
+          focusFirstVisibleControl(actionListRef.current);
+        }
+        return;
+      }
+
+      if (focusWasInDesktopActions) {
+        focusFirstVisibleControl(mobileBarRef.current);
+      }
+    };
+    desktopQuery.addEventListener("change", handleBreakpointChange);
+    return () => {
+      desktopQuery.removeEventListener("change", handleBreakpointChange);
+      if (breakpointFocusFrameRef.current !== null) {
+        window.cancelAnimationFrame(breakpointFocusFrameRef.current);
+      }
+    };
   }, [closeMobileSheet]);
 
   useEffect(() => {
@@ -206,6 +284,7 @@ export default function PublicPageActionDock({
   return (
     <>
       <div
+        ref={mobileBarRef}
         className={`fixed inset-x-3 z-40 md:hidden ${mobileBarBottomClass}`}
         data-public-action-bar
         data-site-ui
@@ -276,7 +355,11 @@ export default function PublicPageActionDock({
           </button>
         </div>
 
-        <div className="flex w-full flex-col items-stretch gap-2">
+        <div
+          ref={actionListRef}
+          className="flex w-full flex-col items-stretch gap-2"
+          data-public-action-list
+        >
           {downloadErrorAlert}
 
           {isOwner ? null : (

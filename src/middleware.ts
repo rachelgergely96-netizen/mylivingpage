@@ -11,6 +11,7 @@ const LOCAL_PREVIEW_PATHS = new Set([
   "/dev/admin-preview",
   "/dev/dashboard-preview",
   "/dev/editor-preview",
+  "/dev/public-action-preview",
   "/dev/theme-lab",
 ]);
 

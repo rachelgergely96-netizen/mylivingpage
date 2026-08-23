@@ -42,11 +42,26 @@ describe("anonymous create draft", () => {
   });
 
   it("round-trips a pre-signup draft", () => {
-    saveAnonymousCreateDraft({ resumeText: "Dana Whitfield" });
+    expect(saveAnonymousCreateDraft({ resumeText: "Dana Whitfield" })).toBe(true);
 
     expect(readAnonymousCreateDraft<{ resumeText: string }>()?.data).toEqual({
       resumeText: "Dana Whitfield",
     });
+  });
+
+  it("reports a blocked pre-signup draft write", () => {
+    const storage = window.localStorage;
+    const originalSetItem = storage.setItem;
+
+    try {
+      storage.setItem = () => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      };
+      expect(saveAnonymousCreateDraft({ resumeText: "Dana Whitfield" })).toBe(false);
+      expect(readAnonymousCreateDraft()).toBeNull();
+    } finally {
+      storage.setItem = originalSetItem;
+    }
   });
 
   it("moves the draft onto the signed-in key and clears the anonymous one", () => {
@@ -57,6 +72,24 @@ describe("anonymous create draft", () => {
     expect(
       JSON.parse(window.localStorage.getItem(USER_KEY) ?? "null").data,
     ).toEqual({ resumeText: "Dana Whitfield" });
+  });
+
+  it("keeps the anonymous source when the user-scoped write is blocked", () => {
+    const storage = window.localStorage;
+    expect(saveAnonymousCreateDraft({ resumeText: "Dana Whitfield" })).toBe(true);
+    const originalSetItem = storage.setItem;
+    storage.setItem = (key: string, value: string) => {
+      if (key === USER_KEY) {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      }
+      originalSetItem(key, value);
+    };
+
+    expect(claimAnonymousCreateDraft<{ resumeText: string }>(USER_KEY)).toBe(false);
+    expect(storage.getItem(USER_KEY)).toBeNull();
+    expect(readAnonymousCreateDraft<{ resumeText: string }>()?.data).toEqual({
+      resumeText: "Dana Whitfield",
+    });
   });
 
   it("never overwrites work already in progress on the account", () => {

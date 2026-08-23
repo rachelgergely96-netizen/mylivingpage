@@ -63,6 +63,23 @@ describe("MotionModeControl", () => {
     expect(markup).toContain('<option value="system" selected="">Device</option>');
     expect(markup).toContain('data-motion-state="still"');
   });
+
+  it("accepts a contextual accessible name for compact controls", () => {
+    const markup = renderToStaticMarkup(
+      <MotionPreferenceContext.Provider
+        value={{
+          mode: "still",
+          preference: "system",
+          systemReducedMotion: true,
+          setPreference: vi.fn(),
+        }}
+      >
+        <MotionModeControl compact ariaLabel="Site motion preference" />
+      </MotionPreferenceContext.Provider>,
+    );
+
+    expect(markup).toContain('aria-label="Site motion preference"');
+  });
 });
 
 describe("MotionPreferenceProvider", () => {

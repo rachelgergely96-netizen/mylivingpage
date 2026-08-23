@@ -31,7 +31,7 @@ export default function AuthDestinationNotice({
 
   return (
     <div
-      className="site-callout mt-5 border-l-2 border-l-site-action px-3 py-2.5"
+      className="site-callout mt-3 border-l-2 border-l-site-action px-3 py-2 sm:mt-5 sm:py-2.5"
       data-auth-destination
     >
       <p className="site-eyebrow text-site-muted">

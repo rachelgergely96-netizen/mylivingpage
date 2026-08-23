@@ -110,6 +110,92 @@ async function completeGuidedResumeEntry(page: Page) {
   ).toBeVisible({ timeout: 45_000 });
 }
 
+test("shared navigation preserves visible focus across Escape and both breakpoints", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/examples");
+
+  const navigation = page.getByRole("navigation", {
+    name: "Primary navigation",
+  });
+  const menuButton = navigation.getByRole("button", {
+    name: "Open navigation",
+  });
+  const menuId = await menuButton.getAttribute("aria-controls");
+  expect(menuId).toBeTruthy();
+  const mobileMenu = navigation.locator(`[id="${menuId}"]`);
+  const mobileExamples = mobileMenu.getByRole("link", {
+    name: "Examples",
+    exact: true,
+  });
+
+  await menuButton.click();
+  await expect(mobileMenu).toBeVisible();
+  await expect(mobileMenu).not.toHaveAttribute("role", "dialog");
+  await page.keyboard.press("Tab");
+  await expect(mobileExamples).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(mobileMenu).toHaveCount(0);
+  await expect(menuButton).toBeFocused();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const desktopExamples = navigation
+    .locator("[data-site-desktop-navigation]")
+    .getByRole("link", { name: "Examples", exact: true });
+  await expect(menuButton).toBeHidden();
+  await expect(desktopExamples).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(menuButton).toBeFocused();
+
+  await menuButton.click();
+  await mobileExamples.focus();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(mobileMenu).toHaveCount(0);
+  await expect(desktopExamples).toBeFocused();
+});
+
+test("public action dock moves focus only to visible breakpoint controls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dev/public-action-preview");
+
+  const mobileBar = page.locator("[data-public-action-bar]");
+  const actionSheet = page.locator("[data-public-action-sheet]");
+  const moreButton = mobileBar.getByRole("button", { name: "More" });
+  await moreButton.click();
+  await expect(actionSheet).toBeVisible();
+  await expect(
+    actionSheet.getByRole("button", { name: "Close page actions" }),
+  ).toBeFocused();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(mobileBar).toBeHidden();
+  await expect(
+    actionSheet.getByRole("button", { name: "Close page actions" }),
+  ).toBeHidden();
+  await expect(
+    actionSheet.getByRole("link", { name: "Get in touch with Avery" }),
+  ).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(mobileBar.getByRole("link", { name: "Contact" })).toBeFocused();
+
+  await moreButton.click();
+  await expect(
+    actionSheet.getByRole("button", { name: "Close page actions" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    actionSheet.getByRole("link", { name: "Get in touch with Avery" }),
+  ).toBeFocused();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(
+    actionSheet.getByRole("link", { name: "Get in touch with Avery" }),
+  ).toBeFocused();
+});
+
 test("email signup shows a pending-confirmation message", async ({ page }) => {
   test.skip(
     !canRunSignupConfirmation,
@@ -489,13 +575,23 @@ test.describe.serial("authenticated user journeys", () => {
       actionSheet.getByRole("button", { name: "Close page actions" }),
     ).toBeFocused();
     await assertStackedDock();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(mobileBar).toBeHidden();
+    await expect(
+      actionSheet.getByRole("button", { name: "Close page actions" }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Download Résumé PDF" }),
+    ).toBeFocused();
+    await assertStackedDock();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(moreButton).toBeFocused();
+    await moreButton.click();
+    await expect(actionSheet).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(actionSheet).toBeHidden();
     await expect(moreButton).toBeFocused();
-
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await expect(mobileBar).toBeHidden();
-    await assertStackedDock();
   });
 
   test("logged-out visitors see the subtle signup prompt on public pages", async ({ page, browser }) => {

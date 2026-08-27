@@ -5,7 +5,12 @@ import { FormEvent, useEffect, useState } from "react";
 import AuthMessage from "@/components/auth/AuthMessage";
 import AuthDestinationNotice from "@/components/auth/AuthDestinationNotice";
 import TurnstileWidget from "@/components/auth/TurnstileWidget";
-import { buildAuthCallbackUrl, buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
+import {
+  buildAuthCallbackUrl,
+  buildGoogleAuthStartUrl,
+  sanitizeAuthRef,
+} from "@/lib/auth/callback-url";
+import { getAuthErrorMessage } from "@/lib/auth/auth-error";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import {
@@ -33,15 +38,25 @@ export default function SignupPage() {
   const [turnstileResetNonce, setTurnstileResetNonce] = useState(0);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
     const requestedNext = params.get("next");
     setNextPath(sanitizeInternalRedirectPath(requestedNext, "/create"));
     const visibleNext = requestedNext
       ? sanitizeInternalRedirectPath(requestedNext, "")
       : "";
     setDestinationPath(visibleNext || null);
-    const ref = params.get("ref") || params.get("utm_source") || null;
+    const ref = sanitizeAuthRef(params.get("ref") || params.get("utm_source"));
     if (ref) setSignupReferrer(ref);
+
+    const callbackError = params.get("error");
+    if (callbackError) {
+      setStatus("error");
+      setMessage(getAuthErrorMessage(callbackError));
+      params.delete("error");
+      const nextUrl = `${url.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+      window.history.replaceState({}, "", nextUrl);
+    }
   }, []);
 
   const signInNextPath =
@@ -80,8 +95,10 @@ export default function SignupPage() {
       const supabase = createBrowserSupabaseClient();
       const redirectTo = buildAuthCallbackUrl({
         next: nextPath,
+        screen: "signup",
         legalAcceptRequested: true,
         legalSource: "signup",
+        ref: signupReferrer,
       });
       const signupMetadata: Record<string, string | boolean> = {
         legal_accepted: true,

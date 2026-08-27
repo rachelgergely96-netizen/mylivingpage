@@ -9,7 +9,7 @@ import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
 import type { PageRecord } from "@/types/resume";
 
 export async function fetchPublicLivePage(
-  supabase: SupabaseClient,
+  client: SupabaseClient | (() => SupabaseClient | null),
   username: string,
 ): Promise<PageRecord | null> {
   if (!username) {
@@ -20,6 +20,14 @@ export async function fetchPublicLivePage(
   // so the published page renders without seeded rows. Inert in production.
   if (isEditorPreviewEnabled() && username === PUBLIC_PAGE_PREVIEW_USERNAME) {
     return buildPublicPagePreviewPage();
+  }
+
+  // Keep credential-free preview seams ahead of service-role construction.
+  // Production callers can pass a lazy factory; social-image callers may
+  // return null when public database configuration is intentionally absent.
+  const supabase = typeof client === "function" ? client() : client;
+  if (!supabase) {
+    return null;
   }
 
   const { data: profile, error: profileError } =
@@ -33,14 +41,17 @@ export async function fetchPublicLivePage(
       matchValue: username,
     });
 
-  if (profileError || !profile) {
+  if (profileError) {
+    throw new Error("Unable to load the public page profile.");
+  }
+  if (!profile) {
     return null;
   }
 
   // "Link only" pages are still visibility='public'; they carry
   // search_indexable = false and are withheld from the sitemap and marked
   // noindex, not hidden from their own URL.
-  const { data: publicPage } = await supabase
+  const { data: publicPage, error: publicPageError } = await supabase
     .from("pages")
     .select("*")
     .eq("owner_id", profile.id)
@@ -49,6 +60,10 @@ export async function fetchPublicLivePage(
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (publicPageError) {
+    throw new Error("Unable to load the public page.");
+  }
 
   if (publicPage) {
     const synced = await syncPageHostingState(
@@ -66,7 +81,7 @@ export async function fetchPublicLivePage(
       : null;
   }
 
-  const { data: legacyPage } = await supabase
+  const { data: legacyPage, error: legacyPageError } = await supabase
     .from("pages")
     .select("*")
     .eq("user_id", profile.id)
@@ -75,6 +90,10 @@ export async function fetchPublicLivePage(
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (legacyPageError) {
+    throw new Error("Unable to load the public page.");
+  }
 
   if (!legacyPage) {
     return null;

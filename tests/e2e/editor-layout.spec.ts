@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import type { AtsReadinessResult } from "../../src/lib/ats-readiness";
 import { DEMO_PAGES } from "../../src/lib/demo-data";
 import { MOTION_STORAGE_KEY } from "../../src/lib/motion";
-import type { PageRecord } from "../../src/types/resume";
+import type { PageRecord, PageVariant } from "../../src/types/resume";
 
 const demo = DEMO_PAGES[0];
 const editorPage: PageRecord = {
@@ -24,6 +24,29 @@ const editorPage: PageRecord = {
   published_at: "2026-07-19T12:00:00.000Z",
   created_at: "2026-07-18T12:00:00.000Z",
   updated_at: "2026-07-19T12:00:00.000Z",
+};
+
+const editorVariant: PageVariant = {
+  id: "recruiter-follow-up",
+  slug: "recruiter-follow-up",
+  label: "Recruiter follow-up",
+  roleTitle: "Senior Full-Stack Engineer",
+  headline: demo.data.headline,
+  summary: demo.data.summary,
+  featuredStatLabels: [],
+  featuredProjectNames: [],
+  ctaEmphasis: null,
+};
+
+const resilienceEditorPage: PageRecord = {
+  ...editorPage,
+  resume_data: {
+    ...editorPage.resume_data,
+    avatar_url: "/theme-quality-avatar.svg",
+  },
+  page_config: {
+    variants: [editorVariant],
+  },
 };
 
 const jobComparisonReadiness: AtsReadinessResult = {
@@ -145,14 +168,17 @@ const jobComparisonReadiness: AtsReadinessResult = {
     "This check reviews common ATS practices and cannot predict employer decisions.",
 };
 
-async function mockEditorRequests(page: Page) {
+async function mockEditorPageRequest(
+  page: Page,
+  pageRecord: PageRecord = editorPage,
+) {
   await page.route("**/api/pages/editor-layout-preview", async (route) => {
     if (route.request().method() === "PATCH") {
       const payload = route.request().postDataJSON() as Partial<PageRecord>;
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ ...editorPage, ...payload }),
+        body: JSON.stringify({ ...pageRecord, ...payload }),
       });
       return;
     }
@@ -160,9 +186,13 @@ async function mockEditorRequests(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(editorPage),
+      body: JSON.stringify(pageRecord),
     });
   });
+}
+
+async function mockEditorRequests(page: Page) {
+  await mockEditorPageRequest(page);
 
   await page.route("**/api/profile", async (route) => {
     await route.fulfill({
@@ -183,6 +213,11 @@ async function mockEditorRequests(page: Page) {
       body: JSON.stringify({ success: true }),
     });
   });
+}
+
+async function useResilienceEditorPage(page: Page) {
+  await page.unroute("**/api/pages/editor-layout-preview");
+  await mockEditorPageRequest(page, resilienceEditorPage);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -274,6 +309,117 @@ test("editor keeps content, commands, and live preview in one desktop workspace"
   ).toBeVisible();
   await expect(headline).toHaveValue("Distinguished Platform Engineer");
   await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+});
+
+test("avatar removal preserves the photo and dialog through failures, then recovers on retry", async ({
+  page,
+}) => {
+  await useResilienceEditorPage(page);
+  let deleteAttempts = 0;
+  await page.route("**/api/avatar", async (route) => {
+    if (route.request().method() !== "DELETE") {
+      await route.fallback();
+      return;
+    }
+
+    deleteAttempts += 1;
+    if (deleteAttempts === 1) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Photo storage is temporarily unavailable." }),
+      });
+      return;
+    }
+    if (deleteAttempts === 2) {
+      await route.abort("connectionfailed");
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true }),
+    });
+  });
+
+  await page.goto("/dev/editor-preview?autosave=off");
+  const removeTrigger = page.getByRole("button", { name: "Remove · use monogram" });
+  await removeTrigger.scrollIntoViewIfNeeded();
+  await removeTrigger.click();
+
+  const dialog = page.getByRole("alertdialog", { name: "Remove this photo?" });
+  const confirm = dialog.getByRole("button", { name: "Remove photo" });
+  await confirm.click();
+
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Photo storage is temporarily unavailable.",
+  );
+  await expect(page.getByRole("button", { name: "Change photo" })).toBeVisible();
+  await expect
+    .poll(() => dialog.evaluate((element) => element.contains(document.activeElement)))
+    .toBe(true);
+
+  await confirm.click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Could not remove your photo. Check your connection and try again.",
+  );
+  await expect(page.getByRole("button", { name: "Change photo" })).toBeVisible();
+  await expect
+    .poll(() => dialog.evaluate((element) => element.contains(document.activeElement)))
+    .toBe(true);
+
+  await confirm.click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("button", { name: "Upload photo" })).toBeVisible();
+  expect(deleteAttempts).toBe(3);
+});
+
+test("targeted-version copy errors stay accessible and clear after a successful retry", async ({
+  page,
+}) => {
+  await useResilienceEditorPage(page);
+  await page.goto("/dev/editor-preview?autosave=off");
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () => Promise.reject(new Error("Clipboard unavailable")),
+      },
+    });
+  });
+
+  const versions = page.locator("#editor-section-versions");
+  await versions.scrollIntoViewIfNeeded();
+  const copyVariant = versions.getByRole("button", { name: "Copy link" });
+  await copyVariant.click();
+
+  const copyError = versions.getByRole("alert");
+  await expect(copyError).toHaveText(
+    "This version link could not be copied. Try again or open the live page and copy its address.",
+  );
+  const copyErrorId = await copyError.getAttribute("id");
+  expect(copyErrorId).not.toBeNull();
+  await expect(copyVariant).toHaveAttribute("aria-describedby", copyErrorId!);
+  await expect(copyVariant).toBeFocused();
+  await page.waitForTimeout(2600);
+  await expect(copyError).toBeVisible();
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () => Promise.resolve(),
+      },
+    });
+  });
+  await copyVariant.click();
+
+  await expect(copyError).toHaveCount(0);
+  await expect(versions.getByRole("button", { name: "Copied" })).toBeFocused();
+  await expect(versions.getByRole("status")).toHaveText(
+    "Recruiter follow-up link copied.",
+  );
 });
 
 test("the editor renders the real PDF and exposes a browser-safe open action", async ({

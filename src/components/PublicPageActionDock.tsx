@@ -40,9 +40,11 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-/* Opaque surface so fixed actions stay legible over any theme artwork. */
+/* Mobile actions remain full-width rows; md+ turns the same controls into one
+   compact segmented rail. The opaque parent keeps every theme legible without
+   giving each action its own heavy card or shadow. */
 const dockButtonClassName =
-  "w-full justify-center bg-site-surface-raised shadow-[var(--site-shadow-raised)]";
+  "w-full justify-center bg-site-surface-raised md:min-h-12 md:w-auto md:border-y-0 md:border-l-0 md:border-r md:border-site-border md:bg-transparent md:px-3 md:shadow-none md:hover:bg-site-selected";
 
 export default function PublicPageActionDock({
   pageId,
@@ -248,7 +250,7 @@ export default function PublicPageActionDock({
   const downloadErrorAlert = downloadError ? (
     <div
       data-testid="public-action-dock-error"
-      className="site-alert-danger flex w-full items-center gap-2 py-1 pl-3.5 pr-1 text-left text-xs leading-5 shadow-[var(--site-shadow-raised)]"
+      className="site-alert-danger flex w-full items-center gap-2 py-1 pl-3.5 pr-1 text-left text-xs leading-5 shadow-[var(--site-shadow-raised)] md:absolute md:bottom-[calc(100%+0.5rem)] md:right-0 md:w-80"
       role="alert"
     >
       <svg
@@ -331,8 +333,9 @@ export default function PublicPageActionDock({
         aria-labelledby={mobileSheetOpen ? sheetTitleId : undefined}
         className={`${
           mobileSheetOpen ? "fixed" : "hidden"
-        } inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] z-[70] max-h-[calc(100dvh-1.5rem)] overflow-y-auto border border-site-border bg-site-surface-raised p-3 shadow-[var(--site-shadow-overlay)] md:fixed md:left-auto md:right-5 md:z-40 md:flex md:w-72 md:max-w-[calc(100vw-2.5rem)] md:flex-col md:border-0 md:bg-transparent md:p-0 md:shadow-none ${desktopDockBottomClass}`}
+        } inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] z-[70] max-h-[calc(100dvh-1.5rem)] overflow-y-auto border border-site-border bg-site-surface-raised p-3 shadow-[var(--site-shadow-overlay)] md:fixed md:left-auto md:right-5 md:z-40 md:flex md:w-auto md:max-w-[calc(100vw-2.5rem)] md:overflow-visible md:border-site-border-strong md:p-0 md:shadow-[var(--site-shadow-raised)] ${desktopDockBottomClass}`}
         data-public-action-sheet
+        data-public-action-dock
         data-site-ui
       >
         <div className="mb-3 flex items-center justify-between gap-3 border-b border-site-border pb-3 md:hidden">
@@ -357,7 +360,8 @@ export default function PublicPageActionDock({
 
         <div
           ref={actionListRef}
-          className="flex w-full flex-col items-stretch gap-2"
+          className="relative flex w-full flex-col items-stretch gap-2 md:w-auto md:flex-row md:gap-0"
+          data-public-action-layout="compact"
           data-public-action-list
         >
           {downloadErrorAlert}
@@ -365,7 +369,8 @@ export default function PublicPageActionDock({
           {isOwner ? null : (
             <ContactOwnerButton
               resumeData={resumeData}
-              className="w-full justify-center shadow-[var(--site-shadow-raised)]"
+              compactLabel="Contact"
+              className="w-full justify-center shadow-none md:min-h-12 md:w-auto md:border-y-0 md:border-l-0 md:border-r md:border-site-border md:bg-transparent md:px-3 md:text-site-action md:shadow-none md:hover:bg-site-selected md:active:translate-x-0 md:active:translate-y-0 md:active:bg-site-selected"
             />
           )}
 
@@ -374,6 +379,7 @@ export default function PublicPageActionDock({
             pageId={pageId}
             variantId={variantId}
             appearance="site"
+            compactLabel="PDF"
             onErrorChange={handleDownloadErrorChange}
             className={dockButtonClassName}
           />
@@ -389,12 +395,13 @@ export default function PublicPageActionDock({
             analyticsHref={analyticsHref}
             analyticsCtaLabel={analyticsCtaLabel}
             enabled={shareCardEnabled}
+            compactLabel="Share"
             className={dockButtonClassName}
             onDialogOpen={handleShareDialogOpen}
             returnFocusTarget={getShareReturnFocusTarget}
           />
 
-          <MotionModeControl compact className="shadow-[var(--site-shadow-raised)]" />
+          <MotionModeControl compact inline className="shadow-none" />
         </div>
       </section>
     </>

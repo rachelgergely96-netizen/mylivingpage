@@ -13,15 +13,63 @@ import {
   getRequestHostname,
 } from "@/lib/supabase/cookies";
 import { ensureUserProfile } from "@/lib/auth/ensureUserProfile";
+import {
+  sanitizeAuthRef,
+  sanitizeAuthScreen,
+  type AuthScreen,
+} from "@/lib/auth/callback-url";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import { resolvePostLoginDestination } from "@/lib/auth/post-login";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 
+const AUTH_CALLBACK_ERROR_MAX_LENGTH = 240;
+
+function getBoundedCallbackError(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof error.message === "string"
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "Unknown profile provisioning failure";
+
+  return (
+    message.replace(/\s+/g, " ").trim() ||
+    "Unknown profile provisioning failure"
+  ).slice(0, AUTH_CALLBACK_ERROR_MAX_LENGTH);
+}
+
 function applyNoStoreHeaders(response: NextResponse) {
   response.headers.set("Cache-Control", "no-store, max-age=0");
   response.headers.set("Pragma", "no-cache");
+}
+
+function buildAuthFailureRedirect({
+  appOrigin,
+  errorCode,
+  next,
+  ref,
+  screen,
+}: {
+  appOrigin: URL;
+  errorCode: string;
+  next: string;
+  ref: string | null;
+  screen: AuthScreen;
+}) {
+  const errorRedirect = new URL(`/${screen}`, appOrigin);
+  errorRedirect.searchParams.set("error", errorCode);
+  errorRedirect.searchParams.set("next", next);
+  if (ref) {
+    errorRedirect.searchParams.set("ref", ref);
+  }
+  return errorRedirect;
 }
 
 export const dynamic = "force-dynamic";
@@ -31,6 +79,8 @@ export async function GET(request: NextRequest) {
   const appOrigin = getAppOrigin();
   const code = requestUrl.searchParams.get("code");
   const next = sanitizeInternalRedirectPath(requestUrl.searchParams.get("next"));
+  const screen = sanitizeAuthScreen(requestUrl.searchParams.get("screen"));
+  const ref = sanitizeAuthRef(requestUrl.searchParams.get("ref"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSourceParam = requestUrl.searchParams.get("legal_source");
   const legalSource: LegalAcceptanceSource =
@@ -52,13 +102,19 @@ export async function GET(request: NextRequest) {
         provider_error: requestUrl.searchParams.get("error"),
         provider_error_code: requestUrl.searchParams.get("error_code"),
         next,
+        screen,
+        ref,
         request_host: getRequestHostname(request.headers),
         auth_origin: appOrigin.origin,
         redirect_to: redirectUrl.toString(),
       });
-      const providerErrorRedirect = new URL("/login", appOrigin);
-      providerErrorRedirect.searchParams.set("error", providerErrorCode);
-      providerErrorRedirect.searchParams.set("next", next);
+      const providerErrorRedirect = buildAuthFailureRedirect({
+        appOrigin,
+        errorCode: providerErrorCode,
+        next,
+        ref,
+        screen,
+      });
       const providerErrorResponse = NextResponse.redirect(providerErrorRedirect);
       applyNoStoreHeaders(providerErrorResponse);
       return providerErrorResponse;
@@ -79,13 +135,19 @@ export async function GET(request: NextRequest) {
       error: error.message,
       error_code: errorCode,
       next,
+      screen,
+      ref,
       request_host: getRequestHostname(request.headers),
       auth_origin: appOrigin.origin,
       redirect_to: redirectUrl.toString(),
     });
-    const errorRedirect = new URL("/login", appOrigin);
-    errorRedirect.searchParams.set("error", errorCode);
-    errorRedirect.searchParams.set("next", next);
+    const errorRedirect = buildAuthFailureRedirect({
+      appOrigin,
+      errorCode,
+      next,
+      ref,
+      screen,
+    });
     const errorResponse = NextResponse.redirect(errorRedirect);
     applyNoStoreHeaders(errorResponse);
     return errorResponse;
@@ -97,7 +159,29 @@ export async function GET(request: NextRequest) {
 
   if (user) {
     const admin = createServiceRoleSupabaseClient();
-    await ensureUserProfile(admin, user);
+    try {
+      await ensureUserProfile(admin, user);
+    } catch (profileError) {
+      const failureRedirect = buildAuthFailureRedirect({
+        appOrigin,
+        errorCode: "signin_failed",
+        next,
+        ref,
+        screen,
+      });
+      await trackEvent(user.id, "auth.callback.failed", {
+        error: getBoundedCallbackError(profileError),
+        error_code: "profile_provision_failed",
+        next,
+        screen,
+        ref,
+        request_host: getRequestHostname(request.headers),
+        auth_origin: appOrigin.origin,
+        redirect_to: failureRedirect.toString(),
+      });
+      response.headers.set("location", failureRedirect.toString());
+      return response;
+    }
 
     const { data: existingPage, error: existingPageError } = await admin
       .from("pages")

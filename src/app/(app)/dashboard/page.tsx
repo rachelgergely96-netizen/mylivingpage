@@ -61,7 +61,7 @@ export default async function DashboardPage({
 
   const supabase = createServiceRoleSupabaseClient();
 
-  const [profileResult, { data: pages }] = await Promise.all([
+  const [profileResult, pagesResult] = await Promise.all([
     fetchProfileWithHostingAccess<{
       full_name?: string | null;
       username?: string | null;
@@ -83,7 +83,12 @@ export default async function DashboardPage({
       .or(`user_id.eq.${user?.id ?? ""},owner_id.eq.${user?.id ?? ""}`)
       .order("created_at", { ascending: false }),
   ]);
+  if (profileResult.error || pagesResult.error) {
+    throw new Error("Unable to load dashboard account data.");
+  }
+
   const profile = profileResult.data;
+  const pages = pagesResult.data;
 
   const displayName = profile?.full_name || profile?.username || null;
   const accountAccess = getAccountAccessState({
@@ -142,6 +147,14 @@ export default async function DashboardPage({
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
   ]);
+
+  if (
+    pageViewResults.some((result) => result.error) ||
+    latestViewResults.some((result) => result.error) ||
+    ("error" in eventsResult && eventsResult.error)
+  ) {
+    throw new Error("Unable to load dashboard activity.");
+  }
 
   const windowedViews = pageViewResults.flatMap(
     (result) => (result.data ?? []) as DashboardPageViewRow[],

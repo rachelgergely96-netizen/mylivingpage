@@ -57,7 +57,7 @@ export async function GET(
   }
 
   const supabase = createServiceRoleSupabaseClient();
-  const [{ data: views }, { data: events }] = await Promise.all([
+  const [viewsResult, eventsResult] = await Promise.all([
     supabase
       .from("page_views")
       .select("page_id, viewed_at, user_agent, engaged_seconds")
@@ -70,6 +70,16 @@ export async function GET(
       .in("event_name", [...SHARE_INTENT_EVENT_NAMES, SHARE_OUTCOME_EVENT_NAME])
       .order("created_at", { ascending: false }),
   ]);
+
+  if (viewsResult.error || eventsResult.error) {
+    return NextResponse.json(
+      { error: "Page activity is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
+
+  const views = viewsResult.data;
+  const events = eventsResult.data;
 
   const response = buildPageProofResponse(
     buildPageProofSummary({

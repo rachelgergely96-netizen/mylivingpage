@@ -11,7 +11,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function PublicActionPreviewPage() {
+interface PublicActionPreviewPageProps {
+  searchParams: Promise<{ owner?: string }>;
+}
+
+export default async function PublicActionPreviewPage({
+  searchParams,
+}: PublicActionPreviewPageProps) {
   if (!isEditorPreviewEnabled()) {
     notFound();
   }
@@ -20,6 +26,8 @@ export default function PublicActionPreviewPage() {
   if (!demo) {
     notFound();
   }
+  const { owner } = await searchParams;
+  const isOwner = owner === "1";
 
   return (
     <main
@@ -36,7 +44,7 @@ export default function PublicActionPreviewPage() {
       </div>
       <PublicPageActionDock
         pageId="public-action-preview"
-        isOwner={false}
+        isOwner={isOwner}
         slug="avery-sample"
         themeId={demo.themeId}
         resumeData={demo.data}

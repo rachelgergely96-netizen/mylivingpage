@@ -25,25 +25,48 @@ export async function getOrCreateStripeCustomer(
 ): Promise<string> {
   const supabase = createServiceRoleSupabaseClient();
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("stripe_customer_id")
     .eq("id", userId)
     .single();
 
-  if (profile?.stripe_customer_id) {
+  if (profileError || !profile) {
+    throw new Error("Could not load the billing profile", {
+      cause: profileError ?? undefined,
+    });
+  }
+
+  if (profile.stripe_customer_id) {
     return profile.stripe_customer_id;
   }
 
-  const customer = await getStripe().customers.create({
-    email,
-    metadata: { supabase_user_id: userId },
-  });
+  const customer = await getStripe().customers.create(
+    {
+      email,
+      metadata: { supabase_user_id: userId },
+    },
+    {
+      // Concurrent or retried portal requests must converge on one customer.
+      idempotencyKey: `living-page-customer:${userId}`,
+    },
+  );
 
-  await supabase
+  const { data: persistedProfile, error: persistError } = await supabase
     .from("profiles")
     .update({ stripe_customer_id: customer.id })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("stripe_customer_id")
+    .single();
+
+  if (
+    persistError ||
+    persistedProfile?.stripe_customer_id !== customer.id
+  ) {
+    throw new Error("Could not save the billing customer", {
+      cause: persistError ?? undefined,
+    });
+  }
 
   return customer.id;
 }

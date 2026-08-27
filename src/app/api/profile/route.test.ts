@@ -6,7 +6,13 @@ const mocks = vi.hoisted(() => ({
   fetchProfileWithHostingAccess: vi.fn(),
   syncPageHostingState: vi.fn(),
   getAccountAccessState: vi.fn(),
+  isEditorPreviewEnabled: vi.fn(),
   onProfileUpdate: vi.fn(),
+}));
+
+vi.mock("@/lib/editor-preview", () => ({
+  EDITOR_LAYOUT_PREVIEW_PAGE_ID: "editor-layout-preview",
+  isEditorPreviewEnabled: () => mocks.isEditorPreviewEnabled(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -101,6 +107,18 @@ function patchRequest(body: unknown) {
   });
 }
 
+function getRequest(headers?: HeadersInit) {
+  return new Request("http://localhost/api/profile", { headers });
+}
+
+function patchRawRequest(body: string) {
+  return new Request("http://localhost/api/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+}
+
 describe("/api/profile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -120,13 +138,43 @@ describe("/api/profile", () => {
       error: null,
     });
     mocks.getAccountAccessState.mockReturnValue({ status: "active" });
+    mocks.isEditorPreviewEnabled.mockReturnValue(false);
   });
 
   describe("GET", () => {
+    it("serves the env-gated editor sentinel without authenticating", async () => {
+      mocks.isEditorPreviewEnabled.mockReturnValue(true);
+
+      const response = await GET(
+        getRequest({ "X-Editor-Preview-Page": "editor-layout-preview" }),
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        id: "editor-layout-preview",
+        username: "preview",
+        full_name: "Avery Sample",
+        hasLivingPage: true,
+      });
+      expect(mocks.authGetUser).not.toHaveBeenCalled();
+      expect(mocks.createServiceRoleSupabaseClient).not.toHaveBeenCalled();
+    });
+
+    it("does not honor the editor sentinel when the preview gate is disabled", async () => {
+      mocks.authGetUser.mockResolvedValueOnce({ data: { user: null } });
+
+      const response = await GET(
+        getRequest({ "X-Editor-Preview-Page": "editor-layout-preview" }),
+      );
+
+      expect(response.status).toBe(401);
+      expect(mocks.authGetUser).toHaveBeenCalledOnce();
+    });
+
     it("requires authentication", async () => {
       mocks.authGetUser.mockResolvedValueOnce({ data: { user: null } });
 
-      const response = await GET();
+      const response = await GET(getRequest());
 
       expect(response.status).toBe(401);
       await expect(response.json()).resolves.toEqual({
@@ -140,14 +188,14 @@ describe("/api/profile", () => {
         error: { message: "not found" },
       });
 
-      const response = await GET();
+      const response = await GET(getRequest());
 
       expect(response.status).toBe(404);
       await expect(response.json()).resolves.toEqual({ error: "Profile not found" });
     });
 
     it("returns the profile with account access and password info", async () => {
-      const response = await GET();
+      const response = await GET(getRequest());
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -168,7 +216,7 @@ describe("/api/profile", () => {
         }),
       );
 
-      const response = await GET();
+      const response = await GET(getRequest());
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
@@ -197,6 +245,17 @@ describe("/api/profile", () => {
         expect.objectContaining({ full_name: "Rachel G" }),
       );
     });
+
+    it.each(["{", "null", "[]", '"Rachel"'])(
+      "rejects an invalid request body: %s",
+      async (body) => {
+        const response = await PATCH(patchRawRequest(body));
+
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toEqual({ error: "Invalid request." });
+        expect(mocks.onProfileUpdate).not.toHaveBeenCalled();
+      },
+    );
 
     it("rejects a full_name longer than 100 characters", async () => {
       const response = await PATCH(patchRequest({ full_name: "a".repeat(101) }));

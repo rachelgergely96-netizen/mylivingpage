@@ -80,6 +80,28 @@ describe("MotionModeControl", () => {
 
     expect(markup).toContain('aria-label="Site motion preference"');
   });
+
+  it("keeps the inline compact treatment as a native four-option select", () => {
+    const markup = renderToStaticMarkup(
+      <MotionPreferenceContext.Provider
+        value={{
+          mode: "still",
+          preference: "system",
+          systemReducedMotion: true,
+          setPreference: vi.fn(),
+        }}
+      >
+        <MotionModeControl compact inline />
+      </MotionPreferenceContext.Provider>,
+    );
+
+    expect(markup).toContain("<label");
+    expect(markup).toContain("<select");
+    expect(markup).toContain('aria-label="Motion preference"');
+    expect((markup.match(/<option/g) ?? []).length).toBe(4);
+    expect(markup).toContain('data-motion-state="still"');
+    expect(markup).toContain("md:border-0");
+  });
 });
 
 describe("MotionPreferenceProvider", () => {

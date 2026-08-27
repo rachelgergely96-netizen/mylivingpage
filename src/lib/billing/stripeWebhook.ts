@@ -53,17 +53,24 @@ export function createSupabaseBillingRepository(
 ): BillingRepository {
   return {
     async updateBillingStateByCustomerId(customerId, state) {
-      const { error } = await supabase
+      const { data: updatedProfile, error } = await supabase
         .from("profiles")
         .update({
           plan: state.plan,
           stripe_subscription_status: state.stripeSubscriptionStatus,
           stripe_trial_ends_at: state.stripeTrialEndsAt,
         })
-        .eq("stripe_customer_id", customerId);
+        .eq("stripe_customer_id", customerId)
+        .select("id")
+        .maybeSingle<{ id: string }>();
 
       if (error) {
         throw new Error(`Unable to update billing state: ${error.message}`);
+      }
+      if (!updatedProfile) {
+        throw new Error(
+          "Unable to update billing state: billing customer was not found",
+        );
       }
     },
     async findUserIdByCustomerId(customerId) {

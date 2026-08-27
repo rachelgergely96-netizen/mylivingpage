@@ -51,23 +51,30 @@ describe("PublicPageActionDock", () => {
     const markup = renderDock(false);
 
     expect(markup).toContain("data-public-action-bar");
-    expect(markup).toContain(">Contact</a>");
+    expect(markup).toContain("<span>Contact</span>");
     expect(markup).toContain(">More</button>");
     expect(markup).toContain('aria-expanded="false"');
     expect(markup).toContain("aria-controls=");
     expect(markup).toContain("data-public-action-list");
+    expect(markup).toContain('data-public-action-layout="compact"');
+    expect(markup).toContain("data-public-action-dock");
     expect(markup.indexOf('aria-label="Close page actions"')).toBeLessThan(
       markup.indexOf("data-public-action-list"),
     );
-    expect(markup).toContain("Download Résumé PDF");
+    expect(markup).toContain('aria-label="Get in touch with Avery"');
+    expect(markup).toContain('aria-label="Download Résumé PDF"');
+    expect(markup).toContain(">PDF</span>");
+    expect(markup).toContain(">Motion</span>");
     expect(markup).toContain('aria-label="Motion preference"');
   });
 
   it("preserves owner download, share, and motion actions", () => {
     const markup = renderDock(true);
 
-    expect(markup).toContain("Download Résumé PDF");
-    expect(markup).toContain("Share Avery’s page");
+    expect(markup).toContain('aria-label="Download Résumé PDF"');
+    expect(markup).toContain('aria-label="Share Avery’s page"');
+    expect(markup).toContain(">PDF</span>");
+    expect(markup).toContain(">Share</span>");
     expect(markup).toContain('aria-label="Motion preference"');
     expect(markup).not.toContain(">Contact</a>");
   });

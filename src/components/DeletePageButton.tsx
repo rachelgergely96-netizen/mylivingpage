@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import {
+  claimPageDeletionRequest,
+  releasePageDeletionRequest,
+  requestPageDeletion,
+} from "@/components/pageDeletionClient";
 
 /**
  * Single source of truth for what deleting a page means, shared by every
@@ -17,18 +22,24 @@ export default function DeletePageButton({ pageId }: { pageId: string }) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const deletionRequestRef = useRef(false);
 
   const handleDelete = async () => {
+    if (!claimPageDeletionRequest(deletionRequestRef)) return;
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      await requestPageDeletion(pageId);
       setConfirming(false);
       router.refresh();
-    } catch {
-      setError("The page could not be deleted. Check your connection and try again.");
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "The page could not be deleted. Check your connection and try again.",
+      );
     } finally {
+      releasePageDeletionRequest(deletionRequestRef);
       setDeleting(false);
     }
   };

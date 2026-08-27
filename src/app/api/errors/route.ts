@@ -24,6 +24,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
   const payload = body as { message?: unknown; digest?: unknown; path?: unknown };
   const message = typeof payload.message === "string" ? payload.message.slice(0, 500) : "Client error";
   const digest = typeof payload.digest === "string" ? payload.digest.slice(0, 100) : null;

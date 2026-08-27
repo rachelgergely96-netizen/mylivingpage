@@ -24,6 +24,8 @@ export function isAccountDeletionError(error: unknown): error is AccountDeletion
   return error instanceof AccountDeletionError;
 }
 
+const DELETION_PAGE_SIZE = 100;
+
 export async function getDeletionTargetProfile(userId: string): Promise<DeletionTargetProfile | null> {
   const supabase = createServiceRoleSupabaseClient();
   const { data, error } = await supabase
@@ -40,23 +42,41 @@ export async function getDeletionTargetProfile(userId: string): Promise<Deletion
 }
 
 async function cancelActiveSubscriptions(customerId: string) {
-  const stripe = getStripe();
-
   try {
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "all",
-      limit: 100,
-    });
+    const stripe = getStripe();
+    const cancellableSubscriptionIds: string[] = [];
+    let startingAfter: string | undefined;
 
-    const cancellable = subscriptions.data.filter(
-      (subscription) =>
-        subscription.status !== "canceled" &&
-        subscription.status !== "incomplete_expired",
-    );
+    while (true) {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: DELETION_PAGE_SIZE,
+        ...(startingAfter ? { starting_after: startingAfter } : {}),
+      });
 
-    for (const subscription of cancellable) {
-      await stripe.subscriptions.cancel(subscription.id);
+      for (const subscription of subscriptions.data) {
+        if (
+          subscription.status !== "canceled" &&
+          subscription.status !== "incomplete_expired"
+        ) {
+          cancellableSubscriptionIds.push(subscription.id);
+        }
+      }
+
+      if (!subscriptions.has_more) {
+        break;
+      }
+
+      const lastSubscription = subscriptions.data[subscriptions.data.length - 1];
+      if (!lastSubscription || lastSubscription.id === startingAfter) {
+        throw new Error("Stripe returned an invalid subscription page.");
+      }
+      startingAfter = lastSubscription.id;
+    }
+
+    for (const subscriptionId of cancellableSubscriptionIds) {
+      await stripe.subscriptions.cancel(subscriptionId);
     }
   } catch (error) {
     console.error("Account deletion blocked: Stripe cancellation failed", error);
@@ -69,22 +89,36 @@ async function cancelActiveSubscriptions(customerId: string) {
 
 async function removeAvatarFiles(userId: string) {
   const supabase = createServiceRoleSupabaseClient();
-  const { data: avatarFiles, error: listError } = await supabase.storage.from("avatars").list(userId);
+  const avatarBucket = supabase.storage.from("avatars");
+  const avatarPaths: string[] = [];
+  let offset = 0;
 
-  if (listError) {
-    throw new AccountDeletionError("Failed to inspect avatar files for deletion.", 500);
+  while (true) {
+    const { data: avatarFiles, error: listError } = await avatarBucket.list(userId, {
+      limit: DELETION_PAGE_SIZE,
+      offset,
+      sortBy: { column: "name", order: "asc" },
+    });
+
+    if (listError || !avatarFiles) {
+      throw new AccountDeletionError("Failed to inspect avatar files for deletion.", 500);
+    }
+
+    avatarPaths.push(...avatarFiles.map((file) => `${userId}/${file.name}`));
+    if (avatarFiles.length < DELETION_PAGE_SIZE) {
+      break;
+    }
+    offset += avatarFiles.length;
   }
 
-  if (!avatarFiles?.length) {
-    return;
-  }
+  for (let index = 0; index < avatarPaths.length; index += DELETION_PAGE_SIZE) {
+    const { error: removeError } = await avatarBucket.remove(
+      avatarPaths.slice(index, index + DELETION_PAGE_SIZE),
+    );
 
-  const { error: removeError } = await supabase.storage
-    .from("avatars")
-    .remove(avatarFiles.map((file) => `${userId}/${file.name}`));
-
-  if (removeError) {
-    throw new AccountDeletionError("Failed to remove avatar files.", 500);
+    if (removeError) {
+      throw new AccountDeletionError("Failed to remove avatar files.", 500);
+    }
   }
 }
 

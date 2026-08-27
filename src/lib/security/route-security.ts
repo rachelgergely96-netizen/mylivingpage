@@ -105,43 +105,100 @@ interface SignedWebhookSuccess<T> {
 
 type SignedWebhookResult<T> = SignedWebhookSuccess<T> | RouteGuardFailure;
 
+const SIGNED_WEBHOOK_REJECTION_MESSAGE = "Webhook request rejected.";
+
+type LimitedWebhookBody =
+  | { ok: true; payload: string }
+  | { ok: false; tooLarge: boolean };
+
+function signedWebhookFailure(status: 400 | 413 | 500): RouteGuardFailure {
+  return {
+    response: NextResponse.json(
+      { error: SIGNED_WEBHOOK_REJECTION_MESSAGE },
+      { status },
+    ),
+  };
+}
+
+async function readWebhookBodyWithinLimit(
+  request: Request,
+  maxBodyBytes: number,
+): Promise<LimitedWebhookBody> {
+  if (!request.body) {
+    return { ok: true, payload: "" };
+  }
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let payload = "";
+  let bytesRead = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return { ok: true, payload: payload + decoder.decode() };
+      }
+
+      bytesRead += value.byteLength;
+      if (bytesRead > maxBodyBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, tooLarge: true };
+      }
+      payload += decoder.decode(value, { stream: true });
+    }
+  } catch {
+    return { ok: false, tooLarge: false };
+  }
+}
+
 export async function assertSignedWebhook<T>(input: {
   request: Request;
   secret: string | null | undefined;
   signatureHeaderName: string;
+  maxBodyBytes: number;
+  maxSignatureLength?: number;
   verify: (payload: string, signature: string, secret: string) => T;
 }): Promise<SignedWebhookResult<T>> {
   const signature = input.request.headers.get(input.signatureHeaderName);
-  if (!signature) {
-    return {
-      response: NextResponse.json({ error: "Missing signature" }, { status: 400 }),
-    };
+  if (
+    !signature ||
+    signature.length > (input.maxSignatureLength ?? 8 * 1024)
+  ) {
+    return signedWebhookFailure(400);
   }
 
   if (!input.secret) {
-    return {
-      response: NextResponse.json({ error: "Missing webhook secret" }, { status: 500 }),
-    };
+    return signedWebhookFailure(500);
   }
 
-  const payload = await input.request.text();
+  const declaredLengthHeader = input.request.headers.get("content-length");
+  const declaredLength = Number(declaredLengthHeader);
+  if (
+    declaredLengthHeader !== null &&
+    Number.isFinite(declaredLength) &&
+    declaredLength > input.maxBodyBytes
+  ) {
+    return signedWebhookFailure(413);
+  }
+
+  const body = await readWebhookBodyWithinLimit(
+    input.request,
+    input.maxBodyBytes,
+  );
+  if (!body.ok) {
+    return signedWebhookFailure(body.tooLarge ? 413 : 400);
+  }
 
   try {
     return {
       value: {
-        payload,
-        verified: input.verify(payload, signature, input.secret),
+        payload: body.payload,
+        verified: input.verify(body.payload, signature, input.secret),
         signature,
       },
     };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Webhook signature verification failed.";
-    return {
-      response: NextResponse.json(
-        { error: `Webhook signature verification failed: ${message}` },
-        { status: 400 },
-      ),
-    };
+  } catch {
+    return signedWebhookFailure(400);
   }
 }

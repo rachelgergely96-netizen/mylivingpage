@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { getClientIp } from "@/lib/security/request";
+import { createHash } from "node:crypto";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  getClientIp,
+  hashSecurityIdentifier,
+} from "@/lib/security/request";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("getClientIp", () => {
   it("prefers Vercel's platform-provided client IP header", () => {
@@ -25,5 +33,54 @@ describe("getClientIp", () => {
       "198.51.100.4",
     );
     expect(getClientIp(new Headers())).toBeNull();
+  });
+});
+
+describe("hashSecurityIdentifier", () => {
+  it("is deterministic for the same server-only pepper", () => {
+    vi.stubEnv("SECURITY_HASH_PEPPER", "test-pepper-one");
+
+    const first = hashSecurityIdentifier("ip:203.0.113.10");
+    const second = hashSecurityIdentifier("ip:203.0.113.10");
+
+    expect(first).toBe(second);
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("produces different identifiers when the pepper changes", () => {
+    vi.stubEnv("SECURITY_HASH_PEPPER", "test-pepper-one");
+    const first = hashSecurityIdentifier("ip:203.0.113.10");
+
+    vi.stubEnv("SECURITY_HASH_PEPPER", "test-pepper-two");
+    const second = hashSecurityIdentifier("ip:203.0.113.10");
+
+    expect(second).not.toBe(first);
+  });
+
+  it("does not equal an enumerable raw SHA-256 identifier", () => {
+    const value = "ip:203.0.113.10";
+    vi.stubEnv("SECURITY_HASH_PEPPER", "test-pepper-one");
+
+    expect(hashSecurityIdentifier(value)).not.toBe(
+      createHash("sha256").update(value).digest("hex"),
+    );
+  });
+
+  it("uses a deterministic development-only fallback for local fixtures", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SECURITY_HASH_PEPPER", undefined);
+
+    expect(hashSecurityIdentifier("ip:127.0.0.1")).toBe(
+      hashSecurityIdentifier("ip:127.0.0.1"),
+    );
+  });
+
+  it("fails closed in production when the pepper is missing", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SECURITY_HASH_PEPPER", undefined);
+
+    expect(() => hashSecurityIdentifier("ip:203.0.113.10")).toThrow(
+      "Missing SECURITY_HASH_PEPPER",
+    );
   });
 });

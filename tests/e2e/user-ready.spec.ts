@@ -177,6 +177,26 @@ test("public action dock moves focus only to visible breakpoint controls", async
   await expect(
     actionSheet.getByRole("link", { name: "Get in touch with Avery" }),
   ).toBeFocused();
+  const desktopContact = actionSheet.getByRole("link", {
+    name: "Get in touch with Avery",
+  });
+  const desktopDownload = actionSheet.getByRole("button", {
+    name: "Download Résumé PDF",
+  });
+  const [contactBox, downloadBox] = await Promise.all([
+    desktopContact.boundingBox(),
+    desktopDownload.boundingBox(),
+  ]);
+  expect(contactBox).toBeTruthy();
+  expect(downloadBox).toBeTruthy();
+  expect((downloadBox?.x ?? 0) >= (contactBox?.x ?? 0) + (contactBox?.width ?? 0) - 1).toBe(true);
+  expect(
+    Math.abs(
+      (downloadBox?.y ?? 0) +
+        (downloadBox?.height ?? 0) / 2 -
+        ((contactBox?.y ?? 0) + (contactBox?.height ?? 0) / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(mobileBar.getByRole("link", { name: "Contact" })).toBeFocused();
@@ -193,6 +213,57 @@ test("public action dock moves focus only to visible breakpoint controls", async
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(
     actionSheet.getByRole("link", { name: "Get in touch with Avery" }),
+  ).toBeFocused();
+});
+
+test("owner action preview keeps Share in the compact desktop rail and mobile sheet", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/dev/public-action-preview?owner=1");
+
+  const dock = page.locator("[data-public-action-dock]");
+  const downloadButton = dock.getByRole("button", {
+    name: "Download Résumé PDF",
+  });
+  const shareButton = dock.getByRole("button", {
+    name: "Share Avery’s page",
+  });
+  const motionSelect = dock.getByRole("combobox", {
+    name: "Motion preference",
+  });
+  await expect(downloadButton).toBeVisible();
+  await expect(shareButton).toBeVisible();
+  await expect(motionSelect).toBeVisible();
+
+  const [downloadBox, shareBox, motionBox] = await Promise.all([
+    downloadButton.boundingBox(),
+    shareButton.boundingBox(),
+    motionSelect.boundingBox(),
+  ]);
+  expect(downloadBox).toBeTruthy();
+  expect(shareBox).toBeTruthy();
+  expect(motionBox).toBeTruthy();
+  expect(shareBox!.x >= downloadBox!.x + downloadBox!.width - 1).toBe(true);
+  expect(motionBox!.x >= shareBox!.x + shareBox!.width - 1).toBe(true);
+  expect(
+    Math.abs(
+      shareBox!.y +
+        shareBox!.height / 2 -
+        (downloadBox!.y + downloadBox!.height / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileBar = page.locator("[data-public-action-bar]");
+  const moreButton = mobileBar.getByRole("button", { name: "More" });
+  await expect(moreButton).toBeVisible();
+  await expect(downloadButton).toBeHidden();
+  await moreButton.click();
+  await expect(downloadButton).toBeVisible();
+  await expect(shareButton).toBeVisible();
+  await expect(
+    dock.getByRole("button", { name: "Close page actions" }),
   ).toBeFocused();
 });
 
@@ -521,7 +592,7 @@ test.describe.serial("authenticated user journeys", () => {
     await viewerContext.close();
   });
 
-  test("public page keeps compact mobile actions and stacked desktop actions for owners", async ({ page }) => {
+  test("public page keeps compact mobile actions and a horizontal desktop utility dock for owners", async ({ page }) => {
     test.skip(
       !canRunAdminFixtureFlows,
       "Set Playwright Supabase service-role env vars to run public mobile action-dock coverage.",
@@ -532,7 +603,7 @@ test.describe.serial("authenticated user journeys", () => {
     await setPlanForProfile(profile.id, "spark");
     await ensureLivePageForProfile(profile);
 
-    const assertStackedDock = async () => {
+    const getOwnerActionBoxes = async () => {
       const downloadButton = page.getByRole("button", { name: "Download Résumé PDF" });
       const shareButton = page.getByRole("button", { name: /Share / });
 
@@ -547,6 +618,13 @@ test.describe.serial("authenticated user journeys", () => {
       expect(downloadBox).toBeTruthy();
       expect(shareBox).toBeTruthy();
 
+      return { downloadBox: downloadBox!, shareBox: shareBox! };
+    };
+
+    const assertActionsDoNotOverlap = (
+      downloadBox: { x: number; y: number; width: number; height: number },
+      shareBox: { x: number; y: number; width: number; height: number },
+    ) => {
       const overlaps =
         (downloadBox?.x ?? 0) < (shareBox?.x ?? 0) + (shareBox?.width ?? 0) &&
         (shareBox?.x ?? 0) < (downloadBox?.x ?? 0) + (downloadBox?.width ?? 0) &&
@@ -554,7 +632,25 @@ test.describe.serial("authenticated user journeys", () => {
         (shareBox?.y ?? 0) < (downloadBox?.y ?? 0) + (downloadBox?.height ?? 0);
 
       expect(overlaps).toBe(false);
-      expect((shareBox?.y ?? 0) >= (downloadBox?.y ?? 0) + (downloadBox?.height ?? 0)).toBe(true);
+    };
+
+    const assertMobileSheetLayout = async () => {
+      const { downloadBox, shareBox } = await getOwnerActionBoxes();
+      assertActionsDoNotOverlap(downloadBox, shareBox);
+      expect(shareBox.y >= downloadBox.y + downloadBox.height).toBe(true);
+    };
+
+    const assertDesktopDockLayout = async () => {
+      const { downloadBox, shareBox } = await getOwnerActionBoxes();
+      assertActionsDoNotOverlap(downloadBox, shareBox);
+      expect(shareBox.x >= downloadBox.x + downloadBox.width - 1).toBe(true);
+      expect(
+        Math.abs(
+          shareBox.y +
+            shareBox.height / 2 -
+            (downloadBox.y + downloadBox.height / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
     };
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -574,7 +670,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(
       actionSheet.getByRole("button", { name: "Close page actions" }),
     ).toBeFocused();
-    await assertStackedDock();
+    await assertMobileSheetLayout();
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(mobileBar).toBeHidden();
     await expect(
@@ -583,7 +679,7 @@ test.describe.serial("authenticated user journeys", () => {
     await expect(
       page.getByRole("button", { name: "Download Résumé PDF" }),
     ).toBeFocused();
-    await assertStackedDock();
+    await assertDesktopDockLayout();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(moreButton).toBeFocused();

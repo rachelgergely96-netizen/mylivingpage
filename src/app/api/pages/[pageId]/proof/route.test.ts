@@ -27,6 +27,8 @@ function createServiceRoleClient(options?: {
   page?: { id: string } | null;
   views?: Array<Record<string, unknown>>;
   events?: Array<Record<string, unknown>>;
+  viewsError?: { message: string } | null;
+  eventsError?: { message: string } | null;
 }) {
   return {
     from(table: string) {
@@ -59,7 +61,7 @@ function createServiceRoleClient(options?: {
                 return {
                   order: vi.fn().mockResolvedValue({
                     data: options?.views ?? [],
-                    error: null,
+                    error: options?.viewsError ?? null,
                   }),
                 };
               },
@@ -78,7 +80,7 @@ function createServiceRoleClient(options?: {
                     return {
                       order: vi.fn().mockResolvedValue({
                         data: options?.events ?? [],
-                        error: null,
+                        error: options?.eventsError ?? null,
                       }),
                     };
                   },
@@ -255,5 +257,24 @@ describe("GET /api/pages/[pageId]/proof", () => {
       firstViewAfterLatestShareDeviceLabel: "desktop",
       firstViewAfterLatestShareEngagedSeconds: null,
     });
+  });
+
+  it.each([
+    { viewsError: { message: "views unavailable" } },
+    { eventsError: { message: "events unavailable" } },
+  ])("does not turn an activity lookup failure into an empty proof state", async (options) => {
+    mocks.createServiceRoleSupabaseClient.mockReturnValue(
+      createServiceRoleClient(options),
+    );
+
+    const response = await GET(new Request("http://localhost"), {
+      params: Promise.resolve({ pageId: "page-1" }),
+    });
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Page activity is temporarily unavailable.",
+    });
+    expect(mocks.trackEvent).not.toHaveBeenCalled();
   });
 });

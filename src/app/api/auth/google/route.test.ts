@@ -49,7 +49,7 @@ describe("GET /api/auth/google", () => {
     expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard&screen=login",
       },
     });
     expect(response.headers.get("location")).toBe(
@@ -75,7 +75,7 @@ describe("GET /api/auth/google", () => {
     expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard&screen=login",
       },
     });
     expect(response.headers.get("location")).toBe(
@@ -97,7 +97,7 @@ describe("GET /api/auth/google", () => {
     expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard",
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fdashboard&screen=login",
       },
     });
   });
@@ -105,7 +105,7 @@ describe("GET /api/auth/google", () => {
   it("preserves signup callback metadata for legal acceptance", async () => {
     await GET(
       new NextRequest(
-        "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup&legal_accept=1&legal_source=signup",
+        "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup&legal_accept=1&legal_source=signup&ref=landing_apply_nav",
       ),
     );
 
@@ -113,9 +113,53 @@ describe("GET /api/auth/google", () => {
       provider: "google",
       options: {
         redirectTo:
-          "https://www.mylivingpage.com/callback?next=%2Fcreate&legal_accept=1&legal_source=signup",
+          "https://www.mylivingpage.com/callback?next=%2Fcreate&screen=signup&legal_accept=1&legal_source=signup&ref=landing_apply_nav",
       },
     });
+  });
+
+  it("returns failed signup starts to signup with safe context intact", async () => {
+    mocks.signInWithOAuth.mockResolvedValue({
+      data: {
+        url: null,
+      },
+      error: new Error("OAuth start failed"),
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup&ref=landing_apply_nav",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/signup?next=%2Fcreate&ref=landing_apply_nav&error=google_signin_failed",
+    );
+  });
+
+  it("drops unsafe refs before OAuth and fallback construction", async () => {
+    mocks.signInWithOAuth.mockResolvedValue({
+      data: {
+        url: null,
+      },
+      error: new Error("OAuth start failed"),
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup&ref=https%3A%2F%2Fevil.example%2Fsteal",
+      ),
+    );
+
+    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "https://www.mylivingpage.com/callback?next=%2Fcreate&screen=signup",
+      },
+    });
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/signup?next=%2Fcreate&error=google_signin_failed",
+    );
   });
 
   it("returns to the auth screen with a stable error when OAuth cannot start", async () => {

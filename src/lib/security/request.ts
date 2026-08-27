@@ -1,4 +1,22 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
+
+const DEVELOPMENT_ONLY_SECURITY_HASH_PEPPER =
+  "development-only-mylivingpage-security-hash-pepper";
+
+function getSecurityHashPepper() {
+  const configuredPepper = process.env.SECURITY_HASH_PEPPER?.trim();
+  if (configuredPepper) {
+    return configuredPepper;
+  }
+
+  if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
+    return DEVELOPMENT_ONLY_SECURITY_HASH_PEPPER;
+  }
+
+  throw new Error(
+    "Missing SECURITY_HASH_PEPPER. Configure a server-only pepper before hashing security identifiers.",
+  );
+}
 
 export function getClientIp(requestHeaders: Headers): string | null {
   const vercelForwardedFor = requestHeaders.get("x-vercel-forwarded-for");
@@ -22,7 +40,9 @@ export function getClientIp(requestHeaders: Headers): string | null {
 }
 
 export function hashSecurityIdentifier(value: string) {
-  return createHash("sha256").update(value).digest("hex");
+  return createHmac("sha256", getSecurityHashPepper())
+    .update(value)
+    .digest("hex");
 }
 
 export function getBestEffortRequestIdentifier(requestHeaders: Headers) {

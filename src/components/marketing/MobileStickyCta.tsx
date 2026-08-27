@@ -77,6 +77,17 @@ export default function MobileStickyCta({
   }, [dismissed, hideNearId, ready, targetId]);
 
   const dismiss = () => {
+    // Move keyboard focus out before this fixed surface becomes aria-hidden.
+    // Marketing pages share #main-content as a stable in-flow landmark; add a
+    // programmatic-only tab stop when the page has not declared one itself.
+    const mainContent = document.getElementById("main-content");
+    if (mainContent) {
+      if (!mainContent.hasAttribute("tabindex")) {
+        mainContent.setAttribute("tabindex", "-1");
+      }
+      mainContent.focus({ preventScroll: true });
+    }
+
     setDismissed(true);
     setVisible(false);
     try {

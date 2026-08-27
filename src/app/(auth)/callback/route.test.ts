@@ -108,12 +108,45 @@ describe("GET /callback", () => {
   it("routes a cancelled provider consent screen to the login form", async () => {
     const response = await GET(
       new NextRequest(
-        "https://www.mylivingpage.com/callback?error=access_denied&next=%2Fdashboard",
+        "https://www.mylivingpage.com/callback?error=access_denied&next=%2Fdashboard&screen=login&ref=pricing_nav",
       ),
     );
 
     expect(response.headers.get("location")).toBe(
-      "https://www.mylivingpage.com/login?error=signin_cancelled&next=%2Fdashboard",
+      "https://www.mylivingpage.com/login?error=signin_cancelled&next=%2Fdashboard&ref=pricing_nav",
+    );
+  });
+
+  it("returns a cancelled signup provider flow to signup with safe context intact", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?error=access_denied&next=%2Fcreate&screen=signup&ref=landing_apply_nav",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/signup?error=signin_cancelled&next=%2Fcreate&ref=landing_apply_nav",
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      null,
+      "auth.callback.failed",
+      expect.objectContaining({
+        next: "/create",
+        screen: "signup",
+        ref: "landing_apply_nav",
+      }),
+    );
+  });
+
+  it("sanitizes signup callback context before constructing an error redirect", async () => {
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?error=access_denied&next=%2F%2Fevil.example%2Fsteal&screen=signup&ref=https%3A%2F%2Fevil.example%2Fsteal",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/signup?error=signin_cancelled&next=%2Fdashboard",
     );
   });
 
@@ -245,6 +278,107 @@ describe("GET /callback", () => {
         auth_origin: "https://www.mylivingpage.com",
         redirect_to: "https://www.mylivingpage.com/dashboard",
       }),
+    );
+  });
+
+  it("returns a failed signup code exchange to signup with next and ref", async () => {
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      error: new Error("PKCE code verifier not found in storage."),
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fcreate&screen=signup&ref=landing_apply_nav",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/signup?error=signin_expired&next=%2Fcreate&ref=landing_apply_nav",
+    );
+  });
+
+  it("gracefully returns profile provisioning failures to signup with bounded telemetry", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-123",
+          app_metadata: {
+            provider: "google",
+          },
+          user_metadata: {},
+        },
+      },
+    });
+    mocks.ensureUserProfile.mockRejectedValue(
+      new Error(`Profile lookup failed ${"x".repeat(400)}`),
+    );
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2Fcreate&screen=signup&ref=landing_apply_nav",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/signup?error=signin_failed&next=%2Fcreate&ref=landing_apply_nav",
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-123",
+      "auth.callback.failed",
+      expect.objectContaining({
+        error_code: "profile_provision_failed",
+        next: "/create",
+        screen: "signup",
+        ref: "landing_apply_nav",
+        redirect_to:
+          "https://www.mylivingpage.com/signup?error=signin_failed&next=%2Fcreate&ref=landing_apply_nav",
+      }),
+    );
+    const failureMetadata = mocks.trackEvent.mock.calls[0]?.[2];
+    expect(failureMetadata?.error).toHaveLength(240);
+    expect(mocks.lookupExistingPage).not.toHaveBeenCalled();
+    expect(mocks.incrementSignInCount).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes callback context when profile provisioning fails", async () => {
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-123",
+          app_metadata: {},
+          user_metadata: {},
+        },
+      },
+    });
+    mocks.ensureUserProfile.mockRejectedValue({
+      message: "Profile conflict lookup unavailable",
+    });
+
+    const response = await GET(
+      new NextRequest(
+        "https://www.mylivingpage.com/callback?code=test-code&next=%2F%2Fevil.example%2Fsteal&screen=admin&ref=https%3A%2F%2Fevil.example%2Fsteal",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://www.mylivingpage.com/login?error=signin_failed&next=%2Fdashboard",
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-123",
+      "auth.callback.failed",
+      expect.objectContaining({
+        error: "Profile conflict lookup unavailable",
+        error_code: "profile_provision_failed",
+        next: "/dashboard",
+        screen: "login",
+        ref: null,
+      }),
+    );
+    expect(mocks.trackEvent).not.toHaveBeenCalledWith(
+      "user-123",
+      "auth.callback.succeeded",
+      expect.anything(),
     );
   });
 

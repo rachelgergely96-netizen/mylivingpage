@@ -4,6 +4,7 @@ import {
   recordLegalAcceptance,
 } from "@/lib/legal/acceptance";
 import type { LegalAcceptanceSource } from "@/lib/legal/legal-version";
+import { isPlainJsonObject } from "@/lib/security/page-write";
 import { trackEvent } from "@/lib/track-event";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -27,14 +28,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: LegalAcceptBody = {};
+  let body: unknown;
   try {
-    body = (await request.json()) as LegalAcceptBody;
+    body = await request.json();
   } catch {
-    body = {};
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  if (!isPlainJsonObject(body)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const source = body.source ?? "signup";
+  const source = (body as LegalAcceptBody).source ?? "signup";
   if (!ALLOWED_SOURCES.includes(source)) {
     return NextResponse.json({ error: "Invalid source" }, { status: 400 });
   }

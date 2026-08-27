@@ -4,10 +4,53 @@ import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/l
 import { trackEvent } from "@/lib/track-event";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+const MAX_MULTIPART_BODY_SIZE = MAX_FILE_SIZE + 128 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const AVATAR_PATH_BASENAME = "headshot";
 const ENABLE_E2E_FAILURE_INJECTION = process.env.ENABLE_E2E_FAILURE_INJECTION === "1";
 const routeTrustLevel = "authenticated_user";
+
+type LimitedBodyResult =
+  | { ok: true; body: ArrayBuffer }
+  | { ok: false; tooLarge: boolean };
+
+async function readBodyWithLimit(
+  request: Request,
+  maxBytes: number,
+): Promise<LimitedBodyResult> {
+  if (!request.body) {
+    return { ok: true, body: new ArrayBuffer(0) };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, tooLarge: true };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, tooLarge: false };
+  }
+
+  const body = new ArrayBuffer(totalBytes);
+  const bytes = new Uint8Array(body);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, body };
+}
 
 /** POST /api/avatar — upload a headshot */
 export async function POST(request: Request) {
@@ -23,12 +66,26 @@ export async function POST(request: Request) {
   const declaredLength = Number(request.headers.get("content-length"));
   if (
     Number.isFinite(declaredLength) &&
-    declaredLength > MAX_FILE_SIZE + 128 * 1024
+    declaredLength > MAX_MULTIPART_BODY_SIZE
   ) {
     return NextResponse.json({ error: "File must be under 2 MB." }, { status: 413 });
   }
 
-  const formData = await request.formData().catch(() => null);
+  const body = await readBodyWithLimit(request, MAX_MULTIPART_BODY_SIZE);
+  if (!body.ok) {
+    if (body.tooLarge) {
+      return NextResponse.json({ error: "File must be under 2 MB." }, { status: 413 });
+    }
+    return NextResponse.json({ error: "Unable to read the upload." }, { status: 400 });
+  }
+
+  const multipartHeaders = new Headers(request.headers);
+  multipartHeaders.delete("content-length");
+  const formData = await new Request(request.url, {
+    method: request.method,
+    headers: multipartHeaders,
+    body: body.body,
+  }).formData().catch(() => null);
   if (!formData) {
     return NextResponse.json({ error: "Unable to read the upload." }, { status: 400 });
   }
@@ -177,11 +234,10 @@ export async function DELETE() {
       .from("avatars")
       .remove(existing.map((file) => `${user.id}/${file.name}`));
     if (removeError) {
-      await trackEvent(user.id, "avatar.remove.failed", {
+      await trackEvent(user.id, "avatar.cleanup.failed", {
         error: removeError.message,
-        stage: "storage-remove",
+        stage: "storage-cleanup",
       });
-      return NextResponse.json({ error: "Unable to remove avatar." }, { status: 500 });
     }
   }
 

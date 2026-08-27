@@ -7,6 +7,7 @@ interface ContactOwnerButtonProps {
   resumeData: ResumeData;
   className?: string;
   label?: string;
+  compactLabel?: string;
 }
 
 function firstName(fullName: string): string {
@@ -26,6 +27,7 @@ export default function ContactOwnerButton({
   resumeData,
   className,
   label,
+  compactLabel,
 }: ContactOwnerButtonProps) {
   const email = resumeData.email?.trim();
   if (!email) {
@@ -35,10 +37,12 @@ export default function ContactOwnerButton({
   const name = firstName(resumeData.name);
   const subject = name ? `Reaching out after your page, ${name}` : "Reaching out";
   const href = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+  const fullLabel = label ?? (name ? `Get in touch with ${name}` : "Get in touch");
 
   return (
     <a
       href={href}
+      aria-label={compactLabel ? fullLabel : undefined}
       data-analytics-target-key="email"
       data-analytics-target-label={email}
       className={`site-button site-button-primary ${className ?? ""}`}
@@ -54,7 +58,10 @@ export default function ContactOwnerButton({
         <rect x="1.75" y="3.25" width="12.5" height="9.5" />
         <path d="M1.75 4.5 8 8.75l6.25-4.25" />
       </svg>
-      {label ?? (name ? `Get in touch with ${name}` : "Get in touch")}
+      <span className={compactLabel ? "md:hidden" : undefined}>{fullLabel}</span>
+      {compactLabel ? (
+        <span className="hidden md:inline">{compactLabel}</span>
+      ) : null}
     </a>
   );
 }

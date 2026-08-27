@@ -12,6 +12,20 @@ import PageVisibilityControl from "@/components/dashboard/PageVisibilityControl"
 import MotionModeControl from "@/components/motion/MotionModeControl";
 import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import { clearBrowserLocalDraftStorage } from "@/hooks/useLocalDraft";
+import { finishDeletedAccountClientState } from "@/lib/account-deletion-client";
+import UsernameAvailabilityFeedback, {
+  readUsernameAvailabilityResponse,
+  type UsernameAvailabilityResult,
+} from "./UsernameAvailabilityFeedback";
+import PasswordChangeFeedback, {
+  getPasswordFieldErrorProps,
+  readPasswordChangeResponse,
+  type PasswordChangeMessage,
+} from "./PasswordChangeFeedback";
+import DeleteAccountError, {
+  DELETE_ACCOUNT_ERROR_ID,
+  focusDeleteFailureControl,
+} from "./DeleteAccountError";
 import {
   getPageVisibilityState,
   isPubliclyReachablePage,
@@ -43,12 +57,6 @@ interface Profile {
   hasPassword: boolean;
 }
 
-interface UsernameAvailability {
-  available: boolean;
-  reason: string | null;
-  slug: string;
-}
-
 const FOCUSABLE_SELECTOR = [
   "a[href]",
   "button:not([disabled])",
@@ -66,9 +74,13 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+  const usernameSaveButtonRef = useRef<HTMLButtonElement>(null);
+  const usernameManualRetryRef = useRef(false);
   const deleteInputRef = useRef<HTMLInputElement>(null);
   const deleteDialogRef = useRef<HTMLDivElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deleteRetryRef = useRef<HTMLButtonElement>(null);
   const deletingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
   const [billingAction, setBillingAction] = useState<"portal" | null>(null);
@@ -80,8 +92,11 @@ export default function SettingsPage() {
   // Profile fields
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
-  const [usernameAvail, setUsernameAvail] = useState<UsernameAvailability | null>(null);
+  const [usernameAvail, setUsernameAvail] = useState<
+    (UsernameAvailabilityResult & { slug: string }) | null
+  >(null);
   const [usernameChecking, setUsernameChecking] = useState(false);
+  const [usernameCheckAttempt, setUsernameCheckAttempt] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Save statuses
@@ -94,11 +109,7 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordMsg, setPasswordMsg] = useState<{
-    ok: boolean;
-    text: string;
-    field?: "current" | "new" | "confirm";
-  } | null>(null);
+  const [passwordMsg, setPasswordMsg] = useState<PasswordChangeMessage | null>(null);
 
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -216,7 +227,7 @@ export default function SettingsPage() {
     const validation = validateUsernameSlug(username);
     if (validation.error) {
       setUsernameChecking(false);
-      setUsernameAvail({ available: false, reason: validation.error, slug: validation.slug });
+      setUsernameAvail({ status: "unavailable", reason: validation.error, slug: validation.slug });
       clearTimeout(checkTimeoutRef.current);
       return;
     }
@@ -229,8 +240,9 @@ export default function SettingsPage() {
     }
 
     const requestedSlug = validation.slug;
+    const isManualRetry = usernameManualRetryRef.current;
+    usernameManualRetryRef.current = false;
     const controller = new AbortController();
-    setUsernameAvail(null);
     setUsernameChecking(true);
     clearTimeout(checkTimeoutRef.current);
     checkTimeoutRef.current = setTimeout(async () => {
@@ -238,12 +250,25 @@ export default function SettingsPage() {
         const res = await fetch(`/api/username?slug=${encodeURIComponent(validation.slug)}`, {
           signal: controller.signal,
         });
-        const data = await res.json();
+        const result = await readUsernameAvailabilityResponse(res);
         if (controller.signal.aborted) return;
-        setUsernameAvail({ available: data.available, reason: data.reason, slug: requestedSlug });
+        setUsernameAvail({ ...result, slug: requestedSlug });
+        if (isManualRetry && result.status !== "error") {
+          window.requestAnimationFrame(() => {
+            if (result.status === "available") {
+              usernameSaveButtonRef.current?.focus();
+            } else {
+              usernameInputRef.current?.focus();
+            }
+          });
+        }
       } catch {
         if (controller.signal.aborted) return;
-        setUsernameAvail({ available: false, reason: "Could not check username availability.", slug: requestedSlug });
+        setUsernameAvail({
+          status: "error",
+          reason: "Could not check username availability. Try again.",
+          slug: requestedSlug,
+        });
       } finally {
         if (!controller.signal.aborted) {
           setUsernameChecking(false);
@@ -255,7 +280,7 @@ export default function SettingsPage() {
       clearTimeout(checkTimeoutRef.current);
       controller.abort();
     };
-  }, [username, profile]);
+  }, [username, profile, usernameCheckAttempt]);
 
   useEffect(() => {
     if (!showDeleteModal) {
@@ -308,6 +333,14 @@ export default function SettingsPage() {
   }, [showDeleteModal]);
 
   useEffect(() => {
+    if (!showDeleteModal || deleting || !deleteError) {
+      return;
+    }
+
+    focusDeleteFailureControl(deleteRetryRef.current, deleteInputRef.current);
+  }, [deleteError, deleting, showDeleteModal]);
+
+  useEffect(() => {
     return () => {
       if (toastTimerRef.current !== null) {
         window.clearTimeout(toastTimerRef.current);
@@ -345,7 +378,7 @@ export default function SettingsPage() {
       return;
     }
     const slug = validation.slug;
-    if (!usernameAvail?.available || usernameAvail.slug !== validation.slug) return;
+    if (usernameAvail?.status !== "available" || usernameAvail.slug !== validation.slug) return;
     setSavingUsername(true);
     try {
       const res = await fetch("/api/username", {
@@ -423,19 +456,19 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: newPassword, currentPassword }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) {
-        throw new Error(data?.error ?? "Failed to update password.");
+      const result = await readPasswordChangeResponse(res);
+      if (!result.ok) {
+        setPasswordMsg(result);
+        return;
       }
       setNewPassword("");
       setCurrentPassword("");
       setConfirmPassword("");
-      setPasswordMsg({ ok: true, text: "Password updated successfully." });
-    } catch (error) {
+      setPasswordMsg(result);
+    } catch {
       setPasswordMsg({
         ok: false,
-        text: error instanceof Error ? error.message : "Failed to update password.",
-        field: "current",
+        text: "Failed to update password. Check your connection and try again.",
       });
     } finally {
       setSavingPassword(false);
@@ -459,9 +492,11 @@ export default function SettingsPage() {
         throw new Error(data?.error ?? "Failed to delete account.");
       }
       const supabase = createBrowserSupabaseClient();
-      clearBrowserLocalDraftStorage();
-      await supabase.auth.signOut();
-      router.replace("/");
+      await finishDeletedAccountClientState({
+        clearLocalDrafts: clearBrowserLocalDraftStorage,
+        signOut: () => supabase.auth.signOut(),
+        navigateHome: () => router.replace("/"),
+      });
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : "Failed to delete account.");
     } finally {
@@ -659,6 +694,7 @@ export default function SettingsPage() {
             <div className="flex min-h-12 min-w-0 flex-1 items-center gap-0 rounded-none border border-site-border-strong bg-site-canvas-alt focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-site-focus">
               <span className="pl-4 text-base text-site-muted sm:text-sm">mylivingpage.com/</span>
               <input
+                ref={usernameInputRef}
                 id="settings-username"
                 type="text"
                 value={username}
@@ -667,25 +703,31 @@ export default function SettingsPage() {
                   setUsernameAvail(null);
                 }}
                 maxLength={40}
+                aria-invalid={usernameAvail?.status === "unavailable" ? true : undefined}
+                aria-describedby={`settings-username-help${usernameChecking || usernameAvail ? " settings-username-feedback" : ""}`}
                 className="h-12 min-w-0 flex-1 bg-transparent px-1 text-base text-site-text focus:outline-none sm:text-sm"
               />
             </div>
             <button
+              ref={usernameSaveButtonRef}
               type="button"
               onClick={onSaveUsername}
-              disabled={savingUsername || usernameChecking || !usernameChanged || !usernameAvail?.available || usernameAvail.slug !== normalizeUsernameSlug(username)}
+              disabled={savingUsername || usernameChecking || !usernameChanged || usernameAvail?.status !== "available" || usernameAvail.slug !== normalizeUsernameSlug(username)}
               className="site-button site-button-primary min-w-[6rem] px-5 disabled:opacity-40"
             >
               {savingUsername ? "Saving…" : "Save"}
             </button>
           </div>
-          {usernameChecking && <p className="mt-1.5 text-xs text-site-muted" role="status">Checking…</p>}
-          {usernameAvail && !usernameChecking && (
-            <p className={`mt-1.5 text-xs ${usernameAvail.available ? "text-site-success" : "text-site-danger"}`} role="status">
-              {usernameAvail.available ? "Available" : usernameAvail.reason}
-            </p>
-          )}
-          <p className="mt-1.5 text-xs text-site-muted">
+          <UsernameAvailabilityFeedback
+            checking={usernameChecking}
+            result={usernameAvail}
+            onRetry={() => {
+              if (usernameChecking) return;
+              usernameManualRetryRef.current = true;
+              setUsernameCheckAttempt((attempt) => attempt + 1);
+            }}
+          />
+          <p id="settings-username-help" className="mt-1.5 text-xs text-site-muted">
             This is your public page URL. Use 3-40 letters, numbers, hyphens, underscores, or periods.
           </p>
         </div>
@@ -710,7 +752,11 @@ export default function SettingsPage() {
       {profile.hasPassword && (
         <section className="site-panel mb-5 p-5 sm:p-7">
           <h2 className="site-panel-title mb-5">Change password</h2>
-          <form className="space-y-3 max-w-sm" onSubmit={onChangePassword}>
+          <form
+            className="space-y-3 max-w-sm"
+            onSubmit={onChangePassword}
+            aria-describedby={passwordMsg && !passwordMsg.ok && !passwordMsg.field ? "password-form-error" : undefined}
+          >
             <div>
               <label htmlFor="settings-current-password" className="mb-1.5 block text-sm font-semibold text-site-secondary">Current password</label>
               <input
@@ -720,8 +766,7 @@ export default function SettingsPage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
-                aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "current" ? true : undefined}
-                aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "current" ? "password-form-error" : undefined}
+                {...getPasswordFieldErrorProps(passwordMsg, "current")}
                 className="site-field h-12 w-full px-4 text-base sm:text-sm"
               />
             </div>
@@ -736,8 +781,7 @@ export default function SettingsPage() {
                 required
                 minLength={8}
                 placeholder="Min 8 characters"
-                aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "new" ? true : undefined}
-                aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "new" ? "password-form-error" : undefined}
+                {...getPasswordFieldErrorProps(passwordMsg, "new")}
                 className="site-field h-12 w-full px-4 text-base sm:text-sm"
               />
             </div>
@@ -752,8 +796,7 @@ export default function SettingsPage() {
                 required
                 minLength={8}
                 placeholder="Repeat password"
-                aria-invalid={passwordMsg && !passwordMsg.ok && passwordMsg.field === "confirm" ? true : undefined}
-                aria-describedby={passwordMsg && !passwordMsg.ok && passwordMsg.field === "confirm" ? "password-form-error" : undefined}
+                {...getPasswordFieldErrorProps(passwordMsg, "confirm")}
                 className="site-field h-12 w-full px-4 text-base sm:text-sm"
               />
             </div>
@@ -764,27 +807,7 @@ export default function SettingsPage() {
             >
               {savingPassword ? "Updating…" : "Update password"}
             </button>
-            {passwordMsg && (
-              passwordMsg.ok ? (
-                <p className="text-xs text-site-success" role="status">{passwordMsg.text}</p>
-              ) : (
-                <p id="password-form-error" className="flex items-start gap-1.5 text-xs text-site-danger" role="alert">
-                  <svg
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    aria-hidden="true"
-                  >
-                    <circle cx="8" cy="8" r="6.5" />
-                    <path d="M8 4.75v3.75" strokeLinecap="square" />
-                    <path d="M8 11.25h.01" strokeLinecap="round" />
-                  </svg>
-                  <span>{passwordMsg.text}</span>
-                </p>
-              )
-            )}
+            {passwordMsg ? <PasswordChangeFeedback message={passwordMsg} /> : null}
           </form>
         </section>
       )}
@@ -897,7 +920,7 @@ export default function SettingsPage() {
                 }}
                 placeholder="Current password"
                 aria-invalid={deleteError ? true : undefined}
-                aria-describedby={deleteError ? "delete-account-error" : undefined}
+                aria-describedby={deleteError ? DELETE_ACCOUNT_ERROR_ID : undefined}
                 className="site-field mb-4 h-12 w-full px-4 text-base sm:text-sm"
               />
             ) : (
@@ -907,23 +930,7 @@ export default function SettingsPage() {
                 then delete your account.
               </p>
             )}
-            {deleteError ? (
-              <div id="delete-account-error" role="alert" className="site-alert-danger mb-4 flex items-start gap-2 p-3 text-sm">
-                <svg
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  aria-hidden="true"
-                >
-                  <circle cx="8" cy="8" r="6.5" />
-                  <path d="M8 4.75v3.75" strokeLinecap="square" />
-                  <path d="M8 11.25h.01" strokeLinecap="round" />
-                </svg>
-                <span>{deleteError}</span>
-              </div>
-            ) : null}
+            {deleteError ? <DeleteAccountError message={deleteError} /> : null}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -941,9 +948,11 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
+                ref={deleteRetryRef}
                 type="button"
                 onClick={onDeleteAccount}
                 disabled={deleteConfirmText !== profile.username || (profile.hasPassword && !deleteCurrentPassword) || deleting}
+                aria-describedby={deleteError ? DELETE_ACCOUNT_ERROR_ID : undefined}
                 className="site-button site-button-danger flex-1 disabled:opacity-40"
               >
                 {deleting ? "Deleting…" : "Delete forever"}

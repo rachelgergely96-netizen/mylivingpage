@@ -26,6 +26,8 @@ import {
 } from "@/lib/pdf/ResumePDFDocument";
 import type { ResumeData } from "@/types/resume";
 
+const PAGE_ID = "11111111-1111-4111-8111-111111111111";
+
 function buildRealWorldResumeData(): ResumeData {
   return {
     name: "Rachel Gergely",
@@ -249,7 +251,7 @@ function buildDenseResumeData(): ResumeData {
 
 function createPageResponse() {
   return {
-    id: "page-1",
+    id: PAGE_ID,
     owner_id: "owner-1",
     user_id: "owner-1",
     visibility: "public" as const,
@@ -324,7 +326,7 @@ describe("POST /api/resume/export real render path", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 

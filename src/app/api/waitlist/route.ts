@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isPlainJsonObject } from "@/lib/security/page-write";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
@@ -22,17 +23,42 @@ export async function POST(request: Request) {
     );
   }
 
+  let body: unknown;
   try {
-    const body = (await request.json()) as { email?: string; referralCode?: string };
-    const email = body.email?.trim().toLowerCase();
-    if (!email || !EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
-    }
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request payload." },
+      { status: 400 },
+    );
+  }
 
+  if (!isPlainJsonObject(body)) {
+    return NextResponse.json(
+      { error: "Invalid request payload." },
+      { status: 400 },
+    );
+  }
+
+  const rawEmail = body.email;
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  if (!email || !EMAIL_REGEX.test(email)) {
+    return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
+  }
+
+  const rawReferralCode = body.referralCode;
+  if (rawReferralCode !== undefined && typeof rawReferralCode !== "string") {
+    return NextResponse.json(
+      { error: "Invalid request payload." },
+      { status: 400 },
+    );
+  }
+
+  try {
     const supabase = createServiceRoleSupabaseClient();
     const { error } = await supabase.from("waitlist").insert({
       email,
-      referral_code: body.referralCode?.trim() || null,
+      referral_code: rawReferralCode?.trim() || null,
     });
 
     if (error) {
@@ -47,10 +73,13 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ message: "You are in. We will email launch updates soon." });
-  } catch {
+  } catch (error) {
+    console.error("waitlist.unhandled_error", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return NextResponse.json(
-      { error: "Invalid request payload." },
-      { status: 400 },
+      { error: "Unable to join the waitlist right now." },
+      { status: 500 },
     );
   }
 }

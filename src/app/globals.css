@@ -102,6 +102,96 @@ html[data-motion-mode="still"] {
   }
 }
 
+@keyframes living-utility-trace {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 0.9;
+    transform: scaleX(1);
+  }
+}
+
+/*
+ * Shared Living Page chrome follows the same hierarchy in every theme:
+ * the themed world stays visible, while compact opaque plates keep navigation
+ * readable without asking an animated canvas to repaint a large blur region.
+ */
+[data-living-section-rail] > .theme-surface-strong,
+[data-living-section-menu] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-living-focus-destination]:focus-visible {
+  outline: 2px solid var(--theme-accent-bright, var(--site-focus));
+  outline-offset: 4px;
+}
+
+html[data-motion-mode="full"] [data-living-section-menu]:not([hidden]) {
+  --motion-event-distance: var(--motion-distance-micro);
+  animation: motion-semantic-enter var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
+}
+
+html[data-motion-mode="calm"] [data-living-section-menu]:not([hidden]) {
+  animation: motion-semantic-confirm var(--motion-duration-micro)
+    var(--motion-ease-standard) both;
+}
+
+html[data-motion-mode="still"] [data-living-section-menu] {
+  animation: none !important;
+}
+
+@media (min-width: 768px) {
+  [data-public-action-list]::before {
+    position: absolute;
+    z-index: 1;
+    top: -1px;
+    right: -1px;
+    left: -1px;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--site-action) 38%,
+      var(--site-action-hover) 62%,
+      transparent
+    );
+    content: "";
+    pointer-events: none;
+    transform-origin: right center;
+  }
+
+  html[data-motion-mode="full"] [data-public-action-list] {
+    --motion-event-distance: var(--motion-distance-micro);
+    animation: motion-semantic-enter var(--motion-duration-standard)
+      var(--motion-ease-enter) both;
+  }
+
+  html[data-motion-mode="full"] [data-public-action-list]::before {
+    animation: living-utility-trace var(--motion-duration-context)
+      var(--motion-ease-enter) 120ms both;
+  }
+
+  html[data-motion-mode="calm"] [data-public-action-list] {
+    animation: motion-semantic-confirm var(--motion-duration-micro)
+      var(--motion-ease-standard) both;
+  }
+
+  html[data-motion-mode="calm"] [data-public-action-list]::before,
+  html[data-motion-mode="still"] [data-public-action-list]::before {
+    animation: none;
+    opacity: 0.82;
+    transform: none;
+  }
+
+  html[data-motion-mode="still"] [data-public-action-list] {
+    animation: none !important;
+  }
+}
+
 html[data-motion-mode="full"]
   :is(
     [data-motion-event="resume.import.fact.detected"]:is(
@@ -139,6 +229,14 @@ html[data-motion-mode="full"]
 }
 
 html[data-motion-mode="full"]
+  [data-motion-event="page.chapter.entered"][data-motion-state="entered"]
+  [data-living-section-current] {
+  --motion-event-distance: var(--motion-distance-micro);
+  animation: motion-semantic-enter var(--motion-duration-standard)
+    var(--motion-ease-enter) both;
+}
+
+html[data-motion-mode="full"]
   :is(
     [data-motion-event="editor.save.confirmed"][data-motion-state="confirmed"],
     [data-motion-event="page.publish.confirmed"][data-dashboard-publish-status][data-motion-state="confirmed"]
@@ -167,6 +265,13 @@ html[data-motion-mode="calm"]
   --motion-event-distance: var(--motion-distance-micro);
   animation: motion-semantic-enter var(--motion-duration-micro)
     var(--motion-ease-enter) both;
+}
+
+html[data-motion-mode="calm"]
+  [data-motion-event="page.chapter.entered"][data-motion-state="entered"]
+  [data-living-section-current] {
+  animation: motion-semantic-confirm var(--motion-duration-micro)
+    var(--motion-ease-standard) both;
 }
 
 /* Calm confirmations change only opacity; they never travel. */
@@ -229,6 +334,23 @@ html[data-motion-mode="still"] [data-homepage-prototype] *::after {
   animation: none !important;
   scroll-behavior: auto !important;
   transition-duration: var(--motion-duration-instant) !important;
+}
+
+html[data-motion-mode="calm"]
+  [data-public-action-dock]
+  :is(.site-button, .site-field, [data-motion-control]) {
+  transition-duration: var(--motion-duration-micro) !important;
+}
+
+html[data-motion-mode="still"]
+  [data-public-action-dock]
+  :is(.site-button, .site-field, [data-motion-control]) {
+  transition-duration: var(--motion-duration-instant) !important;
+}
+
+html[data-motion-mode="calm"] [data-public-action-dock] .site-button:active,
+html[data-motion-mode="still"] [data-public-action-dock] .site-button:active {
+  transform: none;
 }
 
 html[data-motion-mode="still"] [data-homepage-prototype] [data-reveal] {

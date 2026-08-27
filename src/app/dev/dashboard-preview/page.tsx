@@ -5,7 +5,10 @@ import DashboardSignalDesk from "@/components/dashboard/DashboardSignalDesk";
 import AppNavigation from "@/components/ui/AppNavigation";
 import { getAccountAccessState } from "@/lib/account-access";
 import { DEMO_PAGES } from "@/lib/demo-data";
-import { isEditorPreviewEnabled } from "@/lib/editor-preview";
+import {
+  isEditorPreviewEnabled,
+  PUBLIC_PAGE_PREVIEW_USERNAME,
+} from "@/lib/editor-preview";
 import type { PageProofSummary } from "@/lib/analytics/proofSummary";
 import type { PageRecord } from "@/types/resume";
 
@@ -23,7 +26,7 @@ const demo = DEMO_PAGES[0];
 
 const previewPage: PageRecord = {
   id: "dashboard-layout-preview",
-  slug: "avery-sample",
+  slug: PUBLIC_PAGE_PREVIEW_USERNAME,
   status: "live",
   visibility: "public",
   title: "Avery Sample",

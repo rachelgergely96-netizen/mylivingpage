@@ -13,6 +13,10 @@ test("try keeps source lineage local, reviewable, and explicitly saved", async (
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto("/try");
 
+  await expect(
+    page.getByRole("link", { name: "Create a free account" }),
+  ).toHaveAttribute("href", "/signup?ref=try_upload&next=/create");
+
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
   await expect(page.locator("footer")).toBeVisible();
   await expect(
@@ -85,6 +89,10 @@ test("try keeps source lineage local, reviewable, and explicitly saved", async (
   const keepLink = page
     .locator("section.site-callout")
     .getByRole("link", { name: "Create my free page" });
+  await expect(keepLink).toHaveAttribute(
+    "href",
+    "/signup?ref=try_keep&next=/create",
+  );
   await keepLink.evaluate((element) => {
     element.addEventListener("click", (event) => event.preventDefault(), { once: true });
   });

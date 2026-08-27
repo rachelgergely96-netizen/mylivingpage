@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildAuthCallbackUrl } from "@/lib/auth/callback-url";
+import {
+  buildAuthCallbackUrl,
+  sanitizeAuthRef,
+  sanitizeAuthScreen,
+} from "@/lib/auth/callback-url";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
 import { getAppOrigin } from "@/lib/site";
 import { getRequestHostname } from "@/lib/supabase/cookies";
@@ -8,10 +12,6 @@ import { trackEvent } from "@/lib/track-event";
 
 const routeTrustLevel = "public_read";
 export const dynamic = "force-dynamic";
-
-function safeAuthScreen(value: string | null) {
-  return value === "signup" ? "signup" : "login";
-}
 
 function applyNoStoreHeaders(response: NextResponse) {
   response.headers.set("Cache-Control", "no-store, max-age=0");
@@ -22,15 +22,17 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const appOrigin = getAppOrigin();
   const next = sanitizeInternalRedirectPath(requestUrl.searchParams.get("next"));
-  const screen = safeAuthScreen(requestUrl.searchParams.get("screen"));
+  const screen = sanitizeAuthScreen(requestUrl.searchParams.get("screen"));
   const legalAcceptRequested = requestUrl.searchParams.get("legal_accept") === "1";
   const legalSource = requestUrl.searchParams.get("legal_source") === "checkout" ? "checkout" : "signup";
-  const ref = requestUrl.searchParams.get("ref");
+  const ref = sanitizeAuthRef(requestUrl.searchParams.get("ref"));
   const callbackUrl = new URL(
     buildAuthCallbackUrl({
       next,
+      screen,
       legalAcceptRequested,
       legalSource,
+      ref,
     }),
   );
   const fallbackRedirect = new URL(`/${screen}`, appOrigin);

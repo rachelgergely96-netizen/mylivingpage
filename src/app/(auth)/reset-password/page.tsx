@@ -6,6 +6,10 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import AuthMessage from "@/components/auth/AuthMessage";
 import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
+import {
+  buildPasswordRecoveryHref,
+  resolvePasswordRecoveryDestination,
+} from "@/lib/auth/password-recovery";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -15,7 +19,21 @@ export default function ResetPasswordPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [verification, setVerification] = useState<"verifying" | "ready" | "error">("verifying");
+  const [postResetDestination, setPostResetDestination] =
+    useState("/dashboard");
+  const [forgotPasswordHref, setForgotPasswordHref] =
+    useState("/forgot-password");
   const redirectTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const requestedNext = new URLSearchParams(window.location.search).get("next");
+    setPostResetDestination(
+      resolvePasswordRecoveryDestination(requestedNext),
+    );
+    setForgotPasswordHref(
+      buildPasswordRecoveryHref("/forgot-password", requestedNext),
+    );
+  }, []);
 
   // Supabase redirects here with a hash fragment containing the access token.
   // The browser client picks it up automatically via onAuthStateChange.
@@ -81,7 +99,13 @@ export default function ResetPasswordPage() {
       if (error) throw error;
       setStatus("success");
       setMessage("Password updated. Redirecting…");
-      redirectTimerRef.current = window.setTimeout(() => router.replace("/dashboard"), 2000);
+      const requestedNext = new URLSearchParams(window.location.search).get("next");
+      const destination = resolvePasswordRecoveryDestination(requestedNext);
+      setPostResetDestination(destination);
+      redirectTimerRef.current = window.setTimeout(
+        () => router.replace(destination),
+        2000,
+      );
     } catch (error) {
       setStatus("error");
       setMessage(
@@ -113,7 +137,7 @@ export default function ResetPasswordPage() {
             </AuthMessage>
             <p className="mt-4 text-sm text-site-muted">
               <Link
-                href="/forgot-password"
+                href={forgotPasswordHref}
                 className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
               >
                 Request a new reset link
@@ -125,8 +149,8 @@ export default function ResetPasswordPage() {
             <AuthMessage id="reset-message" tone="success">
               {message}
             </AuthMessage>
-            <Link href="/dashboard" className="site-button site-button-primary mt-6">
-              Go to dashboard
+            <Link href={postResetDestination} className="site-button site-button-primary mt-6">
+              {postResetDestination === "/dashboard" ? "Go to dashboard" : "Continue"}
             </Link>
           </div>
         ) : (
@@ -195,7 +219,7 @@ export default function ResetPasswordPage() {
           <p className="mt-5 border-t border-site-border pt-5 text-sm text-site-secondary">
             Link not working?{" "}
             <Link
-              href="/forgot-password"
+              href={forgotPasswordHref}
               className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
             >
               Request a new reset link

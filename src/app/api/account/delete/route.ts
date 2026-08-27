@@ -5,9 +5,12 @@ import {
 } from "@/lib/account/deleteUserAccount";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRecentReauthentication } from "@/lib/auth/reauthentication";
+import { isPlainJsonObject } from "@/lib/security/page-write";
+import { readUtf8BodyWithLimit } from "@/lib/security/request-body";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const routeTrustLevel = "authenticated_user";
+const MAX_ACCOUNT_DELETE_BODY_BYTES = 16 * 1024;
 
 /** POST /api/account/delete — permanently delete user account and all data */
 export async function POST(request: Request) {
@@ -35,10 +38,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Account deletion is temporarily unavailable." }, { status: 503 });
   }
 
-  let body: { currentPassword?: unknown };
+  const bodyResult = await readUtf8BodyWithLimit(
+    request,
+    MAX_ACCOUNT_DELETE_BODY_BYTES,
+  );
+  if (!bodyResult.ok && bodyResult.reason === "too_large") {
+    return NextResponse.json(
+      { error: "Request payload is too large." },
+      { status: 413 },
+    );
+  }
+
+  let body: unknown;
   try {
-    body = (await request.json()) as { currentPassword?: unknown };
+    body = JSON.parse(bodyResult.ok ? bodyResult.text : "") as unknown;
   } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  if (!isPlainJsonObject(body)) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const reauthentication = await requireRecentReauthentication(

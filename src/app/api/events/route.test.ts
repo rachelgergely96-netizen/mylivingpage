@@ -51,6 +51,43 @@ describe("POST /api/events", () => {
     mocks.recordEvent.mockResolvedValue(true);
   });
 
+  it("rejects an oversized payload when content-length is absent", async () => {
+    const request = new Request("http://localhost/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ padding: "x".repeat(17 * 1024) }),
+    });
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      error: "Event payload is too large.",
+    });
+    expect(mocks.authGetUser).not.toHaveBeenCalled();
+    expect(mocks.enforceRateLimit).not.toHaveBeenCalled();
+    expect(mocks.pageMaybeSingle).not.toHaveBeenCalled();
+    expect(mocks.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it("preserves malformed JSON as an invalid event-name response", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not-json",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid event name.",
+    });
+    expect(mocks.enforceRateLimit).not.toHaveBeenCalled();
+    expect(mocks.recordEvent).not.toHaveBeenCalled();
+  });
+
   it("records an allowlisted share event with bounded metadata", async () => {
     const response = await POST(
       buildRequest({

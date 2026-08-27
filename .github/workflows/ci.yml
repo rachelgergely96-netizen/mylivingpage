@@ -24,6 +24,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
       SUPABASE_SECRET_KEY: ci-placeholder-service-role-key
+      # Non-secret placeholder used only by credential-free build and unit checks.
+      SECURITY_HASH_PEPPER: ci-placeholder-development-only-security-hash-pepper
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
       STRIPE_SECRET_KEY: sk_test_ci_placeholder
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
@@ -135,6 +137,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
       SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      SECURITY_HASH_PEPPER: ${{ secrets.STAGING_SECURITY_HASH_PEPPER }}
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STAGING_STRIPE_PUBLISHABLE_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STAGING_STRIPE_SECRET_KEY }}
@@ -178,6 +181,7 @@ jobs:
           for key in \
             NEXT_PUBLIC_SUPABASE_URL \
             SUPABASE_SECRET_KEY \
+            SECURITY_HASH_PEPPER \
             PLAYWRIGHT_TEST_EMAIL \
             PLAYWRIGHT_TEST_PASSWORD
           do

@@ -36,7 +36,10 @@ export async function middleware(request: NextRequest) {
 
   if (isProtectedPath(pathname) && !userId) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
+    // Preserve the complete in-app destination. Dashboard filters, editor
+    // anchors encoded into the query, and future route state should survive a
+    // session timeout instead of dropping the user at the route root.
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 

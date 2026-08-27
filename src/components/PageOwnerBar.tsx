@@ -1,11 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { DELETE_PAGE_CONFIRM_BODY } from "@/components/DeletePageButton";
+import {
+  claimPageDeletionRequest,
+  releasePageDeletionRequest,
+  requestPageDeletion,
+} from "@/components/pageDeletionClient";
 
 interface PageOwnerBarProps {
   pageId: string;
@@ -22,19 +27,20 @@ export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBar
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletionRequestRef = useRef(false);
 
   const handleDelete = async () => {
+    if (!claimPageDeletionRequest(deletionRequestRef)) return;
     setDeleting(true);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Failed to delete page.");
-      }
+      await requestPageDeletion(pageId);
+      setConfirmOpen(false);
       router.push("/dashboard");
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : "Unable to delete page.");
+    } finally {
+      releasePageDeletionRequest(deletionRequestRef);
       setDeleting(false);
     }
   };
@@ -81,7 +87,7 @@ export default function PageOwnerBar({ pageId, isOwner, children }: PageOwnerBar
                 open={confirmOpen}
                 title="Delete this page?"
                 body={DELETE_PAGE_CONFIRM_BODY}
-                confirmLabel="Delete page"
+                confirmLabel={deleting ? "Deleting…" : "Delete page"}
                 destructive
                 loading={deleting}
                 error={deleteError}

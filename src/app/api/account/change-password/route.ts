@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent } from "@/lib/track-event";
 import { requireRecentReauthentication } from "@/lib/auth/reauthentication";
+import { readUtf8BodyWithLimit } from "@/lib/security/request-body";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const routeTrustLevel = "authenticated_user";
+const MAX_PASSWORD_CHANGE_BODY_BYTES = 16 * 1024;
 
 /** POST /api/account/change-password — update the user's password */
 export async function POST(request: Request) {
@@ -29,13 +31,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Password changes are temporarily unavailable." }, { status: 503 });
   }
 
-  let body: { password?: string; currentPassword?: unknown };
+  const bodyResult = await readUtf8BodyWithLimit(
+    request,
+    MAX_PASSWORD_CHANGE_BODY_BYTES,
+  );
+  if (!bodyResult.ok && bodyResult.reason === "too_large") {
+    return NextResponse.json(
+      { error: "Request payload is too large." },
+      { status: 413 },
+    );
+  }
+
+  let body: unknown;
   try {
-    body = (await request.json()) as { password?: string; currentPassword?: unknown };
+    body = JSON.parse(bodyResult.ok ? bodyResult.text : "") as unknown;
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  const password = body.password ?? "";
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const payload = body as { password?: unknown; currentPassword?: unknown };
+  const password = typeof payload.password === "string" ? payload.password : "";
 
   if (password.length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
@@ -44,7 +62,7 @@ export async function POST(request: Request) {
   const reauthentication = await requireRecentReauthentication(
     supabase,
     user,
-    body.currentPassword,
+    payload.currentPassword,
   );
   if (!reauthentication.ok) {
     return NextResponse.json(

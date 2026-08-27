@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import AuthMessage from "@/components/auth/AuthMessage";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
+import { buildPasswordRecoveryHref } from "@/lib/auth/password-recovery";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [loginHref, setLoginHref] = useState("/login");
+
+  useEffect(() => {
+    const requestedNext = new URLSearchParams(window.location.search).get("next");
+    setLoginHref(buildPasswordRecoveryHref("/login", requestedNext));
+  }, []);
 
   const clearErrorState = () => {
     if (status !== "error" && !message) {
@@ -27,7 +34,15 @@ export default function ForgotPasswordPage() {
 
     try {
       const supabase = createBrowserSupabaseClient();
-      const redirectTo = `${window.location.origin}/reset-password`;
+      const requestedNext = new URLSearchParams(window.location.search).get("next");
+      const resetPasswordHref = buildPasswordRecoveryHref(
+        "/reset-password",
+        requestedNext,
+      );
+      const redirectTo = new URL(
+        resetPasswordHref,
+        window.location.origin,
+      ).toString();
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
       setStatus("sent");
@@ -58,7 +73,7 @@ export default function ForgotPasswordPage() {
               {message}
             </AuthMessage>
             <Link
-              href="/login"
+              href={loginHref}
               className="site-button site-button-primary mt-6"
             >
               Back to sign in
@@ -105,7 +120,7 @@ export default function ForgotPasswordPage() {
         <p className="mt-6 border-t border-site-border pt-5 text-sm text-site-secondary">
           Remember your password?{" "}
           <Link
-            href="/login"
+            href={loginHref}
             className="-my-2 inline-block py-2 font-semibold text-site-action hover:text-site-action-hover"
           >
             Sign in

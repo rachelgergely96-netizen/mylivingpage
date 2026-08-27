@@ -48,6 +48,14 @@ function buildRequest(body: unknown) {
   });
 }
 
+function buildRawRequest(body: string) {
+  return new Request("http://localhost/api/waitlist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+}
+
 describe("POST /api/waitlist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -91,6 +99,32 @@ describe("POST /api/waitlist", () => {
       error: "Please provide a valid email address.",
     });
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it.each(["{", "null", "[]", '"rachel@example.com"'])(
+    "rejects an invalid request body: %s",
+    async (body) => {
+      const response = await POST(buildRawRequest(body));
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        error: "Invalid request payload.",
+      });
+      expect(mocks.insert).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports provider construction failures as service errors", async () => {
+    mocks.createServiceRoleSupabaseClient.mockImplementationOnce(() => {
+      throw new Error("service configuration unavailable");
+    });
+
+    const response = await POST(buildRequest({ email: "a@b.com" }));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to join the waitlist right now.",
+    });
   });
 
   it("stores a normalized email and confirms the signup", async () => {

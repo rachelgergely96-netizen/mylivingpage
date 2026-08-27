@@ -47,6 +47,8 @@ import { POST } from "@/app/api/resume/export/route";
 import type { ResumeData } from "@/types/resume";
 
 const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+const PAGE_ID = "11111111-1111-4111-8111-111111111111";
+
 
 function buildResumeData(name: string): ResumeData {
   return {
@@ -75,7 +77,7 @@ function createPageResponse(options?: {
   pageConfig?: Record<string, unknown> | null;
 }) {
   return {
-    id: "page-1",
+    id: PAGE_ID,
     owner_id: "owner-1",
     user_id: "owner-1",
     visibility: options?.visibility ?? "public",
@@ -99,6 +101,7 @@ function createOwnerProfile(options?: {
 
 function createServiceRoleClient(options?: {
   page?: ReturnType<typeof createPageResponse> | null;
+  pageError?: { message: string } | null;
   ownerProfile?: ReturnType<typeof createOwnerProfile> | null;
   onPageUpdate?: (values: Record<string, unknown>) => void;
 }) {
@@ -115,7 +118,7 @@ function createServiceRoleClient(options?: {
                 return {
                   maybeSingle: vi.fn().mockResolvedValue({
                     data: page,
-                    error: null,
+                    error: options?.pageError ?? null,
                   }),
                 };
               },
@@ -190,6 +193,133 @@ describe("POST /api/resume/export", () => {
     });
   });
 
+  it("rejects a malformed page id before rate limiting or database work", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: "not-a-uuid" }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "pageId must be a valid UUID.",
+    });
+    expect(mocks.enforceRateLimit).not.toHaveBeenCalled();
+    expect(mocks.serviceRoleFactory).not.toHaveBeenCalled();
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["JSON null", "null"],
+    ["a JSON array", "[]"],
+    ["malformed JSON", "{"],
+  ])("rejects %s as invalid client input", async (_label, requestBody) => {
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: requestBody,
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Invalid request payload.",
+    });
+    expect(mocks.serviceRoleFactory).not.toHaveBeenCalled();
+  });
+
+  it("rejects headerless oversized JSON before downstream work", async () => {
+    const request = new Request("http://localhost/api/resume/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pageId: PAGE_ID,
+        padding: "x".repeat(17 * 1024),
+      }),
+    });
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      error: "Request payload is too large.",
+    });
+    expect(mocks.serviceRoleFactory).not.toHaveBeenCalled();
+    expect(mocks.enforceRateLimit).not.toHaveBeenCalled();
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+    expect(mocks.fallbackRenderPdf).not.toHaveBeenCalled();
+    expect(mocks.trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("reports a page lookup failure as temporary service unavailability", async () => {
+    mocks.serviceRoleFactory.mockReturnValue(
+      createServiceRoleClient({
+        pageError: { message: "database unavailable" },
+      }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: PAGE_ID }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "Résumé downloads are temporarily unavailable. Please try again in a moment.",
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "resume.export.page_lookup_failed",
+      expect.objectContaining({
+        page_id: PAGE_ID,
+        error: "database unavailable",
+      }),
+    );
+  });
+
+  it("reports service-client construction failures as server errors", async () => {
+    mocks.serviceRoleFactory.mockImplementationOnce(() => {
+      throw new Error("service configuration unavailable");
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/resume/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pageId: PAGE_ID }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to export the Résumé PDF right now. Please try again.",
+    });
+    expect(mocks.renderPdf).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "resume.export.unhandled_error",
+      expect.objectContaining({
+        page_id: PAGE_ID,
+        error: "service configuration unavailable",
+      }),
+    );
+  });
+
   it("rejects export when the page is not public and live", async () => {
     mocks.serviceRoleFactory.mockReturnValue(
       createServiceRoleClient({
@@ -203,7 +333,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -233,7 +363,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -257,7 +387,7 @@ describe("POST /api/resume/export", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          pageId: "page-1",
+          pageId: PAGE_ID,
           resumeData: buildResumeData("Untrusted Browser Payload"),
         }),
       }),
@@ -301,7 +431,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1", variantId: "variant-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID, variantId: "variant-1" }),
       }),
     );
 
@@ -334,7 +464,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -359,7 +489,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -374,8 +504,7 @@ describe("POST /api/resume/export", () => {
     );
   });
 
-  it("returns a real 429 when the download rate limit is actually exceeded", async () => {
-    mocks.serviceRoleFactory.mockReturnValue(createServiceRoleClient());
+  it("rate-limits before constructing a service-role client", async () => {
     mocks.enforceRateLimit.mockResolvedValueOnce({
       limited: true,
       identifierHash: "hash",
@@ -395,7 +524,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -404,6 +533,7 @@ describe("POST /api/resume/export", () => {
       error: "Too many public resume download requests. Please try again later.",
       resetAt: new Date("2026-03-17T16:00:00.000Z").toISOString(),
     });
+    expect(mocks.serviceRoleFactory).not.toHaveBeenCalled();
     expect(mocks.renderPdf).not.toHaveBeenCalled();
   });
 
@@ -417,7 +547,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -429,7 +559,7 @@ describe("POST /api/resume/export", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "resume.export.rate_limit_unavailable",
       expect.objectContaining({
-        page_id: "page-1",
+        page_id: PAGE_ID,
         error: "events table unavailable",
       }),
     );
@@ -445,7 +575,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -490,7 +620,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 
@@ -521,7 +651,7 @@ describe("POST /api/resume/export", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ pageId: "page-1" }),
+        body: JSON.stringify({ pageId: PAGE_ID }),
       }),
     );
 

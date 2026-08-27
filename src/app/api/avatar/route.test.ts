@@ -41,7 +41,7 @@ vi.mock("@/lib/track-event", () => ({
   trackEvent: (...args: unknown[]) => mocks.trackEvent(...args),
 }));
 
-import { POST } from "@/app/api/avatar/route";
+import { DELETE, POST } from "@/app/api/avatar/route";
 
 const priorObjects = [
   { name: "headshot-old" },
@@ -101,6 +101,53 @@ describe("POST /api/avatar", () => {
     mocks.trackEvent.mockResolvedValue(undefined);
   });
 
+  it("accepts a valid image at the 2 MB file limit", async () => {
+    const bytes = new Uint8Array(2 * 1024 * 1024);
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File([bytes], "avatar.png", { type: "image/png" }),
+    );
+
+    const response = await POST(new Request("http://localhost/api/avatar", {
+      method: "POST",
+      body: formData,
+    }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.storageUpload).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a headerless oversized multipart body before storage access", async () => {
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File(
+        [Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        "avatar.png",
+        { type: "image/png" },
+      ),
+    );
+    formData.set("padding", "x".repeat(2 * 1024 * 1024 + 128 * 1024));
+    const request = new Request("http://localhost/api/avatar", {
+      method: "POST",
+      body: formData,
+    });
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      error: "File must be under 2 MB.",
+    });
+    expect(mocks.storageList).not.toHaveBeenCalled();
+    expect(mocks.storageUpload).not.toHaveBeenCalled();
+    expect(mocks.storageRemove).not.toHaveBeenCalled();
+    expect(mocks.profileUpdate).not.toHaveBeenCalled();
+  });
+
   it("uploads a unique replacement, updates the profile, then removes only prior objects", async () => {
     const response = await POST(avatarRequest());
 
@@ -148,5 +195,54 @@ describe("POST /api/avatar", () => {
       "avatar.upload.failed",
       expect.objectContaining({ stage: "profile-update" }),
     );
+  });
+});
+
+describe("DELETE /api/avatar", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.authGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+    });
+    mocks.storageList.mockResolvedValue({ data: priorObjects, error: null });
+    mocks.storageRemove.mockResolvedValue({ error: null });
+    mocks.profileUpdate.mockReturnValue({ eq: mocks.profileEq });
+    mocks.profileEq.mockReturnValue({ select: mocks.profileSelect });
+    mocks.profileSelect.mockReturnValue({ maybeSingle: mocks.profileMaybeSingle });
+    mocks.profileMaybeSingle.mockResolvedValue({
+      data: { id: "user-1" },
+      error: null,
+    });
+    mocks.trackEvent.mockResolvedValue(undefined);
+  });
+
+  it("reports success after the profile is cleared even if object cleanup fails", async () => {
+    mocks.storageRemove.mockResolvedValueOnce({
+      error: { message: "storage unavailable" },
+    });
+
+    const response = await DELETE();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(mocks.profileUpdate).toHaveBeenCalledWith({ avatar_url: null });
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      "user-1",
+      "avatar.cleanup.failed",
+      expect.objectContaining({ stage: "storage-cleanup" }),
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith("user-1", "avatar.remove");
+  });
+
+  it("does not delete objects when clearing the profile fails", async () => {
+    mocks.profileMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: "profile unavailable" },
+    });
+
+    const response = await DELETE();
+
+    expect(response.status).toBe(500);
+    expect(mocks.storageRemove).not.toHaveBeenCalled();
   });
 });

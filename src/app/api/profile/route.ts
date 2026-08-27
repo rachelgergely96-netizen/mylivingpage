@@ -1,13 +1,47 @@
 import { NextResponse } from "next/server";
 import { getAccountAccessState } from "@/lib/account-access";
+import {
+  EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+  isEditorPreviewEnabled,
+} from "@/lib/editor-preview";
 import { syncPageHostingState } from "@/lib/hosting-state";
 import { fetchProfileWithHostingAccess } from "@/lib/profile-access";
+import { isPlainJsonObject } from "@/lib/security/page-write";
 import { createServerSupabaseClient, createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
 const routeTrustLevel = "authenticated_user";
 
 /** GET /api/profile — fetch the authenticated user's profile */
-export async function GET() {
+export async function GET(request: Request) {
+  const isCredentialFreeEditorPreview =
+    isEditorPreviewEnabled() &&
+    request.headers.get("x-editor-preview-page") ===
+      EDITOR_LAYOUT_PREVIEW_PAGE_ID;
+  if (isCredentialFreeEditorPreview) {
+    const plan = "spark";
+    return NextResponse.json({
+      id: EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+      username: "preview",
+      full_name: "Avery Sample",
+      email: null,
+      avatar_url: null,
+      plan,
+      created_at: "2026-01-01T00:00:00.000Z",
+      billing_cohort: "legacy_freemium",
+      hosting_trial_started_at: null,
+      stripe_subscription_status: null,
+      stripe_trial_ends_at: null,
+      accountAccess: getAccountAccessState({
+        plan,
+        billing_cohort: "legacy_freemium",
+      }),
+      latestPage: null,
+      hasLivingPage: true,
+      signup_referrer: null,
+      hasPassword: false,
+    });
+  }
+
   const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) {
@@ -90,7 +124,16 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const body = (await request.json()) as Record<string, unknown>;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  if (!isPlainJsonObject(body)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
   const updates: Record<string, unknown> = {};
 
   if (typeof body.full_name === "string") {

@@ -1,24 +1,33 @@
 import { NextResponse } from "next/server";
 import { normalizeEngagementPayload } from "@/lib/analytics/publicTracking";
+import { readUtf8BodyWithLimit } from "@/lib/security/request-body";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
 
-async function parseRequestBody(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
+const MAX_ENGAGEMENT_BODY_BYTES = 32 * 1024;
 
-  if (contentType.includes("application/json")) {
-    return request.json().catch(() => null);
+async function parseRequestBody(request: Request) {
+  const bodyResult = await readUtf8BodyWithLimit(
+    request,
+    MAX_ENGAGEMENT_BODY_BYTES,
+  );
+  if (!bodyResult.ok && bodyResult.reason === "too_large") {
+    return { value: null, tooLarge: true };
+  }
+  if (!bodyResult.ok) {
+    return { value: null, tooLarge: false };
   }
 
-  const text = await request.text().catch(() => "");
+  const { text } = bodyResult;
+
   if (!text.trim()) {
-    return null;
+    return { value: null, tooLarge: false };
   }
 
   try {
-    return JSON.parse(text) as unknown;
+    return { value: JSON.parse(text) as unknown, tooLarge: false };
   } catch {
-    return null;
+    return { value: null, tooLarge: false };
   }
 }
 
@@ -26,15 +35,15 @@ const routeTrustLevel = "public_write";
 
 export async function POST(request: Request) {
   try {
-    const declaredLength = Number(request.headers.get("content-length"));
-    if (Number.isFinite(declaredLength) && declaredLength > 32 * 1024) {
+    const parsedBody = await parseRequestBody(request);
+    if (parsedBody.tooLarge) {
       return NextResponse.json(
         { error: "Engagement payload is too large." },
         { status: 413 },
       );
     }
 
-    const payload = normalizeEngagementPayload(await parseRequestBody(request));
+    const payload = normalizeEngagementPayload(parsedBody.value);
     if (!payload) {
       return NextResponse.json({ error: "Invalid engagement payload." }, { status: 400 });
     }

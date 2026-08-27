@@ -31,6 +31,14 @@ function buildRequest(body?: unknown) {
   }) as unknown as Parameters<typeof POST>[0];
 }
 
+function buildRawRequest(body: string) {
+  return new Request("http://localhost/api/legal/accept", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "user-agent": "vitest" },
+    body,
+  }) as unknown as Parameters<typeof POST>[0];
+}
+
 describe("POST /api/legal/accept", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,6 +63,17 @@ describe("POST /api/legal/accept", () => {
     await expect(response.json()).resolves.toEqual({ error: "Invalid source" });
     expect(mocks.recordLegalAcceptance).not.toHaveBeenCalled();
   });
+
+  it.each(["{", "null", "[]", '"signup"'])(
+    "rejects an invalid request body: %s",
+    async (body) => {
+      const response = await POST(buildRawRequest(body));
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "Invalid request." });
+      expect(mocks.recordLegalAcceptance).not.toHaveBeenCalled();
+    },
+  );
 
   it("records a signup acceptance and emits the signup event", async () => {
     const response = await POST(buildRequest({ source: "signup" }));

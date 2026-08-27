@@ -126,6 +126,33 @@ test("examples keeps the complete Living Page inside its compact mobile preview"
     ),
   ).toBe(true);
 
+  const chapterRail = preview.getByRole("navigation", {
+    name: "Living Page chapters",
+  });
+  const sectionToggle = chapterRail.getByRole("button", { name: "Sections" });
+  const sectionMenu = chapterRail.locator("[data-living-section-menu]");
+  await sectionToggle.click();
+  await expect(sectionMenu).toBeVisible();
+  const [previewBox, sectionMenuBox] = await Promise.all([
+    preview.boundingBox(),
+    sectionMenu.boundingBox(),
+  ]);
+  expect(previewBox).toBeTruthy();
+  expect(sectionMenuBox).toBeTruthy();
+  expect((sectionMenuBox?.x ?? 0) >= (previewBox?.x ?? 0)).toBe(true);
+  expect(
+    (sectionMenuBox?.x ?? 0) + (sectionMenuBox?.width ?? 0) <=
+      (previewBox?.x ?? 0) + (previewBox?.width ?? 0) + 1,
+  ).toBe(true);
+  expect(
+    await scrollRoot.evaluate(
+      (element) => element.scrollWidth - element.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
+  await page.keyboard.press("Escape");
+  await expect(sectionMenu).toBeHidden();
+  await expect(sectionToggle).toBeFocused();
+
   await preview.getByRole("button", { name: "Next chapter: Impact" }).click();
   await expect
     .poll(() => scrollRoot.evaluate((element) => element.scrollTop))
@@ -145,6 +172,20 @@ test("examples keeps the complete Living Page inside its compact mobile preview"
     "aria-hidden",
     "false",
   );
+
+  const stickyCta = page.getByTestId("mobile-sticky-cta");
+  const dismissStickyCta = stickyCta.getByRole("button", {
+    name: "Dismiss sticky call to action",
+  });
+  await dismissStickyCta.focus();
+  await page.keyboard.press("Enter");
+  await expect(stickyCta).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("#main-content")).toBeFocused();
+  expect(
+    await stickyCta.evaluate((element) =>
+      element.contains(document.activeElement),
+    ),
+  ).toBe(false);
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,

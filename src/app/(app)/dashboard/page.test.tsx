@@ -107,6 +107,9 @@ function makeServiceRoleClient(overrides?: {
     created_at: string;
     metadata: Record<string, unknown> | null;
   }>;
+  pagesError?: { message: string } | null;
+  pageViewsError?: { message: string } | null;
+  eventsError?: { message: string } | null;
 }) {
   const pages = [
     {
@@ -170,7 +173,8 @@ function makeServiceRoleClient(overrides?: {
               or() {
                 return {
                   order: vi.fn().mockResolvedValue({
-                    data: pages,
+                    data: overrides?.pagesError ? null : pages,
+                    error: overrides?.pagesError ?? null,
                   }),
                 };
               },
@@ -200,6 +204,7 @@ function makeServiceRoleClient(overrides?: {
                     return {
                       limit: vi.fn().mockResolvedValue({
                         data: rowsForPage.slice(0, 1),
+                        error: overrides?.pageViewsError ?? null,
                       }),
                     };
                   },
@@ -220,7 +225,10 @@ function makeServiceRoleClient(overrides?: {
                     return {
                       gte() {
                         return {
-                          order: vi.fn().mockResolvedValue({ data: events }),
+                          order: vi.fn().mockResolvedValue({
+                            data: overrides?.eventsError ? null : events,
+                            error: overrides?.eventsError ?? null,
+                          }),
                         };
                       },
                     };
@@ -320,6 +328,37 @@ describe("dashboard page", () => {
     expect(markup).not.toContain("Signal Studio");
     expect(markup).not.toContain("Proof landed");
     expect(markup).not.toContain("Visual world");
+  });
+
+  it("does not turn a page query failure into an empty-account message", async () => {
+    createServiceRoleSupabaseClientMock.mockReturnValue(
+      makeServiceRoleClient({ pagesError: { message: "database unavailable" } }),
+    );
+
+    await expect(DashboardPage({})).rejects.toThrow(
+      "Unable to load dashboard account data.",
+    );
+  });
+
+  it("does not turn a profile query failure into free-account defaults", async () => {
+    fetchProfileWithHostingAccessMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "database unavailable" },
+    });
+
+    await expect(DashboardPage({})).rejects.toThrow(
+      "Unable to load dashboard account data.",
+    );
+  });
+
+  it("does not turn an activity query failure into zero engagement", async () => {
+    createServiceRoleSupabaseClientMock.mockReturnValue(
+      makeServiceRoleClient({ eventsError: { message: "database unavailable" } }),
+    );
+
+    await expect(DashboardPage({})).rejects.toThrow(
+      "Unable to load dashboard activity.",
+    );
   });
 
   it("renders the themed returning-user reveal only when login requests it", async () => {

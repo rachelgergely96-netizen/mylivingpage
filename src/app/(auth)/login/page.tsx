@@ -8,6 +8,7 @@ import { buildGoogleAuthStartUrl } from "@/lib/auth/callback-url";
 import { getAuthErrorMessage } from "@/lib/auth/auth-error";
 import { getFriendlyAuthErrorMessage } from "@/lib/auth-errors";
 import { sanitizeInternalRedirectPath } from "@/lib/auth/internal-redirect";
+import { buildPasswordRecoveryHref } from "@/lib/auth/password-recovery";
 import {
   resolvePostLoginDestination,
   withPostLoginWelcome,
@@ -73,6 +74,8 @@ export default function LoginPage() {
   // for one, so a funnel visitor (next=/create?ref=…) who switches to signup
   // keeps their intent, while a bare /login still links to a bare /signup.
   const [createAccountHref, setCreateAccountHref] = useState("/signup");
+  const [forgotPasswordHref, setForgotPasswordHref] =
+    useState("/forgot-password");
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -91,6 +94,9 @@ export default function LoginPage() {
       requestedNext
         ? `/signup?next=${encodeURIComponent(resolvedNext)}`
         : "/signup",
+    );
+    setForgotPasswordHref(
+      buildPasswordRecoveryHref("/forgot-password", requestedNext),
     );
 
     const error = params.get("error");
@@ -266,7 +272,7 @@ export default function LoginPage() {
 
         <div className="mt-3 text-right">
           <Link
-            href="/forgot-password"
+            href={forgotPasswordHref}
             className="-my-2 inline-flex min-h-11 items-center text-sm font-medium text-site-action hover:text-site-action-hover"
           >
             Forgot password?

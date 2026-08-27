@@ -81,18 +81,30 @@ describe("route security helpers", () => {
   });
 
   it("passes through verified webhook payloads", async () => {
+    const rawPayload = '{\n  "name": "José"\n}\n';
+    const encodedPayload = new TextEncoder().encode(rawPayload);
+    const splitAt = encodedPayload.findIndex((byte) => byte === 0xc3) + 1;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encodedPayload.slice(0, splitAt));
+        controller.enqueue(encodedPayload.slice(splitAt));
+        controller.close();
+      },
+    });
     const result = await assertSignedWebhook({
       request: new Request("http://localhost/api/test", {
         method: "POST",
         headers: {
           "x-signature": "sig",
         },
-        body: "payload",
-      }),
+        body,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" }),
       secret: "secret",
       signatureHeaderName: "x-signature",
+      maxBodyBytes: 1024,
       verify(payload, signature, secret) {
-        expect(payload).toBe("payload");
+        expect(payload).toBe(rawPayload);
         expect(signature).toBe("sig");
         expect(secret).toBe("secret");
         return { ok: true };
@@ -102,6 +114,57 @@ describe("route security helpers", () => {
     expect("value" in result).toBe(true);
     if ("value" in result) {
       expect(result.value.verified).toEqual({ ok: true });
+    }
+  });
+
+  it("streams to the byte limit and rejects the next chunk before verification", async () => {
+    const verify = vi.fn();
+    const request = new Request("http://localhost/api/test", {
+      method: "POST",
+      headers: { "x-signature": "sig" },
+      body: "123456789",
+    });
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const result = await assertSignedWebhook({
+      request,
+      secret: "secret",
+      signatureHeaderName: "x-signature",
+      maxBodyBytes: 8,
+      verify,
+    });
+
+    expect("response" in result).toBe(true);
+    if ("response" in result) {
+      expect(result.response.status).toBe(413);
+      await expect(result.response.json()).resolves.toEqual({
+        error: "Webhook request rejected.",
+      });
+    }
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it("does not expose signature-verifier errors", async () => {
+    const result = await assertSignedWebhook({
+      request: new Request("http://localhost/api/test", {
+        method: "POST",
+        headers: { "x-signature": "sig" },
+        body: "payload",
+      }),
+      secret: "secret",
+      signatureHeaderName: "x-signature",
+      maxBodyBytes: 1024,
+      verify() {
+        throw new Error("internal verifier detail that must not leave the server");
+      },
+    });
+
+    expect("response" in result).toBe(true);
+    if ("response" in result) {
+      expect(result.response.status).toBe(400);
+      await expect(result.response.json()).resolves.toEqual({
+        error: "Webhook request rejected.",
+      });
     }
   });
 });

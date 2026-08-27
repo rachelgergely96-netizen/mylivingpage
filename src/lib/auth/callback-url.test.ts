@@ -49,6 +49,22 @@ describe("buildAuthCallbackUrl", () => {
     );
   });
 
+  it("carries signup screen and a bounded ref through the callback", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
+
+    expect(
+      buildAuthCallbackUrl({
+        next: "/create",
+        screen: "signup",
+        legalAcceptRequested: true,
+        legalSource: "signup",
+        ref: "landing_apply_nav",
+      }),
+    ).toBe(
+      "https://www.mylivingpage.com/callback?next=%2Fcreate&screen=signup&legal_accept=1&legal_source=signup&ref=landing_apply_nav",
+    );
+  });
+
   it("builds Google auth starts on the canonical app origin", () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
 
@@ -73,6 +89,43 @@ describe("buildAuthCallbackUrl", () => {
       }),
     ).toBe(
       "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup&legal_accept=1&legal_source=signup&ref=landing_apply_nav",
+    );
+  });
+
+  it("drops unsafe or oversized refs from auth URLs", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
+
+    expect(
+      buildAuthCallbackUrl({
+        next: "/create",
+        screen: "signup",
+        ref: "https://evil.example/steal",
+      }),
+    ).toBe(
+      "https://www.mylivingpage.com/callback?next=%2Fcreate&screen=signup",
+    );
+    expect(
+      buildGoogleAuthStartUrl({
+        next: "/create",
+        screen: "signup",
+        ref: "a".repeat(81),
+      }),
+    ).toBe(
+      "https://www.mylivingpage.com/api/auth/google?next=%2Fcreate&screen=signup",
+    );
+  });
+
+  it("defaults unknown callback screens to login", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.mylivingpage.com";
+
+    expect(
+      buildAuthCallbackUrl({
+        next: "/create",
+        screen: "admin",
+        ref: "landing_apply_nav",
+      }),
+    ).toBe(
+      "https://www.mylivingpage.com/callback?next=%2Fcreate&screen=login&ref=landing_apply_nav",
     );
   });
 });

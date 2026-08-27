@@ -4,6 +4,7 @@ import {
   type ShareIntentEventName,
   type ShareScenario,
 } from "@/lib/analytics/proofSummary";
+import { readUtf8BodyWithLimit } from "@/lib/security/request-body";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { recordEvent } from "@/lib/track-event";
 import {
@@ -99,9 +100,12 @@ function sanitizeMetadata(value: unknown) {
 }
 
 export async function POST(request: Request) {
-  const declaredLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_EVENT_BODY_BYTES) {
-    return NextResponse.json({ error: "Event payload is too large." }, { status: 413 });
+  const bodyResult = await readUtf8BodyWithLimit(request, MAX_EVENT_BODY_BYTES);
+  if (!bodyResult.ok && bodyResult.reason === "too_large") {
+    return NextResponse.json(
+      { error: "Event payload is too large." },
+      { status: 413 },
+    );
   }
 
   const authClient = await createServerSupabaseClient();
@@ -116,9 +120,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = (await request.json().catch(() => null)) as
-    | { eventName?: unknown; metadata?: unknown }
-    | null;
+  const rawBody = bodyResult.ok ? bodyResult.text : null;
+  let body: { eventName?: unknown; metadata?: unknown } | null = null;
+  if (rawBody !== null) {
+    try {
+      body = JSON.parse(rawBody) as { eventName?: unknown; metadata?: unknown };
+    } catch {
+      body = null;
+    }
+  }
 
   const eventName = typeof body?.eventName === "string" ? body.eventName.trim() : "";
   const metadata = sanitizeMetadata(body?.metadata);

@@ -16,6 +16,49 @@ export const runtime = "nodejs";
 const routeTrustLevel = "authenticated_user";
 const MAX_MULTIPART_BODY_BYTES = MAX_RESUME_FILE_BYTES + 256 * 1024;
 
+type LimitedBodyResult =
+  | { ok: true; body: ArrayBuffer }
+  | { ok: false; tooLarge: boolean };
+
+async function readBodyWithLimit(
+  request: Request,
+  maxBytes: number,
+): Promise<LimitedBodyResult> {
+  if (!request.body) {
+    return { ok: true, body: new ArrayBuffer(0) };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, tooLarge: true };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, tooLarge: false };
+  }
+
+  const body = new ArrayBuffer(totalBytes);
+  const bytes = new Uint8Array(body);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return { ok: true, body };
+}
+
 export async function POST(request: Request) {
   const authResult = await requireAuthenticatedUser();
   if ("response" in authResult) {
@@ -51,10 +94,30 @@ export async function POST(request: Request) {
     );
   }
 
-  let formData: FormData;
-  try {
-    formData = await request.formData();
-  } catch {
+  const body = await readBodyWithLimit(request, MAX_MULTIPART_BODY_BYTES);
+  if (!body.ok) {
+    if (body.tooLarge) {
+      return NextResponse.json(
+        { error: `Résumé files must be ${MAX_RESUME_FILE_LABEL} or smaller.` },
+        { status: 413 },
+      );
+    }
+    return NextResponse.json(
+      { error: "We could not read that import. Try selecting the file again." },
+      { status: 400 },
+    );
+  }
+
+  const multipartHeaders = new Headers(request.headers);
+  multipartHeaders.delete("content-length");
+  const formData = await new Request(request.url, {
+    method: request.method,
+    headers: multipartHeaders,
+    body: body.body,
+  })
+    .formData()
+    .catch(() => null);
+  if (!formData) {
     return NextResponse.json(
       { error: "We could not read that import. Try selecting the file again." },
       { status: 400 },
@@ -84,7 +147,16 @@ export async function POST(request: Request) {
       sourceName = fileValue.name;
       sourceKind = extracted.kind;
     } else if (typeof textValue === "string") {
-      resumeText = textValue.trim().slice(0, MAX_RESUME_TEXT_CHARACTERS);
+      const pastedResumeText = textValue.trim();
+      if (pastedResumeText.length > MAX_RESUME_TEXT_CHARACTERS) {
+        return NextResponse.json(
+          {
+            error: `Pasted résumé text must be ${MAX_RESUME_TEXT_CHARACTERS.toLocaleString("en-US")} characters or fewer.`,
+          },
+          { status: 413 },
+        );
+      }
+      resumeText = pastedResumeText;
     }
   } catch (error) {
     if (error instanceof ResumeFileError) {

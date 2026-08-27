@@ -14,11 +14,16 @@ import DraftBanner from "@/components/DraftBanner";
 import ResumeLayout from "@/components/ResumeLayout";
 import ThemePicker from "@/components/ThemePicker";
 import ThemeCanvas from "@/components/ThemeCanvas";
+import ModeAwareLoadingIndicator from "@/components/motion/ModeAwareLoadingIndicator";
 import {
   PUBLISH_CC_TRIAL_BILLING_COHORT,
   getAccountAccessState,
 } from "@/lib/account-access";
 import { claimAnonymousCreateDraft } from "@/lib/anonymous-draft";
+import {
+  CREATE_PREFLIGHT_ERROR,
+  resolveCreatePreflight,
+} from "@/lib/create-preflight";
 import { buildDecisionReadinessState } from "@/lib/decision-readiness";
 import {
   buildStarterVariant,
@@ -142,6 +147,11 @@ export default function CreatePage() {
   );
   const [publishRestoredDraft, setPublishRestoredDraft] = useState(false);
   const [pageCount, setPageCount] = useState<number>(0);
+  const [preflightStatus, setPreflightStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [preflightError, setPreflightError] = useState("");
+  const [preflightRetry, setPreflightRetry] = useState(0);
   const [copyLinkState, setCopyLinkState] = useState<"idle" | "copied" | "error">("idle");
   const copyLinkTimerRef = useRef<number | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -271,7 +281,11 @@ export default function CreatePage() {
   }, [allowsSmoothScroll]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPlanInfo = async () => {
+      setPreflightStatus("loading");
+      setPreflightError("");
       try {
         const supabase = createBrowserSupabaseClient();
         const {
@@ -279,9 +293,10 @@ export default function CreatePage() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          return;
+          throw new Error("Your session has expired. Sign in again to continue.");
         }
 
+        if (cancelled) return;
         setCurrentUserId(user.id);
 
         const [profileResponse, pagesResponse] = await Promise.all([
@@ -302,27 +317,33 @@ export default function CreatePage() {
             .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`),
         ]);
 
-        setAccountAccess(
-          getAccountAccessState({
-            plan: profileResponse.data?.plan ?? "spark",
-            billing_cohort: profileResponse.data?.billing_cohort ?? null,
-            hosting_trial_started_at:
-              profileResponse.data?.hosting_trial_started_at ?? null,
-            stripe_subscription_status:
-              profileResponse.data?.stripe_subscription_status ?? null,
-            stripe_trial_ends_at:
-              profileResponse.data?.stripe_trial_ends_at ?? null,
-          }),
+        const preflight = resolveCreatePreflight({
+          profileResult: profileResponse,
+          pagesResult: pagesResponse,
+          userEmail: user.email,
+        });
+
+        if (cancelled) return;
+        setAccountAccess(preflight.accountAccess);
+        setPublicSlug(preflight.publicSlug);
+        setPageCount(preflight.pageCount);
+        setPreflightStatus("ready");
+      } catch (preflightFailure) {
+        if (cancelled) return;
+        setPreflightStatus("error");
+        setPreflightError(
+          preflightFailure instanceof Error
+            ? preflightFailure.message
+            : CREATE_PREFLIGHT_ERROR,
         );
-        setPublicSlug(profileResponse.data?.username ?? usernameFromEmail(user.email));
-        setPageCount(pagesResponse.count ?? 0);
-      } catch {
-        // Ignore profile-loading failures and keep defaults.
       }
     };
 
     void fetchPlanInfo();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [preflightRetry]);
 
   useEffect(() => {
     if (
@@ -612,13 +633,45 @@ export default function CreatePage() {
         </div>
       ) : null}
 
-      {pendingDraft && step === "input" && !isDirty ? (
+      {preflightStatus === "loading" ? (
+        <section
+          className="site-panel flex items-center gap-4 p-5 sm:p-7"
+          role="status"
+          aria-live="polite"
+        >
+          <ModeAwareLoadingIndicator size="lg" />
+          <div>
+            <h2 className="site-panel-title">Checking your page access</h2>
+            <p className="mt-1 text-sm text-site-secondary">
+              Making sure a new page will not replace work already on your account.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {preflightStatus === "error" ? (
+        <section className="site-danger-panel p-5 sm:p-7" role="alert">
+          <h2 className="site-panel-title">We couldn&apos;t safely start a new page.</h2>
+          <p className="mt-2 text-sm leading-6 text-site-secondary">
+            {preflightError || CREATE_PREFLIGHT_ERROR}
+          </p>
+          <button
+            type="button"
+            onClick={() => setPreflightRetry((attempt) => attempt + 1)}
+            className="site-button site-button-secondary mt-5"
+          >
+            Try account check again
+          </button>
+        </section>
+      ) : null}
+
+      {preflightStatus === "ready" && pendingDraft && step === "input" && !isDirty ? (
         <div className="mb-4">
           <DraftBanner savedAt={pendingDraft.savedAt} onRestore={restoreDraft} onDiscard={dismissDraft} />
         </div>
       ) : null}
 
-      {atPageLimit ? (
+      {preflightStatus === "ready" && atPageLimit ? (
         <section className="site-panel p-5 text-center sm:p-8">
           <div
             aria-hidden="true"
@@ -650,7 +703,7 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {!atPageLimit && step === "input" ? (
+      {preflightStatus === "ready" && !atPageLimit && step === "input" ? (
         <section className="space-y-4">
           <ResumeImport
             hasExistingData={Boolean(
@@ -735,7 +788,7 @@ export default function CreatePage() {
         </section>
       ) : null}
 
-      {!atPageLimit && step === "review" && parsedData && previewData && readiness ? (
+      {preflightStatus === "ready" && !atPageLimit && step === "review" && parsedData && previewData && readiness ? (
         <section className="space-y-5">
           <div>
             <p className="site-eyebrow">Review</p>

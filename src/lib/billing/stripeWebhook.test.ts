@@ -38,12 +38,17 @@ function createRepository(userId: string | null) {
 
 describe("createSupabaseBillingRepository", () => {
   it("surfaces profile update failures so Stripe can retry the webhook", async () => {
-    const eq = vi.fn().mockResolvedValue({
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: null,
       error: { message: "profiles update failed" },
     });
     const supabase = {
       from: vi.fn(() => ({
-        update: vi.fn(() => ({ eq })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            select: vi.fn(() => ({ maybeSingle })),
+          })),
+        })),
       })),
     } as unknown as SupabaseClient;
     const repository = createSupabaseBillingRepository(supabase);
@@ -55,6 +60,31 @@ describe("createSupabaseBillingRepository", () => {
         stripeTrialEndsAt: null,
       }),
     ).rejects.toThrow("Unable to update billing state: profiles update failed");
+  });
+
+  it("surfaces a zero-row profile update so a customer-mapping race is retried", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = {
+      from: vi.fn(() => ({
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            select: vi.fn(() => ({ maybeSingle })),
+          })),
+        })),
+      })),
+    } as unknown as SupabaseClient;
+    const repository = createSupabaseBillingRepository(supabase);
+
+    await expect(
+      repository.updateBillingStateByCustomerId("cus_not_yet_linked", {
+        plan: "pro",
+        stripeSubscriptionStatus: "active",
+        stripeTrialEndsAt: null,
+      }),
+    ).rejects.toThrow(
+      "Unable to update billing state: billing customer was not found",
+    );
+    expect(maybeSingle).toHaveBeenCalledOnce();
   });
 
   it("surfaces customer lookup failures instead of treating them as a missing user", async () => {
@@ -189,6 +219,35 @@ describe("processStripeWebhookEvent", () => {
         price_id: "price_starter_live",
       }),
     );
+  });
+
+  it("propagates billing-write failures before downstream work so Stripe can retry", async () => {
+    const repository = createRepository("user-234");
+    repository.updateBillingStateByCustomerId.mockRejectedValueOnce(
+      new Error("billing customer was not found"),
+    );
+    const recordLegalAcceptance = vi.fn().mockResolvedValue(undefined);
+    const trackEvent = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      processStripeWebhookEvent({
+        event: buildEvent("customer.subscription.updated", {
+          id: "sub_retry",
+          object: "subscription",
+          customer: "cus_not_yet_linked",
+          status: "active",
+          trial_end: null,
+          items: {
+            data: [{ price: { id: "price_pro_live" } }],
+          },
+        }),
+        repository,
+        recordLegalAcceptance,
+        trackEvent,
+      }),
+    ).rejects.toThrow("billing customer was not found");
+    expect(repository.findUserIdByCustomerId).not.toHaveBeenCalled();
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 
   it("downgrades deleted subscriptions back to spark", async () => {

@@ -140,8 +140,12 @@ export default function PageEditorClient({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [confirmingAvatarRemoval, setConfirmingAvatarRemoval] = useState(false);
   const [removingAvatar, setRemovingAvatar] = useState(false);
+  const [avatarRemovalError, setAvatarRemovalError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
-  const [copiedVariantId, setCopiedVariantId] = useState<string | null>(null);
+  const [variantCopyFeedback, setVariantCopyFeedback] = useState<{
+    variantId: string;
+    state: "copied" | "error";
+  } | null>(null);
   const [editorSignal, setEditorSignal] = useState(INITIAL_EDITOR_SIGNAL);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const successTimerRef = useRef<number | null>(null);
@@ -393,7 +397,16 @@ export default function PageEditorClient({
           }),
         );
 
-        const profileResponse = await fetch("/api/profile");
+        const profileResponse = await fetch(
+          "/api/profile",
+          pageId === EDITOR_LAYOUT_PREVIEW_PAGE_ID
+            ? {
+                headers: {
+                  "X-Editor-Preview-Page": EDITOR_LAYOUT_PREVIEW_PAGE_ID,
+                },
+              }
+            : undefined,
+        );
         if (profileResponse.ok) {
           const profile = (await profileResponse.json()) as {
             plan?: string;
@@ -591,11 +604,12 @@ export default function PageEditorClient({
       const href = buildVariantHref(livePathRef.current as `/${string}`, {
         variantId,
       });
+      setVariantCopyFeedback(null);
       try {
         await navigator.clipboard.writeText(
           `${window.location.origin.replace(/\/$/, "")}${href}`,
         );
-        setCopiedVariantId(variantId);
+        setVariantCopyFeedback({ variantId, state: "copied" });
         void fetch("/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -616,11 +630,15 @@ export default function PageEditorClient({
           window.clearTimeout(variantCopyTimerRef.current);
         }
         variantCopyTimerRef.current = window.setTimeout(() => {
-          setCopiedVariantId(null);
+          setVariantCopyFeedback((current) =>
+            current?.variantId === variantId && current.state === "copied"
+              ? null
+              : current,
+          );
           variantCopyTimerRef.current = null;
         }, 2400);
       } catch {
-        setCopiedVariantId(null);
+        setVariantCopyFeedback({ variantId, state: "error" });
       }
     },
     [hasChanges, page],
@@ -684,10 +702,24 @@ export default function PageEditorClient({
 
   const removeAvatar = async () => {
     setRemovingAvatar(true);
+    setAvatarRemovalError(null);
     try {
-      await fetch("/api/avatar", { method: "DELETE" });
+      const response = await fetch("/api/avatar", { method: "DELETE" });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Could not remove your photo. Try again.");
+      }
+
       setData((prev) => (prev ? { ...prev, avatar_url: null } : prev));
       setConfirmingAvatarRemoval(false);
+    } catch (avatarError) {
+      setAvatarRemovalError(
+        avatarError instanceof Error && !(avatarError instanceof TypeError)
+          ? avatarError.message
+          : "Could not remove your photo. Check your connection and try again.",
+      );
     } finally {
       setRemovingAvatar(false);
     }
@@ -1223,7 +1255,10 @@ export default function PageEditorClient({
                         <>
                           <button
                             type="button"
-                            onClick={() => setConfirmingAvatarRemoval(true)}
+                            onClick={() => {
+                              setAvatarRemovalError(null);
+                              setConfirmingAvatarRemoval(true);
+                            }}
                             className="flex min-h-11 w-full items-center text-left text-xs text-site-muted transition-colors hover:text-site-danger"
                           >
                             Remove · use monogram
@@ -1235,8 +1270,12 @@ export default function PageEditorClient({
                             confirmLabel="Remove photo"
                             destructive
                             loading={removingAvatar}
+                            error={avatarRemovalError}
                             onConfirm={() => void removeAvatar()}
-                            onClose={() => setConfirmingAvatarRemoval(false)}
+                            onClose={() => {
+                              setAvatarRemovalError(null);
+                              setConfirmingAvatarRemoval(false);
+                            }}
                           />
                         </>
                       ) : (
@@ -1333,11 +1372,37 @@ export default function PageEditorClient({
                         <button
                           type="button"
                           aria-disabled={hasChanges || undefined}
+                          aria-describedby={
+                            variantCopyFeedback?.variantId === variant.id &&
+                            variantCopyFeedback.state === "error"
+                              ? `variant-copy-error-${variant.id}`
+                              : undefined
+                          }
                           onClick={() => void copyVariantLink(variant.id)}
                           className="site-button site-button-secondary px-3 py-1.5 text-xs aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
                         >
-                          {copiedVariantId === variant.id ? "Copied" : "Copy link"}
+                          {variantCopyFeedback?.variantId === variant.id &&
+                          variantCopyFeedback.state === "copied"
+                            ? "Copied"
+                            : "Copy link"}
                         </button>
+                        {variantCopyFeedback?.variantId === variant.id &&
+                        variantCopyFeedback.state === "copied" ? (
+                          <p className="sr-only" role="status">
+                            {variant.label || "Targeted version"} link copied.
+                          </p>
+                        ) : null}
+                        {variantCopyFeedback?.variantId === variant.id &&
+                        variantCopyFeedback.state === "error" ? (
+                          <p
+                            id={`variant-copy-error-${variant.id}`}
+                            className="w-full text-xs leading-5 text-site-danger"
+                            role="alert"
+                          >
+                            This version link could not be copied. Try again or open the live page
+                            and copy its address.
+                          </p>
+                        ) : null}
                       </li>
                     );
                   })}

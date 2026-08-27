@@ -10,6 +10,7 @@ interface DownloadResumeButtonProps {
   pageId: string;
   variantId?: string | null;
   className?: string;
+  compactLabel?: string;
   onErrorChange?: (message: string | null) => void;
   appearance?: "site" | "theme";
 }
@@ -34,6 +35,7 @@ export default function DownloadResumeButton({
   pageId,
   variantId = null,
   className,
+  compactLabel,
   onErrorChange,
   appearance = "theme",
 }: DownloadResumeButtonProps) {
@@ -90,6 +92,13 @@ export default function DownloadResumeButton({
         onClick={handleDownload}
         disabled={generating}
         aria-busy={generating || undefined}
+        aria-label={
+          compactLabel
+            ? generating
+              ? "Preparing Résumé PDF"
+              : "Download Résumé PDF"
+            : undefined
+        }
         className={`${appearance === "site"
           ? "site-button site-button-secondary"
           : "motion-responsive-control flex min-h-12 items-center gap-2 rounded-none border border-[var(--theme-accent-border)] bg-[var(--theme-accent-soft)] px-4 py-2.5 text-[13px] font-semibold text-[var(--theme-accent-bright)] transition-transform duration-300 ease-soft hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-bright)] disabled:hover:translate-y-0 sm:text-sm"
@@ -116,16 +125,32 @@ export default function DownloadResumeButton({
         <span className="grid">
           <span
             aria-hidden={generating || undefined}
-            className={`col-start-1 row-start-1 ${generating ? "invisible" : ""}`}
+            className={`col-start-1 row-start-1 ${generating ? "invisible" : ""} ${compactLabel ? "md:hidden" : ""}`}
           >
             Download Résumé PDF
           </span>
+          {compactLabel ? (
+            <span
+              aria-hidden={generating || undefined}
+              className={`col-start-1 row-start-1 hidden md:inline ${generating ? "invisible" : ""}`}
+            >
+              {compactLabel}
+            </span>
+          ) : null}
           <span
             aria-hidden={!generating || undefined}
-            className={`col-start-1 row-start-1 ${generating ? "" : "invisible"}`}
+            className={`col-start-1 row-start-1 ${generating ? "" : "invisible"} ${compactLabel ? "md:hidden" : ""}`}
           >
             Preparing PDF…
           </span>
+          {compactLabel ? (
+            <span
+              aria-hidden={!generating || undefined}
+              className={`col-start-1 row-start-1 hidden md:inline ${generating ? "" : "invisible"}`}
+            >
+              Preparing…
+            </span>
+          ) : null}
         </span>
       </button>
       {fallbackError ? (

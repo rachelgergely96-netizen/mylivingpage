@@ -101,15 +101,22 @@ function makeBaseAnalytics() {
   });
 }
 
-function makeServiceRoleClient() {
+function makeServiceRoleClient(options?: {
+  page?: Record<string, unknown> | null;
+  pageError?: { message: string } | null;
+  profileError?: { message: string } | null;
+}) {
   const profileQuery = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({
-      data: {
-        plan: "pro",
-        username: "rachel",
-      },
+      data: options?.profileError
+        ? null
+        : {
+            plan: "pro",
+            username: "rachel",
+          },
+      error: options?.profileError ?? null,
     }),
   };
   const pageQuery = {
@@ -117,14 +124,18 @@ function makeServiceRoleClient() {
     eq: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({
-      data: {
-        id: "page-1",
-        slug: "rachel",
-        views: 9,
-        resume_data: {
-          name: "Rachel",
-        },
-      },
+      data:
+        options && "page" in options
+          ? options.page
+          : {
+              id: "page-1",
+              slug: "rachel",
+              views: 9,
+              resume_data: {
+                name: "Rachel",
+              },
+            },
+      error: options?.pageError ?? null,
     }),
   };
 
@@ -196,6 +207,47 @@ describe("analytics dashboard page", () => {
         availability: "basic",
       }),
     );
+  });
+
+  it("does not turn a page lookup failure into a false 404", async () => {
+    createServiceRoleSupabaseClientMock.mockReturnValue(
+      makeServiceRoleClient({ pageError: { message: "database unavailable" } }),
+    );
+
+    await expect(
+      AnalyticsPage({
+        params: Promise.resolve({ pageId: "page-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow("Unable to load page activity.");
+    expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("reserves not found for a successful empty page lookup", async () => {
+    createServiceRoleSupabaseClientMock.mockReturnValue(
+      makeServiceRoleClient({ page: null }),
+    );
+
+    await expect(
+      AnalyticsPage({
+        params: Promise.resolve({ pageId: "missing-page" }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow("notFound");
+    expect(notFoundMock).toHaveBeenCalledOnce();
+  });
+
+  it("does not infer analytics access when the profile lookup fails", async () => {
+    createServiceRoleSupabaseClientMock.mockReturnValue(
+      makeServiceRoleClient({ profileError: { message: "database unavailable" } }),
+    );
+
+    await expect(
+      AnalyticsPage({
+        params: Promise.resolve({ pageId: "page-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow("Unable to load page activity account data.");
   });
 
   it("uses a valid range query for the analytics result", async () => {

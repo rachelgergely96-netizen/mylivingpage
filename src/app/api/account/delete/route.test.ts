@@ -49,6 +49,12 @@ describe("POST /api/account/delete", () => {
     body: JSON.stringify({ currentPassword: "current-password" }),
   });
 
+  const rawRequest = (body: string) => new Request("http://localhost/api/account/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authGetUser.mockResolvedValue({
@@ -77,6 +83,34 @@ describe("POST /api/account/delete", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
     expect(mocks.deleteUserAccount).toHaveBeenCalledWith({ targetUserId: "user-1" });
+  });
+
+  it.each(["{", "null", "[]", '"delete"'])(
+    "rejects an invalid request body: %s",
+    async (body) => {
+      const response = await POST(rawRequest(body));
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "Invalid request." });
+      expect(mocks.requireRecentReauthentication).not.toHaveBeenCalled();
+      expect(mocks.deleteUserAccount).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a headerless oversized request before reauthentication", async () => {
+    const oversizedRequest = rawRequest(
+      JSON.stringify({ currentPassword: "current-password", padding: "x".repeat(17 * 1024) }),
+    );
+    expect(oversizedRequest.headers.get("content-length")).toBeNull();
+
+    const response = await POST(oversizedRequest);
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      error: "Request payload is too large.",
+    });
+    expect(mocks.requireRecentReauthentication).not.toHaveBeenCalled();
+    expect(mocks.deleteUserAccount).not.toHaveBeenCalled();
   });
 
   it("surfaces a friendly message when active billing cannot be cancelled", async () => {

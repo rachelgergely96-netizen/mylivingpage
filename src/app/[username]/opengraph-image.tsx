@@ -117,8 +117,13 @@ export default async function OGImage({ params }: OgImageProps) {
     );
   }
 
-  const supabase = createPublicPageClient();
-  const page = supabase ? await fetchPublicLivePage(supabase, username) : null;
+  // A social crawler should still receive a usable branded image when the
+  // page store is temporarily unavailable. The interactive route surfaces the
+  // failure through its retry boundary instead of misreporting a 404.
+  const page = await fetchPublicLivePage(
+    createPublicPageClient,
+    username,
+  ).catch(() => null);
   if (!page) {
     return renderFallbackCard(fonts, Boolean(dmSansFont));
   }

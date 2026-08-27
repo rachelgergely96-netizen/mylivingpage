@@ -47,7 +47,10 @@ export default async function TryPage() {
           </p>
           <p className="mt-3 text-sm leading-6 text-site-muted">
             Have your résumé as a PDF or Word file?{" "}
-            <Link href="/signup?next=%2Fcreate" className="site-link">
+            <Link
+              href="/signup?ref=try_upload&next=/create"
+              className="site-link"
+            >
               Create a free account
             </Link>{" "}
             and you can upload it directly.

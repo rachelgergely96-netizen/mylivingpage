@@ -8,11 +8,15 @@ export async function ensureUserProfile(
     signupReferrer?: string | null;
   },
 ) {
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile, error: existingProfileError } = await supabase
     .from("profiles")
     .select("id, username")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (existingProfileError) {
+    throw existingProfileError;
+  }
 
   if (existingProfile?.username) {
     return existingProfile;
@@ -23,7 +27,14 @@ export async function ensureUserProfile(
   let suffix = 1;
 
   while (true) {
-    const { data: conflict } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
+    const { data: conflict, error: conflictError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+    if (conflictError) {
+      throw conflictError;
+    }
     if (!conflict || conflict.id === user.id) {
       break;
     }

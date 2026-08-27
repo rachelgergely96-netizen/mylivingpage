@@ -239,7 +239,7 @@ export default function TryYourResume() {
     [keepIt],
   );
 
-  const signupHref = "/signup?next=%2Fcreate";
+  const signupHref = "/signup?ref=try_keep&next=/create";
 
   return (
     <div className="space-y-5">

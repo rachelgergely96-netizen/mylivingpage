@@ -55,7 +55,7 @@ export default async function AnalyticsPage({
     ? resolvedSearchParams.range
     : DEFAULT_ANALYTICS_RANGE;
 
-  const { data: profile } = await fetchProfileWithHostingAccess<{
+  const { data: profile, error: profileError } = await fetchProfileWithHostingAccess<{
     plan?: string | null;
     username?: string | null;
     stripe_subscription_status?: string | null;
@@ -66,6 +66,10 @@ export default async function AnalyticsPage({
     matchField: "id",
     matchValue: user.id,
   });
+
+  if (profileError) {
+    throw new Error("Unable to load page activity account data.");
+  }
 
   const accountAccess = getAccountAccessState({
     plan: profile?.plan ?? null,
@@ -79,12 +83,16 @@ export default async function AnalyticsPage({
     redirect("/dashboard");
   }
 
-  const { data: page } = await supabase
+  const { data: page, error: pageError } = await supabase
     .from("pages")
     .select("*")
     .eq("id", pageId)
     .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`)
     .maybeSingle();
+
+  if (pageError) {
+    throw new Error("Unable to load page activity.");
+  }
 
   if (!page) notFound();
 

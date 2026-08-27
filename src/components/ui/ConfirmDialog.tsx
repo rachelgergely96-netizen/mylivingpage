@@ -45,7 +45,9 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const loadingRef = useRef(loading);
+  const previousLoadingRef = useRef(loading);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
   const descriptionId = useId();
@@ -53,6 +55,15 @@ export default function ConfirmDialog({
 
   loadingRef.current = loading;
   onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const requestFinished = previousLoadingRef.current && !loading;
+    previousLoadingRef.current = loading;
+
+    if (open && requestFinished) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [loading, open]);
 
   useEffect(() => {
     if (!open) {
@@ -154,6 +165,7 @@ export default function ConfirmDialog({
           </button>
           <button
             type="button"
+            ref={confirmButtonRef}
             onClick={onConfirm}
             disabled={loading}
             className={`site-button flex-1 ${destructive ? "site-button-danger" : "site-button-primary"} disabled:opacity-40`}

@@ -116,6 +116,22 @@ describe("POST /api/pages/engagement", () => {
     expect(mocks.enforceRateLimit).not.toHaveBeenCalled();
   });
 
+  it("rejects an oversized payload when content-length is absent", async () => {
+    const request = buildRequest({
+      padding: "x".repeat(33 * 1024),
+    });
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      error: "Engagement payload is too large.",
+    });
+    expect(mocks.normalizeEngagementPayload).not.toHaveBeenCalled();
+    expect(mocks.enforceRateLimit).not.toHaveBeenCalled();
+  });
+
   it("rejects a payload that fails normalization", async () => {
     mocks.normalizeEngagementPayload.mockReturnValueOnce(null);
 

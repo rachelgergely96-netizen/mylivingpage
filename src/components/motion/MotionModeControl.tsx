@@ -34,12 +34,14 @@ const OPTIONS = [
 interface MotionModeControlProps {
   className?: string;
   compact?: boolean;
+  inline?: boolean;
   ariaLabel?: string;
 }
 
 export default function MotionModeControl({
   className = "",
   compact = false,
+  inline = false,
   ariaLabel = "Motion preference",
 }: MotionModeControlProps) {
   const { mode, preference, systemReducedMotion, setPreference } =
@@ -49,18 +51,32 @@ export default function MotionModeControl({
   if (compact) {
     return (
       <label
-        className={`flex min-h-11 items-center justify-between gap-3 border border-site-border bg-site-surface-raised px-3 text-xs text-site-secondary ${className}`}
+        className={`flex min-h-11 items-center justify-between gap-3 border border-site-border bg-site-surface-raised px-3 text-xs text-site-secondary ${
+          inline
+            ? "md:min-h-12 md:gap-1.5 md:border-0 md:bg-transparent md:px-2.5"
+            : ""
+        } ${className}`}
         data-motion-control
         data-motion-state={mode}
       >
-        <span className="font-semibold text-site-text">Motion</span>
+        <span
+          className={`font-semibold text-site-text ${
+            inline ? "md:text-site-secondary" : ""
+          }`}
+        >
+          Motion
+        </span>
         <select
           aria-label={ariaLabel}
           value={preference}
           onChange={(event) =>
             setPreference(event.target.value as MotionPreference)
           }
-          className="site-field min-h-11 min-w-[7.25rem] bg-site-canvas-alt px-2 py-1 text-xs"
+          className={`site-field min-h-11 min-w-[7.25rem] bg-site-canvas-alt px-2 py-1 text-xs ${
+            inline
+              ? "md:min-h-11 md:w-auto md:min-w-[5.5rem] md:border-0 md:bg-transparent md:px-1 md:text-site-text"
+              : ""
+          }`}
         >
           {OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

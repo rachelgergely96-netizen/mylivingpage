@@ -12,6 +12,12 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import type { BotDisposition, BotRiskSignal } from "@/lib/bot-risk";
+import AdminDeleteDialogError, {
+  ADMIN_DELETE_ERROR_ID,
+  claimAdminDeleteRequest,
+  focusAdminDeleteFailure,
+  restoreAdminDeleteFocus,
+} from "@/components/admin/AdminDeleteDialogError";
 
 interface AdminUser {
   id: string;
@@ -89,12 +95,17 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const deleteDialogTitleId = useId();
   const deleteDialogDescriptionId = useId();
   const deleteConfirmInputId = useId();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const deleteDialogRef = useRef<HTMLDivElement | null>(null);
+  const deleteConfirmInputRef = useRef<HTMLInputElement | null>(null);
+  const deleteRetryRef = useRef<HTMLButtonElement | null>(null);
+  const deleteRequestInFlightRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
 
   const showToast = (kind: "success" | "error", text: string) => {
@@ -127,21 +138,25 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
   const unconfirmedCount = rows.filter((user) => !user.emailConfirmedAt).length;
 
   const closeDeleteModal = useCallback((allowInFlight = false) => {
-    if (deletingUserId && !allowInFlight) {
+    if (deleteRequestInFlightRef.current && !allowInFlight) {
       return;
     }
+    const trigger = deleteTriggerRef.current;
     setSelectedUser(null);
     setDeleteConfirmText("");
     setDeletingUserId(null);
-    window.requestAnimationFrame(() => deleteTriggerRef.current?.focus());
-  }, [deletingUserId]);
+    setDeleteError(null);
+    window.requestAnimationFrame(() => {
+      restoreAdminDeleteFocus(trigger, searchInputRef.current);
+    });
+  }, []);
 
   useEffect(() => {
     if (!selectedUser) return;
 
     const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !deletingUserId) {
+      if (event.key === "Escape" && !deleteRequestInFlightRef.current) {
         closeDeleteModal();
         return;
       }
@@ -173,7 +188,15 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [closeDeleteModal, deletingUserId, selectedUser]);
+  }, [closeDeleteModal, selectedUser]);
+
+  useEffect(() => {
+    if (!selectedUser || deletingUserId || !deleteError) {
+      return;
+    }
+
+    focusAdminDeleteFailure(deleteRetryRef.current, deleteConfirmInputRef.current);
+  }, [deleteError, deletingUserId, selectedUser]);
 
   useEffect(() => () => {
     if (toastTimerRef.current !== null) {
@@ -182,23 +205,27 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
   }, []);
 
   const handleDeleteUser = async () => {
-    if (!selectedUser?.email) return;
+    if (!selectedUser?.email || !claimAdminDeleteRequest(deleteRequestInFlightRef)) return;
 
-    setDeletingUserId(selectedUser.id);
+    const targetUser = selectedUser;
+    setDeletingUserId(targetUser.id);
+    setDeleteError(null);
     try {
-      const response = await fetch(`/api/admin/users/${selectedUser.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/users/${targetUser.id}`, { method: "DELETE" });
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
 
       if (!response.ok) {
         throw new Error(body?.error ?? "Failed to delete user.");
       }
 
-      setRows((current) => current.filter((user) => user.id !== selectedUser.id));
-      showToast("success", `Deleted ${selectedUser.email}`);
+      setRows((current) => current.filter((user) => user.id !== targetUser.id));
+      showToast("success", `Deleted ${targetUser.email}`);
       closeDeleteModal(true);
       startTransition(() => router.refresh());
     } catch (error) {
-      showToast("error", error instanceof Error ? error.message : "Failed to delete user.");
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete user.");
+    } finally {
+      deleteRequestInFlightRef.current = false;
       setDeletingUserId(null);
     }
   };
@@ -223,6 +250,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
         Search users
       </label>
       <input
+        ref={searchInputRef}
         id="admin-user-search"
         type="text"
         value={search}
@@ -379,6 +407,7 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                       setSelectedUser(user);
                       setDeleteConfirmText("");
                       setDeletingUserId(null);
+                      setDeleteError(null);
                     }}
                     className="site-button site-button-danger px-3 py-1.5 text-xs"
                   >
@@ -424,14 +453,20 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
               Type <span className="font-mono text-site-danger">{selectedUser.email}</span> to confirm permanent deletion.
             </label>
             <input
+              ref={deleteConfirmInputRef}
               id={deleteConfirmInputId}
               type="text"
               autoFocus
               value={deleteConfirmText}
-              onChange={(event) => setDeleteConfirmText(event.target.value)}
+              onChange={(event) => {
+                setDeleteConfirmText(event.target.value);
+                setDeleteError(null);
+              }}
               placeholder={selectedUser.email ?? ""}
+              aria-describedby={deleteError ? ADMIN_DELETE_ERROR_ID : undefined}
               className="site-field mb-4 border-site-danger px-4"
             />
+            {deleteError ? <AdminDeleteDialogError message={deleteError} /> : null}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -442,9 +477,11 @@ export default function AdminUsersTable({ users }: { users: AdminUser[] }) {
                 Cancel
               </button>
               <button
+                ref={deleteRetryRef}
                 type="button"
                 onClick={handleDeleteUser}
                 disabled={deleteConfirmText !== selectedUser.email || deletingUserId === selectedUser.id}
+                aria-describedby={deleteError ? ADMIN_DELETE_ERROR_ID : undefined}
                 className="site-button site-button-danger flex-1 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {deletingUserId === selectedUser.id ? "Deleting…" : "Delete forever"}

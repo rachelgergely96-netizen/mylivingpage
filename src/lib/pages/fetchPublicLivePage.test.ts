@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fetchPublicLivePage,
 } from "@/lib/pages/fetchPublicLivePage";
@@ -14,6 +14,9 @@ interface SupabaseScenario {
   } | null;
   publicPage?: PageRecord | null;
   legacyPage?: PageRecord | null;
+  profileError?: { message: string } | null;
+  publicPageError?: { message: string } | null;
+  legacyPageError?: { message: string } | null;
   onPageUpdate?: (values: Record<string, unknown>) => void;
 }
 
@@ -99,14 +102,20 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
               : visibilityFilter === "public";
 
             if (filters.owner_id === scenario.profile?.id && matchesLiveVisibility) {
-              return { data: scenario.publicPage ?? null, error: null };
+              return {
+                data: scenario.publicPageError ? null : scenario.publicPage ?? null,
+                error: scenario.publicPageError ?? null,
+              };
             }
 
             if (
               filters.user_id === scenario.profile?.id &&
               filters.status === "live"
             ) {
-              return { data: scenario.legacyPage ?? null, error: null };
+              return {
+                data: scenario.legacyPageError ? null : scenario.legacyPage ?? null,
+                error: scenario.legacyPageError ?? null,
+              };
             }
 
             return { data: null, error: null };
@@ -123,7 +132,10 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
             return this;
           },
           async maybeSingle() {
-            return { data: scenario.profile ?? null, error: null };
+            return {
+              data: scenario.profileError ? null : scenario.profile ?? null,
+              error: scenario.profileError ?? null,
+            };
           },
         };
       }
@@ -134,6 +146,26 @@ function createSupabaseMock(scenario: SupabaseScenario): SupabaseClient {
 }
 
 describe("fetchPublicLivePage", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("serves the public preview before constructing a database client", async () => {
+    vi.stubEnv("ENABLE_EDITOR_PREVIEW", "1");
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("VERCEL", undefined);
+    const createClient = vi.fn(() => createSupabaseMock({}));
+
+    await expect(
+      fetchPublicLivePage(createClient, "preview-living-page"),
+    ).resolves.toMatchObject({
+      id: "public-page-preview",
+      slug: "preview-living-page",
+      status: "live",
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it("returns null for empty usernames", async () => {
     const supabase = createSupabaseMock({});
     await expect(fetchPublicLivePage(supabase, "")).resolves.toBeNull();
@@ -142,6 +174,39 @@ describe("fetchPublicLivePage", () => {
   it("returns null when the username does not map to a profile", async () => {
     const supabase = createSupabaseMock({});
     await expect(fetchPublicLivePage(supabase, "missing-user")).resolves.toBeNull();
+  });
+
+  it("does not turn a profile read failure into a missing username", async () => {
+    const supabase = createSupabaseMock({
+      profileError: { message: "database unavailable" },
+    });
+
+    await expect(fetchPublicLivePage(supabase, "ray")).rejects.toThrow(
+      "Unable to load the public page profile.",
+    );
+  });
+
+  it("does not turn a public page read failure into a missing page", async () => {
+    const supabase = createSupabaseMock({
+      profile: { id: "user-1", plan: "spark" },
+      publicPageError: { message: "database unavailable" },
+    });
+
+    await expect(fetchPublicLivePage(supabase, "ray")).rejects.toThrow(
+      "Unable to load the public page.",
+    );
+  });
+
+  it("does not hide a legacy page read failure behind a null result", async () => {
+    const supabase = createSupabaseMock({
+      profile: { id: "user-1", plan: "spark" },
+      publicPage: null,
+      legacyPageError: { message: "database unavailable" },
+    });
+
+    await expect(fetchPublicLivePage(supabase, "ray")).rejects.toThrow(
+      "Unable to load the public page.",
+    );
   });
 
   it("returns the current public page when one exists", async () => {

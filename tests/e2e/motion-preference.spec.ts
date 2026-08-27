@@ -452,8 +452,20 @@ test("chapter events preserve focus and foreground geometry", async ({ page }) =
   const rail = sample.getByRole("navigation", { name: "Living Page chapters" });
   const foreground = sample.locator(".resume-theme-content");
   const preview = sample.locator("[data-example-living-page]");
-  const projectsButton = rail.getByRole("button", { name: /Projects$/ });
-  const experienceButton = rail.getByRole("button", { name: /Experience$/ });
+  const sectionToggle = rail.getByRole("button", { name: "Sections" });
+  const sectionMenu = rail.locator("[data-living-section-menu]");
+  const projectsButton = rail.locator(
+    '[data-living-section-item="projects"]',
+  );
+  const experienceButton = rail.locator(
+    '[data-living-section-item="experience"]',
+  );
+  const projectsDestination = sample.locator(
+    '[data-analytics-section="projects"] [data-section-heading]',
+  );
+  const experienceDestination = sample.locator(
+    '[data-analytics-section="experience"] [data-section-heading]',
+  );
   const geometry = async () => ({
     foreground: await foreground.evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -467,10 +479,14 @@ test("chapter events preserve focus and foreground geometry", async ({ page }) =
 
   await expect(rail).toBeVisible();
   const before = await geometry();
+  await sectionToggle.click();
+  await expect(sectionMenu).toBeVisible();
+  await expect(sectionMenu).toHaveCSS("animation-duration", "0s");
+  await expect(sectionMenu).toHaveCSS("transform", "none");
   await projectsButton.focus();
   await page.keyboard.press("Enter");
 
-  await expect(projectsButton).toBeFocused();
+  await expect(projectsDestination).toBeFocused();
   await expect(rail).toHaveAttribute("data-motion-event", "page.chapter.entered");
   await expect(rail).toHaveAttribute("data-motion-target", "projects");
   await expect(rail).toHaveAttribute("data-motion-sequence", /[1-9]\d*/);
@@ -479,9 +495,11 @@ test("chapter events preserve focus and foreground geometry", async ({ page }) =
   expect(afterProjects).toEqual(before);
   await expect(foreground).toHaveCSS("transform", "none");
 
+  await sectionToggle.click();
+  await expect(projectsButton).toBeFocused();
   await experienceButton.focus();
   await page.keyboard.press("Enter");
-  await expect(experienceButton).toBeFocused();
+  await expect(experienceDestination).toBeFocused();
   await expect(rail).toHaveAttribute("data-motion-target", "experience");
   await expect
     .poll(async () => Number(await rail.getAttribute("data-motion-sequence")))

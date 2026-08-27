@@ -5,6 +5,8 @@ import {
   coerceResumeDataForExport,
 } from "@/lib/resume-export";
 import { applyPageVariant, getPageVariant } from "@/lib/page-variants";
+import { isPlainJsonObject } from "@/lib/security/page-write";
+import { readUtf8BodyWithLimit } from "@/lib/security/request-body";
 import {
   countPdfPages,
   getFriendlyResumePdfError,
@@ -18,9 +20,12 @@ import { trackEvent } from "@/lib/track-event";
 
 export const runtime = "nodejs";
 const routeTrustLevel = "public_read";
+const MAX_RESUME_EXPORT_BODY_BYTES = 16 * 1024;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface ResumeExportRequestBody {
-  pageId?: string;
+  pageId: string;
   variantId?: string | null;
 }
 
@@ -39,15 +44,89 @@ function getResumePdfErrorMessage(error: unknown) {
 }
 
 export async function POST(request: Request) {
-  let requestedPageId: string | undefined;
+  const bodyResult = await readUtf8BodyWithLimit(
+    request,
+    MAX_RESUME_EXPORT_BODY_BYTES,
+  );
+  if (!bodyResult.ok && bodyResult.reason === "too_large") {
+    return NextResponse.json(
+      { error: "Request payload is too large." },
+      { status: 413 },
+    );
+  }
+
+  let parsedBody: unknown;
+  try {
+    parsedBody = JSON.parse(bodyResult.ok ? bodyResult.text : "") as unknown;
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request payload." },
+      { status: 400 },
+    );
+  }
+
+  if (!isPlainJsonObject(parsedBody)) {
+    return NextResponse.json(
+      { error: "Invalid request payload." },
+      { status: 400 },
+    );
+  }
+
+  const rawPageId = parsedBody.pageId;
+  if (typeof rawPageId !== "string" || !rawPageId.trim()) {
+    return NextResponse.json({ error: "pageId is required." }, { status: 400 });
+  }
+  if (!UUID_PATTERN.test(rawPageId.trim())) {
+    return NextResponse.json(
+      { error: "pageId must be a valid UUID." },
+      { status: 400 },
+    );
+  }
+
+  const rawVariantId = parsedBody.variantId;
+  if (
+    rawVariantId !== undefined &&
+    rawVariantId !== null &&
+    typeof rawVariantId !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "Invalid request payload." },
+      { status: 400 },
+    );
+  }
+
+  const body: ResumeExportRequestBody = {
+    pageId: rawPageId.trim(),
+    variantId: rawVariantId,
+  };
 
   try {
-    const body = (await request.json()) as ResumeExportRequestBody;
-    requestedPageId = body.pageId;
-    if (!body.pageId) {
-      return NextResponse.json({ error: "pageId is required." }, { status: 400 });
+    const rateLimit = await enforceRateLimit({
+      request,
+      policy: "ats_export_download",
+      route: "/api/resume/export",
+    });
+    if (rateLimit.limited) {
+      return rateLimit.response;
     }
+  } catch (rateLimitError) {
+    console.error("resume.export.rate_limit_unavailable", {
+      page_id: body.pageId,
+      error:
+        rateLimitError instanceof Error
+          ? rateLimitError.message
+          : "unknown_rate_limit_error",
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Résumé downloads are temporarily unavailable. Please try again in a moment.",
+      },
+      { status: 503 },
+    );
+  }
 
+  try {
     const supabase = createServiceRoleSupabaseClient();
     const { data: page, error: pageError } = await supabase
       .from("pages")
@@ -56,7 +135,17 @@ export async function POST(request: Request) {
       .maybeSingle<PublicPageResumeSource>();
 
     if (pageError) {
-      throw new Error(pageError.message);
+      console.error("resume.export.page_lookup_failed", {
+        page_id: body.pageId,
+        error: pageError.message,
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Résumé downloads are temporarily unavailable. Please try again in a moment.",
+        },
+        { status: 503 },
+      );
     }
 
     const pageOwnerId = page?.owner_id ?? page?.user_id ?? null;
@@ -69,7 +158,21 @@ export async function POST(request: Request) {
           matchField: "id",
           matchValue: pageOwnerId,
         })
-      : { data: null };
+      : { data: null, error: null };
+    if (ownerProfileResult.error) {
+      console.error("resume.export.profile_lookup_failed", {
+        page_id: body.pageId,
+        error: ownerProfileResult.error.message,
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Résumé downloads are temporarily unavailable. Please try again in a moment.",
+        },
+        { status: 503 },
+      );
+    }
+
     const ownerProfile = ownerProfileResult.data;
 
     const syncedPage = page
@@ -82,32 +185,6 @@ export async function POST(request: Request) {
 
     if (!page || !syncedPage || !isPubliclyAvailablePage(syncedPage.page)) {
       return NextResponse.json({ error: "Page not found." }, { status: 404 });
-    }
-
-    try {
-      const rateLimit = await enforceRateLimit({
-        request,
-        policy: "ats_export_download",
-        route: "/api/resume/export",
-      });
-      if (rateLimit.limited) {
-        return rateLimit.response;
-      }
-    } catch (rateLimitError) {
-      console.error("resume.export.rate_limit_unavailable", {
-        page_id: body.pageId,
-        error:
-          rateLimitError instanceof Error
-            ? rateLimitError.message
-            : "unknown_rate_limit_error",
-      });
-      return NextResponse.json(
-        {
-          error:
-            "Résumé downloads are temporarily unavailable. Please try again in a moment.",
-        },
-        { status: 503 },
-      );
     }
 
     const selectedVariant = getPageVariant(
@@ -188,7 +265,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("resume.export.unhandled_error", {
-      page_id: requestedPageId ?? null,
+      page_id: body.pageId,
       error: getResumePdfErrorMessage(error),
     });
 
@@ -199,7 +276,7 @@ export async function POST(request: Request) {
           "Unable to export the Résumé PDF right now. Please try again.",
         ),
       },
-      { status: 400 },
+      { status: 500 },
     );
   }
 }

@@ -32,8 +32,7 @@ import { THEME_IDS, type ThemeId } from "@/themes/types";
 
 const VALID_THEMES: Set<string> = new Set(THEME_IDS);
 const getPublicPage = cache(async (username: string) => {
-  const supabase = createServiceRoleSupabaseClient();
-  return fetchPublicLivePage(supabase, username);
+  return fetchPublicLivePage(createServiceRoleSupabaseClient, username);
 });
 const getOfflinePageContext = cache(async (username: string) => {
   const supabase = createServiceRoleSupabaseClient();
@@ -62,7 +61,7 @@ async function fetchOfflinePageContext(
   username: string,
   supabase: ReturnType<typeof createServiceRoleSupabaseClient>,
 ) {
-  const { data: profile } = await fetchProfileWithHostingAccess<{
+  const { data: profile, error: profileError } = await fetchProfileWithHostingAccess<{
     id: string;
     plan?: string | null;
     stripe_subscription_status?: string | null;
@@ -74,11 +73,15 @@ async function fetchOfflinePageContext(
     matchValue: username,
   });
 
+  if (profileError) {
+    throw new Error("Unable to load the offline page profile.");
+  }
+
   if (!profile) {
     return null;
   }
 
-  const { data: page } = await supabase
+  const { data: page, error: pageError } = await supabase
     .from("pages")
     .select(
       "id, resume_data, published_at, status, visibility, search_indexable, user_id, owner_id",
@@ -87,6 +90,10 @@ async function fetchOfflinePageContext(
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (pageError) {
+    throw new Error("Unable to load the offline page state.");
+  }
 
   if (!page || !page.published_at || isPubliclyReachablePage(page)) {
     return null;

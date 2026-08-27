@@ -42,11 +42,18 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServiceRoleSupabaseClient();
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("profiles")
     .select("id")
     .eq("username", slug)
     .maybeSingle<{ id: string }>();
+
+  if (lookupError) {
+    return NextResponse.json(
+      { available: false, slug, reason: "Username checks are temporarily unavailable." },
+      { status: 503 },
+    );
+  }
 
   // If it's the current user's own username, it's "available" to keep
   const authSupabase = await createServerSupabaseClient();
@@ -64,8 +71,20 @@ export async function PATCH(request: Request) {
   }
   const { user } = authResult.value;
 
-  const body = (await request.json()) as { slug?: string };
-  const { slug, error } = validateUsernameSlug(body.slug ?? "");
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const rawSlug = (body as { slug?: unknown }).slug;
+  const { slug, error } = validateUsernameSlug(
+    typeof rawSlug === "string" ? rawSlug : "",
+  );
 
   if (error) {
     return NextResponse.json({ error }, { status: 400 });
@@ -77,11 +96,18 @@ export async function PATCH(request: Request) {
   const supabase = createServiceRoleSupabaseClient();
 
   // Check uniqueness
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from("profiles")
     .select("id")
     .eq("username", slug)
     .maybeSingle<{ id: string }>();
+
+  if (lookupError) {
+    return NextResponse.json(
+      { error: "Username updates are temporarily unavailable." },
+      { status: 503 },
+    );
+  }
 
   if (existing && existing.id !== user.id) {
     return NextResponse.json({ error: "This URL is already taken." }, { status: 409 });
@@ -98,10 +124,20 @@ export async function PATCH(request: Request) {
   }
 
   // Mirror the account username into legacy page slug fields.
-  await supabase
+  const { error: pageUpdateError } = await supabase
     .from("pages")
     .update({ slug })
     .or(`user_id.eq.${user.id},owner_id.eq.${user.id}`);
+
+  if (pageUpdateError) {
+    return NextResponse.json(
+      {
+        error:
+          "Your username was saved, but the page link could not be refreshed. Reload before trying again.",
+      },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({ success: true, slug });
 }

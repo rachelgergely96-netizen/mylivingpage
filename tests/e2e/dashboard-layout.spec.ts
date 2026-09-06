@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { PUBLIC_PAGE_PREVIEW_USERNAME } from "../../src/lib/editor-preview";
+
+const previewLivePath = `/${PUBLIC_PAGE_PREVIEW_USERNAME}`;
 
 test("dashboard prioritizes one next move and keeps recent activity beside it", async ({
   page,
@@ -68,7 +71,7 @@ test("returning users enter through their real Living Page signal", async ({
   await expect(
     welcome.getByText("Someone viewed it after your last share."),
   ).toBeVisible();
-  await expect(welcome.getByText("/avery-sample")).toBeVisible();
+  await expect(welcome.getByText(previewLivePath)).toBeVisible();
   await expect(
     welcome.locator("[data-dashboard-welcome-preview]"),
   ).toBeVisible();
@@ -145,7 +148,7 @@ test("Still mode keeps the welcome summary inline and the dashboard immediately 
   await expect(page.locator("[role=dialog]")).toHaveCount(0);
   await expect(welcome).toContainText("Avery, your page kept living.");
   await expect(welcome).toContainText("Someone viewed it after your last share.");
-  await expect(welcome).toContainText("/avery-sample");
+  await expect(welcome).toContainText(previewLivePath);
   await expect(
     welcome.getByRole("button", { name: "Open dashboard now" }),
   ).toHaveCount(0);

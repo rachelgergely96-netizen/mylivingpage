@@ -42,7 +42,7 @@ In the cloud environment settings:
 2. Set the non-secret variable `MLP_CLOUD_ENVIRONMENT=cursor`.
 3. Set the install command to `sh scripts/cloud-setup.sh cursor`. It installs the lockfile dependencies and Chromium/system dependencies inside the VM.
 4. Add app secrets with type **Runtime Secret**, scoped to this environment where possible.
-5. For manual app work, start `npm run dev -- --hostname 0.0.0.0` inside the VM and use Cursor's preview/forwarded URL.
+5. For manual app work, start `ENABLE_EDITOR_PREVIEW=1 npm run dev -- --hostname 127.0.0.1 --port 3000` inside the VM. Leave `PLAYWRIGHT_BASE_URL` unset so credential-free Playwright can boot its own server.
 
 The setup script is finite and does not start the app or copy secrets into snapshot files. Its Linux/provider checks help prevent accidental laptop installs; the provider variable is not an authentication mechanism.
 

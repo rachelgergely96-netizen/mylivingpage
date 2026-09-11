@@ -66,6 +66,11 @@ reads the columns they add:
 - `20260810130000_page_search_indexable.sql` — the `search_indexable` column behind
   "Link only". Missing, publishing and the visibility control fail. The sitemap falls
   back to its unfiltered query rather than emptying itself.
+- `20260911190000_fix_pages_policy_recursion.sql` — breaks the RLS loop between
+  `pages` and `page_collaborators`. Without it every browser-side read of `pages`
+  fails with `infinite recursion detected in policy`, and the Create screen shows
+  "We couldn't safely start a new page" to every account. Both of these are now
+  applied in production.
 
 ## Launch Configuration
 

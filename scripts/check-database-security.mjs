@@ -187,6 +187,30 @@ const checks = [
     `,
   },
   {
+    // pages_select_collaborator once read page_collaborators directly, whose
+    // owner policies read pages back, and Postgres refused every browser-side
+    // pages read with "infinite recursion detected in policy". The Create
+    // screen's page-count preflight failed for every account because of it.
+    label: "pages policies do not recurse through page_collaborators",
+    query: `
+      select not exists (
+        select 1
+        from pg_policies
+        where schemaname = 'public'
+          and tablename = 'pages'
+          and lower(qual) like '%page_collaborators%'
+      )
+      and exists (
+        select 1
+        from pg_policies
+        where schemaname = 'public'
+          and tablename = 'pages'
+          and policyname = 'pages_select_collaborator'
+          and lower(qual) like '%is_page_collaborator%'
+      ) as ok
+    `,
+  },
+  {
     label: "rate-limit lookup index exists",
     query: `
       select exists (

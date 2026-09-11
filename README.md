@@ -9,12 +9,11 @@ Next.js 15 App Router implementation for the MyLivingPage MVP.
 - Stripe for legacy subscription management and webhooks
 - React PDF for ATS-safe résumé exports and Canvas 2D for living themes and marketing effects
 
-## Quick Start
+## Cloud Quick Start
 
-1. Copy `.env.example` to `.env.local` and fill in the required values.
-2. Install dependencies with `npm install`.
-3. Apply SQL migrations from `supabase/migrations`.
-4. Run the app with `npm run dev`.
+Use [the cloud development guide](./docs/cloud-development.md) for Codex setup, the existing Cursor VM, and secret placement. Use Node 22 and install dependencies only inside the cloud environment. Codex handles edits/reviews; Cursor handles app and browser verification, with one writer per branch.
+
+Keep real values in each provider's secret settings. `.env.example` lists configuration names; do not commit filled-in environment files. Backend migrations and authenticated checks use isolated staging.
 
 ## Common Scripts
 

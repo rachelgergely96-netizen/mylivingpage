@@ -207,7 +207,25 @@ const checks = [
           and tablename = 'pages'
           and policyname = 'pages_select_collaborator'
           and lower(qual) like '%is_page_collaborator%'
-      ) as ok
+      )
+      -- The helper only breaks the loop while it runs as its owner. Recreated
+      -- as SECURITY INVOKER, its page_collaborators read goes back under RLS
+      -- and the recursion returns with this check still green, so pin the
+      -- definer flag and the locked search_path too.
+      and exists (
+        select 1
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.proname = 'is_page_collaborator'
+          and p.prosecdef
+          and exists (
+            select 1
+            from unnest(coalesce(p.proconfig, '{}'::text[])) as cfg
+            where cfg like 'search_path=%'
+          )
+      )
+      and not has_function_privilege('anon', 'public.is_page_collaborator(uuid)', 'execute') as ok
     `,
   },
   {
